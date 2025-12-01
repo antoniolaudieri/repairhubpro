@@ -13,6 +13,7 @@ import NewRepair from "./pages/NewRepair";
 import Repairs from "./pages/Repairs";
 import RepairDetail from "./pages/RepairDetail";
 import Customers from "./pages/Customers";
+import CustomerDetail from "./pages/CustomerDetail";
 import Inventory from "./pages/Inventory";
 import Orders from "./pages/Orders";
 import Appointments from "./pages/Appointments";
@@ -77,6 +78,16 @@ const App = () => (
                 <ProtectedRoute requireTechnician>
                   <TechnicianLayout>
                     <Customers />
+                  </TechnicianLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customers/:id"
+              element={
+                <ProtectedRoute requireTechnician>
+                  <TechnicianLayout>
+                    <CustomerDetail />
                   </TechnicianLayout>
                 </ProtectedRoute>
               }
