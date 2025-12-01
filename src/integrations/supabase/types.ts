@@ -303,6 +303,80 @@ export type Database = {
         }
         Relationships: []
       }
+      quotes: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          device_brand: string | null
+          device_model: string | null
+          device_type: string
+          diagnosis: string | null
+          id: string
+          issue_description: string
+          items: Json
+          labor_cost: number | null
+          notes: string | null
+          parts_cost: number | null
+          signature_data: string | null
+          signed_at: string | null
+          status: string
+          total_cost: number
+          updated_at: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          device_brand?: string | null
+          device_model?: string | null
+          device_type: string
+          diagnosis?: string | null
+          id?: string
+          issue_description: string
+          items?: Json
+          labor_cost?: number | null
+          notes?: string | null
+          parts_cost?: number | null
+          signature_data?: string | null
+          signed_at?: string | null
+          status?: string
+          total_cost: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          device_brand?: string | null
+          device_model?: string | null
+          device_type?: string
+          diagnosis?: string | null
+          id?: string
+          issue_description?: string
+          items?: Json
+          labor_cost?: number | null
+          notes?: string | null
+          parts_cost?: number | null
+          signature_data?: string | null
+          signed_at?: string | null
+          status?: string
+          total_cost?: number
+          updated_at?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       repair_parts: {
         Row: {
           created_at: string
