@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import TechnicianLayout from "./layouts/TechnicianLayout";
-import Index from "./pages/Index";
+import CustomerHome from "./pages/CustomerHome";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import NewRepair from "./pages/NewRepair";
@@ -15,6 +15,8 @@ import RepairDetail from "./pages/RepairDetail";
 import Customers from "./pages/Customers";
 import Inventory from "./pages/Inventory";
 import Orders from "./pages/Orders";
+import Appointments from "./pages/Appointments";
+import Feedback from "./pages/Feedback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +29,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Index />} />
+            <Route path="/" element={<CustomerHome />} />
             <Route path="/auth" element={<Auth />} />
             <Route
               path="/dashboard"
@@ -95,6 +97,26 @@ const App = () => (
                 <ProtectedRoute requireTechnician>
                   <TechnicianLayout>
                     <Orders />
+                  </TechnicianLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/appointments"
+              element={
+                <ProtectedRoute requireTechnician>
+                  <TechnicianLayout>
+                    <Appointments />
+                  </TechnicianLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/feedback"
+              element={
+                <ProtectedRoute requireTechnician>
+                  <TechnicianLayout>
+                    <Feedback />
                   </TechnicianLayout>
                 </ProtectedRoute>
               }

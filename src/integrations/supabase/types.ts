@@ -14,6 +14,57 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          device_brand: string | null
+          device_model: string | null
+          device_type: string
+          id: string
+          issue_description: string
+          notes: string | null
+          preferred_date: string
+          preferred_time: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          device_brand?: string | null
+          device_model?: string | null
+          device_type: string
+          id?: string
+          issue_description: string
+          notes?: string | null
+          preferred_date: string
+          preferred_time: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          device_brand?: string | null
+          device_model?: string | null
+          device_type?: string
+          id?: string
+          issue_description?: string
+          notes?: string | null
+          preferred_date?: string
+          preferred_time?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -99,6 +150,44 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          customer_email: string
+          customer_name: string
+          id: string
+          rating: number
+          repair_id: string | null
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          id?: string
+          rating: number
+          repair_id?: string | null
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          id?: string
+          rating?: number
+          repair_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_repair_id_fkey"
+            columns: ["repair_id"]
+            isOneToOne: false
+            referencedRelation: "repairs"
             referencedColumns: ["id"]
           },
         ]
@@ -262,6 +351,7 @@ export type Database = {
           assigned_to: string | null
           completed_at: string | null
           created_at: string
+          customer_email: string | null
           delivered_at: string | null
           device_id: string
           diagnosis: string | null
@@ -279,6 +369,7 @@ export type Database = {
           assigned_to?: string | null
           completed_at?: string | null
           created_at?: string
+          customer_email?: string | null
           delivered_at?: string | null
           device_id: string
           diagnosis?: string | null
@@ -296,6 +387,7 @@ export type Database = {
           assigned_to?: string | null
           completed_at?: string | null
           created_at?: string
+          customer_email?: string | null
           delivered_at?: string | null
           device_id?: string
           diagnosis?: string | null

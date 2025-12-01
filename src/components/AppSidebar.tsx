@@ -5,7 +5,8 @@ import {
   Package, 
   ShoppingCart,
   LogOut,
-  Settings
+  Calendar,
+  MessageSquare
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -29,9 +30,11 @@ import { toast } from "@/components/ui/use-toast";
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Riparazioni", url: "/repairs", icon: Wrench },
+  { title: "Prenotazioni", url: "/appointments", icon: Calendar },
   { title: "Clienti", url: "/customers", icon: Users },
   { title: "Magazzino", url: "/inventory", icon: Package },
   { title: "Ordini", url: "/orders", icon: ShoppingCart },
+  { title: "Feedback", url: "/feedback", icon: MessageSquare },
 ];
 
 export function AppSidebar() {
