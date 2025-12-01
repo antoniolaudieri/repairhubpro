@@ -28,6 +28,9 @@ const NewRepair = () => {
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [annotatedPhotoBlob, setAnnotatedPhotoBlob] = useState<Blob | null>(null);
   const [intakeSignature, setIntakeSignature] = useState<string | null>(null);
+  const [showManualEntry, setShowManualEntry] = useState(false);
+  const [manualBrand, setManualBrand] = useState("");
+  const [manualModel, setManualModel] = useState("");
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -185,6 +188,51 @@ const NewRepair = () => {
     setDetectedDevice(null);
     setPhotoFile(null);
     setPhotoPreview("");
+    setShowManualEntry(false);
+    setManualBrand("");
+    setManualModel("");
+  };
+
+  const handleManualLookup = async () => {
+    if (!manualBrand.trim() || !manualModel.trim()) {
+      toast.error("Inserisci marca e modello");
+      return;
+    }
+
+    setLookingUpDetails(true);
+    try {
+      const { data: lookupData, error: lookupError } = await supabase.functions.invoke("lookup-device", {
+        body: { 
+          brand: manualBrand.trim(), 
+          model: manualModel.trim() 
+        },
+      });
+
+      if (!lookupError && lookupData?.device_info) {
+        setDetectedDevice({
+          type: deviceData.device_type || "smartphone",
+          brand: manualBrand.trim(),
+          model: manualModel.trim(),
+          ...lookupData.device_info,
+        });
+        
+        setDeviceData((prev) => ({
+          ...prev,
+          brand: manualBrand.trim(),
+          model: manualModel.trim(),
+        }));
+        
+        toast.success("Dispositivo trovato!");
+        setShowManualEntry(false);
+      } else {
+        toast.error("Dispositivo non trovato nel database");
+      }
+    } catch (error: any) {
+      console.error("Lookup error:", error);
+      toast.error("Errore nella ricerca: " + (error.message || "Riprova"));
+    } finally {
+      setLookingUpDetails(false);
+    }
   };
 
   const handleSelectCustomer = (customer: any) => {
@@ -360,7 +408,7 @@ const NewRepair = () => {
             {!detectedDevice ? (
               <>
                 <PhotoUpload onPhotoUpload={handlePhotoUpload} />
-                {photoPreview && (
+                {photoPreview && !showManualEntry && (
                   <div className="space-y-2">
                     <Button
                       type="button"
@@ -385,12 +433,66 @@ const NewRepair = () => {
                       Annota Punti Intervento
                     </Button>
                     
+                    <Button
+                      type="button"
+                      onClick={() => setShowManualEntry(true)}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Inserisci Manualmente
+                    </Button>
+                    
                     {annotatedPhotoBlob && (
                       <p className="text-sm text-accent flex items-center gap-2">
                         <span className="h-2 w-2 bg-accent rounded-full" />
                         Foto annotata pronta per il salvataggio
                       </p>
                     )}
+                  </div>
+                )}
+
+                {showManualEntry && (
+                  <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
+                    <h3 className="font-semibold text-lg">Inserimento Manuale</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-sm font-medium">Marca</label>
+                        <input
+                          type="text"
+                          value={manualBrand}
+                          onChange={(e) => setManualBrand(e.target.value)}
+                          placeholder="es. Apple, Samsung"
+                          className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Modello</label>
+                        <input
+                          type="text"
+                          value={manualModel}
+                          onChange={(e) => setManualModel(e.target.value)}
+                          placeholder="es. iPhone 15 Pro"
+                          className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          onClick={handleManualLookup}
+                          disabled={lookingUpDetails || !manualBrand.trim() || !manualModel.trim()}
+                          className="flex-1"
+                        >
+                          {lookingUpDetails ? "Ricerca in corso..." : "Cerca Dispositivo"}
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => setShowManualEntry(false)}
+                          variant="outline"
+                        >
+                          Annulla
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </>
