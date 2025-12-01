@@ -49,23 +49,26 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Dashboard</h1>
-            <p className="text-muted-foreground">Gestione riparazioni e magazzino</p>
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6 lg:space-y-8">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Dashboard</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Gestione riparazioni e magazzino</p>
           </div>
           <Button
             onClick={() => navigate("/new-repair")}
             size="lg"
+            className="w-full sm:w-auto shadow-md hover:shadow-lg transition-shadow"
           >
             <Plus className="mr-2 h-5 w-5" />
             Nuovo Ritiro
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
           <StatsCard
             title="Riparazioni in Attesa"
             value={stats.pendingRepairs}
@@ -92,48 +95,49 @@ const Dashboard = () => {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Accesso Rapido</h2>
-            <div className="space-y-3">
+        {/* Quick Access & Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+          <Card className="p-5 lg:p-6 shadow-card hover:shadow-card-hover transition-shadow bg-gradient-card border-border/50">
+            <h2 className="text-lg lg:text-xl font-semibold mb-4 text-foreground">Accesso Rapido</h2>
+            <div className="space-y-2">
               <Button
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start h-12 font-medium hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-all"
                 onClick={() => navigate("/repairs")}
               >
-                <Wrench className="mr-2 h-4 w-4" />
+                <Wrench className="mr-3 h-5 w-5" />
                 Gestione Riparazioni
               </Button>
               <Button
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start h-12 font-medium hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-all"
                 onClick={() => navigate("/customers")}
               >
-                <Smartphone className="mr-2 h-4 w-4" />
+                <Smartphone className="mr-3 h-5 w-5" />
                 Clienti
               </Button>
               <Button
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start h-12 font-medium hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-all"
                 onClick={() => navigate("/inventory")}
               >
-                <Package className="mr-2 h-4 w-4" />
+                <Package className="mr-3 h-5 w-5" />
                 Magazzino
               </Button>
               <Button
                 variant="outline"
-                className="w-full justify-start"
+                className="w-full justify-start h-12 font-medium hover:bg-primary/5 hover:text-primary hover:border-primary/50 transition-all"
                 onClick={() => navigate("/orders")}
               >
-                <ShoppingCart className="mr-2 h-4 w-4" />
+                <ShoppingCart className="mr-3 h-5 w-5" />
                 Ordini Ricambi
               </Button>
             </div>
           </Card>
 
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4">Attività Recenti</h2>
-            <div className="text-muted-foreground text-center py-8">
+          <Card className="p-5 lg:p-6 shadow-card hover:shadow-card-hover transition-shadow bg-gradient-card border-border/50">
+            <h2 className="text-lg lg:text-xl font-semibold mb-4 text-foreground">Attività Recenti</h2>
+            <div className="text-muted-foreground text-center py-12 text-sm">
               Nessuna attività recente
             </div>
           </Card>
