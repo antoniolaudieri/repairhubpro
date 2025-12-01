@@ -19,7 +19,6 @@ import {
   Clock,
   CheckCircle2,
   Star,
-  Calendar,
   Phone,
   Mail,
   MapPin,
@@ -39,6 +38,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { BookingWizard } from "@/components/booking/BookingWizard";
+import { format } from "date-fns";
 
 export default function CustomerHome() {
   const navigate = useNavigate();
@@ -47,18 +48,6 @@ export default function CustomerHome() {
   const [trackingOpen, setTrackingOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const [bookingData, setBookingData] = useState({
-    customer_name: "",
-    customer_email: "",
-    customer_phone: "",
-    device_type: "",
-    device_brand: "",
-    device_model: "",
-    issue_description: "",
-    preferred_date: "",
-    preferred_time: "",
-  });
 
   const [trackingEmail, setTrackingEmail] = useState("");
   const [repairs, setRepairs] = useState<any[]>([]);
@@ -70,12 +59,31 @@ export default function CustomerHome() {
     comment: "",
   });
 
-  const handleBooking = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleBooking = async (data: {
+    customerName: string;
+    customerEmail: string;
+    customerPhone: string;
+    deviceType: string;
+    deviceBrand?: string;
+    deviceModel?: string;
+    issueDescription: string;
+    preferredDate: Date;
+    preferredTime: string;
+  }) => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.from("appointments").insert([bookingData]);
+      const { error } = await supabase.from("appointments").insert([{
+        customer_name: data.customerName,
+        customer_email: data.customerEmail,
+        customer_phone: data.customerPhone,
+        device_type: data.deviceType,
+        device_brand: data.deviceBrand || null,
+        device_model: data.deviceModel || null,
+        issue_description: data.issueDescription,
+        preferred_date: format(data.preferredDate, "yyyy-MM-dd"),
+        preferred_time: data.preferredTime,
+      }]);
 
       if (error) throw error;
 
@@ -85,17 +93,6 @@ export default function CustomerHome() {
       });
 
       setBookingOpen(false);
-      setBookingData({
-        customer_name: "",
-        customer_email: "",
-        customer_phone: "",
-        device_type: "",
-        device_brand: "",
-        device_model: "",
-        issue_description: "",
-        preferred_date: "",
-        preferred_time: "",
-      });
     } catch (error: any) {
       toast({
         title: "Errore",
@@ -259,138 +256,20 @@ export default function CustomerHome() {
             <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
-                  <Calendar className="mr-2 h-4 w-4" />
                   Prenota
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Prenota una Riparazione</DialogTitle>
                   <DialogDescription>
-                    Compila il form e ti contatteremo per confermare
+                    Compila il modulo in pochi semplici passaggi
                   </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleBooking} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Nome Completo *</Label>
-                      <Input
-                        required
-                        value={bookingData.customer_name}
-                        onChange={(e) =>
-                          setBookingData({ ...bookingData, customer_name: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label>Email *</Label>
-                      <Input
-                        type="email"
-                        required
-                        value={bookingData.customer_email}
-                        onChange={(e) =>
-                          setBookingData({ ...bookingData, customer_email: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label>Telefono *</Label>
-                      <Input
-                        type="tel"
-                        required
-                        value={bookingData.customer_phone}
-                        onChange={(e) =>
-                          setBookingData({ ...bookingData, customer_phone: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label>Tipo Dispositivo *</Label>
-                      <Select
-                        value={bookingData.device_type}
-                        onValueChange={(value) =>
-                          setBookingData({ ...bookingData, device_type: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="smartphone">Smartphone</SelectItem>
-                          <SelectItem value="tablet">Tablet</SelectItem>
-                          <SelectItem value="laptop">Laptop</SelectItem>
-                          <SelectItem value="pc">PC</SelectItem>
-                          <SelectItem value="altro">Altro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Marca</Label>
-                      <Input
-                        value={bookingData.device_brand}
-                        onChange={(e) =>
-                          setBookingData({ ...bookingData, device_brand: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label>Modello</Label>
-                      <Input
-                        value={bookingData.device_model}
-                        onChange={(e) =>
-                          setBookingData({ ...bookingData, device_model: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Descrizione Problema *</Label>
-                    <Textarea
-                      required
-                      rows={3}
-                      value={bookingData.issue_description}
-                      onChange={(e) =>
-                        setBookingData({ ...bookingData, issue_description: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Data Preferita *</Label>
-                      <Input
-                        type="date"
-                        required
-                        min={new Date().toISOString().split("T")[0]}
-                        value={bookingData.preferred_date}
-                        onChange={(e) =>
-                          setBookingData({ ...bookingData, preferred_date: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <Label>Orario Preferito *</Label>
-                      <Select
-                        value={bookingData.preferred_time}
-                        onValueChange={(value) =>
-                          setBookingData({ ...bookingData, preferred_time: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Seleziona" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="09:00-11:00">09:00 - 11:00</SelectItem>
-                          <SelectItem value="11:00-13:00">11:00 - 13:00</SelectItem>
-                          <SelectItem value="14:00-16:00">14:00 - 16:00</SelectItem>
-                          <SelectItem value="16:00-18:00">16:00 - 18:00</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Invio..." : "Invia Prenotazione"}
-                  </Button>
-                </form>
+                <BookingWizard 
+                  onSubmit={handleBooking}
+                  isSubmitting={loading}
+                />
               </DialogContent>
             </Dialog>
           </div>
