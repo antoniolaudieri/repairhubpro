@@ -74,11 +74,14 @@ export const DeviceInfoCard = ({ deviceInfo, onConfirm, onEdit }: DeviceInfoCard
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     // Fallback to icon if image fails to load
-                    e.currentTarget.style.display = "none";
-                    e.currentTarget.parentElement!.innerHTML = "";
-                    const iconContainer = document.createElement("div");
-                    iconContainer.className = "flex items-center justify-center w-full h-full";
-                    e.currentTarget.parentElement!.appendChild(iconContainer);
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      e.currentTarget.style.display = "none";
+                      parent.innerHTML = "";
+                      const iconContainer = document.createElement("div");
+                      iconContainer.className = "flex items-center justify-center w-full h-full";
+                      parent.appendChild(iconContainer);
+                    }
                   }}
                 />
               </div>
