@@ -131,10 +131,10 @@ export function FinalCostSignatureDialog({
               <SignatureCanvas
                 ref={sigCanvas}
                 canvasProps={{
-                  className: "w-full h-48 bg-background rounded-lg cursor-crosshair",
+                  className: "w-full h-48 rounded-lg cursor-crosshair",
                 }}
-                backgroundColor="hsl(var(--background))"
-                penColor="hsl(var(--primary))"
+                backgroundColor="#ffffff"
+                penColor="#000000"
               />
             </Card>
             <p className="text-xs text-muted-foreground text-center">
