@@ -3,5 +3,8 @@ project_id = "mivvpthovnkynigfwmjm"
 [functions.analyze-device]
 verify_jwt = false
 
+[functions.lookup-device]
+verify_jwt = false
+
 [functions.repair-assistant]
 verify_jwt = false
