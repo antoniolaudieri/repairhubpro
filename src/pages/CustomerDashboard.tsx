@@ -29,6 +29,8 @@ import { SignatureDialog } from "@/components/quotes/SignatureDialog";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { FinalCostSignatureDialog } from "@/components/customer/FinalCostSignatureDialog";
+import { NotificationBanner } from "@/components/customer/NotificationBanner";
 
 interface Repair {
   id: string;
@@ -36,6 +38,8 @@ interface Repair {
   created_at: string;
   estimated_cost: number | null;
   final_cost: number | null;
+  final_cost_signature: string | null;
+  final_cost_accepted_at: string | null;
   diagnosis: string | null;
   device: {
     brand: string;
@@ -71,6 +75,8 @@ export default function CustomerDashboard() {
   const [loading, setLoading] = useState(true);
   const [signatureOpen, setSignatureOpen] = useState(false);
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
+  const [finalCostDialogOpen, setFinalCostDialogOpen] = useState(false);
+  const [selectedRepair, setSelectedRepair] = useState<Repair | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -414,6 +420,20 @@ export default function CustomerDashboard() {
             </div>
           )}
 
+          {/* Final Cost Notifications */}
+          {repairs
+            .filter((r) => r.final_cost && !r.final_cost_accepted_at)
+            .map((repair) => (
+              <NotificationBanner
+                key={repair.id}
+                repair={repair as any}
+                onAccept={() => {
+                  setSelectedRepair(repair);
+                  setFinalCostDialogOpen(true);
+                }}
+              />
+            ))}
+
           {/* Repairs List */}
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-4">Le Mie Riparazioni</h2>
@@ -489,6 +509,15 @@ export default function CustomerDashboard() {
           open={signatureOpen}
           onOpenChange={setSignatureOpen}
           quoteId={selectedQuoteId}
+          onSuccess={fetchCustomerData}
+        />
+      )}
+
+      {selectedRepair && (
+        <FinalCostSignatureDialog
+          open={finalCostDialogOpen}
+          onOpenChange={setFinalCostDialogOpen}
+          repair={selectedRepair as any}
           onSuccess={fetchCustomerData}
         />
       )}

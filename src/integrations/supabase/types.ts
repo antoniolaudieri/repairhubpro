@@ -431,6 +431,8 @@ export type Database = {
           diagnosis: string | null
           estimated_cost: number | null
           final_cost: number | null
+          final_cost_accepted_at: string | null
+          final_cost_signature: string | null
           id: string
           priority: string
           repair_notes: string | null
@@ -449,6 +451,8 @@ export type Database = {
           diagnosis?: string | null
           estimated_cost?: number | null
           final_cost?: number | null
+          final_cost_accepted_at?: string | null
+          final_cost_signature?: string | null
           id?: string
           priority?: string
           repair_notes?: string | null
@@ -467,6 +471,8 @@ export type Database = {
           diagnosis?: string | null
           estimated_cost?: number | null
           final_cost?: number | null
+          final_cost_accepted_at?: string | null
+          final_cost_signature?: string | null
           id?: string
           priority?: string
           repair_notes?: string | null
