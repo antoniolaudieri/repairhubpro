@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ import {
 
 export default function CustomerHome() {
   const navigate = useNavigate();
+  const { user, isTechnician, isAdmin } = useAuth();
   const [bookingOpen, setBookingOpen] = useState(false);
   const [trackingOpen, setTrackingOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -229,9 +231,19 @@ export default function CustomerHome() {
             <span className="font-bold text-xl text-foreground">TechRepair</span>
           </motion.div>
           <div className="flex gap-3">
-            <Button onClick={() => navigate("/auth")} variant="ghost" size="sm">
-              Accedi
-            </Button>
+            {user ? (
+              <Button 
+                onClick={() => navigate(isTechnician || isAdmin ? "/dashboard" : "/")} 
+                variant="ghost" 
+                size="sm"
+              >
+                {isTechnician || isAdmin ? "Dashboard" : "Profilo"}
+              </Button>
+            ) : (
+              <Button onClick={() => navigate("/auth")} variant="ghost" size="sm">
+                Accedi
+              </Button>
+            )}
             <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
               <DialogTrigger asChild>
                 <Button size="sm">
