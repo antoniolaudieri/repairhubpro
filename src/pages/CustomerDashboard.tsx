@@ -460,7 +460,11 @@ export default function CustomerDashboard() {
                 {repairs.map((repair) => {
                   const statusInfo = getStatusBadge(repair.status);
                   return (
-                    <Card key={repair.id} className="p-6">
+                    <Card 
+                      key={repair.id} 
+                      className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
+                      onClick={() => navigate(`/customer-repairs/${repair.id}`)}
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex items-start gap-4 flex-1">
                           <div className={`p-3 rounded-lg bg-muted ${statusInfo.color}`}>

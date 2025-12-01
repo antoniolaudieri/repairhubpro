@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import TechnicianLayout from "./layouts/TechnicianLayout";
 import CustomerHome from "./pages/CustomerHome";
 import CustomerDashboard from "./pages/CustomerDashboard";
+import CustomerRepairDetail from "./pages/CustomerRepairDetail";
 import SignatureHistory from "./pages/SignatureHistory";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
@@ -48,6 +49,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <SignatureHistory />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/customer-repairs/:id"
+              element={
+                <ProtectedRoute>
+                  <CustomerRepairDetail />
                 </ProtectedRoute>
               }
             />
