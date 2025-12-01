@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { ArrowLeft, Camera, Sparkles } from "lucide-react";
 import { PhotoUpload } from "@/components/repair/PhotoUpload";
+import { DeviceInfoCard } from "@/components/repair/DeviceInfoCard";
 
 const NewRepair = () => {
   const navigate = useNavigate();
@@ -17,6 +18,8 @@ const NewRepair = () => {
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [detectedDevice, setDetectedDevice] = useState<any>(null);
+  const [lookingUpDetails, setLookingUpDetails] = useState(false);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -57,20 +60,61 @@ const NewRepair = () => {
       reader.onload = async () => {
         const base64Image = reader.result as string;
         
-        const { data, error } = await supabase.functions.invoke("analyze-device", {
+        // Step 1: Analyze device from photo
+        const { data: analyzeData, error: analyzeError } = await supabase.functions.invoke("analyze-device", {
           body: { image: base64Image },
         });
 
-        if (error) throw error;
+        if (analyzeError) throw analyzeError;
 
-        if (data?.device_info) {
+        if (analyzeData?.device_info) {
+          const deviceInfo = analyzeData.device_info;
+          
+          // Update form with basic info
           setDeviceData((prev) => ({
             ...prev,
-            device_type: data.device_info.type || prev.device_type,
-            brand: data.device_info.brand || prev.brand,
-            model: data.device_info.model || prev.model,
+            device_type: deviceInfo.type || prev.device_type,
+            brand: deviceInfo.brand || prev.brand,
+            model: deviceInfo.model || prev.model,
+            imei: deviceInfo.imei || prev.imei,
+            serial_number: deviceInfo.serial || prev.serial_number,
           }));
-          toast.success("Dispositivo riconosciuto con IA!");
+
+          toast.success("Dispositivo riconosciuto! Recupero dettagli...");
+
+          // Step 2: Lookup detailed information
+          if (deviceInfo.brand && deviceInfo.model && deviceInfo.brand !== "unknown" && deviceInfo.model !== "unknown") {
+            setLookingUpDetails(true);
+            try {
+              const { data: lookupData, error: lookupError } = await supabase.functions.invoke("lookup-device", {
+                body: { 
+                  brand: deviceInfo.brand, 
+                  model: deviceInfo.model 
+                },
+              });
+
+              if (!lookupError && lookupData?.device_info) {
+                // Combine all information
+                setDetectedDevice({
+                  ...deviceInfo,
+                  ...lookupData.device_info,
+                });
+                toast.success("Dettagli dispositivo recuperati!");
+              } else {
+                // Just show basic info if lookup fails
+                setDetectedDevice(deviceInfo);
+              }
+            } catch (lookupErr) {
+              console.error("Lookup error:", lookupErr);
+              // Show basic info even if lookup fails
+              setDetectedDevice(deviceInfo);
+            } finally {
+              setLookingUpDetails(false);
+            }
+          } else {
+            // Show basic info if brand/model unknown
+            setDetectedDevice(deviceInfo);
+          }
         }
       };
     } catch (error: any) {
@@ -79,6 +123,22 @@ const NewRepair = () => {
     } finally {
       setAiAnalyzing(false);
     }
+  };
+
+  const handleDeviceConfirm = (updatedInfo: any) => {
+    // Update form data with confirmed info
+    setDeviceData((prev) => ({
+      ...prev,
+      imei: updatedInfo.imei || prev.imei,
+      serial_number: updatedInfo.serial || prev.serial_number,
+    }));
+    toast.success("Informazioni dispositivo confermate!");
+  };
+
+  const handleDeviceEdit = () => {
+    setDetectedDevice(null);
+    setPhotoFile(null);
+    setPhotoPreview("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -163,20 +223,35 @@ const NewRepair = () => {
             {/* Photo Upload Section */}
             <div className="space-y-4">
               <Label className="text-lg font-semibold">Foto Dispositivo</Label>
-              <PhotoUpload onPhotoUpload={handlePhotoUpload} />
               
-              {photoPreview && (
-                <div className="mt-4">
-                  <Button
-                    type="button"
-                    onClick={analyzeDeviceWithAI}
-                    disabled={aiAnalyzing}
-                    className="bg-gradient-primary"
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    {aiAnalyzing ? "Analisi in corso..." : "Riconosci con IA"}
-                  </Button>
-                </div>
+              {!detectedDevice ? (
+                <>
+                  <PhotoUpload onPhotoUpload={handlePhotoUpload} />
+                  
+                  {photoPreview && (
+                    <div className="mt-4">
+                      <Button
+                        type="button"
+                        onClick={analyzeDeviceWithAI}
+                        disabled={aiAnalyzing || lookingUpDetails}
+                        className="bg-gradient-primary"
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {aiAnalyzing 
+                          ? "Analisi foto in corso..." 
+                          : lookingUpDetails 
+                          ? "Recupero dettagli..." 
+                          : "Riconosci con IA"}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <DeviceInfoCard
+                  deviceInfo={detectedDevice}
+                  onConfirm={handleDeviceConfirm}
+                  onEdit={handleDeviceEdit}
+                />
               )}
             </div>
 
