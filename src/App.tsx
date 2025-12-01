@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import TechnicianLayout from "./layouts/TechnicianLayout";
 import CustomerHome from "./pages/CustomerHome";
+import CustomerDashboard from "./pages/CustomerDashboard";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import NewRepair from "./pages/NewRepair";
@@ -32,6 +33,14 @@ const App = () => (
           <Routes>
             <Route path="/" element={<CustomerHome />} />
             <Route path="/auth" element={<Auth />} />
+            <Route
+              path="/customer-dashboard"
+              element={
+                <ProtectedRoute>
+                  <CustomerDashboard />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/dashboard"
               element={
