@@ -13,10 +13,16 @@ const Auth = () => {
   const navigate = useNavigate();
   const { user, signIn, signUp, isTechnician, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  
+  // Stati per il form cliente
+  const [customerEmail, setCustomerEmail] = useState("");
+  const [customerPassword, setCustomerPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+  
+  // Stati per il form tecnico
+  const [techEmail, setTechEmail] = useState("");
+  const [techPassword, setTechPassword] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -29,12 +35,27 @@ const Auth = () => {
     }
   }, [user, isTechnician, isAdmin, navigate]);
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleCustomerSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(customerEmail, customerPassword);
+      if (error) throw error;
+      toast.success("Accesso effettuato con successo");
+    } catch (error: any) {
+      toast.error(error.message || "Errore durante l'accesso");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTechSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { error } = await signIn(techEmail, techPassword);
       if (error) throw error;
       toast.success("Accesso effettuato con successo");
     } catch (error: any) {
@@ -49,7 +70,7 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await signUp(email, password, fullName, phone);
+      const { error } = await signUp(customerEmail, customerPassword, fullName, phone);
       if (error) throw error;
       toast.success("Registrazione completata! Verifica la tua email.");
     } catch (error: any) {
@@ -92,15 +113,15 @@ const Auth = () => {
               </TabsList>
 
               <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
+                <form onSubmit={handleCustomerSignIn} className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="customer-email">Email</Label>
                     <Input
                       id="customer-email"
                       type="email"
                       placeholder="tua@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
                       required
                     />
                   </div>
@@ -110,8 +131,8 @@ const Auth = () => {
                       id="customer-password"
                       type="password"
                       placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={customerPassword}
+                      onChange={(e) => setCustomerPassword(e.target.value)}
                       required
                     />
                   </div>
@@ -155,8 +176,8 @@ const Auth = () => {
                       id="signup-email"
                       type="email"
                       placeholder="tua@email.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      value={customerEmail}
+                      onChange={(e) => setCustomerEmail(e.target.value)}
                       required
                     />
                   </div>
@@ -166,8 +187,8 @@ const Auth = () => {
                       id="signup-password"
                       type="password"
                       placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      value={customerPassword}
+                      onChange={(e) => setCustomerPassword(e.target.value)}
                       required
                       minLength={6}
                     />
@@ -196,15 +217,15 @@ const Auth = () => {
               </p>
             </div>
 
-            <form onSubmit={handleSignIn} className="space-y-4">
+            <form onSubmit={handleTechSignIn} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="tech-email">Email Aziendale</Label>
                 <Input
                   id="tech-email"
                   type="email"
                   placeholder="tecnico@techrepair.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={techEmail}
+                  onChange={(e) => setTechEmail(e.target.value)}
                   required
                 />
               </div>
@@ -214,8 +235,8 @@ const Auth = () => {
                   id="tech-password"
                   type="password"
                   placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={techPassword}
+                  onChange={(e) => setTechPassword(e.target.value)}
                   required
                 />
               </div>
