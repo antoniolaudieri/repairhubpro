@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Mail, Phone, MapPin, Edit, Smartphone } from "lucide-react";
+import { ArrowLeft, Mail, Phone, MapPin, Edit, Smartphone, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { CustomerStats } from "@/components/customers/CustomerStats";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
+import { QuoteDialog } from "@/components/quotes/QuoteDialog";
 import {
   Table,
   TableBody,
@@ -51,6 +52,7 @@ export default function CustomerDetail() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
 
   const loadCustomerData = async () => {
     if (!id) return;
@@ -146,20 +148,28 @@ export default function CustomerDetail() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/customers")}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">{customer.name}</h1>
-            <p className="text-muted-foreground">Cliente dal {format(new Date(customer.created_at), "dd MMMM yyyy", { locale: it })}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">{customer.name}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Cliente dal {format(new Date(customer.created_at), "dd MMMM yyyy", { locale: it })}
+            </p>
           </div>
         </div>
-        <Button onClick={() => setEditOpen(true)}>
-          <Edit className="h-4 w-4 mr-2" />
-          Modifica
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setQuoteOpen(true)} variant="default">
+            <FileText className="h-4 w-4 mr-2" />
+            Crea Preventivo
+          </Button>
+          <Button onClick={() => setEditOpen(true)} variant="outline">
+            <Edit className="h-4 w-4 mr-2" />
+            Modifica
+          </Button>
+        </div>
       </div>
 
       <CustomerStats
@@ -266,6 +276,13 @@ export default function CustomerDetail() {
         open={editOpen}
         onOpenChange={setEditOpen}
         customer={customer}
+        onSuccess={loadCustomerData}
+      />
+
+      <QuoteDialog
+        open={quoteOpen}
+        onOpenChange={setQuoteOpen}
+        customerId={id!}
         onSuccess={loadCustomerData}
       />
     </div>

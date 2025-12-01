@@ -6,7 +6,8 @@ import {
   ShoppingCart,
   LogOut,
   Calendar,
-  MessageSquare
+  MessageSquare,
+  FileText
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -32,6 +33,7 @@ const menuItems = [
   { title: "Riparazioni", url: "/repairs", icon: Wrench },
   { title: "Prenotazioni", url: "/appointments", icon: Calendar },
   { title: "Clienti", url: "/customers", icon: Users },
+  { title: "Preventivi", url: "/quotes", icon: FileText },
   { title: "Magazzino", url: "/inventory", icon: Package },
   { title: "Ordini", url: "/orders", icon: ShoppingCart },
   { title: "Feedback", url: "/feedback", icon: MessageSquare },

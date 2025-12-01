@@ -21,8 +21,14 @@ import {
   LogOut,
   Home,
   Package,
+  FileText,
+  PenTool,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
+import { SignatureDialog } from "@/components/quotes/SignatureDialog";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
 interface Repair {
   id: string;
@@ -39,11 +45,32 @@ interface Repair {
   };
 }
 
+interface Quote {
+  id: string;
+  device_type: string;
+  device_brand: string | null;
+  device_model: string | null;
+  issue_description: string;
+  diagnosis: string | null;
+  items: any;
+  labor_cost: number;
+  parts_cost: number;
+  total_cost: number;
+  status: string;
+  notes: string | null;
+  valid_until: string | null;
+  signed_at: string | null;
+  created_at: string;
+}
+
 export default function CustomerDashboard() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [repairs, setRepairs] = useState<Repair[]>([]);
+  const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [signatureOpen, setSignatureOpen] = useState(false);
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -70,6 +97,15 @@ export default function CustomerDashboard() {
         setLoading(false);
         return;
       }
+
+      // Carica preventivi
+      const { data: quotesData } = await supabase
+        .from("quotes")
+        .select("*")
+        .eq("customer_id", customerData.id)
+        .order("created_at", { ascending: false });
+
+      setQuotes((quotesData as any) || []);
 
       // Trova i dispositivi del cliente
       const { data: devices } = await supabase
@@ -260,6 +296,124 @@ export default function CustomerDashboard() {
             </Card>
           </div>
 
+          {/* Quotes Section */}
+          {quotes.length > 0 && (
+            <div>
+              <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
+                <FileText className="h-6 w-6" />
+                Preventivi
+              </h2>
+              <div className="space-y-4">
+                {quotes.map((quote) => {
+                  const items = JSON.parse(quote.items || '[]');
+                  const isPending = quote.status === 'pending' && !quote.signed_at;
+                  const isExpired = quote.valid_until && new Date(quote.valid_until) < new Date();
+                  
+                  return (
+                    <Card key={quote.id} className={`p-6 ${isPending && !isExpired ? 'border-primary/50 shadow-lg' : ''}`}>
+                      <div className="space-y-4">
+                        {/* Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <h3 className="font-semibold text-xl">
+                                {quote.device_type} {quote.device_brand} {quote.device_model}
+                              </h3>
+                              {quote.signed_at ? (
+                                <Badge className="bg-gradient-success text-white">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Firmato
+                                </Badge>
+                              ) : quote.status === 'rejected' ? (
+                                <Badge variant="destructive">Rifiutato</Badge>
+                              ) : (
+                                <Badge variant="secondary">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  In Attesa
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-muted-foreground mb-2">{quote.issue_description}</p>
+                            {quote.diagnosis && (
+                              <p className="text-sm text-muted-foreground">
+                                <span className="font-medium">Diagnosi:</span> {quote.diagnosis}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Creato: {format(new Date(quote.created_at), "dd MMM yyyy", { locale: it })}
+                            </p>
+                            {quote.valid_until && (
+                              <p className="text-xs text-muted-foreground">
+                                Valido fino: {format(new Date(quote.valid_until), "dd MMM yyyy", { locale: it })}
+                                {isExpired && <span className="text-destructive ml-2">(Scaduto)</span>}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="text-right">
+                            <p className="text-3xl font-bold text-primary">
+                              € {quote.total_cost.toFixed(2)}
+                            </p>
+                            {quote.signed_at && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Firmato: {format(new Date(quote.signed_at), "dd/MM/yyyy HH:mm", { locale: it })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Items breakdown */}
+                        {items.length > 0 && (
+                          <div className="border-t pt-4 space-y-2">
+                            <p className="font-medium text-sm">Dettaglio Costi:</p>
+                            <div className="space-y-1">
+                              {items.map((item: any, idx: number) => (
+                                <div key={idx} className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">
+                                    {item.description} ({item.quantity}x)
+                                  </span>
+                                  <span className="font-medium">€ {item.total.toFixed(2)}</span>
+                                </div>
+                              ))}
+                              <div className="flex justify-between text-sm border-t pt-2">
+                                <span className="text-muted-foreground">Manodopera</span>
+                                <span className="font-medium">€ {quote.labor_cost.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Notes */}
+                        {quote.notes && (
+                          <div className="border-t pt-4">
+                            <p className="text-sm font-medium mb-1">Note:</p>
+                            <p className="text-sm text-muted-foreground">{quote.notes}</p>
+                          </div>
+                        )}
+
+                        {/* Actions */}
+                        {isPending && !isExpired && (
+                          <div className="border-t pt-4">
+                            <Button 
+                              className="w-full sm:w-auto"
+                              onClick={() => {
+                                setSelectedQuoteId(quote.id);
+                                setSignatureOpen(true);
+                              }}
+                            >
+                              <PenTool className="h-4 w-4 mr-2" />
+                              Firma Preventivo
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Repairs List */}
           <div>
             <h2 className="text-2xl font-bold text-foreground mb-4">Le Mie Riparazioni</h2>
@@ -329,6 +483,15 @@ export default function CustomerDashboard() {
           </div>
         </div>
       </main>
+
+      {selectedQuoteId && (
+        <SignatureDialog
+          open={signatureOpen}
+          onOpenChange={setSignatureOpen}
+          quoteId={selectedQuoteId}
+          onSuccess={fetchCustomerData}
+        />
+      )}
     </div>
   );
 }
