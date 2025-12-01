@@ -503,6 +503,7 @@ export type Database = {
           cost: number | null
           created_at: string
           id: string
+          image_url: string | null
           minimum_stock: number | null
           model_compatibility: string | null
           name: string
@@ -519,6 +520,7 @@ export type Database = {
           cost?: number | null
           created_at?: string
           id?: string
+          image_url?: string | null
           minimum_stock?: number | null
           model_compatibility?: string | null
           name: string
@@ -535,6 +537,7 @@ export type Database = {
           cost?: number | null
           created_at?: string
           id?: string
+          image_url?: string | null
           minimum_stock?: number | null
           model_compatibility?: string | null
           name?: string
