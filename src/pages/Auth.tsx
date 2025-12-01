@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,40 +11,31 @@ import { Wrench } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const { user, signIn, signUp, isTechnician, isAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
+    if (user) {
+      // Redirect technicians and admins to dashboard, customers to home
+      if (isTechnician || isAdmin) {
         navigate("/dashboard");
+      } else {
+        navigate("/");
       }
-    });
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        navigate("/dashboard");
-      }
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [navigate]);
+    }
+  }, [user, isTechnician, isAdmin, navigate]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error } = await signIn(email, password);
       if (error) throw error;
-
       toast.success("Accesso effettuato con successo");
     } catch (error: any) {
       toast.error(error.message || "Errore durante l'accesso");
@@ -58,17 +49,9 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-        },
-      });
-
+      const { error } = await signUp(email, password, fullName, phone);
       if (error) throw error;
-
-      toast.success("Registrazione completata! Controlla la tua email per confermare l'account.");
+      toast.success("Registrazione completata! Verifica la tua email.");
     } catch (error: any) {
       toast.error(error.message || "Errore durante la registrazione");
     } finally {
@@ -83,7 +66,7 @@ const Auth = () => {
           <div className="bg-primary text-primary-foreground p-4 rounded-full mb-4">
             <Wrench className="h-8 w-8" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">RepairShop CRM</h1>
+          <h1 className="text-2xl font-bold text-foreground">TechRepair CRM</h1>
           <p className="text-muted-foreground text-center mt-2">
             Sistema di gestione riparazioni
           </p>
@@ -121,7 +104,7 @@ const Auth = () => {
               </div>
               <Button
                 type="submit"
-                className="w-full bg-primary hover:bg-primary-hover"
+                className="w-full"
                 disabled={loading}
               >
                 {loading ? "Accesso..." : "Accedi"}
@@ -131,6 +114,28 @@ const Auth = () => {
 
           <TabsContent value="signup">
             <form onSubmit={handleSignUp} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-name">Nome Completo</Label>
+                <Input
+                  id="signup-name"
+                  type="text"
+                  placeholder="Mario Rossi"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-phone">Telefono</Label>
+                <Input
+                  id="signup-phone"
+                  type="tel"
+                  placeholder="+39 123 456 7890"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  required
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-email">Email</Label>
                 <Input
@@ -151,14 +156,15 @@ const Auth = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
                 />
               </div>
               <Button
                 type="submit"
-                className="w-full bg-primary hover:bg-primary-hover"
+                className="w-full"
                 disabled={loading}
               >
-                {loading ? "Registrazione..." : "Registrati"}
+                {loading ? "Registrazione..." : "Registrati come Cliente"}
               </Button>
             </form>
           </TabsContent>
