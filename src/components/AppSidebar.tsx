@@ -55,50 +55,61 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel className={isCollapsed ? "hidden" : ""}>
-            TechRepair CRM
-          </SidebarGroupLabel>
+    <Sidebar collapsible="icon" className="border-r-0">
+      <div className="h-full bg-sidebar text-sidebar-foreground">
+        <SidebarContent className="bg-sidebar">
+          <SidebarGroup className="pt-4">
+            <SidebarGroupLabel className={isCollapsed ? "hidden" : "text-sidebar-foreground/70 px-3 mb-2 text-xs font-semibold uppercase tracking-wider"}>
+              TechRepair CRM
+            </SidebarGroupLabel>
 
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end
-                      className="hover:bg-muted/50"
-                      activeClassName="bg-muted text-primary font-medium"
-                    >
-                      <item.icon className="h-4 w-4" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                {menuItems.map((item) => {
+                  const isActive = currentPath === item.url;
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton asChild className="group">
+                        <NavLink
+                          to={item.url}
+                          end
+                          className={`
+                            transition-all duration-200 rounded-lg
+                            ${isActive 
+                              ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-md' 
+                              : 'hover:bg-sidebar-accent/10 text-sidebar-foreground/80 hover:text-sidebar-foreground'
+                            }
+                          `}
+                          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                        >
+                          <item.icon className={`h-5 w-5 ${isActive ? 'text-sidebar-accent-foreground' : ''}`} />
+                          {!isCollapsed && <span className="font-medium">{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
 
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild>
-              <button
-                onClick={handleSignOut}
-                className="w-full hover:bg-destructive/10 hover:text-destructive"
-              >
-                <LogOut className="h-4 w-4" />
-                {!isCollapsed && <span>Esci</span>}
-              </button>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
+        <SidebarFooter className="bg-sidebar border-t border-sidebar-border mt-auto">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild>
+                <button
+                  onClick={handleSignOut}
+                  className="w-full hover:bg-destructive/20 hover:text-destructive text-sidebar-foreground/80 transition-colors rounded-lg"
+                >
+                  <LogOut className="h-5 w-5" />
+                  {!isCollapsed && <span className="font-medium">Esci</span>}
+                </button>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </div>
     </Sidebar>
   );
 }

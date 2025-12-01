@@ -89,103 +89,163 @@ export default function Customers() {
   }, [searchQuery, customers]);
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Clienti</h1>
-          <p className="text-muted-foreground">Gestisci la tua base clienti</p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nuovo Cliente
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista Clienti</CardTitle>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cerca per nome, email o telefono..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Clienti</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Gestisci la tua base clienti</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto shadow-md">
+            <Plus className="h-4 w-4 mr-2" />
+            Nuovo Cliente
+          </Button>
+        </div>
+
+        <Card className="shadow-card hover:shadow-card-hover transition-shadow border-border/50">
+          <CardHeader className="space-y-4">
+            <CardTitle className="text-xl lg:text-2xl">Lista Clienti</CardTitle>
+            <div className="relative">
+              <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cerca per nome, email o telefono..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-11 bg-background/50"
+              />
             </div>
-          ) : filteredCustomers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {searchQuery ? "Nessun cliente trovato" : "Nessun cliente registrato"}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Contatti</TableHead>
-                  <TableHead>Riparazioni</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{customer.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Cliente dal {new Date(customer.created_at).toLocaleDateString("it-IT")}
-                        </p>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
+              </div>
+            ) : filteredCustomers.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {searchQuery ? "Nessun cliente trovato" : "Nessun cliente registrato"}
+              </div>
+            ) : (
+              <>
+                {/* Desktop Table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="font-semibold">Nome</TableHead>
+                        <TableHead className="font-semibold">Contatti</TableHead>
+                        <TableHead className="font-semibold">Riparazioni</TableHead>
+                        <TableHead className="text-right font-semibold">Azioni</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredCustomers.map((customer) => (
+                        <TableRow key={customer.id} className="group hover:bg-muted/50">
+                          <TableCell>
+                            <div>
+                              <p className="font-medium text-foreground">{customer.name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Cliente dal {new Date(customer.created_at).toLocaleDateString("it-IT")}
+                              </p>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              {customer.email && (
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="text-foreground">{customer.email}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center gap-2 text-sm">
+                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-foreground">{customer.phone}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="font-medium">
+                              {repairCounts[customer.id] || 0} riparazioni
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/customers/${customer.id}`)}
+                              className="hover:bg-primary/10 hover:text-primary"
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Dettagli
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Cards */}
+                <div className="md:hidden space-y-3">
+                  {filteredCustomers.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="p-4 rounded-xl border bg-gradient-card hover:shadow-md transition-all cursor-pointer"
+                      onClick={() => navigate(`/customers/${customer.id}`)}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-foreground mb-1">{customer.name}</h3>
+                          <p className="text-xs text-muted-foreground">
+                            Cliente dal {new Date(customer.created_at).toLocaleDateString("it-IT")}
+                          </p>
+                        </div>
+                        <Badge variant="secondary" className="font-medium text-xs">
+                          {repairCounts[customer.id] || 0}
+                        </Badge>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
+                      
+                      <div className="space-y-2">
                         {customer.email && (
                           <div className="flex items-center gap-2 text-sm">
-                            <Mail className="h-3 w-3 text-muted-foreground" />
-                            <span>{customer.email}</span>
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                            <span className="text-foreground truncate">{customer.email}</span>
                           </div>
                         )}
                         <div className="flex items-center gap-2 text-sm">
-                          <Phone className="h-3 w-3 text-muted-foreground" />
-                          <span>{customer.phone}</span>
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-foreground">{customer.phone}</span>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {repairCounts[customer.id] || 0} riparazioni
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => navigate(`/customers/${customer.id}`)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        Dettagli
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
 
-      <CustomerDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSuccess={loadCustomers}
-      />
+                      <div className="mt-3 pt-3 border-t flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-primary hover:bg-primary/10"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/customers/${customer.id}`);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Dettagli
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <CustomerDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          onSuccess={loadCustomers}
+        />
+      </div>
     </div>
   );
 }
