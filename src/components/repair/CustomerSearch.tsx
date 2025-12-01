@@ -25,6 +25,7 @@ export const CustomerSearch = ({ onSelectCustomer, onCreateNew }: CustomerSearch
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
     const searchCustomers = async () => {
@@ -57,75 +58,149 @@ export const CustomerSearch = ({ onSelectCustomer, onCreateNew }: CustomerSearch
   }, [searchTerm]);
 
   const handleSelectCustomer = (customer: Customer) => {
+    setSelectedCustomer(customer);
     onSelectCustomer(customer);
     setSearchTerm(customer.name);
     setShowSuggestions(false);
+    toast.success(`Cliente selezionato: ${customer.name}`);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedCustomer(null);
+    onSelectCustomer(null);
+    setSearchTerm("");
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="customer-search">Cerca Cliente Esistente</Label>
-        <div className="relative">
-          <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            id="customer-search"
-            placeholder="Nome, telefono o email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onFocus={() => customers.length > 0 && setShowSuggestions(true)}
-            className="pl-9"
-          />
-          
-          {showSuggestions && customers.length > 0 && (
-            <Card className="absolute z-10 w-full mt-1 p-2 max-h-60 overflow-y-auto">
-              {customers.map((customer) => (
-                <button
-                  key={customer.id}
-                  onClick={() => handleSelectCustomer(customer)}
-                  className="w-full text-left p-3 hover:bg-accent rounded-md transition-colors"
-                >
-                  <div className="font-medium">{customer.name}</div>
-                  <div className="flex gap-3 text-sm text-muted-foreground mt-1">
-                    <span className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      {customer.phone}
-                    </span>
-                    {customer.email && (
-                      <span className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {customer.email}
-                      </span>
-                    )}
+    <div className="space-y-6">
+      {selectedCustomer ? (
+        <Card className="p-4 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
+          <div className="flex items-start justify-between">
+            <div className="space-y-3 flex-1">
+              <div className="flex items-center gap-2">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-lg font-bold text-primary">
+                    {selectedCustomer.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">{selectedCustomer.name}</p>
+                  <p className="text-xs text-muted-foreground">Cliente Selezionato</p>
+                </div>
+              </div>
+              <div className="space-y-1 text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Phone className="h-3.5 w-3.5" />
+                  <span>{selectedCustomer.phone}</span>
+                </div>
+                {selectedCustomer.email && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5" />
+                    <span>{selectedCustomer.email}</span>
                   </div>
-                </button>
-              ))}
-            </Card>
-          )}
-        </div>
-        {loading && (
-          <p className="text-sm text-muted-foreground">Ricerca in corso...</p>
-        )}
-      </div>
+                )}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClearSelection}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Cambia
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <>
+          <div className="space-y-2">
+            <Label htmlFor="customer-search" className="text-base font-semibold">
+              Cerca Cliente Esistente
+            </Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                id="customer-search"
+                placeholder="Digita nome, telefono o email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => customers.length > 0 && setShowSuggestions(true)}
+                className="pl-9 h-11"
+              />
+              
+              {showSuggestions && customers.length > 0 && (
+                <div className="absolute z-50 w-full mt-2">
+                  <Card className="p-1 shadow-xl border-border/50 bg-card/95 backdrop-blur-sm">
+                    <div className="max-h-60 overflow-y-auto">
+                      {customers.map((customer) => (
+                        <button
+                          key={customer.id}
+                          type="button"
+                          onClick={() => handleSelectCustomer(customer)}
+                          className="w-full text-left p-3 hover:bg-accent/50 rounded-md transition-all duration-200 group"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                              <span className="text-sm font-bold text-primary">
+                                {customer.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-foreground truncate">{customer.name}</div>
+                              <div className="flex gap-3 text-xs text-muted-foreground mt-0.5">
+                                <span className="flex items-center gap-1">
+                                  <Phone className="h-3 w-3" />
+                                  {customer.phone}
+                                </span>
+                                {customer.email && (
+                                  <span className="flex items-center gap-1 truncate">
+                                    <Mail className="h-3 w-3" />
+                                    {customer.email}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </Card>
+                </div>
+              )}
+            </div>
+            {loading && (
+              <p className="text-sm text-muted-foreground animate-pulse">Ricerca in corso...</p>
+            )}
+            {searchTerm.length >= 2 && customers.length === 0 && !loading && (
+              <p className="text-sm text-muted-foreground">Nessun cliente trovato</p>
+            )}
+          </div>
+        </>
+      )}
 
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-background px-2 text-muted-foreground">oppure</span>
-        </div>
-      </div>
+      {!selectedCustomer && (
+        <>
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-3 text-muted-foreground font-medium">oppure</span>
+            </div>
+          </div>
 
-      <Button
-        type="button"
-        variant="outline"
-        onClick={onCreateNew}
-        className="w-full"
-      >
-        <UserPlus className="mr-2 h-4 w-4" />
-        Crea Nuovo Cliente
-      </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCreateNew}
+            className="w-full h-11 border-dashed border-2 hover:border-primary hover:bg-primary/5 transition-all"
+          >
+            <UserPlus className="mr-2 h-4 w-4" />
+            Crea Nuovo Cliente
+          </Button>
+        </>
+      )}
     </div>
   );
 };
