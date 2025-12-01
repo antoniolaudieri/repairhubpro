@@ -22,7 +22,7 @@ interface DeviceInfo {
     storage?: string;
     display?: string;
     processor?: string;
-    camera?: string;
+    camera?: string | { main?: string; telephoto?: string; ultrawide?: string; front?: string };
   };
   imageUrl?: string;
 }
@@ -147,7 +147,12 @@ export const DeviceInfoCard = ({ deviceInfo, onConfirm, onEdit }: DeviceInfoCard
                 {deviceInfo.specs.camera && (
                   <div className="text-sm">
                     <span className="text-muted-foreground">Camera:</span>
-                    <span className="ml-2 font-medium">{deviceInfo.specs.camera}</span>
+                    <span className="ml-2 font-medium">
+                      {typeof deviceInfo.specs.camera === 'string' 
+                        ? deviceInfo.specs.camera 
+                        : deviceInfo.specs.camera.main || Object.values(deviceInfo.specs.camera).filter(Boolean).join(', ')
+                      }
+                    </span>
                   </div>
                 )}
               </div>
