@@ -12,6 +12,7 @@ import { DeviceFormStep } from "@/components/repair/DeviceFormStep";
 import { NewRepairWizard } from "@/components/repair/NewRepairWizard";
 import { PhotoEditor } from "@/components/repair/PhotoEditor";
 import { Button } from "@/components/ui/button";
+import { IntakeSignatureStep } from "@/components/repair/IntakeSignatureStep";
 
 const NewRepair = () => {
   const navigate = useNavigate();
@@ -26,6 +27,7 @@ const NewRepair = () => {
   const [isNewCustomer, setIsNewCustomer] = useState(false);
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [annotatedPhotoBlob, setAnnotatedPhotoBlob] = useState<Blob | null>(null);
+  const [intakeSignature, setIntakeSignature] = useState<string | null>(null);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -58,6 +60,10 @@ const NewRepair = () => {
     {
       title: "Dettagli Dispositivo",
       description: "Verifica e completa le informazioni del dispositivo",
+    },
+    {
+      title: "Firma Ritiro",
+      description: "Il cliente firma per accettare i termini del servizio",
     },
     {
       title: "Riepilogo",
@@ -216,6 +222,8 @@ const NewRepair = () => {
       case 2:
         return Boolean(deviceData.device_type && deviceData.brand && deviceData.model && deviceData.reported_issue);
       case 3:
+        return intakeSignature !== null;
+      case 4:
         return true;
       default:
         return false;
@@ -298,13 +306,15 @@ const NewRepair = () => {
 
       if (deviceError) throw deviceError;
 
-      // Create repair entry
+      // Create repair entry with intake signature
       const { error: repairError } = await supabase
         .from("repairs")
         .insert({
           device_id: device.id,
           status: "pending",
           priority: "normal",
+          intake_signature: intakeSignature,
+          intake_signature_date: new Date().toISOString(),
         });
 
       if (repairError) throw repairError;
@@ -403,6 +413,14 @@ const NewRepair = () => {
         );
       
       case 3:
+        return (
+          <IntakeSignatureStep
+            onSignatureComplete={setIntakeSignature}
+            currentSignature={intakeSignature}
+          />
+        );
+      
+      case 4:
         return (
           <div className="space-y-6">
             <div className="space-y-4">

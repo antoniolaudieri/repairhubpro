@@ -434,6 +434,8 @@ export type Database = {
           final_cost_accepted_at: string | null
           final_cost_signature: string | null
           id: string
+          intake_signature: string | null
+          intake_signature_date: string | null
           priority: string
           repair_notes: string | null
           started_at: string | null
@@ -454,6 +456,8 @@ export type Database = {
           final_cost_accepted_at?: string | null
           final_cost_signature?: string | null
           id?: string
+          intake_signature?: string | null
+          intake_signature_date?: string | null
           priority?: string
           repair_notes?: string | null
           started_at?: string | null
@@ -474,6 +478,8 @@ export type Database = {
           final_cost_accepted_at?: string | null
           final_cost_signature?: string | null
           id?: string
+          intake_signature?: string | null
+          intake_signature_date?: string | null
           priority?: string
           repair_notes?: string | null
           started_at?: string | null
