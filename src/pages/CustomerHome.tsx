@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ import {
   Shield,
   Zap,
   Award,
+  Sparkles,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -207,24 +209,51 @@ export default function CustomerHome() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-primary/10">
-      {/* Hero Section */}
-      <nav className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Animated Background Gradients */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl animate-float" />
+        <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "1s" }} />
+        <div className="absolute bottom-0 left-1/2 w-[600px] h-[600px] bg-info/10 rounded-full blur-3xl animate-float" style={{ animationDelay: "2s" }} />
+      </div>
+
+      {/* Navigation */}
+      <motion.nav
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="border-b bg-background/80 backdrop-blur-xl sticky top-0 z-50 shadow-md"
+      >
         <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Wrench className="h-6 w-6 text-primary" />
-            <span className="font-bold text-xl">TechRepair</span>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate("/auth")} variant="outline">
-              Accedi
-            </Button>
+          <motion.div
+            className="flex items-center gap-2"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: "spring", stiffness: 400 }}
+          >
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            >
+              <Wrench className="h-7 w-7 text-primary" />
+            </motion.div>
+            <span className="font-bold text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              TechRepair
+            </span>
+          </motion.div>
+          <div className="flex gap-3">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button onClick={() => navigate("/auth")} variant="outline" className="shadow-md">
+                Accedi
+              </Button>
+            </motion.div>
             <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
               <DialogTrigger asChild>
-                <Button>
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Prenota Ora
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button className="shadow-glow">
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Prenota Ora
+                  </Button>
+                </motion.div>
               </DialogTrigger>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -358,37 +387,81 @@ export default function CustomerHome() {
             </Dialog>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
-      {/* Hero */}
+      {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <div className="inline-block bg-primary/10 backdrop-blur-sm p-6 rounded-3xl mb-6 animate-bounce">
-            <Wrench className="h-20 w-20 text-primary" />
-          </div>
-          <h1 className="text-6xl font-bold text-foreground mb-6 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-            TechRepair CRM
-          </h1>
-          <p className="text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto">
+        <div className="text-center mb-20">
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ duration: 0.8, type: "spring", stiffness: 100 }}
+            className="inline-block relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent rounded-3xl blur-2xl opacity-50 animate-glow-pulse" />
+            <div className="relative bg-gradient-to-br from-primary/20 to-accent/20 backdrop-blur-sm p-8 rounded-3xl shadow-glow-lg">
+              <Wrench className="h-24 w-24 text-primary" />
+            </div>
+          </motion.div>
+
+          <motion.h1
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="text-7xl font-bold mt-8 mb-6"
+          >
+            <span className="bg-gradient-to-r from-primary via-info to-accent bg-clip-text text-transparent animate-fade-in">
+              TechRepair CRM
+            </span>
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="text-2xl text-muted-foreground mb-4 max-w-3xl mx-auto"
+          >
             Riparazioni professionali per smartphone, tablet, PC e laptop.
-            <br />
-            <span className="text-primary font-semibold">Veloce. Affidabile. Garantito.</span>
-          </p>
-          <div className="flex gap-4 justify-center flex-wrap">
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="flex items-center justify-center gap-2 mb-10"
+          >
+            <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+            <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Veloce. Affidabile. Garantito.
+            </span>
+            <Sparkles className="h-6 w-6 text-accent animate-pulse" />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+            className="flex gap-4 justify-center flex-wrap"
+          >
             <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" className="text-lg px-8 py-6">
-                  <Calendar className="mr-2 h-5 w-5" />
-                  Prenota Riparazione
-                </Button>
+                <motion.div whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}>
+                  <Button size="lg" className="text-lg px-8 py-7 shadow-glow-lg hover:shadow-glow animate-fade-in-up">
+                    <Calendar className="mr-2 h-6 w-6" />
+                    Prenota Riparazione
+                  </Button>
+                </motion.div>
               </DialogTrigger>
             </Dialog>
+
             <Dialog open={trackingOpen} onOpenChange={setTrackingOpen}>
               <DialogTrigger asChild>
-                <Button size="lg" variant="outline" className="text-lg px-8 py-6">
-                  <Clock className="mr-2 h-5 w-5" />
-                  Traccia Riparazione
-                </Button>
+                <motion.div whileHover={{ scale: 1.05, y: -5 }} whileTap={{ scale: 0.95 }}>
+                  <Button size="lg" variant="outline" className="text-lg px-8 py-7 shadow-xl border-2 animate-fade-in-up" style={{ animationDelay: "0.1s" }}>
+                    <Clock className="mr-2 h-6 w-6" />
+                    Traccia Riparazione
+                  </Button>
+                </motion.div>
               </DialogTrigger>
               <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
@@ -447,161 +520,214 @@ export default function CustomerHome() {
                 )}
               </DialogContent>
             </Dialog>
-          </div>
+          </motion.div>
         </div>
 
         {/* Features */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-          <Card className="p-8 hover:shadow-xl transition-shadow">
-            <Shield className="h-12 w-12 mb-4 text-primary" />
-            <h3 className="text-xl font-semibold mb-3">Garanzia 90 Giorni</h3>
-            <p className="text-muted-foreground">
-              Tutte le riparazioni sono coperte da garanzia estesa di 90 giorni sui ricambi e
-              manodopera
-            </p>
-          </Card>
-          <Card className="p-8 hover:shadow-xl transition-shadow">
-            <Zap className="h-12 w-12 mb-4 text-primary" />
-            <h3 className="text-xl font-semibold mb-3">Riparazioni Express</h3>
-            <p className="text-muted-foreground">
-              Riparazioni rapide in giornata per i problemi più comuni. Servizio prioritario
-              disponibile
-            </p>
-          </Card>
-          <Card className="p-8 hover:shadow-xl transition-shadow">
-            <Award className="h-12 w-12 mb-4 text-primary" />
-            <h3 className="text-xl font-semibold mb-3">Tecnici Certificati</h3>
-            <p className="text-muted-foreground">
-              Team di tecnici esperti e certificati con oltre 15 anni di esperienza nel settore
-            </p>
-          </Card>
-        </div>
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, margin: "-100px" }}
+          variants={{
+            hidden: {},
+            visible: {
+              transition: {
+                staggerChildren: 0.2,
+              },
+            },
+          }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20"
+        >
+          {[
+            {
+              icon: Shield,
+              title: "Garanzia 90 Giorni",
+              desc: "Tutte le riparazioni sono coperte da garanzia estesa di 90 giorni sui ricambi e manodopera",
+              color: "text-primary",
+            },
+            {
+              icon: Zap,
+              title: "Riparazioni Express",
+              desc: "Riparazioni rapide in giornata per i problemi più comuni. Servizio prioritario disponibile",
+              color: "text-warning",
+            },
+            {
+              icon: Award,
+              title: "Tecnici Certificati",
+              desc: "Team di tecnici esperti e certificati con oltre 15 anni di esperienza nel settore",
+              color: "text-accent",
+            },
+          ].map((feature, idx) => (
+            <motion.div
+              key={idx}
+              variants={{
+                hidden: { opacity: 0, y: 50 },
+                visible: { opacity: 1, y: 0 },
+              }}
+              whileHover={{ y: -10, scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 300 }}
+            >
+              <Card className="p-8 h-full bg-gradient-card shadow-xl hover:shadow-glow-lg border-2 transition-all duration-300">
+                <motion.div
+                  whileHover={{ rotate: 360, scale: 1.2 }}
+                  transition={{ duration: 0.6 }}
+                >
+                  <feature.icon className={`h-14 w-14 mb-4 ${feature.color}`} />
+                </motion.div>
+                <h3 className="text-2xl font-bold mb-3">{feature.title}</h3>
+                <p className="text-muted-foreground leading-relaxed">{feature.desc}</p>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
 
         {/* Contact & Feedback */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-6">Contattaci</h2>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 text-primary mt-1" />
-                <div>
-                  <p className="font-medium">Indirizzo</p>
-                  <p className="text-muted-foreground">Via Roma 123, 00100 Roma</p>
-                </div>
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.6 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-8"
+        >
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+            <Card className="p-8 h-full shadow-xl hover:shadow-glow border-2">
+              <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-primary to-info bg-clip-text text-transparent">
+                Contattaci
+              </h2>
+              <div className="space-y-6">
+                {[
+                  { icon: MapPin, label: "Indirizzo", value: "Via Roma 123, 00100 Roma" },
+                  { icon: Phone, label: "Telefono", value: "+39 123 456 7890" },
+                  { icon: Mail, label: "Email", value: "info@techrepair.it" },
+                ].map((item, idx) => (
+                  <motion.div
+                    key={idx}
+                    whileHover={{ x: 10 }}
+                    className="flex items-start gap-3 group"
+                  >
+                    <item.icon className="h-6 w-6 text-primary mt-1 group-hover:scale-125 transition-transform" />
+                    <div>
+                      <p className="font-semibold text-lg">{item.label}</p>
+                      <p className="text-muted-foreground">{item.value}</p>
+                    </div>
+                  </motion.div>
+                ))}
+                <motion.div whileHover={{ x: 10 }} className="flex items-start gap-3 group">
+                  <Clock className="h-6 w-6 text-primary mt-1 group-hover:scale-125 transition-transform" />
+                  <div>
+                    <p className="font-semibold text-lg">Orari</p>
+                    <p className="text-muted-foreground">Lun-Ven: 9:00-18:00</p>
+                    <p className="text-muted-foreground">Sab: 9:00-13:00</p>
+                  </div>
+                </motion.div>
               </div>
-              <div className="flex items-start gap-3">
-                <Phone className="h-5 w-5 text-primary mt-1" />
-                <div>
-                  <p className="font-medium">Telefono</p>
-                  <p className="text-muted-foreground">+39 123 456 7890</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Mail className="h-5 w-5 text-primary mt-1" />
-                <div>
-                  <p className="font-medium">Email</p>
-                  <p className="text-muted-foreground">info@techrepair.it</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Clock className="h-5 w-5 text-primary mt-1" />
-                <div>
-                  <p className="font-medium">Orari</p>
-                  <p className="text-muted-foreground">Lun-Ven: 9:00-18:00</p>
-                  <p className="text-muted-foreground">Sab: 9:00-13:00</p>
-                </div>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          </motion.div>
 
-          <Card className="p-8">
-            <h2 className="text-2xl font-bold mb-6">Lascia un Feedback</h2>
-            <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full" size="lg">
-                  <Star className="mr-2 h-5 w-5" />
-                  Scrivi Recensione
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>Lascia il tuo Feedback</DialogTitle>
-                  <DialogDescription>
-                    La tua opinione ci aiuta a migliorare i nostri servizi
-                  </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleFeedback} className="space-y-4">
-                  <div>
-                    <Label>Nome</Label>
-                    <Input
-                      required
-                      value={feedbackData.customer_name}
-                      onChange={(e) =>
-                        setFeedbackData({ ...feedbackData, customer_name: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label>Email</Label>
-                    <Input
-                      type="email"
-                      required
-                      value={feedbackData.customer_email}
-                      onChange={(e) =>
-                        setFeedbackData({ ...feedbackData, customer_email: e.target.value })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <Label>Valutazione</Label>
-                    <Select
-                      value={feedbackData.rating.toString()}
-                      onValueChange={(value) =>
-                        setFeedbackData({ ...feedbackData, rating: parseInt(value) })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="5">⭐⭐⭐⭐⭐ Eccellente</SelectItem>
-                        <SelectItem value="4">⭐⭐⭐⭐ Ottimo</SelectItem>
-                        <SelectItem value="3">⭐⭐⭐ Buono</SelectItem>
-                        <SelectItem value="2">⭐⭐ Sufficiente</SelectItem>
-                        <SelectItem value="1">⭐ Scarso</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Commento</Label>
-                    <Textarea
-                      rows={4}
-                      value={feedbackData.comment}
-                      onChange={(e) =>
-                        setFeedbackData({ ...feedbackData, comment: e.target.value })
-                      }
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Invio..." : "Invia Feedback"}
-                  </Button>
-                </form>
-              </DialogContent>
-            </Dialog>
-            <p className="text-sm text-muted-foreground text-center mt-4">
-              Il tuo feedback è fondamentale per noi!
-            </p>
-          </Card>
-        </div>
+          <motion.div whileHover={{ scale: 1.02 }} transition={{ type: "spring", stiffness: 300 }}>
+            <Card className="p-8 h-full shadow-xl hover:shadow-glow border-2">
+              <h2 className="text-3xl font-bold mb-6 bg-gradient-to-r from-accent to-primary bg-clip-text text-transparent">
+                Lascia un Feedback
+              </h2>
+              <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
+                <DialogTrigger asChild>
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button className="w-full" size="lg">
+                      <Star className="mr-2 h-5 w-5" />
+                      Scrivi Recensione
+                    </Button>
+                  </motion.div>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Lascia il tuo Feedback</DialogTitle>
+                    <DialogDescription>
+                      La tua opinione ci aiuta a migliorare i nostri servizi
+                    </DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleFeedback} className="space-y-4">
+                    <div>
+                      <Label>Nome</Label>
+                      <Input
+                        required
+                        value={feedbackData.customer_name}
+                        onChange={(e) =>
+                          setFeedbackData({ ...feedbackData, customer_name: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        required
+                        value={feedbackData.customer_email}
+                        onChange={(e) =>
+                          setFeedbackData({ ...feedbackData, customer_email: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div>
+                      <Label>Valutazione</Label>
+                      <Select
+                        value={feedbackData.rating.toString()}
+                        onValueChange={(value) =>
+                          setFeedbackData({ ...feedbackData, rating: parseInt(value) })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="5">⭐⭐⭐⭐⭐ Eccellente</SelectItem>
+                          <SelectItem value="4">⭐⭐⭐⭐ Ottimo</SelectItem>
+                          <SelectItem value="3">⭐⭐⭐ Buono</SelectItem>
+                          <SelectItem value="2">⭐⭐ Sufficiente</SelectItem>
+                          <SelectItem value="1">⭐ Scarso</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Commento</Label>
+                      <Textarea
+                        rows={4}
+                        value={feedbackData.comment}
+                        onChange={(e) =>
+                          setFeedbackData({ ...feedbackData, comment: e.target.value })
+                        }
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Invio..." : "Invia Feedback"}
+                    </Button>
+                  </form>
+                </DialogContent>
+              </Dialog>
+              <p className="text-muted-foreground text-center mt-4">
+                Il tuo feedback è fondamentale per noi!
+              </p>
+            </Card>
+          </motion.div>
+        </motion.div>
       </div>
 
       {/* Footer */}
-      <footer className="border-t bg-background/80 backdrop-blur-sm mt-20">
-        <div className="max-w-7xl mx-auto px-4 py-8 text-center text-muted-foreground">
-          <p>© 2024 TechRepair CRM. Tutti i diritti riservati.</p>
-          <p className="text-sm mt-2">Riparazioni professionali dal 2010</p>
+      <motion.footer
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+        className="border-t bg-background/80 backdrop-blur-xl mt-20 shadow-lg"
+      >
+        <div className="max-w-7xl mx-auto px-4 py-8 text-center">
+          <p className="text-muted-foreground font-medium">
+            © 2024 TechRepair CRM. Tutti i diritti riservati.
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Riparazioni professionali dal 2010
+          </p>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   );
 }
