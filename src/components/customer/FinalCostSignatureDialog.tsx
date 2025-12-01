@@ -127,13 +127,13 @@ export function FinalCostSignatureDialog({
               </Button>
             </div>
             
-            <Card className="p-4 bg-card/50 backdrop-blur-sm border-2 border-dashed border-primary/30 hover:border-primary/50 transition-colors">
+            <Card className="p-4 bg-white border-2 border-dashed border-primary/30 hover:border-primary/50 transition-colors">
               <SignatureCanvas
                 ref={sigCanvas}
                 canvasProps={{
-                  className: "w-full h-48 rounded-lg cursor-crosshair",
+                  className: "w-full h-48 rounded-lg cursor-crosshair touch-action-none",
                 }}
-                backgroundColor="#ffffff"
+                backgroundColor="white"
                 penColor="#000000"
               />
             </Card>
