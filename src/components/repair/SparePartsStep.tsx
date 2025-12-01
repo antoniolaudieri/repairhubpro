@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Plus, Trash2, Package } from "lucide-react";
 import { toast } from "sonner";
+import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
 
 interface SparePart {
   id: string;
@@ -15,6 +16,7 @@ interface SparePart {
   selling_price: number | null;
   supplier_code: string | null;
   model_compatibility: string | null;
+  image_url: string | null;
 }
 
 interface SelectedPart {
@@ -140,12 +142,15 @@ export const SparePartsStep = ({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h3 className="text-lg font-semibold">Ricambi Necessari</h3>
-        <p className="text-sm text-muted-foreground">
-          Cerca e seleziona i ricambi necessari per questa riparazione
-          {deviceBrand && ` (Compatibili con ${deviceBrand})`}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-2">
+          <h3 className="text-lg font-semibold">Ricambi Necessari</h3>
+          <p className="text-sm text-muted-foreground">
+            Cerca e seleziona i ricambi necessari per questa riparazione
+            {deviceBrand && ` (Compatibili con ${deviceBrand})`}
+          </p>
+        </div>
+        <AddSparePartDialog onPartAdded={loadSpareParts} />
       </div>
 
       {/* Ricambi Selezionati */}
@@ -239,9 +244,19 @@ export const SparePartsStep = ({
                   key={part.id}
                   className="p-3 hover:bg-accent/5 transition-colors"
                 >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-3">
+                    {part.image_url && (
+                      <img 
+                        src={part.image_url} 
+                        alt={part.name}
+                        className="h-16 w-16 object-contain rounded border bg-background shrink-0"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium">{part.name}</p>
                         {part.brand && (
                           <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
@@ -249,7 +264,7 @@ export const SparePartsStep = ({
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                         <span>{part.category}</span>
                         {part.supplier_code && (
                           <span className="text-xs">
@@ -280,9 +295,10 @@ export const SparePartsStep = ({
                       disabled={selectedParts.some(
                         (p) => p.spare_part_id === part.id
                       )}
+                      className="shrink-0"
                     >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Aggiungi
+                      <Plus className="h-4 w-4 md:mr-1" />
+                      <span className="hidden md:inline">Aggiungi</span>
                     </Button>
                   </div>
                 </div>
