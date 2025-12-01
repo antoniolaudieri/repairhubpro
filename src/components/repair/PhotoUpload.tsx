@@ -48,12 +48,12 @@ export const PhotoUpload = ({ onPhotoUpload }: PhotoUploadProps) => {
       />
 
       {!preview ? (
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <Button
             type="button"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
-            className="flex-1"
+            className="flex-1 h-11"
           >
             <Camera className="mr-2 h-4 w-4" />
             Scatta Foto
@@ -67,7 +67,7 @@ export const PhotoUpload = ({ onPhotoUpload }: PhotoUploadProps) => {
                 fileInputRef.current.click();
               }
             }}
-            className="flex-1"
+            className="flex-1 h-11"
           >
             <Upload className="mr-2 h-4 w-4" />
             Carica File
@@ -78,14 +78,14 @@ export const PhotoUpload = ({ onPhotoUpload }: PhotoUploadProps) => {
           <img
             src={preview}
             alt="Device preview"
-            className="w-full h-64 object-contain rounded-lg border-2 border-border bg-muted"
+            className="w-full h-48 md:h-64 object-contain rounded-lg border-2 border-border bg-muted"
           />
           <Button
             type="button"
             variant="destructive"
             size="icon"
             onClick={handleClear}
-            className="absolute top-2 right-2"
+            className="absolute top-2 right-2 h-9 w-9"
           >
             <X className="h-4 w-4" />
           </Button>

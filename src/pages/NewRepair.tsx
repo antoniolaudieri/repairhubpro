@@ -760,14 +760,14 @@ const NewRepair = () => {
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-mesh">
+    <div className="min-h-screen p-3 md:p-6 bg-gradient-mesh">
       <div className="max-w-5xl mx-auto">
-        <Card className="p-8 shadow-xl border-border/50 bg-card/95 backdrop-blur-sm">
-          <div className="mb-8 text-center">
-            <h1 className="text-4xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent mb-3">
+        <Card className="p-4 md:p-8 shadow-xl border-border/50 bg-card/95 backdrop-blur-sm">
+          <div className="mb-4 md:mb-8 text-center">
+            <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent mb-2 md:mb-3">
               Nuovo Ritiro Dispositivo
             </h1>
-            <p className="text-muted-foreground text-lg">
+            <p className="text-muted-foreground text-sm md:text-lg px-2">
               Segui i passaggi per registrare un nuovo dispositivo in modo rapido e semplice
             </p>
           </div>

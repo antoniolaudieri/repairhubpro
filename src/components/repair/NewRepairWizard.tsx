@@ -36,9 +36,9 @@ export const NewRepairWizard = ({
   const currentStepInfo = steps[currentStep];
 
   return (
-    <div className="space-y-8">
-      {/* Step Indicators */}
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 md:space-y-8">
+      {/* Step Indicators - Desktop */}
+      <div className="hidden md:flex justify-between items-center">
         {steps.map((step, index) => (
           <div key={index} className="flex items-center flex-1">
             <div className="flex flex-col items-center flex-1">
@@ -74,24 +74,43 @@ export const NewRepairWizard = ({
         ))}
       </div>
 
+      {/* Step Indicators - Mobile (Compact) */}
+      <div className="md:hidden flex items-center justify-center gap-2">
+        {steps.map((step, index) => (
+          <div
+            key={index}
+            className={`
+              h-2 rounded-full transition-all duration-300
+              ${
+                index < currentStep
+                  ? "w-8 bg-gradient-to-r from-primary to-primary-glow"
+                  : index === currentStep
+                  ? "w-12 bg-gradient-to-r from-primary to-primary-hover"
+                  : "w-2 bg-muted"
+              }
+            `}
+          />
+        ))}
+      </div>
+
       {/* Progress Bar */}
       <div className="space-y-2">
-        <div className="flex justify-between text-sm font-medium">
+        <div className="flex justify-between text-xs md:text-sm font-medium">
           <span className="text-muted-foreground">Progresso</span>
           <span className="text-primary">{Math.round(progress)}%</span>
         </div>
         <div className="relative">
-          <Progress value={progress} className="h-2.5 bg-muted" />
+          <Progress value={progress} className="h-2 md:h-2.5 bg-muted" />
         </div>
       </div>
 
       {/* Step Title */}
-      <div className="text-center space-y-2 py-4">
+      <div className="text-center space-y-1 md:space-y-2 py-2 md:py-4">
         <motion.h2
           key={currentStep}
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text"
+          className="text-xl md:text-3xl font-bold bg-gradient-to-br from-foreground to-foreground/70 bg-clip-text"
         >
           {currentStepInfo.title}
         </motion.h2>
@@ -100,7 +119,7 @@ export const NewRepairWizard = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="text-muted-foreground"
+          className="text-sm md:text-base text-muted-foreground px-2"
         >
           {currentStepInfo.description}
         </motion.p>
@@ -114,23 +133,23 @@ export const NewRepairWizard = ({
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.3, ease: "easeInOut" }}
-          className="min-h-[450px] p-6 rounded-xl bg-gradient-to-br from-card to-card/50 border border-border/50 shadow-sm"
+          className="min-h-[300px] md:min-h-[450px] p-4 md:p-6 rounded-xl bg-gradient-to-br from-card to-card/50 border border-border/50 shadow-sm"
         >
           {children}
         </motion.div>
       </AnimatePresence>
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between gap-4 pt-6 border-t border-border/50">
+      <div className="flex justify-between gap-3 md:gap-4 pt-4 md:pt-6 border-t border-border/50">
         <Button
           type="button"
           variant="outline"
           onClick={onPrevious}
           disabled={currentStep === 0 || loading}
-          className="h-11 px-6"
+          className="h-10 md:h-11 px-4 md:px-6"
         >
-          <ChevronLeft className="mr-2 h-4 w-4" />
-          Indietro
+          <ChevronLeft className="mr-1 md:mr-2 h-4 w-4" />
+          <span className="hidden sm:inline">Indietro</span>
         </Button>
 
         {currentStep < totalSteps - 1 ? (
@@ -138,24 +157,26 @@ export const NewRepairWizard = ({
             type="button"
             onClick={onNext}
             disabled={!canGoNext || loading}
-            className="h-11 px-8 bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary shadow-md hover:shadow-lg transition-all"
+            className="h-10 md:h-11 px-6 md:px-8 bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary shadow-md hover:shadow-lg transition-all"
           >
-            Avanti
-            <ChevronRight className="ml-2 h-4 w-4" />
+            <span className="hidden sm:inline">Avanti</span>
+            <span className="sm:hidden">Avanti</span>
+            <ChevronRight className="ml-1 md:ml-2 h-4 w-4" />
           </Button>
         ) : (
           <Button
             type="button"
             onClick={onSubmit}
             disabled={!canGoNext || loading}
-            className="h-11 px-8 bg-gradient-to-r from-accent to-accent-glow hover:from-accent-glow hover:to-accent shadow-md hover:shadow-lg transition-all"
+            className="h-10 md:h-11 px-4 md:px-8 bg-gradient-to-r from-accent to-accent-glow hover:from-accent-glow hover:to-accent shadow-md hover:shadow-lg transition-all text-sm md:text-base"
           >
             {loading ? (
-              <>
-                <span className="animate-pulse">Salvataggio...</span>
-              </>
+              <span className="animate-pulse">Salvataggio...</span>
             ) : (
-              "Completa Registrazione"
+              <>
+                <span className="hidden sm:inline">Completa Registrazione</span>
+                <span className="sm:hidden">Completa</span>
+              </>
             )}
           </Button>
         )}
