@@ -239,6 +239,25 @@ const NewRepair = () => {
       let customerId = existingCustomerId;
 
       if (!existingCustomerId) {
+        // First create customer account if email is provided
+        if (customerData.email) {
+          const { error: accountError } = await supabase.functions.invoke("create-customer-account", {
+            body: {
+              email: customerData.email,
+              fullName: customerData.name,
+              phone: customerData.phone,
+            },
+          });
+
+          if (accountError) {
+            console.error("Account creation error:", accountError);
+            toast.error("Errore nella creazione dell'account: " + accountError.message);
+          } else {
+            toast.success("Account cliente creato con password: 12345678");
+          }
+        }
+
+        // Then create customer record
         const { data: customer, error: customerError } = await supabase
           .from("customers")
           .insert(customerData)

@@ -45,6 +45,25 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
         if (error) throw error;
         toast.success("Cliente aggiornato con successo");
       } else {
+        // First create customer account if email is provided
+        if (formData.email) {
+          const { error: accountError } = await supabase.functions.invoke("create-customer-account", {
+            body: {
+              email: formData.email,
+              fullName: formData.name,
+              phone: formData.phone,
+            },
+          });
+
+          if (accountError) {
+            console.error("Account creation error:", accountError);
+            toast.error("Errore nella creazione dell'account: " + accountError.message);
+          } else {
+            toast.success("Account cliente creato con password: 12345678");
+          }
+        }
+
+        // Then create customer record
         const { error } = await supabase
           .from("customers")
           .insert([formData]);
