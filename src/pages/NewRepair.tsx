@@ -10,6 +10,7 @@ import { CustomerSearch } from "@/components/repair/CustomerSearch";
 import { CustomerFormStep } from "@/components/repair/CustomerFormStep";
 import { DeviceFormStep } from "@/components/repair/DeviceFormStep";
 import { NewRepairWizard } from "@/components/repair/NewRepairWizard";
+import { PhotoEditor } from "@/components/repair/PhotoEditor";
 import { Button } from "@/components/ui/button";
 
 const NewRepair = () => {
@@ -23,6 +24,8 @@ const NewRepair = () => {
   const [lookingUpDetails, setLookingUpDetails] = useState(false);
   const [existingCustomerId, setExistingCustomerId] = useState<string | null>(null);
   const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [showPhotoEditor, setShowPhotoEditor] = useState(false);
+  const [annotatedPhotoBlob, setAnnotatedPhotoBlob] = useState<Blob | null>(null);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -65,6 +68,21 @@ const NewRepair = () => {
   const handlePhotoUpload = (file: File, preview: string) => {
     setPhotoFile(file);
     setPhotoPreview(preview);
+    setAnnotatedPhotoBlob(null);
+  };
+
+  const handleOpenPhotoEditor = () => {
+    if (!photoPreview) {
+      toast.error("Carica prima una foto");
+      return;
+    }
+    setShowPhotoEditor(true);
+  };
+
+  const handleSaveAnnotatedPhoto = (annotatedBlob: Blob) => {
+    setAnnotatedPhotoBlob(annotatedBlob);
+    setShowPhotoEditor(false);
+    toast.success("Foto annotata salvata! Verrà utilizzata per la riparazione");
   };
 
   const analyzeDeviceWithAI = async () => {
@@ -233,11 +251,12 @@ const NewRepair = () => {
 
       // Upload photo if exists
       let photoUrl = "";
-      if (photoFile) {
-        const fileName = `${Date.now()}_${photoFile.name}`;
+      if (annotatedPhotoBlob || photoFile) {
+        const fileToUpload = annotatedPhotoBlob || photoFile!;
+        const fileName = `${Date.now()}_${photoFile!.name}`;
         const { error: uploadError } = await supabase.storage
           .from("device-photos")
-          .upload(fileName, photoFile);
+          .upload(fileName, fileToUpload);
 
         if (uploadError) throw uploadError;
 
@@ -301,25 +320,49 @@ const NewRepair = () => {
         );
       
       case 1:
-        return (
+        return showPhotoEditor && photoPreview ? (
+          <PhotoEditor
+            imageUrl={photoPreview}
+            onSave={handleSaveAnnotatedPhoto}
+            onCancel={() => setShowPhotoEditor(false)}
+          />
+        ) : (
           <div className="space-y-4">
             {!detectedDevice ? (
               <>
                 <PhotoUpload onPhotoUpload={handlePhotoUpload} />
                 {photoPreview && (
-                  <Button
-                    type="button"
-                    onClick={analyzeDeviceWithAI}
-                    disabled={aiAnalyzing || lookingUpDetails}
-                    className="w-full bg-gradient-primary"
-                  >
-                    <Sparkles className="mr-2 h-4 w-4" />
-                    {aiAnalyzing 
-                      ? "Analisi foto in corso..." 
-                      : lookingUpDetails 
-                      ? "Recupero dettagli..." 
-                      : "Riconosci con IA"}
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      onClick={analyzeDeviceWithAI}
+                      disabled={aiAnalyzing || lookingUpDetails}
+                      className="w-full bg-gradient-primary"
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      {aiAnalyzing 
+                        ? "Analisi foto in corso..." 
+                        : lookingUpDetails 
+                        ? "Recupero dettagli..." 
+                        : "Riconosci con IA"}
+                    </Button>
+                    
+                    <Button
+                      type="button"
+                      onClick={handleOpenPhotoEditor}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      Annota Punti Intervento
+                    </Button>
+                    
+                    {annotatedPhotoBlob && (
+                      <p className="text-sm text-accent flex items-center gap-2">
+                        <span className="h-2 w-2 bg-accent rounded-full" />
+                        Foto annotata pronta per il salvataggio
+                      </p>
+                    )}
+                  </div>
                 )}
               </>
             ) : (
