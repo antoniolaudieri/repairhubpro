@@ -1,25 +1,28 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Camera, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { PhotoUpload } from "@/components/repair/PhotoUpload";
 import { DeviceInfoCard } from "@/components/repair/DeviceInfoCard";
+import { CustomerSearch } from "@/components/repair/CustomerSearch";
+import { CustomerFormStep } from "@/components/repair/CustomerFormStep";
+import { DeviceFormStep } from "@/components/repair/DeviceFormStep";
+import { NewRepairWizard } from "@/components/repair/NewRepairWizard";
+import { Button } from "@/components/ui/button";
 
 const NewRepair = () => {
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [detectedDevice, setDetectedDevice] = useState<any>(null);
   const [lookingUpDetails, setLookingUpDetails] = useState(false);
+  const [existingCustomerId, setExistingCustomerId] = useState<string | null>(null);
+  const [isNewCustomer, setIsNewCustomer] = useState(false);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -39,6 +42,25 @@ const NewRepair = () => {
     reported_issue: "",
     initial_condition: "",
   });
+
+  const wizardSteps = [
+    {
+      title: "Cliente",
+      description: "Cerca un cliente esistente o creane uno nuovo",
+    },
+    {
+      title: "Foto Dispositivo",
+      description: "Scatta una foto per il riconoscimento automatico",
+    },
+    {
+      title: "Dettagli Dispositivo",
+      description: "Verifica e completa le informazioni del dispositivo",
+    },
+    {
+      title: "Riepilogo",
+      description: "Controlla i dati prima di confermare",
+    },
+  ];
 
   const handlePhotoUpload = (file: File, preview: string) => {
     setPhotoFile(file);
@@ -141,19 +163,73 @@ const NewRepair = () => {
     setPhotoPreview("");
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSelectCustomer = (customer: any) => {
+    if (customer) {
+      setExistingCustomerId(customer.id);
+      setCustomerData({
+        name: customer.name,
+        email: customer.email || "",
+        phone: customer.phone,
+        address: customer.address || "",
+        notes: "",
+      });
+      setIsNewCustomer(false);
+    }
+  };
+
+  const handleCreateNewCustomer = () => {
+    setExistingCustomerId(null);
+    setCustomerData({
+      name: "",
+      email: "",
+      phone: "",
+      address: "",
+      notes: "",
+    });
+    setIsNewCustomer(true);
+  };
+
+  const canGoNext = () => {
+    switch (currentStep) {
+      case 0:
+        return isNewCustomer ? Boolean(customerData.name && customerData.phone) : existingCustomerId !== null;
+      case 1:
+        return detectedDevice !== null;
+      case 2:
+        return Boolean(deviceData.device_type && deviceData.brand && deviceData.model && deviceData.reported_issue);
+      case 3:
+        return true;
+      default:
+        return false;
+    }
+  };
+
+  const handleNext = () => {
+    if (canGoNext()) {
+      setCurrentStep((prev) => Math.min(prev + 1, wizardSteps.length - 1));
+    }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
+  };
+
+  const handleSubmit = async () => {
     setLoading(true);
 
     try {
-      // Create customer
-      const { data: customer, error: customerError } = await supabase
-        .from("customers")
-        .insert(customerData)
-        .select()
-        .single();
+      let customerId = existingCustomerId;
 
-      if (customerError) throw customerError;
+      if (!existingCustomerId) {
+        const { data: customer, error: customerError } = await supabase
+          .from("customers")
+          .insert(customerData)
+          .select()
+          .single();
+
+        if (customerError) throw customerError;
+        customerId = customer.id;
+      }
 
       // Upload photo if exists
       let photoUrl = "";
@@ -172,12 +248,11 @@ const NewRepair = () => {
         photoUrl = urlData.publicUrl;
       }
 
-      // Create device
       const { data: device, error: deviceError } = await supabase
         .from("devices")
         .insert({
           ...deviceData,
-          customer_id: customer.id,
+          customer_id: customerId,
           photo_url: photoUrl,
         })
         .select()
@@ -206,6 +281,94 @@ const NewRepair = () => {
     }
   };
 
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 0:
+        return (
+          <div className="space-y-6">
+            {!isNewCustomer ? (
+              <CustomerSearch
+                onSelectCustomer={handleSelectCustomer}
+                onCreateNew={handleCreateNewCustomer}
+              />
+            ) : (
+              <CustomerFormStep
+                customerData={customerData}
+                onChange={setCustomerData}
+              />
+            )}
+          </div>
+        );
+      
+      case 1:
+        return (
+          <div className="space-y-4">
+            {!detectedDevice ? (
+              <>
+                <PhotoUpload onPhotoUpload={handlePhotoUpload} />
+                {photoPreview && (
+                  <Button
+                    type="button"
+                    onClick={analyzeDeviceWithAI}
+                    disabled={aiAnalyzing || lookingUpDetails}
+                    className="w-full bg-gradient-primary"
+                  >
+                    <Sparkles className="mr-2 h-4 w-4" />
+                    {aiAnalyzing 
+                      ? "Analisi foto in corso..." 
+                      : lookingUpDetails 
+                      ? "Recupero dettagli..." 
+                      : "Riconosci con IA"}
+                  </Button>
+                )}
+              </>
+            ) : (
+              <DeviceInfoCard
+                deviceInfo={detectedDevice}
+                onConfirm={handleDeviceConfirm}
+                onEdit={handleDeviceEdit}
+              />
+            )}
+          </div>
+        );
+      
+      case 2:
+        return (
+          <DeviceFormStep
+            deviceData={deviceData}
+            onChange={setDeviceData}
+          />
+        );
+      
+      case 3:
+        return (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Dati Cliente</h3>
+              <CustomerFormStep
+                customerData={customerData}
+                onChange={setCustomerData}
+                readOnly
+              />
+            </div>
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Dati Dispositivo</h3>
+              {detectedDevice && (
+                <DeviceInfoCard
+                  deviceInfo={detectedDevice}
+                  onConfirm={() => {}}
+                  onEdit={() => {}}
+                />
+              )}
+            </div>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="max-w-4xl mx-auto">
@@ -215,217 +378,22 @@ const NewRepair = () => {
               Nuovo Ritiro Dispositivo
             </h1>
             <p className="text-muted-foreground">
-              Registra un nuovo dispositivo per la riparazione
+              Segui i passaggi per registrare un nuovo dispositivo
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            {/* Photo Upload Section */}
-            <div className="space-y-4">
-              <Label className="text-lg font-semibold">Foto Dispositivo</Label>
-              
-              {!detectedDevice ? (
-                <>
-                  <PhotoUpload onPhotoUpload={handlePhotoUpload} />
-                  
-                  {photoPreview && (
-                    <div className="mt-4">
-                      <Button
-                        type="button"
-                        onClick={analyzeDeviceWithAI}
-                        disabled={aiAnalyzing || lookingUpDetails}
-                        className="bg-gradient-primary"
-                      >
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        {aiAnalyzing 
-                          ? "Analisi foto in corso..." 
-                          : lookingUpDetails 
-                          ? "Recupero dettagli..." 
-                          : "Riconosci con IA"}
-                      </Button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <DeviceInfoCard
-                  deviceInfo={detectedDevice}
-                  onConfirm={handleDeviceConfirm}
-                  onEdit={handleDeviceEdit}
-                />
-              )}
-            </div>
-
-            {/* Customer Information */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Dati Cliente</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customer-name">Nome *</Label>
-                  <Input
-                    id="customer-name"
-                    required
-                    value={customerData.name}
-                    onChange={(e) =>
-                      setCustomerData({ ...customerData, name: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customer-phone">Telefono *</Label>
-                  <Input
-                    id="customer-phone"
-                    type="tel"
-                    required
-                    value={customerData.phone}
-                    onChange={(e) =>
-                      setCustomerData({ ...customerData, phone: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customer-email">Email</Label>
-                  <Input
-                    id="customer-email"
-                    type="email"
-                    value={customerData.email}
-                    onChange={(e) =>
-                      setCustomerData({ ...customerData, email: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customer-address">Indirizzo</Label>
-                  <Input
-                    id="customer-address"
-                    value={customerData.address}
-                    onChange={(e) =>
-                      setCustomerData({ ...customerData, address: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Device Information */}
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Dati Dispositivo</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="device-type">Tipo Dispositivo *</Label>
-                  <Select
-                    value={deviceData.device_type}
-                    onValueChange={(value) =>
-                      setDeviceData({ ...deviceData, device_type: value })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="smartphone">Smartphone</SelectItem>
-                      <SelectItem value="tablet">Tablet</SelectItem>
-                      <SelectItem value="pc">PC</SelectItem>
-                      <SelectItem value="laptop">Laptop</SelectItem>
-                      <SelectItem value="other">Altro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="device-brand">Marca *</Label>
-                  <Input
-                    id="device-brand"
-                    required
-                    value={deviceData.brand}
-                    onChange={(e) =>
-                      setDeviceData({ ...deviceData, brand: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="device-model">Modello *</Label>
-                  <Input
-                    id="device-model"
-                    required
-                    value={deviceData.model}
-                    onChange={(e) =>
-                      setDeviceData({ ...deviceData, model: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="device-serial">Numero Seriale</Label>
-                  <Input
-                    id="device-serial"
-                    value={deviceData.serial_number}
-                    onChange={(e) =>
-                      setDeviceData({ ...deviceData, serial_number: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="device-imei">IMEI</Label>
-                  <Input
-                    id="device-imei"
-                    value={deviceData.imei}
-                    onChange={(e) =>
-                      setDeviceData({ ...deviceData, imei: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="device-password">Password/PIN</Label>
-                  <Input
-                    id="device-password"
-                    type="password"
-                    value={deviceData.password}
-                    onChange={(e) =>
-                      setDeviceData({ ...deviceData, password: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="reported-issue">Problema Segnalato *</Label>
-                <Textarea
-                  id="reported-issue"
-                  required
-                  rows={3}
-                  value={deviceData.reported_issue}
-                  onChange={(e) =>
-                    setDeviceData({ ...deviceData, reported_issue: e.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="initial-condition">Condizioni Iniziali</Label>
-                <Textarea
-                  id="initial-condition"
-                  rows={2}
-                  value={deviceData.initial_condition}
-                  onChange={(e) =>
-                    setDeviceData({ ...deviceData, initial_condition: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-4">
-              <Button
-                type="submit"
-                disabled={loading}
-                className="bg-primary hover:bg-primary-hover"
-              >
-                {loading ? "Salvataggio..." : "Registra Dispositivo"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate("/dashboard")}
-              >
-                Annulla
-              </Button>
-            </div>
-          </form>
+          <NewRepairWizard
+            currentStep={currentStep}
+            totalSteps={wizardSteps.length}
+            steps={wizardSteps}
+            onNext={handleNext}
+            onPrevious={handlePrevious}
+            onSubmit={handleSubmit}
+            canGoNext={canGoNext()}
+            loading={loading}
+          >
+            {renderStepContent()}
+          </NewRepairWizard>
         </Card>
       </div>
     </div>
