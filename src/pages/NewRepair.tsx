@@ -251,11 +251,29 @@ const NewRepair = () => {
       });
 
       if (!lookupError && lookupData?.device_info) {
-        setDetectedDevice({
+        const deviceInfo = {
           type: deviceData.device_type || "smartphone",
           brand: manualBrand.trim(),
           model: manualModel.trim(),
           ...lookupData.device_info,
+        };
+        
+        setDetectedDevice(deviceInfo);
+        
+        setDeviceData((prev) => ({
+          ...prev,
+          brand: manualBrand.trim(),
+          model: manualModel.trim(),
+        }));
+        
+        toast.success("Dispositivo trovato! Puoi procedere al prossimo step.");
+        setShowManualEntry(false);
+      } else {
+        // Anche se non troviamo il dispositivo online, permettiamo di procedere
+        setDetectedDevice({
+          type: deviceData.device_type || "smartphone",
+          brand: manualBrand.trim(),
+          model: manualModel.trim(),
         });
         
         setDeviceData((prev) => ({
@@ -264,14 +282,26 @@ const NewRepair = () => {
           model: manualModel.trim(),
         }));
         
-        toast.success("Dispositivo trovato!");
+        toast.info("Puoi procedere, ma non abbiamo trovato l'immagine del dispositivo");
         setShowManualEntry(false);
-      } else {
-        toast.error("Dispositivo non trovato nel database");
       }
     } catch (error: any) {
       console.error("Lookup error:", error);
-      toast.error("Errore nella ricerca: " + (error.message || "Riprova"));
+      // Anche in caso di errore, permettiamo di procedere con i dati inseriti
+      setDetectedDevice({
+        type: deviceData.device_type || "smartphone",
+        brand: manualBrand.trim(),
+        model: manualModel.trim(),
+      });
+      
+      setDeviceData((prev) => ({
+        ...prev,
+        brand: manualBrand.trim(),
+        model: manualModel.trim(),
+      }));
+      
+      toast.info("Puoi procedere con i dati inseriti manualmente");
+      setShowManualEntry(false);
     } finally {
       setLookingUpDetails(false);
     }
@@ -308,7 +338,7 @@ const NewRepair = () => {
       case 0:
         return isNewCustomer ? Boolean(customerData.name && customerData.phone) : existingCustomerId !== null;
       case 1:
-        return detectedDevice !== null;
+        return true; // Foto opzionale, può essere saltata
       case 2:
         return Boolean(deviceData.device_type && deviceData.brand && deviceData.model && deviceData.reported_issue);
       case 3:
@@ -322,6 +352,12 @@ const NewRepair = () => {
 
   const handleNext = () => {
     if (canGoNext()) {
+      // Se siamo allo step 1 (foto) e non c'è né foto né device riconosciuto,
+      // mostra l'inserimento manuale
+      if (currentStep === 1 && !photoFile && !detectedDevice) {
+        setShowManualEntry(true);
+        return;
+      }
       setCurrentStep((prev) => Math.min(prev + 1, wizardSteps.length - 1));
     }
   };
@@ -366,7 +402,7 @@ const NewRepair = () => {
         customerId = customer.id;
       }
 
-      // Upload photo if exists
+      // Upload photo if exists, otherwise use online image
       let photoUrl = "";
       if (annotatedPhotoBlob || photoFile) {
         const fileToUpload = annotatedPhotoBlob || photoFile!;
@@ -382,6 +418,9 @@ const NewRepair = () => {
           .getPublicUrl(fileName);
         
         photoUrl = urlData.publicUrl;
+      } else if (detectedDevice?.imageUrl) {
+        // Usa l'immagine trovata online come miniatura
+        photoUrl = detectedDevice.imageUrl;
       }
 
       const { data: device, error: deviceError } = await supabase
@@ -449,6 +488,13 @@ const NewRepair = () => {
           <div className="space-y-4">
             {!detectedDevice ? (
               <>
+                <div className="text-center p-4 bg-muted/30 rounded-lg mb-4">
+                  <p className="text-sm text-muted-foreground">
+                    La foto è opzionale. Puoi scattarla e usare l'IA per il riconoscimento, 
+                    oppure inserire i dati manualmente.
+                  </p>
+                </div>
+                
                 <PhotoUpload onPhotoUpload={handlePhotoUpload} />
                 {photoPreview && !showManualEntry && (
                   <div className="space-y-2">
