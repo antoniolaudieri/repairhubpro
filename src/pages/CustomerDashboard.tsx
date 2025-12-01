@@ -23,6 +23,7 @@ import {
   Package,
   FileText,
   PenTool,
+  FileSignature,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { SignatureDialog } from "@/components/quotes/SignatureDialog";
@@ -212,6 +213,11 @@ export default function CustomerDashboard() {
           </div>
 
           <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/signature-history")}>
+              <FileSignature className="h-4 w-4 mr-2" />
+              Storico Firme
+            </Button>
+
             <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
               <Home className="h-4 w-4 mr-2" />
               Home
