@@ -26,11 +26,11 @@ const Auth = () => {
 
   useEffect(() => {
     if (user) {
-      // Redirect technicians and admins to dashboard, customers to home
+      // Redirect technicians and admins to dashboard, customers to customer dashboard
       if (isTechnician || isAdmin) {
         navigate("/dashboard");
       } else {
-        navigate("/");
+        navigate("/customer-dashboard");
       }
     }
   }, [user, isTechnician, isAdmin, navigate]);

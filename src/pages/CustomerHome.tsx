@@ -42,7 +42,7 @@ import {
 
 export default function CustomerHome() {
   const navigate = useNavigate();
-  const { user, isTechnician, isAdmin } = useAuth();
+  const { user, isTechnician, isAdmin, signOut } = useAuth();
   const [bookingOpen, setBookingOpen] = useState(false);
   const [trackingOpen, setTrackingOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -232,13 +232,25 @@ export default function CustomerHome() {
           </motion.div>
           <div className="flex gap-3">
             {user ? (
-              <Button 
-                onClick={() => navigate(isTechnician || isAdmin ? "/dashboard" : "/")} 
-                variant="ghost" 
-                size="sm"
-              >
-                {isTechnician || isAdmin ? "Dashboard" : "Profilo"}
-              </Button>
+              <>
+                <Button 
+                  onClick={() => navigate(isTechnician || isAdmin ? "/dashboard" : "/customer-dashboard")} 
+                  variant="ghost" 
+                  size="sm"
+                >
+                  Dashboard
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    await signOut();
+                    navigate("/");
+                  }} 
+                  variant="ghost" 
+                  size="sm"
+                >
+                  Esci
+                </Button>
+              </>
             ) : (
               <Button onClick={() => navigate("/auth")} variant="ghost" size="sm">
                 Accedi
