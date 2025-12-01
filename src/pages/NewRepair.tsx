@@ -370,15 +370,15 @@ const NewRepair = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="max-w-4xl mx-auto">
-        <Card className="p-8">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold text-foreground mb-2">
+    <div className="min-h-screen p-6 bg-gradient-mesh">
+      <div className="max-w-5xl mx-auto">
+        <Card className="p-8 shadow-xl border-border/50 bg-card/95 backdrop-blur-sm">
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent mb-3">
               Nuovo Ritiro Dispositivo
             </h1>
-            <p className="text-muted-foreground">
-              Segui i passaggi per registrare un nuovo dispositivo
+            <p className="text-muted-foreground text-lg">
+              Segui i passaggi per registrare un nuovo dispositivo in modo rapido e semplice
             </p>
           </div>
 
