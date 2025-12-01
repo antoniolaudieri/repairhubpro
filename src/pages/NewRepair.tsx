@@ -14,6 +14,7 @@ import { PhotoEditor } from "@/components/repair/PhotoEditor";
 import { Button } from "@/components/ui/button";
 import { IntakeSignatureStep } from "@/components/repair/IntakeSignatureStep";
 import { getBrandSuggestions, getModelSuggestions } from "@/data/commonDevices";
+import { SparePartsStep } from "@/components/repair/SparePartsStep";
 
 const NewRepair = () => {
   const navigate = useNavigate();
@@ -36,6 +37,7 @@ const NewRepair = () => {
   const [modelSuggestions, setModelSuggestions] = useState<string[]>([]);
   const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
   const [showModelSuggestions, setShowModelSuggestions] = useState(false);
+  const [selectedSpareParts, setSelectedSpareParts] = useState<any[]>([]);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -64,6 +66,10 @@ const NewRepair = () => {
     {
       title: "Foto Dispositivo",
       description: "Scatta una foto per il riconoscimento automatico",
+    },
+    {
+      title: "Ricambi",
+      description: "Seleziona i ricambi necessari (opzionale)",
     },
     {
       title: "Dettagli Dispositivo",
@@ -340,10 +346,12 @@ const NewRepair = () => {
       case 1:
         return true; // Foto opzionale, può essere saltata
       case 2:
-        return Boolean(deviceData.device_type && deviceData.brand && deviceData.model && deviceData.reported_issue);
+        return true; // Ricambi opzionali
       case 3:
-        return intakeSignature !== null;
+        return Boolean(deviceData.device_type && deviceData.brand && deviceData.model && deviceData.reported_issue);
       case 4:
+        return intakeSignature !== null;
+      case 5:
         return true;
       default:
         return false;
@@ -436,7 +444,7 @@ const NewRepair = () => {
       if (deviceError) throw deviceError;
 
       // Create repair entry with intake signature
-      const { error: repairError } = await supabase
+      const { data: repairData, error: repairError } = await supabase
         .from("repairs")
         .insert({
           device_id: device.id,
@@ -444,9 +452,30 @@ const NewRepair = () => {
           priority: "normal",
           intake_signature: intakeSignature,
           intake_signature_date: new Date().toISOString(),
-        });
+        })
+        .select()
+        .single();
 
       if (repairError) throw repairError;
+
+      // Salva i ricambi se selezionati
+      if (selectedSpareParts.length > 0 && repairData) {
+        const repairPartsData = selectedSpareParts.map((part) => ({
+          repair_id: repairData.id,
+          spare_part_id: part.spare_part_id,
+          quantity: part.quantity,
+          unit_cost: part.unit_cost,
+        }));
+
+        const { error: partsError } = await supabase
+          .from("repair_parts")
+          .insert(repairPartsData);
+
+        if (partsError) {
+          console.error("Error saving spare parts:", partsError);
+          toast.error("Errore nel salvataggio ricambi");
+        }
+      }
 
       toast.success("Dispositivo registrato con successo!");
       navigate("/dashboard");
@@ -645,13 +674,23 @@ const NewRepair = () => {
       
       case 2:
         return (
+          <SparePartsStep
+            deviceBrand={deviceData.brand}
+            deviceModel={deviceData.model}
+            selectedParts={selectedSpareParts}
+            onPartsChange={setSelectedSpareParts}
+          />
+        );
+      
+      case 3:
+        return (
           <DeviceFormStep
             deviceData={deviceData}
             onChange={setDeviceData}
           />
         );
       
-      case 3:
+      case 4:
         return (
           <IntakeSignatureStep
             onSignatureComplete={setIntakeSignature}
@@ -659,7 +698,7 @@ const NewRepair = () => {
           />
         );
       
-      case 4:
+      case 5:
         return (
           <div className="space-y-6">
             <div className="space-y-4">
@@ -680,6 +719,38 @@ const NewRepair = () => {
                 />
               )}
             </div>
+            {selectedSpareParts.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Ricambi Selezionati</h3>
+                <div className="border border-border rounded-lg p-4">
+                  {selectedSpareParts.map((part) => (
+                    <div
+                      key={part.spare_part_id}
+                      className="flex justify-between items-center py-2"
+                    >
+                      <span>{part.name}</span>
+                      <span className="text-muted-foreground">
+                        {part.quantity}x €{part.unit_cost.toFixed(2)}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t border-border mt-2">
+                    <div className="flex justify-between font-semibold">
+                      <span>Totale Ricambi:</span>
+                      <span>
+                        €
+                        {selectedSpareParts
+                          .reduce(
+                            (sum, part) => sum + part.unit_cost * part.quantity,
+                            0
+                          )
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       
