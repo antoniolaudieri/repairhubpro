@@ -13,6 +13,7 @@ import { NewRepairWizard } from "@/components/repair/NewRepairWizard";
 import { PhotoEditor } from "@/components/repair/PhotoEditor";
 import { Button } from "@/components/ui/button";
 import { IntakeSignatureStep } from "@/components/repair/IntakeSignatureStep";
+import { getBrandSuggestions, getModelSuggestions } from "@/data/commonDevices";
 
 const NewRepair = () => {
   const navigate = useNavigate();
@@ -31,6 +32,10 @@ const NewRepair = () => {
   const [showManualEntry, setShowManualEntry] = useState(false);
   const [manualBrand, setManualBrand] = useState("");
   const [manualModel, setManualModel] = useState("");
+  const [brandSuggestions, setBrandSuggestions] = useState<string[]>([]);
+  const [modelSuggestions, setModelSuggestions] = useState<string[]>([]);
+  const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
+  const [showModelSuggestions, setShowModelSuggestions] = useState(false);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -191,6 +196,43 @@ const NewRepair = () => {
     setShowManualEntry(false);
     setManualBrand("");
     setManualModel("");
+    setBrandSuggestions([]);
+    setModelSuggestions([]);
+    setShowBrandSuggestions(false);
+    setShowModelSuggestions(false);
+  };
+
+  const handleBrandChange = (value: string) => {
+    setManualBrand(value);
+    const suggestions = getBrandSuggestions(value);
+    setBrandSuggestions(suggestions);
+    setShowBrandSuggestions(suggestions.length > 0);
+    
+    // Reset model when brand changes
+    setManualModel("");
+    setModelSuggestions([]);
+  };
+
+  const handleModelChange = (value: string) => {
+    setManualModel(value);
+    if (manualBrand) {
+      const suggestions = getModelSuggestions(manualBrand, value);
+      setModelSuggestions(suggestions);
+      setShowModelSuggestions(suggestions.length > 0);
+    }
+  };
+
+  const selectBrand = (brand: string) => {
+    setManualBrand(brand);
+    setShowBrandSuggestions(false);
+    // Show initial model suggestions
+    const suggestions = getModelSuggestions(brand, "");
+    setModelSuggestions(suggestions);
+  };
+
+  const selectModel = (model: string) => {
+    setManualModel(model);
+    setShowModelSuggestions(false);
   };
 
   const handleManualLookup = async () => {
@@ -455,25 +497,68 @@ const NewRepair = () => {
                   <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
                     <h3 className="font-semibold text-lg">Inserimento Manuale</h3>
                     <div className="space-y-3">
-                      <div>
+                      <div className="relative">
                         <label className="text-sm font-medium">Marca</label>
                         <input
                           type="text"
                           value={manualBrand}
-                          onChange={(e) => setManualBrand(e.target.value)}
+                          onChange={(e) => handleBrandChange(e.target.value)}
+                          onFocus={() => {
+                            const suggestions = getBrandSuggestions(manualBrand);
+                            setBrandSuggestions(suggestions);
+                            setShowBrandSuggestions(suggestions.length > 0);
+                          }}
+                          onBlur={() => setTimeout(() => setShowBrandSuggestions(false), 200)}
                           placeholder="es. Apple, Samsung"
                           className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
                         />
+                        {showBrandSuggestions && brandSuggestions.length > 0 && (
+                          <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                            {brandSuggestions.map((brand) => (
+                              <button
+                                key={brand}
+                                type="button"
+                                onClick={() => selectBrand(brand)}
+                                className="w-full px-3 py-2 text-left hover:bg-accent/10 transition-colors"
+                              >
+                                {brand}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
-                      <div>
+                      <div className="relative">
                         <label className="text-sm font-medium">Modello</label>
                         <input
                           type="text"
                           value={manualModel}
-                          onChange={(e) => setManualModel(e.target.value)}
+                          onChange={(e) => handleModelChange(e.target.value)}
+                          onFocus={() => {
+                            if (manualBrand) {
+                              const suggestions = getModelSuggestions(manualBrand, manualModel);
+                              setModelSuggestions(suggestions);
+                              setShowModelSuggestions(suggestions.length > 0);
+                            }
+                          }}
+                          onBlur={() => setTimeout(() => setShowModelSuggestions(false), 200)}
                           placeholder="es. iPhone 15 Pro"
-                          className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
+                          disabled={!manualBrand}
+                          className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background disabled:opacity-50"
                         />
+                        {showModelSuggestions && modelSuggestions.length > 0 && (
+                          <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                            {modelSuggestions.map((model) => (
+                              <button
+                                key={model}
+                                type="button"
+                                onClick={() => selectModel(model)}
+                                className="w-full px-3 py-2 text-left hover:bg-accent/10 transition-colors"
+                              >
+                                {model}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <Button
@@ -486,7 +571,13 @@ const NewRepair = () => {
                         </Button>
                         <Button
                           type="button"
-                          onClick={() => setShowManualEntry(false)}
+                          onClick={() => {
+                            setShowManualEntry(false);
+                            setManualBrand("");
+                            setManualModel("");
+                            setBrandSuggestions([]);
+                            setModelSuggestions([]);
+                          }}
                           variant="outline"
                         >
                           Annulla
