@@ -166,26 +166,15 @@ export default function Repairs() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate("/dashboard")}
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Gestione Riparazioni
-              </h1>
-              <p className="text-muted-foreground">
-                Visualizza e gestisci tutte le riparazioni
-              </p>
-            </div>
-          </div>
+    <div className="p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-foreground mb-2">
+            Gestione Riparazioni
+          </h1>
+          <p className="text-muted-foreground">
+            Visualizza e gestisci tutte le riparazioni
+          </p>
         </div>
 
         <div className="mb-6">

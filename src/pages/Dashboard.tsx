@@ -49,7 +49,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="p-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -59,7 +59,6 @@ const Dashboard = () => {
           <Button
             onClick={() => navigate("/new-repair")}
             size="lg"
-            className="bg-gradient-primary hover:opacity-90 transition-opacity"
           >
             <Plus className="mr-2 h-5 w-5" />
             Nuovo Ritiro

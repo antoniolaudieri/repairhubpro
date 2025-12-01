@@ -147,21 +147,17 @@ const NewRepair = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="p-6">
       <div className="max-w-4xl mx-auto">
-        <Button
-          variant="ghost"
-          onClick={() => navigate("/dashboard")}
-          className="mb-6"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Torna alla Dashboard
-        </Button>
-
         <Card className="p-8">
-          <h1 className="text-3xl font-bold text-foreground mb-6">
-            Nuovo Ritiro Dispositivo
-          </h1>
+          <div className="mb-6">
+            <h1 className="text-3xl font-bold text-foreground mb-2">
+              Nuovo Ritiro Dispositivo
+            </h1>
+            <p className="text-muted-foreground">
+              Registra un nuovo dispositivo per la riparazione
+            </p>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Photo Upload Section */}

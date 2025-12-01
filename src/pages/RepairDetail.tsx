@@ -216,19 +216,14 @@ export default function RepairDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="container mx-auto p-6 max-w-6xl">
+    <div className="p-6">
+      <div className="max-w-6xl mx-auto">
         <div className="mb-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/repairs")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Dettagli Riparazione</h1>
-              <p className="text-muted-foreground">
-                {repair.customer.name} - {repair.device.brand} {repair.device.model}
-              </p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Dettagli Riparazione</h1>
+            <p className="text-muted-foreground">
+              {repair.customer.name} - {repair.device.brand} {repair.device.model}
+            </p>
           </div>
           <Button onClick={saveChanges} disabled={saving}>
             {saving ? (
