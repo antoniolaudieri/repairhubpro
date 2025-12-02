@@ -149,25 +149,26 @@ export default function CustomerDetail() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/customers")}>
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/customers")} className="flex-shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">{customer.name}</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Cliente dal {format(new Date(customer.created_at), "dd MMMM yyyy", { locale: it })}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate">{customer.name}</h1>
+            <p className="text-xs sm:text-sm lg:text-base text-muted-foreground">
+              Cliente dal {format(new Date(customer.created_at), "dd MMM yyyy", { locale: it })}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setQuoteOpen(true)} variant="default">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button onClick={() => setQuoteOpen(true)} variant="default" className="w-full sm:w-auto">
             <FileText className="h-4 w-4 mr-2" />
-            Crea Preventivo
+            <span className="hidden sm:inline">Crea Preventivo</span>
+            <span className="sm:hidden">Preventivo</span>
           </Button>
-          <Button onClick={() => setEditOpen(true)} variant="outline">
+          <Button onClick={() => setEditOpen(true)} variant="outline" className="w-full sm:w-auto">
             <Edit className="h-4 w-4 mr-2" />
             Modifica
           </Button>
@@ -254,37 +255,72 @@ export default function CustomerDetail() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Storico Riparazioni</CardTitle>
+          <CardTitle className="text-lg sm:text-xl">Storico Riparazioni</CardTitle>
         </CardHeader>
         <CardContent>
           {allRepairs.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">Nessuna riparazione registrata</p>
+            <p className="text-sm sm:text-base text-muted-foreground text-center py-8">Nessuna riparazione registrata</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Dispositivo</TableHead>
-                  <TableHead>Diagnosi</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead>Costo</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Dispositivo</TableHead>
+                      <TableHead>Diagnosi</TableHead>
+                      <TableHead>Stato</TableHead>
+                      <TableHead>Costo</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allRepairs.map((repair) => {
+                      const device = devices.find(d => d.repairs.some(r => r.id === repair.id));
+                      return (
+                        <TableRow key={repair.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/repairs/${repair.id}`)}>
+                          <TableCell>{format(new Date(repair.created_at), "dd/MM/yyyy", { locale: it })}</TableCell>
+                          <TableCell>{device ? `${device.brand} ${device.model}` : "-"}</TableCell>
+                          <TableCell className="max-w-[200px] truncate">{repair.diagnosis || "-"}</TableCell>
+                          <TableCell>{getStatusBadge(repair.status)}</TableCell>
+                          <TableCell>{repair.final_cost ? `€${repair.final_cost.toFixed(2)}` : "-"}</TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden space-y-3">
                 {allRepairs.map((repair) => {
                   const device = devices.find(d => d.repairs.some(r => r.id === repair.id));
                   return (
-                    <TableRow key={repair.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/repairs/${repair.id}`)}>
-                      <TableCell>{format(new Date(repair.created_at), "dd/MM/yyyy", { locale: it })}</TableCell>
-                      <TableCell>{device ? `${device.brand} ${device.model}` : "-"}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{repair.diagnosis || "-"}</TableCell>
-                      <TableCell>{getStatusBadge(repair.status)}</TableCell>
-                      <TableCell>{repair.final_cost ? `€${repair.final_cost.toFixed(2)}` : "-"}</TableCell>
-                    </TableRow>
+                    <div
+                      key={repair.id}
+                      className="p-3 border rounded-lg hover:bg-muted/50 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/repairs/${repair.id}`)}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{device ? `${device.brand} ${device.model}` : "-"}</p>
+                          <p className="text-xs text-muted-foreground">{format(new Date(repair.created_at), "dd/MM/yyyy", { locale: it })}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          {getStatusBadge(repair.status)}
+                          {repair.final_cost && (
+                            <span className="text-sm font-semibold text-primary">€{repair.final_cost.toFixed(2)}</span>
+                          )}
+                        </div>
+                      </div>
+                      {repair.diagnosis && (
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{repair.diagnosis}</p>
+                      )}
+                    </div>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

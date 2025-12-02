@@ -178,25 +178,25 @@ export default function Repairs() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground mb-2">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
             Gestione Riparazioni
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Visualizza e gestisci tutte le riparazioni
           </p>
         </div>
 
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Cerca per cliente, marca o modello..."
+              placeholder="Cerca cliente, marca, modello..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-11"
             />
           </div>
         </div>
@@ -216,32 +216,34 @@ export default function Repairs() {
             filteredRepairs.map((repair) => (
               <Card
                 key={repair.id}
-                className="p-6 hover:shadow-lg transition-all cursor-pointer border-2"
+                className="p-4 sm:p-6 hover:shadow-lg transition-all cursor-pointer border-2"
                 onClick={() => navigate(`/repairs/${repair.id}`)}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4 flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                  {/* Mobile: Status icon and info */}
+                  <div className="flex items-start gap-3 flex-1">
                     <div className="mt-1">{getStatusIcon(repair.status)}</div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-foreground">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h3 className="text-base sm:text-lg font-semibold text-foreground">
                           {repair.customer.name}
                         </h3>
                         {getStatusBadge(repair.status)}
                         {getPriorityBadge(repair.priority)}
                         {repair.has_pending_orders && (
-                          <Badge variant="outline" className="gap-1 bg-warning/10 text-warning border-warning/20">
+                          <Badge variant="outline" className="gap-1 bg-warning/10 text-warning border-warning/20 text-xs">
                             <AlertCircle className="h-3 w-3" />
-                            Ordini in attesa
+                            <span className="hidden sm:inline">Ordini in attesa</span>
+                            <span className="sm:hidden">Ordini</span>
                           </Badge>
                         )}
                       </div>
-                      <div className="text-sm text-muted-foreground space-y-1">
-                        <p>
+                      <div className="text-xs sm:text-sm text-muted-foreground space-y-1">
+                        <p className="line-clamp-1">
                           <span className="font-medium">Dispositivo:</span>{" "}
-                          {repair.device.brand} {repair.device.model} ({repair.device.device_type})
+                          {repair.device.brand} {repair.device.model}
                         </p>
-                        <p>
+                        <p className="line-clamp-2 sm:line-clamp-1">
                           <span className="font-medium">Problema:</span>{" "}
                           {repair.device.reported_issue}
                         </p>
@@ -251,13 +253,15 @@ export default function Repairs() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
+
+                  {/* Mobile: Cost and date below, Desktop: right side */}
+                  <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 sm:gap-0 pt-3 sm:pt-0 border-t sm:border-t-0">
                     {repair.estimated_cost && (
-                      <p className="text-2xl font-bold text-primary mb-2">
+                      <p className="text-xl sm:text-2xl font-bold text-primary sm:mb-2">
                         €{repair.estimated_cost.toFixed(2)}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-muted-foreground whitespace-nowrap">
                       {new Date(repair.created_at).toLocaleDateString("it-IT", {
                         day: "2-digit",
                         month: "short",

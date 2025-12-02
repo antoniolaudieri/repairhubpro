@@ -120,53 +120,53 @@ export default function Appointments() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Prenotazioni Online</h1>
-          <p className="text-muted-foreground">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">Prenotazioni Online</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gestisci le richieste di prenotazione dei clienti
           </p>
         </div>
 
         {appointments.length === 0 ? (
-          <Card className="p-12 text-center">
-            <Calendar className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Nessuna prenotazione</h2>
-            <p className="text-muted-foreground">
+          <Card className="p-8 sm:p-12 text-center">
+            <Calendar className="h-12 w-12 sm:h-16 sm:w-16 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-lg sm:text-xl font-semibold mb-2">Nessuna prenotazione</h2>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Le prenotazioni online appariranno qui
             </p>
           </Card>
         ) : (
           <div className="grid gap-4">
             {appointments.map((appointment) => (
-              <Card key={appointment.id} className="p-6">
-                <div className="flex items-start justify-between">
+              <Card key={appointment.id} className="p-4 sm:p-6">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-lg font-semibold">{appointment.customer_name}</h3>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-3">
+                      <h3 className="text-base sm:text-lg font-semibold">{appointment.customer_name}</h3>
                       {getStatusBadge(appointment.status)}
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
+                      <div className="space-y-2">
                         <p className="text-muted-foreground flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          {appointment.customer_email}
+                          <Mail className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate">{appointment.customer_email}</span>
                         </p>
-                        <p className="text-muted-foreground flex items-center gap-2 mt-1">
-                          <Phone className="h-4 w-4" />
-                          {appointment.customer_phone}
+                        <p className="text-muted-foreground flex items-center gap-2">
+                          <Phone className="h-4 w-4 flex-shrink-0" />
+                          <span>{appointment.customer_phone}</span>
                         </p>
                       </div>
-                      <div>
+                      <div className="space-y-2">
                         <p className="text-muted-foreground flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(appointment.preferred_date).toLocaleDateString("it-IT")}
+                          <Calendar className="h-4 w-4 flex-shrink-0" />
+                          <span>{new Date(appointment.preferred_date).toLocaleDateString("it-IT")}</span>
                         </p>
-                        <p className="text-muted-foreground flex items-center gap-2 mt-1">
-                          <Clock className="h-4 w-4" />
-                          {appointment.preferred_time}
+                        <p className="text-muted-foreground flex items-center gap-2">
+                          <Clock className="h-4 w-4 flex-shrink-0" />
+                          <span>{appointment.preferred_time}</span>
                         </p>
                       </div>
                     </div>
@@ -177,18 +177,18 @@ export default function Appointments() {
                         {appointment.device_brand && ` - ${appointment.device_brand}`}
                         {appointment.device_model && ` ${appointment.device_model}`}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
                         {appointment.issue_description}
                       </p>
                     </div>
                   </div>
 
-                  <div className="ml-4">
+                  <div className="w-full lg:w-auto lg:ml-4">
                     <Select
                       value={appointment.status}
                       onValueChange={(value) => updateStatus(appointment.id, value)}
                     >
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-full lg:w-[180px]">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
