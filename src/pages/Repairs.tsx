@@ -106,7 +106,7 @@ export default function Repairs() {
         return <CheckCircle2 className="h-5 w-5 text-success" />;
       case "in_progress":
         return <Wrench className="h-5 w-5 text-info" />;
-      case "waiting_for_parts":
+      case "waiting_parts":
         return <Package className="h-5 w-5 text-warning" />;
       case "cancelled":
         return <XCircle className="h-5 w-5 text-destructive" />;
@@ -118,7 +118,7 @@ export default function Repairs() {
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "outline",
-      waiting_for_parts: "secondary",
+      waiting_parts: "secondary",
       in_progress: "default",
       completed: "secondary",
       cancelled: "destructive",
@@ -126,7 +126,7 @@ export default function Repairs() {
     
     const labels: Record<string, string> = {
       pending: "In attesa",
-      waiting_for_parts: "In attesa ricambi",
+      waiting_parts: "In attesa ricambi",
       in_progress: "In corso",
       completed: "Completata",
       cancelled: "Annullata",

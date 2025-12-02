@@ -47,7 +47,7 @@ export function useRealtimeNotifications() {
                 pending: "In attesa",
                 in_progress: "In corso",
                 completed: "Completata",
-                waiting_for_parts: "In attesa ricambi",
+                waiting_parts: "In attesa ricambi",
                 waiting_for_approval: "In attesa approvazione",
                 ready_for_pickup: "Pronta per il ritiro",
                 delivered: "Consegnata"

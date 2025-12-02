@@ -197,7 +197,7 @@ export default function CustomerRepairDetail() {
         color: "text-warning",
         bgColor: "bg-warning/10",
       },
-      waiting_for_parts: {
+      waiting_parts: {
         label: "In Attesa Ricambi",
         icon: <Package className="h-5 w-5" />,
         color: "text-info",
@@ -422,7 +422,7 @@ export default function CustomerRepairDetail() {
                   </div>
 
                   {/* Waiting for Parts */}
-                  {repair.status === "waiting_for_parts" && !repair.orders?.some(o => o.received_at) && (
+                  {repair.status === "waiting_parts" && !repair.orders?.some(o => o.received_at) && (
                     <div className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div className="w-10 h-10 rounded-full bg-info/20 flex items-center justify-center animate-pulse">
