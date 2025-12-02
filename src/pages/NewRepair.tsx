@@ -38,6 +38,7 @@ const NewRepair = () => {
   const [showBrandSuggestions, setShowBrandSuggestions] = useState(false);
   const [showModelSuggestions, setShowModelSuggestions] = useState(false);
   const [selectedSpareParts, setSelectedSpareParts] = useState<any[]>([]);
+  const [selectedServices, setSelectedServices] = useState<{ id: string; name: string; price: number }[]>([]);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -443,6 +444,16 @@ const NewRepair = () => {
 
       if (deviceError) throw deviceError;
 
+      // Calculate totals including services
+      const partsTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0);
+      const servicesTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
+      const estimatedTotal = partsTotal + servicesTotal;
+      
+      // Build services notes
+      const servicesNotes = selectedServices.length > 0 
+        ? `Servizi richiesti: ${selectedServices.map(s => `${s.name} (€${s.price})`).join(", ")}`
+        : "";
+
       // Create repair entry with intake signature and diagnostic fee
       const { data: repairData, error: repairError } = await supabase
         .from("repairs")
@@ -454,6 +465,8 @@ const NewRepair = () => {
           intake_signature_date: new Date().toISOString(),
           diagnostic_fee: 15.00,
           diagnostic_fee_paid: false,
+          estimated_cost: estimatedTotal > 0 ? estimatedTotal : null,
+          repair_notes: servicesNotes || null,
         })
         .select()
         .single();
@@ -722,6 +735,8 @@ const NewRepair = () => {
             deviceModel={deviceData.model}
             selectedParts={selectedSpareParts}
             onPartsChange={setSelectedSpareParts}
+            selectedServices={selectedServices}
+            onServicesChange={setSelectedServices}
           />
         );
       
@@ -791,6 +806,43 @@ const NewRepair = () => {
                       </span>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+            {selectedServices.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Servizi Selezionati</h3>
+                <div className="border border-border rounded-lg p-4">
+                  {selectedServices.map((service) => (
+                    <div
+                      key={service.id}
+                      className="flex justify-between items-center py-2"
+                    >
+                      <span>{service.name}</span>
+                      <span className="text-muted-foreground">€{service.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="pt-2 border-t border-border mt-2">
+                    <div className="flex justify-between font-semibold">
+                      <span>Totale Servizi:</span>
+                      <span>
+                        €{selectedServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            {(selectedSpareParts.length > 0 || selectedServices.length > 0) && (
+              <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-lg">Totale Complessivo:</span>
+                  <span className="font-bold text-lg text-primary">
+                    €{(
+                      selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) +
+                      selectedServices.reduce((sum, s) => sum + s.price, 0)
+                    ).toFixed(2)}
+                  </span>
                 </div>
               </div>
             )}
