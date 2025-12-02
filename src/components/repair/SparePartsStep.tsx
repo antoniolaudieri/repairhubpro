@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Trash2, Package, Wrench, Check, Sparkles, Loader2, Hammer } from "lucide-react";
+import { Search, Plus, Trash2, Package, Wrench, Check, Sparkles, Loader2, Hammer, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
 
@@ -510,16 +510,36 @@ export const SparePartsStep = ({
                           </div>
                           <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{suggestion.reason}</p>
                           
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => addSuggestedPart(suggestion)}
-                            disabled={isAdded}
-                            className="mt-3 w-full sm:w-auto"
-                          >
-                            <Plus className="h-4 w-4 mr-1" />
-                            {isAdded ? "Aggiunto" : "Aggiungi alla riparazione"}
-                          </Button>
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => addSuggestedPart(suggestion)}
+                              disabled={isAdded}
+                              className="w-full sm:w-auto"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              {isAdded ? "Aggiunto" : "Aggiungi alla riparazione"}
+                            </Button>
+                            {isAdded && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                asChild
+                                className="w-full sm:w-auto border-primary/50 hover:bg-primary/10"
+                              >
+                                <a 
+                                  href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(suggestion.partName)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLink className="h-4 w-4 mr-1" />
+                                  Acquista su Utopya
+                                </a>
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
