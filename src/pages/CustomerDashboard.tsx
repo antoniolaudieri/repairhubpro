@@ -32,6 +32,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { FinalCostSignatureDialog } from "@/components/customer/FinalCostSignatureDialog";
 import { NotificationBanner } from "@/components/customer/NotificationBanner";
+import { InAppNotifications } from "@/components/customer/InAppNotifications";
 
 interface Repair {
   id: string;
@@ -213,14 +214,16 @@ export default function CustomerDashboard() {
           </div>
 
           <div className="flex items-center gap-4">
+            <InAppNotifications />
+            
             <Button variant="ghost" size="sm" onClick={() => navigate("/signature-history")}>
               <FileSignature className="h-4 w-4 mr-2" />
-              Storico Firme
+              <span className="hidden sm:inline">Storico Firme</span>
             </Button>
 
             <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
               <Home className="h-4 w-4 mr-2" />
-              Home
+              <span className="hidden sm:inline">Home</span>
             </Button>
 
             <DropdownMenu>
