@@ -300,8 +300,9 @@ const NewRepair = () => {
           model: manualModel.trim(),
         }));
         
-        toast.success("Dispositivo trovato! Puoi procedere al prossimo step.");
+        toast.success("Dispositivo trovato!");
         setShowManualEntry(false);
+        setCurrentStep(2);
       } else {
         // Anche se non troviamo il dispositivo online, permettiamo di procedere
         setDetectedDevice({
@@ -317,8 +318,9 @@ const NewRepair = () => {
           model: manualModel.trim(),
         }));
         
-        toast.info("Puoi procedere, ma non abbiamo trovato l'immagine del dispositivo");
+        toast.info("Dispositivo confermato");
         setShowManualEntry(false);
+        setCurrentStep(2);
       }
     } catch (error: any) {
       console.error("Lookup error:", error);
@@ -336,8 +338,9 @@ const NewRepair = () => {
         model: manualModel.trim(),
       }));
       
-      toast.info("Puoi procedere con i dati inseriti manualmente");
+      toast.info("Dispositivo confermato");
       setShowManualEntry(false);
+      setCurrentStep(2);
     } finally {
       setLookingUpDetails(false);
     }
