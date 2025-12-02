@@ -491,8 +491,8 @@ export default function Inventory() {
                               asChild
                               className="border-primary/50 hover:bg-primary hover:text-primary-foreground"
                             >
-                              <a 
-                                href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
+                            <a 
+                              href={`https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(part.name)}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                               >
@@ -601,8 +601,8 @@ export default function Inventory() {
                             size="sm"
                             asChild
                           >
-                            <a 
-                              href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
+                          <a 
+                            href={`https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(part.name)}`}
                               target="_blank"
                               rel="noopener noreferrer"
                             >
