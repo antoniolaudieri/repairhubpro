@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Search, Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 
 interface AddSparePartDialogProps {
   onPartAdded?: () => void;
@@ -48,41 +48,45 @@ export default function AddSparePartDialog({ onPartAdded, trigger }: AddSparePar
     notes: ""
   });
 
-  const handleSearchOnline = async () => {
-    if (!formData.name) {
-      toast.error("Inserisci il nome del ricambio prima di cercare");
-      return;
-    }
+  // Auto-search image when name changes
+  const searchImageAutomatically = useCallback(async (partName: string, brand: string, model: string) => {
+    if (!partName || partName.length < 3) return;
 
     setIsSearching(true);
     try {
       const { data, error } = await supabase.functions.invoke('search-spare-part-info', {
         body: {
-          partName: formData.name,
-          brand: formData.brand,
-          model: formData.model_compatibility
+          partName,
+          brand,
+          model
         }
       });
 
       if (error) throw error;
 
-      if (data) {
+      if (data?.image_url) {
         setFormData(prev => ({
           ...prev,
-          cost: data.estimated_price ? String(data.estimated_price) : prev.cost,
-          selling_price: data.estimated_price ? String(Math.round(data.estimated_price * 1.5)) : prev.selling_price,
-          image_url: data.image_url || prev.image_url,
-          notes: data.description || prev.notes
+          image_url: data.image_url
         }));
-        toast.success("Informazioni trovate online!");
       }
     } catch (error) {
-      console.error('Error searching spare part info:', error);
-      toast.error("Impossibile cercare informazioni online");
+      console.error('Error searching image:', error);
     } finally {
       setIsSearching(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.name) {
+        searchImageAutomatically(formData.name, formData.brand, formData.model_compatibility);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [formData.name, formData.brand, formData.model_compatibility, searchImageAutomatically]);
+
 
   const handleSave = async () => {
     if (!formData.name || !formData.category) {
@@ -149,28 +153,20 @@ export default function AddSparePartDialog({ onPartAdded, trigger }: AddSparePar
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="name">Nome Ricambio *</Label>
-              <div className="flex gap-2">
+              <div className="relative">
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="es. Display iPhone 15 Pro"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleSearchOnline}
-                  disabled={isSearching || !formData.name}
-                  className="shrink-0"
-                >
-                  {isSearching ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Search className="h-4 w-4" />
-                  )}
-                  Cerca
-                </Button>
+                {isSearching && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
               </div>
+              <p className="text-xs text-muted-foreground">L'immagine verrà cercata automaticamente online</p>
             </div>
 
             <div className="space-y-2">

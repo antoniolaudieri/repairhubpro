@@ -21,21 +21,23 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    const searchPrompt = `Search for spare part information: "${partName}" for ${brand || 'generic'} ${model || 'device'}.
+    const searchPrompt = `Find a high-quality product image URL for this spare part: "${partName}" ${brand ? `for ${brand}` : ''} ${model ? model : ''}.
 
-Provide:
-1. Estimated market price in EUR (retail price for repair shops)
-2. Direct image URL from reliable sources (iFixit, Amazon, eBay, AliExpress)
-3. Brief technical description
+CRITICAL REQUIREMENTS:
+1. Return ONLY a direct image URL (must end in .jpg, .jpeg, .png, .webp)
+2. Prioritize sources: iFixit.com, Amazon product images, eBay, AliExpress
+3. Image must be clear and show the actual spare part
+4. Verify the URL is accessible and direct (not a webpage)
 
 Format your response as JSON:
 {
-  "estimated_price": number,
-  "image_url": "direct image URL",
-  "description": "brief description"
+  "image_url": "direct image URL ending in .jpg/.png/.webp"
 }
 
-If you cannot find exact information, provide reasonable estimates based on similar parts.`;
+If no reliable image found, return:
+{
+  "image_url": ""
+}`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -48,7 +50,7 @@ If you cannot find exact information, provide reasonable estimates based on simi
         messages: [
           { 
             role: 'system', 
-            content: 'You are a spare parts pricing and sourcing expert. Always return valid JSON with estimated_price, image_url, and description fields.' 
+            content: 'You are an expert at finding product images for spare parts. Return valid JSON with ONLY the image_url field containing a direct image URL.' 
           },
           { role: 'user', content: searchPrompt }
         ],
@@ -83,9 +85,7 @@ If you cannot find exact information, provide reasonable estimates based on simi
       console.error('Failed to parse AI JSON response:', e);
       // Fallback with default values
       result = {
-        estimated_price: 0,
-        image_url: '',
-        description: 'Unable to fetch information. Please enter manually.'
+        image_url: ''
       };
     }
 
@@ -102,9 +102,7 @@ If you cannot find exact information, provide reasonable estimates based on simi
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error',
-        estimated_price: 0,
-        image_url: '',
-        description: 'Error fetching information'
+        image_url: ''
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
