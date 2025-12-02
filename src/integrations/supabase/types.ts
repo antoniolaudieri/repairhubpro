@@ -457,6 +457,45 @@ export type Database = {
           },
         ]
       }
+      repair_guides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          device_brand: string
+          device_model: string
+          device_type: string
+          guide_data: Json
+          id: string
+          issue_category: string
+          updated_at: string
+          usage_count: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          device_brand: string
+          device_model: string
+          device_type: string
+          guide_data: Json
+          id?: string
+          issue_category: string
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          device_brand?: string
+          device_model?: string
+          device_type?: string
+          guide_data?: Json
+          id?: string
+          issue_category?: string
+          updated_at?: string
+          usage_count?: number | null
+        }
+        Relationships: []
+      }
       repair_parts: {
         Row: {
           created_at: string
