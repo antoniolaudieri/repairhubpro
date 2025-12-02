@@ -144,8 +144,27 @@ export default function Inventory() {
     setDeleteDialogOpen(true);
   };
 
+  // Check if all linked repairs are completed or delivered
+  const allRepairsCompleted = linkedRepairs.length > 0 && linkedRepairs.every(
+    rp => rp.repair?.status === 'completed' || rp.repair?.status === 'delivered'
+  );
+
   const handleDeletePart = async () => {
     if (!partToDelete) return;
+    
+    // If there are linked repairs that are all completed, first delete repair_parts
+    if (linkedRepairs.length > 0 && allRepairsCompleted) {
+      const { error: deleteLinksError } = await supabase
+        .from("repair_parts")
+        .delete()
+        .eq("spare_part_id", partToDelete.id);
+      
+      if (deleteLinksError) {
+        toast.error("Errore durante la rimozione dei collegamenti");
+        console.error(deleteLinksError);
+        return;
+      }
+    }
     
     const { error } = await supabase
       .from("spare_parts")
@@ -154,7 +173,7 @@ export default function Inventory() {
     
     if (error) {
       if (error.code === '23503') {
-        toast.error("Impossibile eliminare: questo ricambio è utilizzato in una o più riparazioni");
+        toast.error("Impossibile eliminare: questo ricambio è utilizzato in riparazioni attive");
       } else {
         toast.error("Errore durante l'eliminazione");
       }
@@ -661,15 +680,27 @@ export default function Inventory() {
                               {rp.repair?.device?.customer?.name} • Qtà: {rp.quantity}
                             </p>
                           </div>
-                          <Badge variant="outline" className="text-xs">
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-xs",
+                              (rp.repair?.status === 'completed' || rp.repair?.status === 'delivered') && "bg-success/10 text-success border-success/30"
+                            )}
+                          >
                             {rp.repair?.status}
                           </Badge>
                         </Link>
                       ))}
                     </div>
-                    <p className="text-destructive text-sm font-medium">
-                      Non puoi eliminare questo ricambio finché è collegato a delle riparazioni.
-                    </p>
+                    {allRepairsCompleted ? (
+                      <p className="text-warning text-sm">
+                        Tutte le riparazioni sono completate. Puoi eliminare questo ricambio e i relativi collegamenti.
+                      </p>
+                    ) : (
+                      <p className="text-destructive text-sm font-medium">
+                        Non puoi eliminare questo ricambio finché ci sono riparazioni attive.
+                      </p>
+                    )}
                   </>
                 ) : (
                   <p>
@@ -682,7 +713,7 @@ export default function Inventory() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
-            {linkedRepairs.length === 0 && (
+            {(linkedRepairs.length === 0 || allRepairsCompleted) && (
               <AlertDialogAction
                 onClick={handleDeletePart}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
