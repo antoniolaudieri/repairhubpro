@@ -536,22 +536,23 @@ export default function Orders() {
                       <div className="flex flex-col md:flex-row md:items-center gap-4">
                         {/* Device/Order Image */}
                         <div className="flex items-center gap-4 flex-1">
-                          {order.repairs?.devices?.photo_url ? (
-                            <motion.div
-                              whileHover={{ scale: 1.05 }}
-                              className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white shadow-md flex-shrink-0"
-                            >
+                          <motion.div
+                            whileHover={{ scale: 1.05 }}
+                            className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 shadow-md flex-shrink-0 flex items-center justify-center"
+                          >
+                            {order.repairs?.devices?.photo_url ? (
                               <img 
                                 src={order.repairs.devices.photo_url} 
                                 alt="Device"
                                 className="w-full h-full object-cover"
                               />
-                            </motion.div>
-                          ) : (
-                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center flex-shrink-0">
-                              <Box className="h-8 w-8 text-primary/60" />
-                            </div>
-                          )}
+                            ) : (
+                              <div className="text-white text-center">
+                                <div className="text-lg md:text-xl font-black tracking-tight">RP</div>
+                                <div className="text-[8px] md:text-[10px] font-medium opacity-80">REPAIR</div>
+                              </div>
+                            )}
+                          </motion.div>
                           
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -728,19 +729,19 @@ export default function Orders() {
                               className="flex items-center gap-3 p-3 bg-background rounded-xl border hover:border-primary/30 hover:shadow-sm transition-all"
                             >
                               {/* Part Image */}
-                              {item.spare_parts?.image_url ? (
-                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary/80 to-primary">
+                                {item.spare_parts?.image_url ? (
                                   <img 
                                     src={item.spare_parts.image_url} 
                                     alt={item.product_name}
                                     className="w-full h-full object-cover"
                                   />
-                                </div>
-                              ) : (
-                                <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                                  <Box className="h-5 w-5 text-muted-foreground" />
-                                </div>
-                              )}
+                                ) : (
+                                  <div className="text-white text-center">
+                                    <div className="text-xs font-bold">RP</div>
+                                  </div>
+                                )}
+                              </div>
                               
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-sm text-foreground truncate">
