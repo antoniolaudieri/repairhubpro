@@ -127,7 +127,7 @@ export default function CustomerRepairDetail() {
           ),
           repair_parts (
             quantity,
-            spare_parts (
+            spare_parts:spare_part_id (
               name,
               image_url
             )
@@ -137,7 +137,10 @@ export default function CustomerRepairDetail() {
         .in("device_id", deviceIds)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching repair:", error);
+        throw error;
+      }
 
       if (!repairData) {
         toast.error("Riparazione non trovata");
@@ -147,7 +150,7 @@ export default function CustomerRepairDetail() {
 
       setRepair(repairData as any);
     } catch (error: any) {
-      console.error(error);
+      console.error("Fetch repair detail error:", error);
       toast.error("Errore nel caricamento della riparazione");
       navigate("/customer-dashboard");
     } finally {
@@ -482,7 +485,7 @@ export default function CustomerRepairDetail() {
               )}
 
               {/* Spare Parts Used */}
-              {repair.repair_parts && repair.repair_parts.length > 0 && (
+              {repair.repair_parts && Array.isArray(repair.repair_parts) && repair.repair_parts.length > 0 && (
                 <Card className="p-6">
                   <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
                     <Package className="h-5 w-5 text-primary" />
@@ -491,7 +494,7 @@ export default function CustomerRepairDetail() {
                   <div className="space-y-3">
                     {repair.repair_parts.map((part, index) => (
                       <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
-                        {part.spare_parts.image_url ? (
+                        {part.spare_parts?.image_url ? (
                           <img 
                             src={part.spare_parts.image_url} 
                             alt={part.spare_parts.name}
@@ -506,7 +509,7 @@ export default function CustomerRepairDetail() {
                           </div>
                         )}
                         <div className="flex-1">
-                          <p className="font-medium text-foreground">{part.spare_parts.name}</p>
+                          <p className="font-medium text-foreground">{part.spare_parts?.name || "Ricambio"}</p>
                           <p className="text-sm text-muted-foreground">Quantità: {part.quantity}</p>
                         </div>
                       </div>
