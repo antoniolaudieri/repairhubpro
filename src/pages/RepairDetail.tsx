@@ -40,6 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -75,6 +76,8 @@ interface RepairDetail {
   estimated_cost: number | null;
   final_cost: number | null;
   ai_suggestions: string | null;
+  diagnostic_fee: number | null;
+  diagnostic_fee_paid: boolean | null;
   created_at: string;
   device: {
     brand: string;
@@ -187,6 +190,8 @@ export default function RepairDetail() {
         estimated_cost: data.estimated_cost,
         final_cost: data.final_cost,
         ai_suggestions: data.ai_suggestions,
+        diagnostic_fee: data.diagnostic_fee,
+        diagnostic_fee_paid: data.diagnostic_fee_paid,
         created_at: data.created_at,
         device: data.device,
         customer: data.device.customer,
@@ -265,6 +270,7 @@ export default function RepairDetail() {
           repair_notes: repair.repair_notes,
           estimated_cost: repair.estimated_cost,
           final_cost: repair.final_cost,
+          diagnostic_fee_paid: repair.diagnostic_fee_paid,
           started_at: repair.status === "in_progress" ? new Date().toISOString() : null,
           completed_at: repair.status === "completed" ? new Date().toISOString() : null,
         })
@@ -642,7 +648,31 @@ export default function RepairDetail() {
                           className="pl-10 h-11"
                           placeholder="0.00"
                         />
+                  </div>
+
+                  {/* Diagnostic Fee Toggle */}
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-200/50">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                        <Euro className="h-5 w-5 text-amber-600" />
                       </div>
+                      <div>
+                        <p className="font-medium text-foreground">Gestione Diagnosi</p>
+                        <p className="text-sm text-muted-foreground">
+                          €{repair.diagnostic_fee?.toFixed(2) || "15.00"} - Pagamento anticipato
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-sm font-medium ${repair.diagnostic_fee_paid ? 'text-emerald-600' : 'text-amber-600'}`}>
+                        {repair.diagnostic_fee_paid ? 'Pagato' : 'Non pagato'}
+                      </span>
+                      <Switch
+                        checked={repair.diagnostic_fee_paid || false}
+                        onCheckedChange={(checked) => setRepair({ ...repair, diagnostic_fee_paid: checked })}
+                      />
+                    </div>
+                  </div>
                     </div>
                   </div>
 
