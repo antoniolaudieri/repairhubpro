@@ -305,18 +305,24 @@ export default function CustomerHome() {
               <div className="flex flex-wrap gap-4">
                 <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
                   <DialogTrigger asChild>
-                    <Button size="lg" className="group">
-                      Prenota Riparazione
-                      <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button size="lg" variant="glow" className="group gap-3">
+                        <Wrench className="h-5 w-5 transition-transform group-hover:rotate-12" />
+                        <span>Prenota Riparazione</span>
+                        <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
+                      </Button>
+                    </motion.div>
                   </DialogTrigger>
                 </Dialog>
 
                 <Dialog open={trackingOpen} onOpenChange={setTrackingOpen}>
                   <DialogTrigger asChild>
-                    <Button size="lg" variant="outline">
-                      Traccia Riparazione
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button size="lg" variant="outline-glow" className="group gap-3">
+                        <Clock className="h-5 w-5 transition-transform group-hover:rotate-[-15deg]" />
+                        <span>Traccia Riparazione</span>
+                      </Button>
+                    </motion.div>
                   </DialogTrigger>
                   <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
@@ -576,10 +582,12 @@ export default function CustomerHome() {
 
                 <Dialog open={feedbackOpen} onOpenChange={setFeedbackOpen}>
                   <DialogTrigger asChild>
-                    <Button size="lg" className="w-full mb-6">
-                      <Star className="mr-2 h-5 w-5" />
-                      Scrivi una Recensione
-                    </Button>
+                    <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                      <Button size="lg" variant="shine" className="w-full mb-6 gap-3">
+                        <Star className="h-5 w-5 transition-transform group-hover:rotate-12" />
+                        <span>Scrivi una Recensione</span>
+                      </Button>
+                    </motion.div>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
