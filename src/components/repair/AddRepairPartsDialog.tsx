@@ -31,7 +31,7 @@ interface AddRepairPartsDialogProps {
   repairId: string;
   deviceBrand?: string;
   deviceModel?: string;
-  onPartsAdded: () => void;
+  onPartsAdded: (newParts: any[]) => void;
 }
 
 export default function AddRepairPartsDialog({
@@ -152,7 +152,7 @@ export default function AddRepairPartsDialog({
     setSaving(true);
     try {
       // Inserisci i ricambi nella tabella repair_parts
-      const { error: repairPartsError } = await supabase
+      const { data: insertedParts, error: repairPartsError } = await supabase
         .from("repair_parts")
         .insert(
           selectedParts.map((part) => ({
@@ -161,7 +161,19 @@ export default function AddRepairPartsDialog({
             quantity: part.quantity,
             unit_cost: part.unit_cost,
           }))
-        );
+        )
+        .select(`
+          id,
+          quantity,
+          unit_cost,
+          spare_parts (
+            id,
+            name,
+            image_url,
+            brand,
+            category
+          )
+        `);
 
       if (repairPartsError) throw repairPartsError;
 
@@ -226,7 +238,7 @@ export default function AddRepairPartsDialog({
       setSelectedParts([]);
       setSearchTerm("");
       setOpen(false);
-      onPartsAdded();
+      onPartsAdded(insertedParts || []);
     } catch (error: any) {
       console.error("Error adding parts:", error);
       toast.error("Errore nell'aggiungere i ricambi");
