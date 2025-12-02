@@ -475,6 +475,47 @@ const NewRepair = () => {
           console.error("Error saving spare parts:", partsError);
           toast.error("Errore nel salvataggio ricambi");
         }
+
+        // Crea ordine automatico per i ricambi
+        const orderNumber = `ORD-${Date.now()}`;
+        const totalAmount = selectedSpareParts.reduce((sum, part) => sum + (part.unit_cost * part.quantity), 0);
+
+        const { data: orderData, error: orderError } = await supabase
+          .from("orders")
+          .insert({
+            order_number: orderNumber,
+            repair_id: repairData.id,
+            status: "pending",
+            supplier: "utopya",
+            total_amount: totalAmount,
+            notes: `Ordine automatico per riparazione ${repairData.id}`,
+          })
+          .select()
+          .single();
+
+        if (orderError) {
+          console.error("Error creating order:", orderError);
+        } else {
+          // Aggiungi gli item all'ordine
+          const orderItems = selectedSpareParts.map((part) => ({
+            order_id: orderData.id,
+            spare_part_id: part.spare_part_id,
+            product_name: part.name,
+            product_code: part.supplier_code || "",
+            quantity: part.quantity,
+            unit_cost: part.unit_cost,
+          }));
+
+          const { error: itemsError } = await supabase
+            .from("order_items")
+            .insert(orderItems);
+
+          if (itemsError) {
+            console.error("Error creating order items:", itemsError);
+          } else {
+            toast.success("Ordine ricambi creato automaticamente!");
+          }
+        }
       }
 
       toast.success("Dispositivo registrato con successo!");
