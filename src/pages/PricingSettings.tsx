@@ -80,7 +80,7 @@ const LABOR_CATEGORIES = [
 ];
 
 const DEVICE_TYPES = [
-  { value: "", label: "Tutti i dispositivi" },
+  { value: "all", label: "Tutti i dispositivi" },
   { value: "smartphone", label: "Smartphone" },
   { value: "tablet", label: "Tablet" },
   { value: "laptop", label: "Laptop" },
@@ -153,11 +153,11 @@ const PricingSettings = () => {
         description: labor.description || "",
         price: labor.price.toString(),
         category: labor.category,
-        device_type: labor.device_type || "",
+        device_type: labor.device_type || "all",
       });
     } else {
       setEditingLabor(null);
-      setLaborForm({ name: "", description: "", price: "", category: "general", device_type: "" });
+      setLaborForm({ name: "", description: "", price: "", category: "general", device_type: "all" });
     }
     setLaborDialogOpen(true);
   };
@@ -175,7 +175,7 @@ const PricingSettings = () => {
         description: laborForm.description || null,
         price: parseFloat(laborForm.price),
         category: laborForm.category,
-        device_type: laborForm.device_type || null,
+        device_type: laborForm.device_type === "all" ? null : laborForm.device_type,
       };
 
       if (editingLabor) {
