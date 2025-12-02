@@ -155,6 +155,8 @@ export default function RepairDetail() {
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
   const [showStartedAnimation, setShowStartedAnimation] = useState(false);
   const [repairGuide, setRepairGuide] = useState<RepairGuideData | null>(null);
+  const [guideFromCache, setGuideFromCache] = useState(false);
+  const [guideUsageCount, setGuideUsageCount] = useState<number | undefined>();
 
   useEffect(() => {
     if (id) {
@@ -275,6 +277,8 @@ export default function RepairDetail() {
       // Handle structured guide response
       if (data.isStructured && data.guide) {
         setRepairGuide(data.guide);
+        setGuideFromCache(data.fromCache || false);
+        setGuideUsageCount(data.usageCount);
         
         // Store a summary in ai_suggestions for backward compatibility
         const summaryText = `Guida generata: ${data.guide.steps?.length || 0} step - ${data.guide.overview?.difficulty || 'N/A'} - ${data.guide.overview?.estimatedTime || 'N/A'}`;
@@ -289,6 +293,19 @@ export default function RepairDetail() {
           title: "Guida Riparazione Generata",
           description: `${data.guide.steps?.length || 0} step con immagini e suggerimenti`,
         });
+
+        if (data.fromCache) {
+          toast({
+            title: "📚 Guida Esistente Trovata!",
+            description: `Usata ${data.usageCount || 1} volte - ${data.guide.steps?.length || 0} step`,
+            className: "bg-emerald-600 text-white border-emerald-700",
+          });
+        } else {
+          toast({
+            title: "✨ Nuova Guida Generata",
+            description: `${data.guide.steps?.length || 0} step - Salvata per riutilizzo`,
+          });
+        }
       } else {
         // Fallback to old text-based suggestions
         const suggestions = data.suggestions;
@@ -811,7 +828,9 @@ export default function RepairDetail() {
                   {repairGuide ? (
                     <RepairGuide 
                       guide={repairGuide} 
-                      deviceName={`${repair.device.brand} ${repair.device.model}`} 
+                      deviceName={`${repair.device.brand} ${repair.device.model}`}
+                      fromCache={guideFromCache}
+                      usageCount={guideUsageCount}
                     />
                   ) : repair.ai_suggestions ? (
                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200/50 rounded-xl p-4 text-sm whitespace-pre-wrap leading-relaxed">

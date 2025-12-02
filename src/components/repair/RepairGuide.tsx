@@ -68,6 +68,8 @@ interface RepairGuideData {
 interface RepairGuideProps {
   guide: RepairGuideData;
   deviceName: string;
+  fromCache?: boolean;
+  usageCount?: number;
 }
 
 const severityConfig = {
@@ -83,7 +85,7 @@ const difficultyConfig: Record<string, { color: string; icon: string }> = {
   "Esperto": { color: "text-red-600", icon: "🔴" },
 };
 
-export default function RepairGuide({ guide, deviceName }: RepairGuideProps) {
+export default function RepairGuide({ guide, deviceName, fromCache, usageCount }: RepairGuideProps) {
   const [currentStep, setCurrentStep] = useState(-1); // -1 = overview
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [expandedCheckpoints, setExpandedCheckpoints] = useState<Record<number, boolean>>({});
@@ -116,10 +118,23 @@ export default function RepairGuide({ guide, deviceName }: RepairGuideProps) {
           <div className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-primary" />
             <span className="font-semibold text-foreground">Guida Riparazione</span>
+            {fromCache && (
+              <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-xs gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                Salvata
+              </Badge>
+            )}
           </div>
-          <Badge variant="outline" className="gap-1">
-            {completedSteps.length}/{totalSteps} completati
-          </Badge>
+          <div className="flex items-center gap-2">
+            {usageCount && usageCount > 1 && (
+              <Badge variant="secondary" className="text-xs">
+                Usata {usageCount}x
+              </Badge>
+            )}
+            <Badge variant="outline" className="gap-1">
+              {completedSteps.length}/{totalSteps} completati
+            </Badge>
+          </div>
         </div>
         <Progress value={progress} className="h-2" />
         <div className="flex justify-between mt-2 text-xs text-muted-foreground">
