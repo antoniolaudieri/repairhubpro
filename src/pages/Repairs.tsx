@@ -17,7 +17,12 @@ import {
   ChevronRight,
   Euro,
   Calendar,
-  Filter
+  Filter,
+  Laptop,
+  Tablet,
+  Watch,
+  Tv,
+  Gamepad2
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
@@ -34,6 +39,7 @@ interface Repair {
     model: string;
     device_type: string;
     reported_issue: string;
+    photo_url: string | null;
   };
   customer: {
     name: string;
@@ -55,6 +61,26 @@ const priorityConfig: Record<string, { label: string; bg: string; text: string }
   low: { label: "Bassa", bg: "bg-slate-100", text: "text-slate-600" },
   normal: { label: "Normale", bg: "bg-blue-50", text: "text-blue-600" },
   high: { label: "Alta", bg: "bg-red-50", text: "text-red-600" },
+};
+
+const deviceIcons: Record<string, any> = {
+  smartphone: Smartphone,
+  tablet: Tablet,
+  laptop: Laptop,
+  computer: Laptop,
+  pc: Laptop,
+  watch: Watch,
+  smartwatch: Watch,
+  tv: Tv,
+  console: Gamepad2,
+};
+
+const getDeviceIcon = (deviceType: string) => {
+  const type = deviceType.toLowerCase();
+  for (const [key, Icon] of Object.entries(deviceIcons)) {
+    if (type.includes(key)) return Icon;
+  }
+  return Smartphone;
 };
 
 export default function Repairs() {
@@ -81,6 +107,7 @@ export default function Repairs() {
             model,
             device_type,
             reported_issue,
+            photo_url,
             customer:customers (
               name,
               phone
@@ -106,6 +133,7 @@ export default function Repairs() {
           model: repair.device.model,
           device_type: repair.device.device_type,
           reported_issue: repair.device.reported_issue,
+          photo_url: repair.device.photo_url,
         },
         customer: repair.device.customer,
         has_pending_orders: repair.orders?.some((order: any) => order.status === "pending") || false,
@@ -244,11 +272,12 @@ export default function Repairs() {
               </Card>
             </motion.div>
           ) : (
-            <div className="grid gap-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredRepairs.map((repair, index) => {
                 const status = statusConfig[repair.status] || statusConfig.pending;
                 const priority = priorityConfig[repair.priority] || priorityConfig.normal;
                 const StatusIcon = status.icon;
+                const DeviceIcon = getDeviceIcon(repair.device.device_type);
 
                 return (
                   <motion.div
@@ -260,88 +289,115 @@ export default function Repairs() {
                     layout
                   >
                     <Card
-                      className="p-0 overflow-hidden hover:shadow-lg transition-all cursor-pointer border-border/50 group"
+                      className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer border-border/50 group h-full"
                       onClick={() => navigate(`/repairs/${repair.id}`)}
                     >
-                      <div className="flex">
-                        {/* Status indicator bar */}
-                        <div className={`w-1.5 ${status.bg}`} />
-                        
-                        <div className="flex-1 p-4 sm:p-5">
-                          <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                            {/* Device Icon & Info */}
-                            <div className="flex items-start gap-4 flex-1">
-                              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center flex-shrink-0">
-                                <Smartphone className="h-6 w-6 text-primary" />
-                              </div>
-                              
-                              <div className="flex-1 min-w-0">
-                                <div className="flex flex-wrap items-center gap-2 mb-2">
-                                  <h3 className="text-base sm:text-lg font-semibold text-foreground">
-                                    {repair.customer.name}
-                                  </h3>
-                                  <Badge className={`${status.bgLight} ${status.text} border-0 gap-1`}>
-                                    <StatusIcon className="h-3 w-3" />
-                                    {status.label}
-                                  </Badge>
-                                  <Badge className={`${priority.bg} ${priority.text} border-0`}>
-                                    {priority.label}
-                                  </Badge>
-                                  {repair.has_pending_orders && (
-                                    <Badge className="bg-amber-100 text-amber-700 border-0 gap-1">
-                                      <AlertCircle className="h-3 w-3" />
-                                      <span className="hidden sm:inline">Ordini</span>
-                                    </Badge>
-                                  )}
-                                </div>
-                                
-                                <div className="space-y-1.5 text-sm text-muted-foreground">
-                                  <p className="flex items-center gap-2">
-                                    <Smartphone className="h-4 w-4" />
-                                    <span className="font-medium text-foreground">{repair.device.brand} {repair.device.model}</span>
-                                    <span className="text-xs bg-muted px-2 py-0.5 rounded">{repair.device.device_type}</span>
-                                  </p>
-                                  <p className="line-clamp-1 text-muted-foreground">
-                                    {repair.device.reported_issue}
-                                  </p>
-                                  <p className="flex items-center gap-2">
-                                    <Phone className="h-4 w-4" />
-                                    {repair.customer.phone}
-                                  </p>
-                                </div>
+                      {/* Device Image Header */}
+                      <div className="relative h-40 bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 overflow-hidden">
+                        {repair.device.photo_url ? (
+                          <>
+                            <img
+                              src={repair.device.photo_url}
+                              alt={`${repair.device.brand} ${repair.device.model}`}
+                              className="w-full h-full object-contain p-4 group-hover:scale-110 transition-transform duration-500"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                                e.currentTarget.nextElementSibling?.classList.remove("hidden");
+                              }}
+                            />
+                            <div className="hidden absolute inset-0 flex items-center justify-center">
+                              <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                                <DeviceIcon className="h-10 w-10 text-primary/60" />
                               </div>
                             </div>
-
-                            {/* Cost & Date */}
-                            <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-3 pt-3 sm:pt-0 border-t sm:border-t-0 border-border/50">
-                              {repair.estimated_cost ? (
-                                <div className="text-right">
-                                  <p className="text-xs text-muted-foreground">Stimato</p>
-                                  <p className="text-xl sm:text-2xl font-bold text-primary flex items-center gap-1">
-                                    <Euro className="h-4 w-4" />
-                                    {repair.estimated_cost.toFixed(2)}
-                                  </p>
-                                </div>
-                              ) : (
-                                <div className="text-right">
-                                  <p className="text-xs text-muted-foreground">Stimato</p>
-                                  <p className="text-sm text-muted-foreground">Da definire</p>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {new Date(repair.created_at).toLocaleDateString("it-IT", {
-                                  day: "2-digit",
-                                  month: "short",
-                                })}
-                              </div>
-                            </div>
-
-                            {/* Arrow */}
-                            <div className="hidden sm:flex items-center">
-                              <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </>
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                              <DeviceIcon className="h-10 w-10 text-primary/60" />
                             </div>
                           </div>
+                        )}
+                        
+                        {/* Status Badge Overlay */}
+                        <div className="absolute top-3 left-3">
+                          <Badge className={`${status.bgLight} ${status.text} border-0 gap-1 shadow-sm`}>
+                            <StatusIcon className="h-3 w-3" />
+                            {status.label}
+                          </Badge>
+                        </div>
+                        
+                        {/* Priority Badge */}
+                        <div className="absolute top-3 right-3">
+                          <Badge className={`${priority.bg} ${priority.text} border-0 shadow-sm`}>
+                            {priority.label}
+                          </Badge>
+                        </div>
+
+                        {/* Pending Orders Badge */}
+                        {repair.has_pending_orders && (
+                          <div className="absolute bottom-3 right-3">
+                            <Badge className="bg-amber-100 text-amber-700 border-0 gap-1 shadow-sm">
+                              <AlertCircle className="h-3 w-3" />
+                              Ordini
+                            </Badge>
+                          </div>
+                        )}
+
+                        {/* Gradient Overlay */}
+                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background/80 to-transparent" />
+                      </div>
+
+                      {/* Content */}
+                      <div className="p-4">
+                        {/* Device Info */}
+                        <div className="mb-3">
+                          <h3 className="font-bold text-foreground text-lg leading-tight mb-1">
+                            {repair.device.brand} {repair.device.model}
+                          </h3>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <span className="bg-muted px-2 py-0.5 rounded">{repair.device.device_type}</span>
+                          </p>
+                        </div>
+
+                        {/* Issue */}
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4 min-h-[2.5rem]">
+                          {repair.device.reported_issue}
+                        </p>
+
+                        {/* Customer & Cost */}
+                        <div className="flex items-end justify-between pt-3 border-t border-border/50">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-foreground truncate">{repair.customer.name}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Phone className="h-3 w-3" />
+                              {repair.customer.phone}
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0 ml-3">
+                            {repair.estimated_cost ? (
+                              <p className="text-xl font-bold text-primary flex items-center gap-0.5">
+                                <Euro className="h-4 w-4" />
+                                {repair.estimated_cost.toFixed(0)}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">--</p>
+                            )}
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(repair.created_at).toLocaleDateString("it-IT", {
+                                day: "2-digit",
+                                month: "short",
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hover Indicator */}
+                      <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                          <ChevronRight className="h-4 w-4 text-primary" />
                         </div>
                       </div>
                     </Card>
