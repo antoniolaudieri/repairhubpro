@@ -35,7 +35,13 @@ interface SelectedService {
 interface AISuggestion {
   partName: string;
   reason: string;
-  matchedPart?: SparePart;
+  estimatedPrice: number;
+  category: string;
+  imageUrl?: string;
+  inStock: boolean;
+  matchedPartId?: string;
+  stockQuantity: number;
+  actualPrice?: number;
 }
 
 const AVAILABLE_SERVICES = [
@@ -114,26 +120,21 @@ export const SparePartsStep = ({
           deviceBrand,
           deviceModel,
           reportedIssue,
-          availableParts: spareParts.map(p => ({ name: p.name, category: p.category })),
+          availableParts: spareParts.map(p => ({ 
+            id: p.id,
+            name: p.name, 
+            category: p.category,
+            stock_quantity: p.stock_quantity,
+            selling_price: p.selling_price,
+            cost: p.cost,
+          })),
         },
       });
 
       if (error) throw error;
 
       if (data?.suggestions) {
-        // Match suggested parts with actual inventory
-        const matchedSuggestions: AISuggestion[] = data.suggestions.map((suggestion: any) => {
-          const matchedPart = spareParts.find(p => 
-            p.name.toLowerCase().includes(suggestion.partName.toLowerCase()) ||
-            suggestion.partName.toLowerCase().includes(p.name.toLowerCase()) ||
-            p.category.toLowerCase().includes(suggestion.partName.toLowerCase())
-          );
-          return {
-            ...suggestion,
-            matchedPart,
-          };
-        });
-        setAiSuggestions(matchedSuggestions);
+        setAiSuggestions(data.suggestions);
       }
       setHasFetchedSuggestions(true);
     } catch (error: any) {
@@ -141,6 +142,29 @@ export const SparePartsStep = ({
     } finally {
       setLoadingSuggestions(false);
     }
+  };
+
+  const addSuggestedPart = (suggestion: AISuggestion) => {
+    // Check if already added
+    const existingPart = selectedParts.find(p => 
+      p.name.toLowerCase().includes(suggestion.partName.toLowerCase()) ||
+      (suggestion.matchedPartId && p.spare_part_id === suggestion.matchedPartId)
+    );
+    
+    if (existingPart) {
+      toast.info("Ricambio già aggiunto");
+      return;
+    }
+
+    const newPart: SelectedPart = {
+      spare_part_id: suggestion.matchedPartId || `suggested-${Date.now()}`,
+      name: suggestion.partName,
+      quantity: 1,
+      unit_cost: suggestion.actualPrice || suggestion.estimatedPrice,
+    };
+
+    onPartsChange([...selectedParts, newPart]);
+    toast.success(`${suggestion.partName} aggiunto`);
   };
 
   const loadSpareParts = async () => {
@@ -301,36 +325,78 @@ export const SparePartsStep = ({
                 Analisi del difetto in corso...
               </div>
             ) : aiSuggestions.length > 0 ? (
-              <div className="grid gap-2">
-                {aiSuggestions.map((suggestion, index) => (
-                  <div
-                    key={index}
-                    className="p-3 border border-primary/30 rounded-lg bg-primary/5"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <p className="font-medium text-sm">{suggestion.partName}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{suggestion.reason}</p>
+              <div className="grid gap-3">
+                {aiSuggestions.map((suggestion, index) => {
+                  const isAdded = selectedParts.some(p => 
+                    p.name.toLowerCase().includes(suggestion.partName.toLowerCase()) ||
+                    (suggestion.matchedPartId && p.spare_part_id === suggestion.matchedPartId)
+                  );
+                  
+                  return (
+                    <div
+                      key={index}
+                      className="p-4 border border-primary/30 rounded-lg bg-gradient-to-r from-primary/5 to-accent/5"
+                    >
+                      <div className="flex gap-4">
+                        {/* Image */}
+                        <div className="shrink-0">
+                          {suggestion.imageUrl ? (
+                            <img 
+                              src={suggestion.imageUrl} 
+                              alt={suggestion.partName}
+                              className="w-20 h-20 object-cover rounded-lg border border-border bg-background"
+                              onError={(e) => {
+                                e.currentTarget.src = 'https://images.unsplash.com/photo-1517336714731-489689fd1ca8?w=400';
+                              }}
+                            />
+                          ) : (
+                            <div className="w-20 h-20 bg-muted rounded-lg flex items-center justify-center">
+                              <Package className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-semibold text-sm">{suggestion.partName}</p>
+                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded mt-1 inline-block">
+                                {suggestion.category}
+                              </span>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="font-bold text-lg text-primary">
+                                €{(suggestion.actualPrice || suggestion.estimatedPrice).toFixed(2)}
+                              </p>
+                              {suggestion.inStock ? (
+                                <span className="text-xs text-green-600">
+                                  In magazzino ({suggestion.stockQuantity})
+                                </span>
+                              ) : (
+                                <span className="text-xs text-amber-600">
+                                  Da ordinare
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{suggestion.reason}</p>
+                          
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => addSuggestedPart(suggestion)}
+                            disabled={isAdded}
+                            className="mt-3 w-full sm:w-auto"
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            {isAdded ? "Aggiunto" : "Aggiungi alla riparazione"}
+                          </Button>
+                        </div>
                       </div>
-                      {suggestion.matchedPart ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          onClick={() => addPart(suggestion.matchedPart!)}
-                          disabled={selectedParts.some(p => p.spare_part_id === suggestion.matchedPart!.id)}
-                          className="shrink-0"
-                        >
-                          <Plus className="h-4 w-4 mr-1" />
-                          {selectedParts.some(p => p.spare_part_id === suggestion.matchedPart!.id) ? "Aggiunto" : "Aggiungi"}
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded shrink-0">
-                          Non in magazzino
-                        </span>
-                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : hasFetchedSuggestions ? (
               <div className="p-4 text-center text-muted-foreground bg-muted/30 rounded-lg">
