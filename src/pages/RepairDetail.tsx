@@ -91,6 +91,8 @@ export default function RepairDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [loadingAI, setLoadingAI] = useState(false);
+  const [previousStatus, setPreviousStatus] = useState<string | null>(null);
+  const [showStartedAnimation, setShowStartedAnimation] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -148,7 +150,7 @@ export default function RepairDetail() {
 
       if (error) throw error;
 
-      setRepair({
+      const repairData = {
         id: data.id,
         status: data.status,
         priority: data.priority,
@@ -162,7 +164,9 @@ export default function RepairDetail() {
         customer: data.device.customer,
         orders: data.orders || [],
         repair_parts: data.repair_parts || [],
-      });
+      };
+      setRepair(repairData);
+      setPreviousStatus(data.status);
     } catch (error) {
       console.error("Error loading repair:", error);
       toast({
@@ -220,6 +224,8 @@ export default function RepairDetail() {
   const saveChanges = async () => {
     if (!repair) return;
 
+    const isStartingRepair = previousStatus === "pending" && repair.status === "in_progress";
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -238,10 +244,23 @@ export default function RepairDetail() {
 
       if (error) throw error;
 
-      toast({
-        title: "Salvato",
-        description: "Le modifiche sono state salvate con successo",
-      });
+      // Show special animation when repair starts
+      if (isStartingRepair) {
+        setShowStartedAnimation(true);
+        setTimeout(() => setShowStartedAnimation(false), 3000);
+        toast({
+          title: "🔧 Riparazione Iniziata!",
+          description: "La riparazione è ora in corso",
+          className: "bg-primary text-primary-foreground border-primary",
+        });
+      } else {
+        toast({
+          title: "Salvato",
+          description: "Le modifiche sono state salvate con successo",
+        });
+      }
+
+      setPreviousStatus(repair.status);
     } catch (error) {
       console.error("Error saving changes:", error);
       toast({
@@ -320,7 +339,38 @@ export default function RepairDetail() {
   }
 
   return (
-    <div className="p-4 sm:p-6">
+    <div className="p-4 sm:p-6 relative">
+      {/* Animation overlay when repair starts */}
+      <AnimatePresence>
+        {showStartedAnimation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center"
+          >
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.5, opacity: 0 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="bg-primary/90 text-primary-foreground px-8 py-6 rounded-2xl shadow-2xl flex items-center gap-4"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: 2, ease: "linear" }}
+              >
+                <Wrench className="h-10 w-10" />
+              </motion.div>
+              <div>
+                <p className="text-2xl font-bold">Riparazione Iniziata!</p>
+                <p className="text-sm opacity-80">Lavori in corso...</p>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-6xl mx-auto">
         <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
           <div>
