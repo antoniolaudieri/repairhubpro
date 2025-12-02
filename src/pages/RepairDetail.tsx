@@ -42,7 +42,37 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
+import RepairGuide from "@/components/repair/RepairGuide";
 import { motion, AnimatePresence } from "framer-motion";
+
+interface RepairGuideData {
+  diagnosis: {
+    problem: string;
+    cause: string;
+    severity: "low" | "medium" | "high";
+    repairability: number;
+  };
+  overview: {
+    difficulty: string;
+    estimatedTime: string;
+    partsNeeded: string[];
+    toolsNeeded: string[];
+  };
+  steps: Array<{
+    stepNumber: number;
+    title: string;
+    description: string;
+    imageUrl?: string;
+    warnings?: string[];
+    tips?: string[];
+    checkpoints?: string[];
+  }>;
+  troubleshooting: Array<{
+    problem: string;
+    solution: string;
+  }>;
+  finalNotes: string;
+}
 
 interface OrderInfo {
   id: string;
@@ -124,6 +154,7 @@ export default function RepairDetail() {
   const [loadingAI, setLoadingAI] = useState(false);
   const [previousStatus, setPreviousStatus] = useState<string | null>(null);
   const [showStartedAnimation, setShowStartedAnimation] = useState(false);
+  const [repairGuide, setRepairGuide] = useState<RepairGuideData | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -200,6 +231,18 @@ export default function RepairDetail() {
       };
       setRepair(repairData);
       setPreviousStatus(data.status);
+      
+      // Try to parse stored guide JSON
+      if (data.ai_suggestions) {
+        try {
+          const parsed = JSON.parse(data.ai_suggestions);
+          if (parsed.steps && parsed.diagnosis) {
+            setRepairGuide(parsed);
+          }
+        } catch {
+          // Not JSON, it's text-based suggestions - that's fine
+        }
+      }
     } catch (error) {
       console.error("Error loading repair:", error);
       toast({
@@ -229,19 +272,38 @@ export default function RepairDetail() {
 
       if (error) throw error;
 
-      const suggestions = data.suggestions;
-      
-      setRepair({ ...repair, ai_suggestions: suggestions });
-      
-      await supabase
-        .from("repairs")
-        .update({ ai_suggestions: suggestions })
-        .eq("id", id);
+      // Handle structured guide response
+      if (data.isStructured && data.guide) {
+        setRepairGuide(data.guide);
+        
+        // Store a summary in ai_suggestions for backward compatibility
+        const summaryText = `Guida generata: ${data.guide.steps?.length || 0} step - ${data.guide.overview?.difficulty || 'N/A'} - ${data.guide.overview?.estimatedTime || 'N/A'}`;
+        setRepair({ ...repair, ai_suggestions: summaryText });
+        
+        await supabase
+          .from("repairs")
+          .update({ ai_suggestions: JSON.stringify(data.guide) })
+          .eq("id", id);
 
-      toast({
-        title: "Suggerimenti IA generati",
-        description: "I suggerimenti sono stati aggiunti alla riparazione",
-      });
+        toast({
+          title: "Guida Riparazione Generata",
+          description: `${data.guide.steps?.length || 0} step con immagini e suggerimenti`,
+        });
+      } else {
+        // Fallback to old text-based suggestions
+        const suggestions = data.suggestions;
+        setRepair({ ...repair, ai_suggestions: suggestions });
+        
+        await supabase
+          .from("repairs")
+          .update({ ai_suggestions: suggestions })
+          .eq("id", id);
+
+        toast({
+          title: "Suggerimenti IA generati",
+          description: "I suggerimenti sono stati aggiunti alla riparazione",
+        });
+      }
     } catch (error) {
       console.error("Error getting AI suggestions:", error);
       toast({
@@ -707,55 +769,71 @@ export default function RepairDetail() {
               </Card>
             </motion.div>
 
-            {/* AI Suggestions Card */}
+            {/* AI Repair Guide Card */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.4 }}
             >
               <Card className="overflow-hidden border-amber-200/50">
-                <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/5 px-6 py-4 border-b border-amber-200/30">
+                <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/5 px-4 sm:px-6 py-4 border-b border-amber-200/30">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <h2 className="text-lg font-semibold flex items-center gap-2">
                       <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
                         <Sparkles className="h-4 w-4 text-amber-600" />
                       </div>
-                      Assistente IA
+                      Guida Riparazione IA
                     </h2>
                     <Button
                       onClick={getAISuggestions}
                       disabled={loadingAI}
                       variant="outline"
                       size="sm"
-                      className="border-amber-300 hover:bg-amber-50 gap-2"
+                      className="border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-2"
                     >
                       {loadingAI ? (
                         <>
                           <Loader2 className="h-4 w-4 animate-spin" />
-                          Generazione...
+                          <span className="hidden sm:inline">Generazione Guida...</span>
+                          <span className="sm:hidden">Generando...</span>
                         </>
                       ) : (
                         <>
                           <Lightbulb className="h-4 w-4" />
-                          Genera Suggerimenti
+                          <span className="hidden sm:inline">Genera Guida Step-by-Step</span>
+                          <span className="sm:hidden">Genera Guida</span>
                         </>
                       )}
                     </Button>
                   </div>
                 </div>
-                <div className="p-6">
-                  {repair.ai_suggestions ? (
+                <div className="p-4 sm:p-6">
+                  {repairGuide ? (
+                    <RepairGuide 
+                      guide={repairGuide} 
+                      deviceName={`${repair.device.brand} ${repair.device.model}`} 
+                    />
+                  ) : repair.ai_suggestions ? (
                     <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200/50 rounded-xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
                       {repair.ai_suggestions}
                     </div>
                   ) : (
-                    <div className="text-center py-6">
-                      <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
-                        <Lightbulb className="h-6 w-6 text-amber-600" />
+                    <div className="text-center py-8">
+                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 flex items-center justify-center mx-auto mb-4">
+                        <Lightbulb className="h-8 w-8 text-amber-600" />
                       </div>
-                      <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                        Clicca su "Genera Suggerimenti" per ottenere consigli dall'IA su come procedere con questa riparazione.
+                      <h3 className="font-semibold text-foreground mb-2">Tutorial Riparazione</h3>
+                      <p className="text-muted-foreground text-sm max-w-sm mx-auto mb-4">
+                        Genera una guida step-by-step stile iFixit con immagini, avvisi di sicurezza e suggerimenti per completare la riparazione.
                       </p>
+                      <Button
+                        onClick={getAISuggestions}
+                        disabled={loadingAI}
+                        className="gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                      >
+                        <Sparkles className="h-4 w-4" />
+                        Genera Guida IA
+                      </Button>
                     </div>
                   )}
                 </div>
