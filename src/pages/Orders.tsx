@@ -50,6 +50,15 @@ interface Order {
   ordered_at: string | null;
   received_at: string | null;
   order_items: OrderItem[];
+  repairs?: {
+    devices: {
+      customers: {
+        name: string;
+        phone: string;
+        email: string | null;
+      };
+    };
+  } | null;
 }
 
 export default function Orders() {
@@ -95,6 +104,15 @@ export default function Orders() {
             quantity,
             unit_cost,
             spare_part_id
+          ),
+          repairs (
+            devices (
+              customers (
+                name,
+                phone,
+                email
+              )
+            )
           )
         `)
         .order("created_at", { ascending: false });
@@ -313,6 +331,24 @@ export default function Orders() {
                             </Badge>
                           )}
                         </div>
+                        
+                        {order.repairs?.devices?.customers && (
+                          <div className="mb-2 p-3 bg-muted/30 rounded-lg">
+                            <p className="font-semibold text-foreground">
+                              Cliente: {order.repairs.devices.customers.name}
+                            </p>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                              <span>📞 {order.repairs.devices.customers.phone}</span>
+                              {order.repairs.devices.customers.email && (
+                                <>
+                                  <span>•</span>
+                                  <span>✉️ {order.repairs.devices.customers.email}</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>Fornitore: {order.supplier}</span>
                           <span>•</span>
