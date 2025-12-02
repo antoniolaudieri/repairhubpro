@@ -19,6 +19,24 @@ interface NewRepairWizardProps {
   loading?: boolean;
 }
 
+const stepVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 50 : -50,
+    opacity: 0,
+    scale: 0.98,
+  }),
+  center: {
+    x: 0,
+    opacity: 1,
+    scale: 1,
+  },
+  exit: (direction: number) => ({
+    x: direction < 0 ? 50 : -50,
+    opacity: 0,
+    scale: 0.98,
+  }),
+};
+
 export const NewRepairWizard = ({
   currentStep,
   totalSteps,
@@ -34,39 +52,50 @@ export const NewRepairWizard = ({
   const currentStepInfo = steps[currentStep];
 
   return (
-    <div className="space-y-4 md:space-y-6">
+    <div className="space-y-4">
       {/* Step Indicators - Desktop */}
       <div className="hidden lg:flex items-center justify-between px-2">
         {steps.map((step, index) => (
           <div key={index} className="flex items-center flex-1">
             <div className="flex flex-col items-center">
-              <div
+              <motion.div
+                initial={false}
+                animate={{
+                  scale: index === currentStep ? 1.1 : 1,
+                  backgroundColor: index <= currentStep ? "hsl(var(--primary))" : "hsl(var(--muted))",
+                }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
                 className={`
-                  h-9 w-9 rounded-full flex items-center justify-center font-semibold text-sm
-                  transition-all duration-300 relative
-                  ${
-                    index < currentStep
-                      ? "bg-primary text-primary-foreground"
-                      : index === currentStep
-                      ? "bg-primary text-primary-foreground ring-4 ring-primary/20"
-                      : "bg-muted text-muted-foreground border-2 border-border"
-                  }
+                  h-8 w-8 rounded-full flex items-center justify-center font-semibold text-sm
+                  ${index <= currentStep ? "text-primary-foreground" : "text-muted-foreground"}
+                  ${index === currentStep ? "ring-4 ring-primary/20" : ""}
                 `}
               >
-                {index < currentStep ? <Check className="h-4 w-4" /> : index + 1}
-              </div>
-              <span className={`text-xs mt-1.5 font-medium text-center max-w-[80px] leading-tight ${
+                {index < currentStep ? (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  >
+                    <Check className="h-4 w-4" />
+                  </motion.div>
+                ) : (
+                  index + 1
+                )}
+              </motion.div>
+              <span className={`text-[10px] mt-1.5 font-medium text-center max-w-[70px] leading-tight ${
                 index === currentStep ? "text-primary" : "text-muted-foreground"
               }`}>
                 {step.title}
               </span>
             </div>
             {index < totalSteps - 1 && (
-              <div className="flex-1 h-0.5 mx-3 -mt-5">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    index < currentStep ? "bg-primary" : "bg-border"
-                  }`}
+              <div className="flex-1 h-0.5 mx-2 -mt-4 bg-muted rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-primary"
+                  initial={{ width: 0 }}
+                  animate={{ width: index < currentStep ? "100%" : "0%" }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
                 />
               </div>
             )}
@@ -74,102 +103,102 @@ export const NewRepairWizard = ({
         ))}
       </div>
 
-      {/* Step Indicators - Mobile (Compact dots + progress) */}
-      <div className="lg:hidden space-y-3">
-        <div className="flex items-center justify-center gap-1.5">
-          {steps.map((_, index) => (
-            <div
-              key={index}
-              className={`
-                h-2 rounded-full transition-all duration-300
-                ${
-                  index < currentStep
-                    ? "w-2 bg-primary"
-                    : index === currentStep
-                    ? "w-6 bg-primary"
-                    : "w-2 bg-border"
-                }
-              `}
-            />
-          ))}
-        </div>
-        <div className="flex items-center justify-between text-xs px-1">
-          <span className="text-muted-foreground">
-            Step {currentStep + 1} di {totalSteps}
+      {/* Step Indicators - Mobile */}
+      <div className="lg:hidden">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs text-muted-foreground">
+            Step {currentStep + 1}/{totalSteps}
           </span>
-          <span className="text-primary font-medium">{Math.round(progress)}%</span>
+          <span className="text-xs font-semibold text-primary">{Math.round(progress)}%</span>
         </div>
-      </div>
-
-      {/* Progress Bar - Desktop only */}
-      <div className="hidden lg:block">
         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
           <motion.div
             className="h-full bg-primary rounded-full"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
           />
+        </div>
+        <div className="flex items-center justify-center gap-1 mt-2">
+          {steps.map((_, index) => (
+            <motion.div
+              key={index}
+              animate={{
+                width: index === currentStep ? 20 : 6,
+                backgroundColor: index <= currentStep ? "hsl(var(--primary))" : "hsl(var(--muted))",
+              }}
+              transition={{ duration: 0.3 }}
+              className="h-1.5 rounded-full"
+            />
+          ))}
         </div>
       </div>
 
       {/* Step Title */}
       <div className="text-center py-2">
-        <motion.h2
-          key={currentStep}
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-lg md:text-xl font-bold text-foreground"
-        >
-          {currentStepInfo.title}
-        </motion.h2>
-        <motion.p
-          key={`desc-${currentStep}`}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="text-xs md:text-sm text-muted-foreground mt-1"
-        >
-          {currentStepInfo.description}
-        </motion.p>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <h2 className="text-base md:text-lg font-bold text-foreground">
+              {currentStepInfo.title}
+            </h2>
+            <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+              {currentStepInfo.description}
+            </p>
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       {/* Step Content */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
-          className="min-h-[280px] md:min-h-[400px] p-3 md:p-5 rounded-xl bg-muted/30 border border-border/50"
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
+      <div className="relative min-h-[300px] md:min-h-[380px]">
+        <AnimatePresence mode="wait" custom={1}>
+          <motion.div
+            key={currentStep}
+            custom={1}
+            variants={stepVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.2 },
+              scale: { duration: 0.2 },
+            }}
+            className="p-3 md:p-4 rounded-xl bg-muted/20 border border-border/40"
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between gap-3 pt-3 md:pt-4 border-t border-border/50">
+      <div className="flex gap-3 pt-3 border-t border-border/40">
         <Button
           type="button"
           variant="outline"
           onClick={onPrevious}
           disabled={currentStep === 0 || loading}
-          className="h-10 md:h-11 px-3 md:px-5 flex-1 md:flex-none"
+          className="h-11 flex-1 md:flex-none md:px-6"
         >
           <ChevronLeft className="mr-1 h-4 w-4" />
-          <span className="hidden sm:inline">Indietro</span>
-          <span className="sm:hidden">Indietro</span>
+          Indietro
         </Button>
+
+        <div className="flex-1" />
 
         {currentStep < totalSteps - 1 ? (
           <Button
             type="button"
             onClick={onNext}
             disabled={!canGoNext || loading}
-            className="h-10 md:h-11 px-4 md:px-6 flex-1 md:flex-none bg-primary hover:bg-primary/90"
+            className="h-11 flex-1 md:flex-none md:px-8 bg-primary hover:bg-primary/90"
           >
-            <span>Avanti</span>
+            Avanti
             <ChevronRight className="ml-1 h-4 w-4" />
           </Button>
         ) : (
@@ -177,19 +206,17 @@ export const NewRepairWizard = ({
             type="button"
             onClick={onSubmit}
             disabled={!canGoNext || loading}
-            className="h-10 md:h-11 px-4 md:px-6 flex-1 md:flex-none bg-accent hover:bg-accent/90 text-accent-foreground"
+            className="h-11 flex-1 md:flex-none md:px-6 bg-accent hover:bg-accent/90 text-accent-foreground"
           >
             {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span className="hidden sm:inline">Salvataggio...</span>
-                <span className="sm:hidden">Salva...</span>
+                Salvataggio...
               </>
             ) : (
               <>
                 <Check className="mr-1.5 h-4 w-4" />
-                <span className="hidden sm:inline">Completa</span>
-                <span className="sm:hidden">Completa</span>
+                Completa
               </>
             )}
           </Button>

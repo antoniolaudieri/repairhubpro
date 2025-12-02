@@ -647,66 +647,81 @@ const NewRepair = () => {
             onCancel={() => setShowPhotoEditor(false)}
           />
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {!detectedDevice ? (
               <>
-                <div className="text-center p-4 bg-muted/30 rounded-lg mb-4">
-                  <p className="text-sm text-muted-foreground">
-                    La foto è opzionale. Puoi scattarla e usare l'IA per il riconoscimento, 
-                    oppure inserire i dati manualmente.
+                <div className="text-center p-3 bg-muted/30 rounded-lg">
+                  <p className="text-xs text-muted-foreground">
+                    📷 Foto opzionale. Scatta per riconoscimento IA o inserisci manualmente.
                   </p>
                 </div>
                 
                 <PhotoUpload onPhotoUpload={handlePhotoUpload} />
+                
                 {photoPreview && !showManualEntry && (
                   <div className="space-y-2">
                     <Button
                       type="button"
                       onClick={analyzeDeviceWithAI}
                       disabled={aiAnalyzing || lookingUpDetails}
-                      className="w-full bg-gradient-primary"
+                      className="w-full h-10 bg-primary hover:bg-primary/90"
                     >
                       <Sparkles className="mr-2 h-4 w-4" />
                       {aiAnalyzing 
-                        ? "Analisi foto in corso..." 
+                        ? "Analisi..." 
                         : lookingUpDetails 
                         ? "Recupero dettagli..." 
                         : "Riconosci con IA"}
                     </Button>
                     
-                    <Button
-                      type="button"
-                      onClick={handleOpenPhotoEditor}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      Annota Punti Intervento
-                    </Button>
-                    
-                    <Button
-                      type="button"
-                      onClick={() => setShowManualEntry(true)}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      Inserisci Manualmente
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleOpenPhotoEditor}
+                        variant="outline"
+                        size="sm"
+                        className="h-9 text-xs"
+                      >
+                        ✏️ Annota
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        onClick={() => setShowManualEntry(true)}
+                        variant="outline"
+                        size="sm"
+                        className="h-9 text-xs"
+                      >
+                        ⌨️ Manuale
+                      </Button>
+                    </div>
                     
                     {annotatedPhotoBlob && (
-                      <p className="text-sm text-accent flex items-center gap-2">
-                        <span className="h-2 w-2 bg-accent rounded-full" />
-                        Foto annotata pronta per il salvataggio
+                      <p className="text-xs text-accent flex items-center justify-center gap-1.5">
+                        <span className="h-1.5 w-1.5 bg-accent rounded-full" />
+                        Foto annotata pronta
                       </p>
                     )}
                   </div>
                 )}
 
+                {!photoPreview && !showManualEntry && (
+                  <Button
+                    type="button"
+                    onClick={() => setShowManualEntry(true)}
+                    variant="outline"
+                    className="w-full h-10"
+                  >
+                    Inserisci Manualmente
+                  </Button>
+                )}
+
                 {showManualEntry && (
-                  <div className="space-y-4 p-4 border border-border rounded-lg bg-card">
-                    <h3 className="font-semibold text-lg">Inserimento Manuale</h3>
-                    <div className="space-y-3">
+                  <div className="space-y-3 p-3 border border-border rounded-lg bg-card">
+                    <h3 className="font-semibold text-sm">Inserimento Manuale</h3>
+                    <div className="grid grid-cols-2 gap-2">
                       <div className="relative">
-                        <label className="text-sm font-medium">Marca</label>
+                        <label className="text-xs font-medium text-muted-foreground">Marca</label>
                         <input
                           type="text"
                           value={manualBrand}
@@ -717,17 +732,17 @@ const NewRepair = () => {
                             setShowBrandSuggestions(suggestions.length > 0);
                           }}
                           onBlur={() => setTimeout(() => setShowBrandSuggestions(false), 200)}
-                          placeholder="es. Apple, Samsung"
-                          className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background"
+                          placeholder="es. Apple"
+                          className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-background"
                         />
                         {showBrandSuggestions && brandSuggestions.length > 0 && (
-                          <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          <div className="absolute z-20 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-40 overflow-y-auto">
                             {brandSuggestions.map((brand) => (
                               <button
                                 key={brand}
                                 type="button"
                                 onClick={() => selectBrand(brand)}
-                                className="w-full px-3 py-2 text-left hover:bg-accent/10 transition-colors"
+                                className="w-full px-3 py-2 text-sm text-left hover:bg-accent/10 transition-colors"
                               >
                                 {brand}
                               </button>
@@ -736,7 +751,7 @@ const NewRepair = () => {
                         )}
                       </div>
                       <div className="relative">
-                        <label className="text-sm font-medium">Modello</label>
+                        <label className="text-xs font-medium text-muted-foreground">Modello</label>
                         <input
                           type="text"
                           value={manualModel}
@@ -749,18 +764,18 @@ const NewRepair = () => {
                             }
                           }}
                           onBlur={() => setTimeout(() => setShowModelSuggestions(false), 200)}
-                          placeholder="es. iPhone 15 Pro"
+                          placeholder="es. iPhone 15"
                           disabled={!manualBrand}
-                          className="w-full mt-1 px-3 py-2 border border-border rounded-md bg-background disabled:opacity-50"
+                          className="w-full mt-1 px-3 py-2 text-sm border border-border rounded-md bg-background disabled:opacity-50"
                         />
                         {showModelSuggestions && modelSuggestions.length > 0 && (
-                          <div className="absolute z-10 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          <div className="absolute z-20 w-full mt-1 bg-card border border-border rounded-md shadow-lg max-h-40 overflow-y-auto">
                             {modelSuggestions.map((model) => (
                               <button
                                 key={model}
                                 type="button"
                                 onClick={() => selectModel(model)}
-                                className="w-full px-3 py-2 text-left hover:bg-accent/10 transition-colors"
+                                className="w-full px-3 py-2 text-sm text-left hover:bg-accent/10 transition-colors"
                               >
                                 {model}
                               </button>
@@ -768,29 +783,30 @@ const NewRepair = () => {
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2">
-                        <Button
-                          type="button"
-                          onClick={handleManualLookup}
-                          disabled={lookingUpDetails || !manualBrand.trim() || !manualModel.trim()}
-                          className="flex-1"
-                        >
-                          {lookingUpDetails ? "Ricerca in corso..." : "Cerca Dispositivo"}
-                        </Button>
-                        <Button
-                          type="button"
-                          onClick={() => {
-                            setShowManualEntry(false);
-                            setManualBrand("");
-                            setManualModel("");
-                            setBrandSuggestions([]);
-                            setModelSuggestions([]);
-                          }}
-                          variant="outline"
-                        >
-                          Annulla
-                        </Button>
-                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        onClick={handleManualLookup}
+                        disabled={lookingUpDetails || !manualBrand.trim() || !manualModel.trim()}
+                        className="flex-1 h-9 text-sm"
+                      >
+                        {lookingUpDetails ? "Ricerca..." : "Conferma"}
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setShowManualEntry(false);
+                          setManualBrand("");
+                          setManualModel("");
+                          setBrandSuggestions([]);
+                          setModelSuggestions([]);
+                        }}
+                        variant="outline"
+                        className="h-9 text-sm"
+                      >
+                        Annulla
+                      </Button>
                     </div>
                   </div>
                 )}
@@ -867,83 +883,73 @@ const NewRepair = () => {
         const ProfitIcon = profitLevel.icon;
         
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Card Guadagno Netto - Solo per tecnici */}
-            <div className={`p-4 rounded-xl border-2 border-dashed border-primary/30 bg-gradient-to-r ${profitLevel.bg}`}>
-              <div className="flex items-center justify-between mb-3">
+            <div className={`p-3 md:p-4 rounded-xl border border-dashed border-primary/30 bg-gradient-to-r ${profitLevel.bg}`}>
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <ProfitIcon className={`h-5 w-5 ${profitLevel.color}`} />
-                  <span className="text-sm font-medium text-muted-foreground">Guadagno Netto (interno)</span>
+                  <ProfitIcon className={`h-4 w-4 ${profitLevel.color}`} />
+                  <span className="text-xs font-medium text-muted-foreground">Guadagno (interno)</span>
                 </div>
-                <span className={`text-xs font-bold px-2 py-1 rounded-full bg-background/50 ${profitLevel.color}`}>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full bg-background/50 ${profitLevel.color}`}>
                   {profitLevel.emoji} {profitLevel.label}
                 </span>
               </div>
-              <div className="flex items-baseline justify-between">
-                <span className={`text-3xl font-bold ${profitLevel.color}`}>
+              <div className="flex items-baseline gap-2">
+                <span className={`text-2xl md:text-3xl font-bold ${profitLevel.color}`}>
                   €{netProfit.toFixed(2)}
                 </span>
               </div>
-              {/* Breakdown dettagliato */}
-              <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-2 gap-2 text-xs">
+              {/* Breakdown compatto */}
+              <div className="mt-2 pt-2 border-t border-border/50 grid grid-cols-2 gap-x-3 gap-y-1 text-[10px] md:text-xs">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Margine ricambi:</span>
-                  <span className="font-medium">€{partsMargin.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Ricambi:</span>
+                  <span>€{partsMargin.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Servizi:</span>
-                  <span className="font-medium">€{servicesRevenue.toFixed(2)}</span>
+                  <span>€{servicesRevenue.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Manodopera:</span>
-                  <span className="font-medium">€{laborCost.toFixed(2)}</span>
+                  <span>€{laborCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Gestione diagnosi:</span>
-                  <span className="font-medium">€{diagnosticFee.toFixed(2)}</span>
+                  <span className="text-muted-foreground">Diagnosi:</span>
+                  <span>€{diagnosticFee.toFixed(2)}</span>
                 </div>
               </div>
-              <div className="mt-2 text-xs text-muted-foreground/60 text-right">
+              <div className="mt-1.5 text-[9px] text-muted-foreground/60 text-right">
                 Non visibile al cliente
               </div>
             </div>
 
             {/* Avviso ricambi senza costo */}
             {hasMissingCosts && (
-              <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-3">
-                <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-warning">Attenzione: costi mancanti</p>
-                  <p className="text-muted-foreground mt-1">
+              <div className="p-2.5 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <p className="font-medium text-warning">Costi mancanti</p>
+                  <p className="text-muted-foreground">
                     {partsWithoutCost.length === 1 
-                      ? `Il ricambio "${partsWithoutCost[0].name}" non ha il costo d'acquisto impostato.`
-                      : `${partsWithoutCost.length} ricambi non hanno il costo d'acquisto impostato:`
+                      ? `"${partsWithoutCost[0].name}" senza costo.`
+                      : `${partsWithoutCost.length} ricambi senza costo.`
                     }
-                  </p>
-                  {partsWithoutCost.length > 1 && (
-                    <ul className="mt-1 text-xs text-muted-foreground list-disc list-inside">
-                      {partsWithoutCost.map(p => (
-                        <li key={p.spare_part_id}>{p.name}</li>
-                      ))}
-                    </ul>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Il margine mostrato potrebbe non essere accurato. Aggiorna i costi nell'inventario per un calcolo preciso.
                   </p>
                 </div>
               </div>
             )}
 
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Dati Cliente</h3>
+            <div className="space-y-3">
+              <h3 className="font-semibold text-sm md:text-base">Dati Cliente</h3>
               <CustomerFormStep
                 customerData={customerData}
                 onChange={setCustomerData}
                 readOnly
               />
             </div>
-            <div className="space-y-4">
-              <h3 className="font-semibold text-lg">Dati Dispositivo</h3>
+            <div className="space-y-3">
+              <h3 className="font-semibold text-sm md:text-base">Dispositivo</h3>
               {detectedDevice && (
                 <DeviceInfoCard
                   deviceInfo={detectedDevice}
@@ -953,30 +959,28 @@ const NewRepair = () => {
               )}
             </div>
             {selectedSpareParts.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Ricambi Selezionati</h3>
-                <div className="border border-border rounded-lg p-4">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm md:text-base">Ricambi ({selectedSpareParts.length})</h3>
+                <div className="border border-border rounded-lg p-3 space-y-1">
                   {selectedSpareParts.map((part) => (
                     <div
                       key={part.spare_part_id}
-                      className="flex justify-between items-center py-2"
+                      className="flex justify-between items-center py-1 text-sm"
                     >
-                      <span>{part.name}</span>
-                      <span className="text-muted-foreground">
+                      <span className="truncate flex-1 mr-2">{part.name}</span>
+                      <span className="text-muted-foreground whitespace-nowrap">
                         {part.quantity}x €{part.unit_cost.toFixed(2)}
                       </span>
                     </div>
                   ))}
                   <div className="pt-2 border-t border-border mt-2 space-y-1">
-                    <div className="flex justify-between font-semibold">
-                      <span>Totale Ricambi:</span>
-                      <span>
-                        €{partsRevenue.toFixed(2)}
-                      </span>
+                    <div className="flex justify-between font-semibold text-sm">
+                      <span>Totale:</span>
+                      <span>€{partsRevenue.toFixed(2)}</span>
                     </div>
                     {partsMargin > 0 && (
-                      <div className="flex justify-between text-sm text-success">
-                        <span>Margine Totale:</span>
+                      <div className="flex justify-between text-xs text-accent">
+                        <span>Margine:</span>
                         <span className="font-medium">
                           €{partsMargin.toFixed(2)} 
                           {partsCost > 0 && ` (${((partsMargin / partsCost) * 100).toFixed(0)}%)`}
@@ -988,55 +992,53 @@ const NewRepair = () => {
               </div>
             )}
             {selectedServices.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Servizi Selezionati</h3>
-                <div className="border border-border rounded-lg p-4">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm md:text-base">Servizi ({selectedServices.length})</h3>
+                <div className="border border-border rounded-lg p-3 space-y-1">
                   {selectedServices.map((service) => (
                     <div
                       key={service.id}
-                      className="flex justify-between items-center py-2"
+                      className="flex justify-between items-center py-1 text-sm"
                     >
-                      <span>{service.name}</span>
+                      <span className="truncate flex-1 mr-2">{service.name}</span>
                       <span className="text-muted-foreground">€{service.price.toFixed(2)}</span>
                     </div>
                   ))}
                   <div className="pt-2 border-t border-border mt-2">
-                    <div className="flex justify-between font-semibold">
-                      <span>Totale Servizi:</span>
-                      <span>
-                        €{servicesRevenue.toFixed(2)}
-                      </span>
+                    <div className="flex justify-between font-semibold text-sm">
+                      <span>Totale:</span>
+                      <span>€{servicesRevenue.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
               </div>
             )}
             {laborCost > 0 && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Manodopera</h3>
-                <div className="border border-border rounded-lg p-4">
+              <div className="space-y-2">
+                <h3 className="font-semibold text-sm md:text-base">Manodopera</h3>
+                <div className="border border-border rounded-lg p-3">
                   {selectedLabors.length > 0 && (
-                    <div className="space-y-2 mb-2">
+                    <div className="space-y-1 mb-2">
                       {selectedLabors.map((labor) => (
                         <div key={labor.id} className="flex justify-between text-sm">
-                          <span>{labor.name}</span>
+                          <span className="truncate flex-1 mr-2">{labor.name}</span>
                           <span className="text-muted-foreground">€{labor.price.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                   )}
-                  <div className={`flex justify-between font-semibold ${selectedLabors.length > 0 ? 'pt-2 border-t border-border' : ''}`}>
-                    <span>Totale Manodopera:</span>
+                  <div className={`flex justify-between font-semibold text-sm ${selectedLabors.length > 0 ? 'pt-2 border-t border-border' : ''}`}>
+                    <span>Totale:</span>
                     <span>€{laborCost.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
             )}
             {(selectedSpareParts.length > 0 || selectedServices.length > 0 || laborCost > 0) && (
-              <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-lg">Totale Preventivo:</span>
-                  <span className="font-bold text-lg text-primary">
+                  <span className="font-bold text-sm md:text-base">Totale Preventivo:</span>
+                  <span className="font-bold text-base md:text-lg text-primary">
                     €{(partsRevenue + servicesRevenue + laborCost).toFixed(2)}
                   </span>
                 </div>

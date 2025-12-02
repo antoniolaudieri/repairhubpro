@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, FileSignature, X, Euro, Shield, CheckCircle2 } from "lucide-react";
+import { FileSignature, X, Euro, Shield, CheckCircle2 } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion } from "framer-motion";
@@ -27,44 +27,29 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Diagnostic Fee Card */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <Card className="overflow-hidden border-2 border-primary/30 bg-gradient-to-br from-primary/5 via-background to-accent/5">
-          <div className="p-5">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg">
-                  <Euro className="h-7 w-7 text-primary-foreground" />
-                </div>
-              </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-foreground mb-1">
-                  Gestione Diagnosi
-                </h3>
-                <p className="text-sm text-muted-foreground mb-3">
-                  Costo fisso per analisi e diagnosi del dispositivo
-                </p>
-                <div className="flex items-center gap-3">
-                  <span className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                    €15,00
-                  </span>
-                  <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 text-xs font-semibold border border-amber-500/20">
-                    Da pagare in anticipo
-                  </span>
-                </div>
-              </div>
+        <Card className="p-3 md:p-4 border border-primary/30 bg-primary/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
+              <Euro className="h-5 w-5 md:h-6 md:w-6 text-primary-foreground" />
             </div>
-            
-            <div className="mt-4 pt-4 border-t border-border/50">
-              <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                <span>Il costo di gestione diagnosi include l'analisi completa del dispositivo e la valutazione del guasto</span>
-              </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm md:text-base font-bold text-foreground">
+                Gestione Diagnosi
+              </h3>
+              <p className="text-xs text-muted-foreground">
+                Costo fisso per analisi del dispositivo
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="text-xl md:text-2xl font-bold text-primary">€15</span>
+              <p className="text-[10px] text-amber-600 font-medium">Anticipo</p>
             </div>
           </div>
         </Card>
@@ -76,55 +61,38 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.1 }}
       >
-        <Card className="overflow-hidden border border-amber-500/30 bg-gradient-to-br from-amber-500/5 via-background to-orange-500/5">
-          <div className="p-4">
-            <div className="flex items-start gap-3 mb-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
-                <Shield className="h-5 w-5 text-amber-500" />
-              </div>
-              <div>
-                <h4 className="font-semibold text-foreground">Informativa sulla Responsabilità</h4>
-                <p className="text-xs text-muted-foreground">Leggi attentamente prima di firmare</p>
-              </div>
-            </div>
-            
-            <ScrollArea className="h-[160px] pr-3">
-              <div className="space-y-3 text-sm text-muted-foreground">
-                <p>
-                  Il laboratorio <strong className="text-foreground">TechRepair</strong> non si assume alcuna responsabilità per eventuali:
-                </p>
-                <ul className="space-y-2 ml-1">
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                    <span><strong className="text-foreground">Perdita di dati</strong> presenti sul dispositivo</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                    <span><strong className="text-foreground">Cancellazione o corruzione</strong> di file, documenti, foto, video e applicazioni</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                    <span><strong className="text-foreground">Malfunzionamenti</strong> causati da danni preesistenti non dichiarati</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                    <span><strong className="text-foreground">Danni a componenti</strong> non sostituiti durante la riparazione</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mt-2 flex-shrink-0" />
-                    <span><strong className="text-foreground">Incompatibilità software</strong> rilevate dopo l'intervento</span>
-                  </li>
-                </ul>
-                <p className="pt-2">
-                  Si raccomanda vivamente di <strong className="text-foreground">effettuare un backup completo</strong> dei propri dati prima di consegnare il dispositivo.
-                </p>
-                <p className="pt-1 font-medium text-foreground">
-                  Firmando questo documento, il cliente autorizza il laboratorio ad eseguire gli interventi necessari, 
-                  accetta il pagamento anticipato di €15 per la gestione diagnosi e solleva lo stesso da ogni responsabilità.
-                </p>
-              </div>
-            </ScrollArea>
+        <Card className="p-3 border border-amber-500/30 bg-amber-500/5">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="h-4 w-4 text-amber-500 flex-shrink-0" />
+            <h4 className="text-xs font-semibold text-foreground">Informativa Responsabilità</h4>
           </div>
+          
+          <ScrollArea className="h-[100px] md:h-[120px]">
+            <div className="space-y-2 text-xs text-muted-foreground pr-2">
+              <p>Il laboratorio non si assume responsabilità per:</p>
+              <ul className="space-y-1 ml-2">
+                <li className="flex items-start gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                  <span>Perdita o corruzione dati</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                  <span>Malfunzionamenti da danni preesistenti</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                  <span>Danni a componenti non sostituiti</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
+                  <span>Incompatibilità software post-intervento</span>
+                </li>
+              </ul>
+              <p className="pt-1 text-foreground font-medium">
+                Firmando, il cliente autorizza gli interventi e accetta il pagamento di €15 per la diagnosi.
+              </p>
+            </div>
+          </ScrollArea>
         </Card>
       </motion.div>
 
@@ -133,11 +101,11 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, delay: 0.2 }}
-        className="space-y-3"
+        className="space-y-2"
       >
         <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold text-foreground flex items-center gap-2">
-            <FileSignature className="h-4 w-4 text-primary" />
+          <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+            <FileSignature className="h-3.5 w-3.5 text-primary" />
             Firma del Cliente
           </label>
           <Button
@@ -145,18 +113,18 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
             variant="ghost"
             size="sm"
             onClick={handleClear}
-            className="text-muted-foreground hover:text-foreground h-8"
+            className="text-muted-foreground hover:text-foreground h-7 text-xs px-2"
           >
-            <X className="h-4 w-4 mr-1" />
+            <X className="h-3 w-3 mr-1" />
             Cancella
           </Button>
         </div>
         
-        <Card className="p-1 bg-white border-2 border-dashed border-primary/40 hover:border-primary/60 transition-all duration-300 shadow-sm hover:shadow-md">
+        <Card className="p-0.5 bg-white border-2 border-dashed border-primary/40">
           <SignatureCanvas
             ref={sigCanvas}
             canvasProps={{
-              className: "w-full h-44 rounded-lg cursor-crosshair",
+              className: "w-full h-32 md:h-36 rounded cursor-crosshair",
               style: { touchAction: "none" }
             }}
             backgroundColor="white"
@@ -164,8 +132,8 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
           />
         </Card>
         
-        <p className="text-xs text-center text-muted-foreground">
-          Firma per accettare i termini, le condizioni e il pagamento della gestione diagnosi di €15
+        <p className="text-[10px] text-center text-muted-foreground">
+          Firma per accettare i termini e il pagamento di €15
         </p>
 
         {currentSignature && (
@@ -173,10 +141,10 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <Alert className="border-green-500/30 bg-green-500/5">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <AlertDescription className="text-sm text-green-700 dark:text-green-400">
-                Firma salvata correttamente. Puoi modificarla firmando nuovamente.
+            <Alert className="border-green-500/30 bg-green-500/5 py-2">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+              <AlertDescription className="text-xs text-green-700 dark:text-green-400">
+                Firma salvata. Puoi modificarla firmando di nuovo.
               </AlertDescription>
             </Alert>
           </motion.div>
@@ -185,10 +153,10 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
         <Button
           type="button"
           onClick={handleSave}
-          className="w-full h-12 text-base font-semibold bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all duration-300 shadow-lg hover:shadow-xl"
+          className="w-full h-10 text-sm font-semibold bg-primary hover:bg-primary/90"
         >
-          <FileSignature className="mr-2 h-5 w-5" />
-          Salva Firma e Conferma €15
+          <FileSignature className="mr-2 h-4 w-4" />
+          Salva Firma
         </Button>
       </motion.div>
     </div>
