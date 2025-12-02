@@ -248,6 +248,16 @@ export default function RepairDetail() {
     }
   };
 
+  const handlePartsAdded = (newParts: RepairPart[]) => {
+    // Aggiorna lo stato locale aggiungendo i nuovi ricambi
+    if (repair) {
+      setRepair({
+        ...repair,
+        repair_parts: [...(repair.repair_parts || []), ...newParts]
+      });
+    }
+  };
+
   const deleteRepairPart = async (repairPartId: string) => {
     try {
       // Aggiorna lo stato locale immediatamente per rimozione visuale
@@ -464,7 +474,7 @@ export default function RepairDetail() {
                   repairId={repair.id}
                   deviceBrand={repair.device.brand}
                   deviceModel={repair.device.model}
-                  onPartsAdded={loadRepairDetail}
+                  onPartsAdded={handlePartsAdded}
                 />
               </div>
 
