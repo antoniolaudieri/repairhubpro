@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Sparkles, TrendingUp, Trophy, Flame, Zap, AlertTriangle } from "lucide-react";
+import { Sparkles, AlertTriangle, Smartphone, ArrowLeft, Flame, Trophy, Zap, TrendingUp } from "lucide-react";
 import { PhotoUpload } from "@/components/repair/PhotoUpload";
 import { DeviceInfoCard } from "@/components/repair/DeviceInfoCard";
 import { CustomerSearch } from "@/components/repair/CustomerSearch";
@@ -1051,18 +1051,35 @@ const NewRepair = () => {
   };
 
   return (
-    <div className="min-h-screen p-3 md:p-6 bg-gradient-mesh">
-      <div className="max-w-5xl mx-auto">
-        <Card className="p-4 md:p-8 shadow-xl border-border/50 bg-card/95 backdrop-blur-sm">
-          <div className="mb-4 md:mb-8 text-center">
-            <h1 className="text-2xl md:text-4xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent mb-2 md:mb-3">
-              Nuovo Ritiro Dispositivo
-            </h1>
-            <p className="text-muted-foreground text-sm md:text-lg px-2">
-              Segui i passaggi per registrare un nuovo dispositivo in modo rapido e semplice
-            </p>
+    <div className="min-h-screen p-3 md:p-6">
+      <div className="max-w-4xl mx-auto space-y-4">
+        {/* Header */}
+        <div className="flex items-center gap-3 md:gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="h-9 w-9 md:h-10 md:w-10 shrink-0"
+          >
+            <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
+          </Button>
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Smartphone className="h-5 w-5 md:h-6 md:w-6 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-lg md:text-2xl font-bold text-foreground">
+                Nuovo Ritiro
+              </h1>
+              <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">
+                Registra un nuovo dispositivo
+              </p>
+            </div>
           </div>
+        </div>
 
+        {/* Main Card */}
+        <Card className="p-4 md:p-6 border-border/50 bg-card">
           <NewRepairWizard
             currentStep={currentStep}
             totalSteps={wizardSteps.length}
