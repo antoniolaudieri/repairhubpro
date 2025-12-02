@@ -58,6 +58,13 @@ interface RepairDetail {
     serial_number: string | null;
     photo_url: string | null;
   };
+  repair_parts?: {
+    quantity: number;
+    spare_parts: {
+      name: string;
+      image_url: string | null;
+    };
+  }[];
 }
 
 export default function CustomerRepairDetail() {
@@ -117,6 +124,13 @@ export default function CustomerRepairDetail() {
             imei,
             serial_number,
             photo_url
+          ),
+          repair_parts (
+            quantity,
+            spare_parts (
+              name,
+              image_url
+            )
           )
         `)
         .eq("id", id)
@@ -181,6 +195,12 @@ export default function CustomerRepairDetail() {
         icon: <TruckIcon className="h-5 w-5" />,
         color: "text-accent",
         bgColor: "bg-accent/10",
+      },
+      cancelled: {
+        label: "Annullata",
+        icon: <AlertCircle className="h-5 w-5" />,
+        color: "text-destructive",
+        bgColor: "bg-destructive/10",
       },
     };
     return config[status] || config.pending;
@@ -457,6 +477,40 @@ export default function CustomerRepairDetail() {
                         <p className="text-foreground">{repair.repair_notes}</p>
                       </div>
                     )}
+                  </div>
+                </Card>
+              )}
+
+              {/* Spare Parts Used */}
+              {repair.repair_parts && repair.repair_parts.length > 0 && (
+                <Card className="p-6">
+                  <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                    <Package className="h-5 w-5 text-primary" />
+                    Ricambi Utilizzati
+                  </h2>
+                  <div className="space-y-3">
+                    {repair.repair_parts.map((part, index) => (
+                      <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+                        {part.spare_parts.image_url ? (
+                          <img 
+                            src={part.spare_parts.image_url} 
+                            alt={part.spare_parts.name}
+                            className="h-12 w-12 object-contain rounded border bg-background"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="h-12 w-12 rounded bg-muted flex items-center justify-center">
+                            <Package className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <p className="font-medium text-foreground">{part.spare_parts.name}</p>
+                          <p className="text-sm text-muted-foreground">Quantità: {part.quantity}</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </Card>
               )}
