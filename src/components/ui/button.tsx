@@ -13,7 +13,7 @@ const buttonVariants = cva(
         destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90 hover:shadow-md",
         outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-primary/50",
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-md",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
+        ghost: "hover:bg-primary/10 hover:text-primary",
         link: "text-primary underline-offset-4 hover:underline",
         // Premium variants with blue glow
         gradient: "bg-gradient-to-r from-primary to-primary/80 text-primary-foreground hover:shadow-lg hover:-translate-y-0.5",
