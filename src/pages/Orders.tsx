@@ -12,7 +12,15 @@ import {
   AlertCircle,
   Loader2,
   ExternalLink,
-  Truck
+  Truck,
+  FileEdit,
+  PackageCheck,
+  Box,
+  Sparkles,
+  TrendingUp,
+  User,
+  Phone,
+  Mail
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -35,6 +43,9 @@ interface OrderItem {
   quantity: number;
   unit_cost: number;
   spare_part_id: string | null;
+  spare_parts?: {
+    image_url: string | null;
+  } | null;
 }
 
 interface Order {
@@ -52,6 +63,9 @@ interface Order {
   order_items: OrderItem[];
   repairs?: {
     devices: {
+      brand: string;
+      model: string;
+      photo_url: string | null;
       customers: {
         name: string;
         phone: string;
@@ -60,6 +74,37 @@ interface Order {
     };
   } | null;
 }
+
+const statusConfig: Record<string, { label: string; color: string; bgColor: string; borderColor: string; icon: JSX.Element }> = {
+  draft: {
+    label: "Bozza",
+    color: "text-slate-600",
+    bgColor: "bg-slate-100",
+    borderColor: "border-l-slate-400",
+    icon: <FileEdit className="h-4 w-4" />,
+  },
+  pending: {
+    label: "In Attesa",
+    color: "text-amber-600",
+    bgColor: "bg-amber-100",
+    borderColor: "border-l-amber-500",
+    icon: <Clock className="h-4 w-4" />,
+  },
+  ordered: {
+    label: "Ordinato",
+    color: "text-blue-600",
+    bgColor: "bg-blue-100",
+    borderColor: "border-l-blue-500",
+    icon: <ShoppingCart className="h-4 w-4" />,
+  },
+  received: {
+    label: "Ricevuto",
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-100",
+    borderColor: "border-l-emerald-500",
+    icon: <CheckCircle className="h-4 w-4" />,
+  },
+};
 
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -70,7 +115,6 @@ export default function Orders() {
   useEffect(() => {
     fetchOrders();
 
-    // Setup realtime subscription for orders
     const channel = supabase
       .channel('orders-changes')
       .on(
@@ -103,10 +147,16 @@ export default function Orders() {
             product_code,
             quantity,
             unit_cost,
-            spare_part_id
+            spare_part_id,
+            spare_parts (
+              image_url
+            )
           ),
           repairs (
             devices (
+              brand,
+              model,
+              photo_url,
               customers (
                 name,
                 phone,
@@ -127,34 +177,7 @@ export default function Orders() {
     }
   };
 
-  const getStatusInfo = (status: string) => {
-    const config: Record<string, { label: string; icon: JSX.Element; variant: any }> = {
-      draft: {
-        label: "Bozza",
-        icon: <Clock className="h-4 w-4" />,
-        variant: "secondary",
-      },
-      pending: {
-        label: "In Attesa",
-        icon: <Clock className="h-4 w-4" />,
-        variant: "secondary",
-      },
-      ordered: {
-        label: "Ordinato",
-        icon: <ShoppingCart className="h-4 w-4" />,
-        variant: "default",
-      },
-      received: {
-        label: "Ricevuto",
-        icon: <CheckCircle className="h-4 w-4" />,
-        variant: "default",
-      },
-    };
-    return config[status] || config.draft;
-  };
-
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
-    // Aggiorna lo stato locale immediatamente (ottimistico)
     const previousOrders = [...orders];
     setOrders(orders.map(o => {
       if (o.id === orderId) {
@@ -189,7 +212,6 @@ export default function Orders() {
 
       if (error) throw error;
 
-      // Se lo stato è "received", aggiorna anche lo stock dei ricambi
       if (newStatus === "received" && order) {
         for (const item of order.order_items) {
           if (item.spare_part_id) {
@@ -223,13 +245,11 @@ export default function Orders() {
     } catch (error: any) {
       console.error("Error updating status:", error);
       toast.error("Errore aggiornamento stato");
-      // Ripristina lo stato precedente in caso di errore
       setOrders(previousOrders);
     }
   };
 
   const updateTrackingNumber = async (orderId: string, trackingNumber: string) => {
-    // Aggiorna lo stato locale immediatamente (ottimistico)
     const previousOrders = [...orders];
     setOrders(orders.map(o => 
       o.id === orderId ? { ...o, tracking_number: trackingNumber } : o
@@ -246,7 +266,6 @@ export default function Orders() {
     } catch (error: any) {
       console.error("Error updating tracking:", error);
       toast.error("Errore aggiornamento tracking");
-      // Ripristina lo stato precedente in caso di errore
       setOrders(previousOrders);
     }
   };
@@ -255,7 +274,6 @@ export default function Orders() {
     setProcessingOrder(order.id);
     
     try {
-      // Aggiorna lo stato dell'ordine
       const { error: orderError } = await supabase
         .from("orders")
         .update({
@@ -266,10 +284,8 @@ export default function Orders() {
 
       if (orderError) throw orderError;
 
-      // Aggiorna lo stock dei ricambi
       for (const item of order.order_items) {
         if (item.spare_part_id) {
-          // Recupera lo stock attuale
           const { data: partData, error: fetchError } = await supabase
             .from("spare_parts")
             .select("stock_quantity")
@@ -281,7 +297,6 @@ export default function Orders() {
             continue;
           }
 
-          // Incrementa lo stock
           const newStock = (partData?.stock_quantity || 0) + item.quantity;
           
           const { error: updateError } = await supabase
@@ -310,85 +325,193 @@ export default function Orders() {
     return order.status === filterStatus;
   });
 
+  const stats = {
+    draft: orders.filter(o => o.status === "draft").length,
+    pending: orders.filter(o => o.status === "pending").length,
+    ordered: orders.filter(o => o.status === "ordered").length,
+    received: orders.filter(o => o.status === "received").length,
+    totalValue: orders.reduce((sum, o) => sum + (o.total_amount || 0), 0),
+  };
+
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-primary/20 rounded-full" />
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin absolute inset-0" />
           </div>
-        </div>
+          <p className="text-muted-foreground font-medium">Caricamento ordini...</p>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="max-w-7xl mx-auto">
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
-                Ordini Ricambi
-              </h1>
-              <p className="text-sm md:text-base text-muted-foreground">
-                Gestisci gli ordini ai fornitori e scarica i ricambi quando arrivano
-              </p>
+    <div className="min-h-screen">
+      {/* Hero Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 text-white"
+      >
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 md:py-8">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring" }}
+                className="w-14 h-14 md:w-16 md:h-16 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center"
+              >
+                <ShoppingCart className="h-7 w-7 md:h-8 md:w-8 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-2xl md:text-3xl font-bold">Ordini Ricambi</h1>
+                <p className="text-blue-100 text-sm md:text-base">
+                  Gestisci ordini fornitori e traccia le spedizioni
+                </p>
+              </div>
             </div>
-            <Badge variant="outline" className="gap-2 w-fit">
-              <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Tracking Real-Time Attivo</span>
-              <span className="sm:hidden">Live</span>
-            </Badge>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="flex items-center gap-2 bg-white/10 backdrop-blur rounded-full px-4 py-2"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+              </span>
+              <span className="text-sm font-medium">Real-Time Attivo</span>
+            </motion.div>
           </div>
+        </div>
+      </motion.div>
+
+      <div className="max-w-7xl mx-auto px-4 md:px-6 py-6">
+        {/* Stats Cards */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4 mb-6"
+        >
+          <Card className="p-4 bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => setFilterStatus("draft")}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-slate-200 rounded-xl flex items-center justify-center">
+                <FileEdit className="h-5 w-5 text-slate-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-slate-700">{stats.draft}</p>
+                <p className="text-xs text-slate-500">Bozze</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => setFilterStatus("pending")}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-200 rounded-xl flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-700">{stats.pending}</p>
+                <p className="text-xs text-amber-600">In Attesa</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => setFilterStatus("ordered")}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-200 rounded-xl flex items-center justify-center">
+                <Truck className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-blue-700">{stats.ordered}</p>
+                <p className="text-xs text-blue-600">In Transito</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 border-emerald-200 hover:shadow-lg transition-all cursor-pointer"
+                onClick={() => setFilterStatus("received")}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-emerald-200 rounded-xl flex items-center justify-center">
+                <PackageCheck className="h-5 w-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-emerald-700">{stats.received}</p>
+                <p className="text-xs text-emerald-600">Ricevuti</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-4 bg-gradient-to-br from-violet-50 to-violet-100 border-violet-200 hover:shadow-lg transition-all col-span-2 md:col-span-1">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-violet-200 rounded-xl flex items-center justify-center">
+                <TrendingUp className="h-5 w-5 text-violet-600" />
+              </div>
+              <div>
+                <p className="text-xl md:text-2xl font-bold text-violet-700">€{stats.totalValue.toFixed(0)}</p>
+                <p className="text-xs text-violet-600">Valore Totale</p>
+              </div>
+            </div>
+          </Card>
         </motion.div>
 
-        <Tabs value={filterStatus} onValueChange={setFilterStatus} className="mb-6">
-          <TabsList className="w-full grid grid-cols-3 md:grid-cols-5 gap-2 h-auto p-1">
-            <TabsTrigger value="all" className="text-xs md:text-sm">
-              <span className="hidden sm:inline">Tutti</span>
-              <span className="sm:hidden">Tutti</span>
-              <span className="ml-1">({orders.length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="draft" className="text-xs md:text-sm">
-              <span className="hidden sm:inline">Bozze</span>
-              <span className="sm:hidden">Bozze</span>
-              <span className="ml-1">({orders.filter(o => o.status === "draft").length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="text-xs md:text-sm">
-              <span className="hidden sm:inline">In Attesa</span>
-              <span className="sm:hidden">Attesa</span>
-              <span className="ml-1">({orders.filter(o => o.status === "pending").length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="ordered" className="text-xs md:text-sm">
-              <span className="hidden sm:inline">Ordinati</span>
-              <span className="sm:hidden">Ord.</span>
-              <span className="ml-1">({orders.filter(o => o.status === "ordered").length})</span>
-            </TabsTrigger>
-            <TabsTrigger value="received" className="text-xs md:text-sm">
-              <span className="hidden sm:inline">Ricevuti</span>
-              <span className="sm:hidden">Ric.</span>
-              <span className="ml-1">({orders.filter(o => o.status === "received").length})</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Filter Tabs */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <Tabs value={filterStatus} onValueChange={setFilterStatus} className="mb-6">
+            <TabsList className="w-full grid grid-cols-3 md:grid-cols-5 gap-1 h-auto p-1 bg-muted/50">
+              <TabsTrigger value="all" className="text-xs md:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                Tutti ({orders.length})
+              </TabsTrigger>
+              <TabsTrigger value="draft" className="text-xs md:text-sm">
+                Bozze
+              </TabsTrigger>
+              <TabsTrigger value="pending" className="text-xs md:text-sm">
+                Attesa
+              </TabsTrigger>
+              <TabsTrigger value="ordered" className="text-xs md:text-sm">
+                Ordinati
+              </TabsTrigger>
+              <TabsTrigger value="received" className="text-xs md:text-sm">
+                Ricevuti
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </motion.div>
 
+        {/* Orders List */}
         {filteredOrders.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3 }}
           >
-            <Card className="p-8 md:p-12 text-center">
-              <ShoppingCart className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground mx-auto mb-4" />
-              <h2 className="text-lg md:text-xl font-semibold mb-2">
-                {orders.length === 0 ? "Nessun ordine" : "Nessun ordine in questa categoria"}
+            <Card className="p-12 text-center bg-gradient-to-br from-muted/30 to-muted/50">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: 0.2, type: "spring" }}
+                className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4"
+              >
+                <Package className="h-10 w-10 text-muted-foreground" />
+              </motion.div>
+              <h2 className="text-xl font-semibold mb-2">
+                {orders.length === 0 ? "Nessun ordine" : "Nessun ordine qui"}
               </h2>
-              <p className="text-sm md:text-base text-muted-foreground">
+              <p className="text-muted-foreground">
                 {orders.length === 0 
                   ? "Gli ordini creati durante le riparazioni appariranno qui"
                   : "Cambia filtro per vedere altri ordini"}
@@ -396,9 +519,9 @@ export default function Orders() {
             </Card>
           </motion.div>
         ) : (
-          <div className="grid gap-6">
+          <div className="grid gap-4 md:gap-6">
             {filteredOrders.map((order, index) => {
-              const statusInfo = getStatusInfo(order.status);
+              const status = statusConfig[order.status] || statusConfig.draft;
               
               return (
                 <motion.div
@@ -407,129 +530,161 @@ export default function Orders() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className="p-4 md:p-6 hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary/20">
-                    <div className="space-y-4">
-                      {/* Header con numero ordine e badges */}
-                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                        <div className="flex-1 space-y-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="text-lg md:text-xl font-bold text-foreground">
-                              {order.order_number}
-                            </h3>
-                            <Badge 
-                              variant={statusInfo.variant}
-                              className="gap-1"
+                  <Card className={`overflow-hidden border-l-4 ${status.borderColor} hover:shadow-xl transition-all duration-300`}>
+                    {/* Order Header with Device Image */}
+                    <div className="bg-gradient-to-r from-muted/30 via-muted/20 to-transparent p-4 md:p-5 border-b">
+                      <div className="flex flex-col md:flex-row md:items-center gap-4">
+                        {/* Device/Order Image */}
+                        <div className="flex items-center gap-4 flex-1">
+                          {order.repairs?.devices?.photo_url ? (
+                            <motion.div
+                              whileHover={{ scale: 1.05 }}
+                              className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-white shadow-md flex-shrink-0"
                             >
-                              {statusInfo.icon}
-                              <span className="text-xs">{statusInfo.label}</span>
-                            </Badge>
-                            {order.repair_id && (
-                              <Badge variant="outline" className="gap-1">
-                                <Package className="h-3 w-3" />
-                                <span className="text-xs">Riparazione</span>
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          {/* Info Cliente */}
-                          {order.repairs?.devices?.customers && (
-                            <motion.div 
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              className="p-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20"
-                            >
-                              <p className="font-semibold text-foreground text-sm md:text-base mb-1">
-                                👤 {order.repairs.devices.customers.name}
-                              </p>
-                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs md:text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  📞 {order.repairs.devices.customers.phone}
-                                </span>
-                                {order.repairs.devices.customers.email && (
-                                  <span className="flex items-center gap-1">
-                                    <span className="hidden sm:inline">•</span>
-                                    ✉️ {order.repairs.devices.customers.email}
-                                  </span>
-                                )}
-                              </div>
+                              <img 
+                                src={order.repairs.devices.photo_url} 
+                                alt="Device"
+                                className="w-full h-full object-cover"
+                              />
                             </motion.div>
+                          ) : (
+                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 flex items-center justify-center flex-shrink-0">
+                              <Box className="h-8 w-8 text-primary/60" />
+                            </div>
                           )}
                           
-                          {/* Info Date e Fornitore */}
-                          <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
-                            <span className="font-medium">🏪 {order.supplier}</span>
-                            <span className="hidden sm:inline">•</span>
-                            <span>
-                              📅 {format(new Date(order.created_at), "dd MMM yyyy", { locale: it })}
-                            </span>
-                            {order.ordered_at && (
-                              <>
-                                <span className="hidden sm:inline">•</span>
-                                <span className="text-primary">
-                                  🛒 {format(new Date(order.ordered_at), "dd MMM yyyy", { locale: it })}
-                                </span>
-                              </>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2 mb-1">
+                              <h3 className="text-lg md:text-xl font-bold text-foreground">
+                                {order.order_number}
+                              </h3>
+                              <Badge className={`${status.bgColor} ${status.color} gap-1 border-0`}>
+                                {status.icon}
+                                {status.label}
+                              </Badge>
+                            </div>
+                            
+                            {order.repairs?.devices && (
+                              <p className="text-sm text-muted-foreground">
+                                {order.repairs.devices.brand} {order.repairs.devices.model}
+                              </p>
                             )}
-                            {order.received_at && (
-                              <>
-                                <span className="hidden sm:inline">•</span>
-                                <span className="text-success font-medium">
-                                  ✅ {format(new Date(order.received_at), "dd MMM yyyy", { locale: it })}
+                            
+                            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-muted-foreground">
+                              <span className="font-medium bg-muted/50 px-2 py-0.5 rounded">
+                                {order.supplier}
+                              </span>
+                              <span>
+                                {format(new Date(order.created_at), "dd MMM yyyy", { locale: it })}
+                              </span>
+                              {order.ordered_at && (
+                                <span className="text-blue-600">
+                                  Ordinato: {format(new Date(order.ordered_at), "dd MMM", { locale: it })}
                                 </span>
-                              </>
-                            )}
+                              )}
+                              {order.received_at && (
+                                <span className="text-emerald-600 font-medium">
+                                  ✓ Ricevuto: {format(new Date(order.received_at), "dd MMM", { locale: it })}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        
-                        {/* Pulsante Scarica */}
-                        {order.status !== "received" && (
-                          <Button
-                            onClick={() => handleReceiveOrder(order)}
-                            disabled={processingOrder === order.id}
-                            className="gap-2 w-full sm:w-auto"
-                            size="sm"
-                          >
-                            {processingOrder === order.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-4 w-4" />
-                            )}
-                            <span className="hidden sm:inline">Scarica Ordine</span>
-                            <span className="sm:hidden">Scarica</span>
-                          </Button>
-                        )}
-                      </div>
 
-                      {/* Gestione Stato e Tracking */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 md:p-4 bg-muted/20 rounded-lg border border-border/50">
+                        {/* Total & Receive Button */}
+                        <div className="flex items-center gap-3">
+                          {order.total_amount !== null && (
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Totale</p>
+                              <p className="text-2xl md:text-3xl font-bold text-primary">
+                                €{order.total_amount.toFixed(2)}
+                              </p>
+                            </div>
+                          )}
+                          
+                          {order.status !== "received" && (
+                            <Button
+                              onClick={() => handleReceiveOrder(order)}
+                              disabled={processingOrder === order.id}
+                              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                              {processingOrder === order.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <PackageCheck className="h-4 w-4" />
+                              )}
+                              <span className="hidden sm:inline">Scarica</span>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-4 md:p-5 space-y-4">
+                      {/* Customer Info */}
+                      {order.repairs?.devices?.customers && (
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl border border-blue-100 dark:border-blue-900"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                              <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-semibold text-foreground">
+                                {order.repairs.devices.customers.name}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                <a href={`tel:${order.repairs.devices.customers.phone}`} 
+                                   className="flex items-center gap-1 hover:text-primary transition-colors">
+                                  <Phone className="h-3 w-3" />
+                                  {order.repairs.devices.customers.phone}
+                                </a>
+                                {order.repairs.devices.customers.email && (
+                                  <a href={`mailto:${order.repairs.devices.customers.email}`}
+                                     className="flex items-center gap-1 hover:text-primary transition-colors">
+                                    <Mail className="h-3 w-3" />
+                                    {order.repairs.devices.customers.email}
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {/* Status & Tracking Controls */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4 bg-muted/30 rounded-xl">
                         <div className="space-y-2">
-                          <Label htmlFor={`status-${order.id}`} className="text-xs md:text-sm font-medium flex items-center gap-2">
-                            📊 Stato Ordine
+                          <Label className="text-xs font-medium flex items-center gap-2">
+                            <Sparkles className="h-3 w-3 text-primary" />
+                            Stato Ordine
                           </Label>
                           <Select
                             value={order.status}
                             onValueChange={(value) => updateOrderStatus(order.id, value)}
                             disabled={order.status === "received"}
                           >
-                            <SelectTrigger id={`status-${order.id}`} className="h-9 text-sm">
+                            <SelectTrigger className="h-10 bg-background">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="draft">Bozza</SelectItem>
-                              <SelectItem value="pending">In Attesa</SelectItem>
-                              <SelectItem value="ordered">Ordinato</SelectItem>
-                              <SelectItem value="received">Ricevuto</SelectItem>
+                              <SelectItem value="draft">📝 Bozza</SelectItem>
+                              <SelectItem value="pending">⏳ In Attesa</SelectItem>
+                              <SelectItem value="ordered">🛒 Ordinato</SelectItem>
+                              <SelectItem value="received">✅ Ricevuto</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
                         
                         <div className="space-y-2">
-                          <Label htmlFor={`tracking-${order.id}`} className="text-xs md:text-sm font-medium flex items-center gap-2">
-                            <Truck className="h-3 w-3 md:h-4 md:w-4" />
-                            Tracking
+                          <Label className="text-xs font-medium flex items-center gap-2">
+                            <Truck className="h-3 w-3 text-primary" />
+                            Numero Tracking
                           </Label>
                           <Input
-                            id={`tracking-${order.id}`}
                             placeholder="Inserisci tracking..."
                             value={order.tracking_number || ""}
                             onChange={(e) => {
@@ -541,87 +696,84 @@ export default function Orders() {
                             }}
                             onBlur={(e) => updateTrackingNumber(order.id, e.target.value)}
                             disabled={order.status === "received"}
-                            className="h-9 text-sm"
+                            className="h-10 bg-background"
                           />
                         </div>
                       </div>
 
+                      {/* Notes */}
                       {order.notes && (
-                        <motion.div 
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="p-3 bg-warning/10 border border-warning/20 rounded-lg"
-                        >
-                          <p className="text-xs md:text-sm text-foreground flex items-start gap-2">
-                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-warning" />
+                        <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl">
+                          <p className="text-sm text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
                             {order.notes}
                           </p>
-                        </motion.div>
+                        </div>
                       )}
 
-                      {/* Articoli */}
+                      {/* Order Items */}
                       <div className="space-y-3">
-                        <h4 className="font-semibold text-sm md:text-base text-foreground flex items-center gap-2 pb-2 border-b">
-                          <Package className="h-4 w-4" />
+                        <h4 className="font-semibold text-sm flex items-center gap-2 text-foreground">
+                          <Package className="h-4 w-4 text-primary" />
                           Articoli ({order.order_items.length})
                         </h4>
                         
-                        <div className="space-y-2">
+                        <div className="grid gap-2">
                           {order.order_items.map((item, idx) => (
                             <motion.div 
                               key={item.id}
-                              initial={{ opacity: 0, x: -20 }}
+                              initial={{ opacity: 0, x: -10 }}
                               animate={{ opacity: 1, x: 0 }}
                               transition={{ delay: idx * 0.05 }}
-                              className="p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                              className="flex items-center gap-3 p-3 bg-background rounded-xl border hover:border-primary/30 hover:shadow-sm transition-all"
                             >
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-medium text-sm md:text-base text-foreground truncate">
-                                    {item.product_name}
-                                  </p>
-                                  {item.product_code && (
-                                    <p className="text-xs text-muted-foreground">
-                                      Cod: {item.product_code}
-                                    </p>
-                                  )}
+                              {/* Part Image */}
+                              {item.spare_parts?.image_url ? (
+                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                                  <img 
+                                    src={item.spare_parts.image_url} 
+                                    alt={item.product_name}
+                                    className="w-full h-full object-cover"
+                                  />
                                 </div>
-                                <div className="text-right flex-shrink-0">
-                                  <p className="font-semibold text-sm md:text-base text-foreground whitespace-nowrap">
-                                    {item.quantity}x €{item.unit_cost.toFixed(2)}
-                                  </p>
+                              ) : (
+                                <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                                  <Box className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                              )}
+                              
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm text-foreground truncate">
+                                  {item.product_name}
+                                </p>
+                                {item.product_code && (
                                   <p className="text-xs text-muted-foreground">
-                                    Tot: €{(item.quantity * item.unit_cost).toFixed(2)}
+                                    Cod: {item.product_code}
                                   </p>
-                                </div>
+                                )}
+                              </div>
+                              
+                              <div className="text-right flex-shrink-0">
+                                <p className="font-bold text-foreground">
+                                  {item.quantity}x €{item.unit_cost.toFixed(2)}
+                                </p>
+                                <p className="text-xs text-primary font-medium">
+                                  €{(item.quantity * item.unit_cost).toFixed(2)}
+                                </p>
                               </div>
                             </motion.div>
                           ))}
                         </div>
-
-                        {order.total_amount !== null && (
-                          <motion.div 
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="pt-3 mt-3 border-t-2 border-primary/20 flex justify-between items-center bg-primary/5 p-3 rounded-lg"
-                          >
-                            <span className="font-semibold text-sm md:text-base text-foreground">
-                              Totale Ordine
-                            </span>
-                            <span className="text-xl md:text-2xl font-bold text-primary">
-                              €{order.total_amount.toFixed(2)}
-                            </span>
-                          </motion.div>
-                        )}
                       </div>
 
+                      {/* Footer Actions */}
                       {order.repair_id && (
-                        <div className="pt-3 mt-3 border-t border-border">
+                        <div className="pt-3 border-t">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => window.open(`/repairs/${order.repair_id}`, "_blank")}
-                            className="gap-2 w-full sm:w-auto hover:bg-primary/10 hover:text-primary hover:border-primary transition-colors"
+                            className="gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
                           >
                             <ExternalLink className="h-4 w-4" />
                             Vedi Riparazione
