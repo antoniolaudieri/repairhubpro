@@ -366,9 +366,10 @@ export default function RepairDetail() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">In attesa</SelectItem>
-                      <SelectItem value="waiting_for_parts">In attesa ricambi</SelectItem>
+                      <SelectItem value="waiting_parts">In attesa ricambi</SelectItem>
                       <SelectItem value="in_progress">In corso</SelectItem>
                       <SelectItem value="completed">Completata</SelectItem>
+                      <SelectItem value="delivered">Consegnato</SelectItem>
                       <SelectItem value="cancelled">Annullata</SelectItem>
                     </SelectContent>
                   </Select>
