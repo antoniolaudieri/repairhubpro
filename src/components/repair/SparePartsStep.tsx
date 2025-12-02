@@ -577,7 +577,7 @@ export const SparePartsStep = ({
                                 className="w-full sm:w-auto border-primary/50 hover:bg-primary/10"
                               >
                                 <a 
-                                  href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(suggestion.partName)}`}
+                                  href={`https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(suggestion.partName)}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                 >
@@ -835,8 +835,8 @@ export const SparePartsStep = ({
                         asChild
                         className="border-primary/50 hover:bg-primary/10"
                       >
-                        <a 
-                          href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
+                      <a 
+                        href={`https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(part.name)}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >

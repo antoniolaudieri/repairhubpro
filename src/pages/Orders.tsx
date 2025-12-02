@@ -856,7 +856,7 @@ export default function Orders() {
                                     className="border-primary/50 hover:bg-primary hover:text-primary-foreground"
                                   >
                                     <a 
-                                      href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(item.product_name)}`}
+                                      href={`https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(item.product_name)}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                     >
