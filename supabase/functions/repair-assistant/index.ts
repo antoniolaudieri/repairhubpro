@@ -5,76 +5,103 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Search DuckDuckGo for images
-async function searchRepairImages(query: string): Promise<string[]> {
+// Generate an image using Lovable AI
+async function generateStepImage(
+  apiKey: string,
+  deviceBrand: string,
+  deviceModel: string,
+  stepTitle: string,
+  stepDescription: string
+): Promise<string | null> {
   try {
-    const searchQuery = encodeURIComponent(`${query} repair guide tutorial`);
-    const response = await fetch(
-      `https://duckduckgo.com/?q=${searchQuery}&iar=images&iax=images&ia=images`,
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        }
-      }
-    );
+    const prompt = `Technical repair illustration, professional iFixit style guide image showing: ${stepTitle} on a ${deviceBrand} ${deviceModel} smartphone. Clean white background, detailed hands-on repair view, high quality technical documentation style. Step: ${stepDescription.substring(0, 100)}. Ultra high resolution, photorealistic.`;
+
+    console.log("Generating image for step:", stepTitle);
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-image-preview",
+        messages: [
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        modalities: ["image", "text"]
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Image generation failed:", response.status);
+      return null;
+    }
+
+    const data = await response.json();
+    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
     
-    const html = await response.text();
-    const imageUrls: string[] = [];
-    
-    // Extract image URLs from response
-    const regex = /https:\/\/[^"'\s]+\.(?:jpg|jpeg|png|webp)/gi;
-    const matches = html.match(regex);
-    
-    if (matches) {
-      for (const url of matches) {
-        if (!url.includes('duckduckgo') && imageUrls.length < 3) {
-          imageUrls.push(url);
-        }
-      }
+    if (imageUrl) {
+      console.log("Image generated successfully for:", stepTitle);
+      return imageUrl;
     }
     
-    return imageUrls;
+    return null;
   } catch (error) {
-    console.error("Image search error:", error);
-    return [];
+    console.error("Error generating image:", error);
+    return null;
   }
 }
 
-// Get iFixit-style images for specific repair types
-function getRepairTypeImages(deviceType: string, repairType: string): string {
-  const imageMap: Record<string, string> = {
-    // Screen repairs
-    "screen": "https://images.unsplash.com/photo-1621330396173-e41b1cafd17f?w=400",
-    "display": "https://images.unsplash.com/photo-1621330396173-e41b1cafd17f?w=400",
-    "lcd": "https://images.unsplash.com/photo-1621330396173-e41b1cafd17f?w=400",
-    // Battery
-    "battery": "https://images.unsplash.com/photo-1619641805634-98e018a6ba43?w=400",
-    "batteria": "https://images.unsplash.com/photo-1619641805634-98e018a6ba43?w=400",
-    // Charging
-    "charging": "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400",
-    "connettore": "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400",
-    "ricarica": "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400",
-    // Camera
-    "camera": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400",
-    "fotocamera": "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400",
-    // Speaker/Audio
-    "speaker": "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=400",
-    "audio": "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=400",
-    "altoparlante": "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=400",
-    // Tools
-    "tools": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400",
-    "strumenti": "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=400",
-    // General
-    "default": "https://images.unsplash.com/photo-1597673030062-0a0f1a801a31?w=400",
-  };
+// Get fallback images for common repair types
+function getFallbackImage(stepTitle: string, deviceType: string): string {
+  const lowerTitle = stepTitle.toLowerCase();
   
-  const lowerRepair = repairType.toLowerCase();
-  for (const [key, url] of Object.entries(imageMap)) {
-    if (lowerRepair.includes(key)) {
-      return url;
-    }
+  // Tool/preparation images
+  if (lowerTitle.includes("strument") || lowerTitle.includes("prepara") || lowerTitle.includes("tool")) {
+    return "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=600&h=400&fit=crop";
   }
-  return imageMap.default;
+  
+  // Opening/disassembly
+  if (lowerTitle.includes("apri") || lowerTitle.includes("rimuov") || lowerTitle.includes("smonta")) {
+    return "https://images.unsplash.com/photo-1597673030062-0a0f1a801a31?w=600&h=400&fit=crop";
+  }
+  
+  // Screen/display
+  if (lowerTitle.includes("schermo") || lowerTitle.includes("display") || lowerTitle.includes("lcd")) {
+    return "https://images.unsplash.com/photo-1621330396173-e41b1cafd17f?w=600&h=400&fit=crop";
+  }
+  
+  // Battery
+  if (lowerTitle.includes("batteria") || lowerTitle.includes("battery")) {
+    return "https://images.unsplash.com/photo-1619641805634-98e018a6ba43?w=600&h=400&fit=crop";
+  }
+  
+  // Connector/charging
+  if (lowerTitle.includes("connettore") || lowerTitle.includes("ricarica") || lowerTitle.includes("porta")) {
+    return "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=600&h=400&fit=crop";
+  }
+  
+  // Camera
+  if (lowerTitle.includes("fotocamera") || lowerTitle.includes("camera")) {
+    return "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&h=400&fit=crop";
+  }
+  
+  // Testing/verification
+  if (lowerTitle.includes("test") || lowerTitle.includes("verifica") || lowerTitle.includes("controllo")) {
+    return "https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&h=400&fit=crop";
+  }
+  
+  // Assembly/closing
+  if (lowerTitle.includes("assembla") || lowerTitle.includes("chiud") || lowerTitle.includes("rimonta")) {
+    return "https://images.unsplash.com/photo-1530893609608-32a9af3aa95c?w=600&h=400&fit=crop";
+  }
+  
+  // Default electronics repair image
+  return "https://images.unsplash.com/photo-1597673030062-0a0f1a801a31?w=600&h=400&fit=crop";
 }
 
 serve(async (req) => {
@@ -113,24 +140,27 @@ Rispondi SOLO con un JSON valido (senza markdown code blocks) nel seguente forma
   "steps": [
     {
       "stepNumber": 1,
-      "title": "Titolo dello step",
-      "description": "Descrizione dettagliata di cosa fare",
-      "imageSearchQuery": "query per cercare immagine pertinente",
-      "warnings": ["Attenzione: avviso importante"],
-      "tips": ["Suggerimento utile"],
+      "title": "Titolo dello step (es: Preparazione strumenti, Rimozione schermo, etc)",
+      "description": "Descrizione dettagliata di cosa fare in questo step specifico per ${brand} ${model}",
+      "warnings": ["Attenzione: avviso importante se presente"],
+      "tips": ["Suggerimento utile se presente"],
       "checkpoints": ["Verifica che sia fatto correttamente"]
     }
   ],
   "troubleshooting": [
     {
-      "problem": "Problema comune",
+      "problem": "Problema comune durante la riparazione",
       "solution": "Soluzione"
     }
   ],
-  "finalNotes": "Note finali e consigli post-riparazione"
+  "finalNotes": "Note finali e consigli post-riparazione per ${brand} ${model}"
 }
 
-Includi almeno 6-8 step dettagliati. Per ogni step, includi warnings se ci sono rischi, tips se ci sono trucchi utili, e checkpoints per verificare il lavoro.`;
+IMPORTANTE: 
+- Includi 6-8 step dettagliati specifici per ${brand} ${model}
+- Ogni step deve essere specifico per questo dispositivo, non generico
+- Per ogni step, includi warnings se ci sono rischi, tips se ci sono trucchi utili
+- I checkpoints servono per verificare il lavoro fatto`;
 
     console.log("Generating repair guide for:", brand, model, issue);
 
@@ -145,7 +175,7 @@ Includi almeno 6-8 step dettagliati. Per ogni step, includi warnings se ci sono 
         messages: [
           {
             role: "system",
-            content: "Sei un tecnico esperto di riparazione elettronica con oltre 15 anni di esperienza. Crei guide dettagliate stile iFixit. Rispondi SEMPRE e SOLO con JSON valido, senza markdown code blocks."
+            content: "Sei un tecnico esperto di riparazione elettronica con oltre 15 anni di esperienza. Crei guide dettagliate stile iFixit specifiche per ogni dispositivo. Rispondi SEMPRE e SOLO con JSON valido, senza markdown code blocks."
           },
           {
             role: "user",
@@ -183,7 +213,7 @@ Includi almeno 6-8 step dettagliati. Per ogni step, includi warnings se ci sono 
     // Clean up the response - remove markdown code blocks if present
     aiContent = aiContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
     
-    console.log("AI Response (cleaned):", aiContent.substring(0, 200));
+    console.log("AI Response received, parsing JSON...");
 
     let guide;
     try {
@@ -200,18 +230,31 @@ Includi almeno 6-8 step dettagliati. Per ogni step, includi warnings se ci sono 
       );
     }
 
-    // Enrich steps with images
+    // Generate images for each step (limit to first 4 steps to save API calls, use fallbacks for rest)
     if (guide.steps && Array.isArray(guide.steps)) {
-      for (const step of guide.steps) {
-        // Try to get a relevant image
-        const searchQuery = step.imageSearchQuery || `${brand} ${model} ${step.title}`;
-        const images = await searchRepairImages(searchQuery);
+      console.log(`Generating images for ${Math.min(guide.steps.length, 4)} steps...`);
+      
+      for (let i = 0; i < guide.steps.length; i++) {
+        const step = guide.steps[i];
         
-        if (images.length > 0) {
-          step.imageUrl = images[0];
+        // Generate AI images for first 4 important steps, use fallbacks for others
+        if (i < 4) {
+          const generatedImage = await generateStepImage(
+            LOVABLE_API_KEY,
+            brand,
+            model,
+            step.title,
+            step.description
+          );
+          
+          if (generatedImage) {
+            step.imageUrl = generatedImage;
+          } else {
+            step.imageUrl = getFallbackImage(step.title, device_type);
+          }
         } else {
-          // Use fallback based on step content
-          step.imageUrl = getRepairTypeImages(device_type, step.title + " " + step.description);
+          // Use contextual fallback for remaining steps
+          step.imageUrl = getFallbackImage(step.title, device_type);
         }
       }
     }
@@ -222,7 +265,7 @@ Includi almeno 6-8 step dettagliati. Per ogni step, includi warnings se ci sono 
       JSON.stringify({ 
         guide,
         isStructured: true,
-        suggestions: null // Keep for backward compatibility
+        suggestions: null
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
