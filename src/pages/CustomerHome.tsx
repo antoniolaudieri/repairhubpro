@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -38,7 +38,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { BookingWizard } from "@/components/booking/BookingWizard";
+import { BookingWizard, CustomerData } from "@/components/booking/BookingWizard";
 import { format } from "date-fns";
 
 export default function CustomerHome() {
@@ -48,6 +48,7 @@ export default function CustomerHome() {
   const [trackingOpen, setTrackingOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [customerData, setCustomerData] = useState<CustomerData | null>(null);
 
   const [trackingEmail, setTrackingEmail] = useState("");
   const [repairs, setRepairs] = useState<any[]>([]);
@@ -59,6 +60,32 @@ export default function CustomerHome() {
     comment: "",
   });
 
+  // Fetch customer data when user is logged in
+  useEffect(() => {
+    const fetchCustomerData = async () => {
+      if (!user?.email) return;
+      
+      try {
+        const { data: customer } = await supabase
+          .from("customers")
+          .select("name, email, phone")
+          .eq("email", user.email)
+          .maybeSingle();
+        
+        if (customer) {
+          setCustomerData({
+            name: customer.name,
+            email: customer.email || user.email,
+            phone: customer.phone,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching customer data:", error);
+      }
+    };
+
+    fetchCustomerData();
+  }, [user]);
   const handleBooking = async (data: {
     customerName: string;
     customerEmail: string;
@@ -288,6 +315,7 @@ export default function CustomerHome() {
                 <BookingWizard 
                   onSubmit={handleBooking}
                   isSubmitting={loading}
+                  initialCustomerData={customerData}
                 />
               </DialogContent>
             </Dialog>

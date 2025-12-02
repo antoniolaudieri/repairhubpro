@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -28,9 +28,16 @@ const bookingSchema = z.object({
 
 type BookingFormData = z.infer<typeof bookingSchema>;
 
+export interface CustomerData {
+  name: string;
+  email: string;
+  phone: string;
+}
+
 interface BookingWizardProps {
   onSubmit: (data: BookingFormData) => Promise<void>;
   isSubmitting: boolean;
+  initialCustomerData?: CustomerData | null;
 }
 
 const DEVICE_TYPES = [
@@ -45,7 +52,7 @@ const TIME_SLOTS = [
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
 ];
 
-export function BookingWizard({ onSubmit, isSubmitting }: BookingWizardProps) {
+export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: BookingWizardProps) {
   const [step, setStep] = useState(1);
   const totalSteps = 3;
 
@@ -53,9 +60,9 @@ export function BookingWizard({ onSubmit, isSubmitting }: BookingWizardProps) {
     resolver: zodResolver(bookingSchema),
     mode: "onChange",
     defaultValues: {
-      customerName: "",
-      customerEmail: "",
-      customerPhone: "",
+      customerName: initialCustomerData?.name || "",
+      customerEmail: initialCustomerData?.email || "",
+      customerPhone: initialCustomerData?.phone || "",
       deviceType: "",
       deviceBrand: "",
       deviceModel: "",
@@ -64,6 +71,14 @@ export function BookingWizard({ onSubmit, isSubmitting }: BookingWizardProps) {
     },
   });
 
+  // Update form when initialCustomerData changes
+  useEffect(() => {
+    if (initialCustomerData) {
+      form.setValue("customerName", initialCustomerData.name);
+      form.setValue("customerEmail", initialCustomerData.email);
+      form.setValue("customerPhone", initialCustomerData.phone);
+    }
+  }, [initialCustomerData, form]);
   const validateStep = async (currentStep: number): Promise<boolean> => {
     let fieldsToValidate: (keyof BookingFormData)[] = [];
 
