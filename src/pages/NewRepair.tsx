@@ -485,60 +485,97 @@ const NewRepair = () => {
 
       // Salva i ricambi se selezionati
       if (selectedSpareParts.length > 0 && repairData) {
-        const repairPartsData = selectedSpareParts.map((part) => ({
-          repair_id: repairData.id,
-          spare_part_id: part.spare_part_id,
-          quantity: part.quantity,
-          unit_cost: part.unit_cost,
-        }));
+        // Prima crea nell'inventario i ricambi suggeriti dall'IA che non esistono ancora
+        const partsWithResolvedIds = await Promise.all(
+          selectedSpareParts.map(async (part) => {
+            // Se l'ID inizia con "suggested-", il ricambio non esiste nel database
+            if (part.spare_part_id.startsWith('suggested-')) {
+              // Crea il ricambio nell'inventario
+              const { data: newPart, error: createError } = await supabase
+                .from("spare_parts")
+                .insert({
+                  name: part.name,
+                  category: "Generico", // Categoria default
+                  cost: part.purchase_cost || null,
+                  selling_price: part.unit_cost,
+                  stock_quantity: 0,
+                  supplier: "utopya",
+                })
+                .select()
+                .single();
 
-        const { error: partsError } = await supabase
-          .from("repair_parts")
-          .insert(repairPartsData);
+              if (createError) {
+                console.error("Error creating spare part:", createError);
+                toast.error(`Errore creazione ricambio: ${part.name}`);
+                return { ...part, spare_part_id: null }; // Marca come fallito
+              }
 
-        if (partsError) {
-          console.error("Error saving spare parts:", partsError);
-          toast.error("Errore nel salvataggio ricambi");
-        }
-
-        // Crea ordine automatico per i ricambi
-        const orderNumber = `ORD-${Date.now()}`;
-        const totalAmount = selectedSpareParts.reduce((sum, part) => sum + (part.unit_cost * part.quantity), 0);
-
-        const { data: orderData, error: orderError } = await supabase
-          .from("orders")
-          .insert({
-            order_number: orderNumber,
-            repair_id: repairData.id,
-            status: "pending",
-            supplier: "utopya",
-            total_amount: totalAmount,
-            notes: `Ordine automatico per riparazione ${repairData.id}`,
+              toast.success(`Ricambio "${part.name}" aggiunto all'inventario`);
+              return { ...part, spare_part_id: newPart.id };
+            }
+            return part;
           })
-          .select()
-          .single();
+        );
 
-        if (orderError) {
-          console.error("Error creating order:", orderError);
-        } else {
-          // Aggiungi gli item all'ordine
-          const orderItems = selectedSpareParts.map((part) => ({
-            order_id: orderData.id,
+        // Filtra i ricambi che sono stati creati con successo
+        const validParts = partsWithResolvedIds.filter(p => p.spare_part_id !== null);
+
+        if (validParts.length > 0) {
+          const repairPartsData = validParts.map((part) => ({
+            repair_id: repairData.id,
             spare_part_id: part.spare_part_id,
-            product_name: part.name,
-            product_code: part.supplier_code || "",
             quantity: part.quantity,
             unit_cost: part.unit_cost,
           }));
 
-          const { error: itemsError } = await supabase
-            .from("order_items")
-            .insert(orderItems);
+          const { error: partsError } = await supabase
+            .from("repair_parts")
+            .insert(repairPartsData);
 
-          if (itemsError) {
-            console.error("Error creating order items:", itemsError);
+          if (partsError) {
+            console.error("Error saving spare parts:", partsError);
+            toast.error("Errore nel salvataggio ricambi");
+          }
+
+          // Crea ordine automatico per i ricambi
+          const orderNumber = `ORD-${Date.now()}`;
+          const totalAmount = validParts.reduce((sum, part) => sum + (part.unit_cost * part.quantity), 0);
+
+          const { data: orderData, error: orderError } = await supabase
+            .from("orders")
+            .insert({
+              order_number: orderNumber,
+              repair_id: repairData.id,
+              status: "pending",
+              supplier: "utopya",
+              total_amount: totalAmount,
+              notes: `Ordine automatico per riparazione ${repairData.id}`,
+            })
+            .select()
+            .single();
+
+          if (orderError) {
+            console.error("Error creating order:", orderError);
           } else {
-            toast.success("Ordine ricambi creato automaticamente!");
+            // Aggiungi gli item all'ordine
+            const orderItems = validParts.map((part) => ({
+              order_id: orderData.id,
+              spare_part_id: part.spare_part_id,
+              product_name: part.name,
+              product_code: part.supplier_code || "",
+              quantity: part.quantity,
+              unit_cost: part.unit_cost,
+            }));
+
+            const { error: itemsError } = await supabase
+              .from("order_items")
+              .insert(orderItems);
+
+            if (itemsError) {
+              console.error("Error creating order items:", itemsError);
+            } else {
+              toast.success("Ordine ricambi creato automaticamente!");
+            }
           }
         }
       }
