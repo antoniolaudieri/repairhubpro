@@ -261,43 +261,78 @@ export default function Orders() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">Ordini Ricambi</h1>
-            <p className="text-muted-foreground">
-              Gestisci gli ordini ai fornitori e scarica i ricambi quando arrivano
-            </p>
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6"
+        >
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+                Ordini Ricambi
+              </h1>
+              <p className="text-sm md:text-base text-muted-foreground">
+                Gestisci gli ordini ai fornitori e scarica i ricambi quando arrivano
+              </p>
+            </div>
+            <Badge variant="outline" className="gap-2 w-fit">
+              <Clock className="h-4 w-4" />
+              <span className="hidden sm:inline">Tracking Real-Time Attivo</span>
+              <span className="sm:hidden">Live</span>
+            </Badge>
           </div>
-          <Badge variant="outline" className="gap-2">
-            <Clock className="h-4 w-4" />
-            Tracking Real-Time Attivo
-          </Badge>
-        </div>
+        </motion.div>
 
         <Tabs value={filterStatus} onValueChange={setFilterStatus} className="mb-6">
-          <TabsList>
-            <TabsTrigger value="all">Tutti ({orders.length})</TabsTrigger>
-            <TabsTrigger value="draft">Bozze ({orders.filter(o => o.status === "draft").length})</TabsTrigger>
-            <TabsTrigger value="pending">In Attesa ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
-            <TabsTrigger value="ordered">Ordinati ({orders.filter(o => o.status === "ordered").length})</TabsTrigger>
-            <TabsTrigger value="received">Ricevuti ({orders.filter(o => o.status === "received").length})</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-3 md:grid-cols-5 gap-2 h-auto p-1">
+            <TabsTrigger value="all" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Tutti</span>
+              <span className="sm:hidden">Tutti</span>
+              <span className="ml-1">({orders.length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="draft" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Bozze</span>
+              <span className="sm:hidden">Bozze</span>
+              <span className="ml-1">({orders.filter(o => o.status === "draft").length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="pending" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">In Attesa</span>
+              <span className="sm:hidden">Attesa</span>
+              <span className="ml-1">({orders.filter(o => o.status === "pending").length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="ordered" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Ordinati</span>
+              <span className="sm:hidden">Ord.</span>
+              <span className="ml-1">({orders.filter(o => o.status === "ordered").length})</span>
+            </TabsTrigger>
+            <TabsTrigger value="received" className="text-xs md:text-sm">
+              <span className="hidden sm:inline">Ricevuti</span>
+              <span className="sm:hidden">Ric.</span>
+              <span className="ml-1">({orders.filter(o => o.status === "received").length})</span>
+            </TabsTrigger>
           </TabsList>
         </Tabs>
 
         {filteredOrders.length === 0 ? (
-          <Card className="p-12 text-center">
-            <ShoppingCart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">
-              {orders.length === 0 ? "Nessun ordine" : "Nessun ordine in questa categoria"}
-            </h2>
-            <p className="text-muted-foreground">
-              {orders.length === 0 
-                ? "Gli ordini creati durante le riparazioni appariranno qui"
-                : "Cambia filtro per vedere altri ordini"}
-            </p>
-          </Card>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            <Card className="p-8 md:p-12 text-center">
+              <ShoppingCart className="h-12 w-12 md:h-16 md:w-16 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-lg md:text-xl font-semibold mb-2">
+                {orders.length === 0 ? "Nessun ordine" : "Nessun ordine in questa categoria"}
+              </h2>
+              <p className="text-sm md:text-base text-muted-foreground">
+                {orders.length === 0 
+                  ? "Gli ordini creati durante le riparazioni appariranno qui"
+                  : "Cambia filtro per vedere altri ordini"}
+              </p>
+            </Card>
+          </motion.div>
         ) : (
           <div className="grid gap-6">
             {filteredOrders.map((order, index) => {
@@ -310,193 +345,228 @@ export default function Orders() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <Card className="p-6 hover:shadow-md transition-shadow">
-                    <div className="flex items-start justify-between mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-bold text-foreground">
-                            {order.order_number}
-                          </h3>
-                          <Badge 
-                            variant={statusInfo.variant}
-                            className="gap-1"
-                          >
-                            {statusInfo.icon}
-                            {statusInfo.label}
-                          </Badge>
-                          {order.repair_id && (
-                            <Badge variant="outline" className="gap-1">
-                              <Package className="h-3 w-3" />
-                              Riparazione
+                  <Card className="p-4 md:p-6 hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary/20">
+                    <div className="space-y-4">
+                      {/* Header con numero ordine e badges */}
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div className="flex-1 space-y-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="text-lg md:text-xl font-bold text-foreground">
+                              {order.order_number}
+                            </h3>
+                            <Badge 
+                              variant={statusInfo.variant}
+                              className="gap-1"
+                            >
+                              {statusInfo.icon}
+                              <span className="text-xs">{statusInfo.label}</span>
                             </Badge>
+                            {order.repair_id && (
+                              <Badge variant="outline" className="gap-1">
+                                <Package className="h-3 w-3" />
+                                <span className="text-xs">Riparazione</span>
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Info Cliente */}
+                          {order.repairs?.devices?.customers && (
+                            <motion.div 
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              className="p-3 bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg border border-primary/20"
+                            >
+                              <p className="font-semibold text-foreground text-sm md:text-base mb-1">
+                                👤 {order.repairs.devices.customers.name}
+                              </p>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs md:text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  📞 {order.repairs.devices.customers.phone}
+                                </span>
+                                {order.repairs.devices.customers.email && (
+                                  <span className="flex items-center gap-1">
+                                    <span className="hidden sm:inline">•</span>
+                                    ✉️ {order.repairs.devices.customers.email}
+                                  </span>
+                                )}
+                              </div>
+                            </motion.div>
                           )}
+                          
+                          {/* Info Date e Fornitore */}
+                          <div className="flex flex-wrap items-center gap-2 text-xs md:text-sm text-muted-foreground">
+                            <span className="font-medium">🏪 {order.supplier}</span>
+                            <span className="hidden sm:inline">•</span>
+                            <span>
+                              📅 {format(new Date(order.created_at), "dd MMM yyyy", { locale: it })}
+                            </span>
+                            {order.ordered_at && (
+                              <>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="text-primary">
+                                  🛒 {format(new Date(order.ordered_at), "dd MMM yyyy", { locale: it })}
+                                </span>
+                              </>
+                            )}
+                            {order.received_at && (
+                              <>
+                                <span className="hidden sm:inline">•</span>
+                                <span className="text-success font-medium">
+                                  ✅ {format(new Date(order.received_at), "dd MMM yyyy", { locale: it })}
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
                         
-                        {order.repairs?.devices?.customers && (
-                          <div className="mb-2 p-3 bg-muted/30 rounded-lg">
-                            <p className="font-semibold text-foreground">
-                              Cliente: {order.repairs.devices.customers.name}
-                            </p>
-                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                              <span>📞 {order.repairs.devices.customers.phone}</span>
-                              {order.repairs.devices.customers.email && (
-                                <>
-                                  <span>•</span>
-                                  <span>✉️ {order.repairs.devices.customers.email}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
+                        {/* Pulsante Scarica */}
+                        {order.status !== "received" && (
+                          <Button
+                            onClick={() => handleReceiveOrder(order)}
+                            disabled={processingOrder === order.id}
+                            className="gap-2 w-full sm:w-auto"
+                            size="sm"
+                          >
+                            {processingOrder === order.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4" />
+                            )}
+                            <span className="hidden sm:inline">Scarica Ordine</span>
+                            <span className="sm:hidden">Scarica</span>
+                          </Button>
                         )}
+                      </div>
+
+                      {/* Gestione Stato e Tracking */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-3 md:p-4 bg-muted/20 rounded-lg border border-border/50">
+                        <div className="space-y-2">
+                          <Label htmlFor={`status-${order.id}`} className="text-xs md:text-sm font-medium flex items-center gap-2">
+                            📊 Stato Ordine
+                          </Label>
+                          <Select
+                            value={order.status}
+                            onValueChange={(value) => updateOrderStatus(order.id, value)}
+                            disabled={order.status === "received"}
+                          >
+                            <SelectTrigger id={`status-${order.id}`} className="h-9 text-sm">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="draft">Bozza</SelectItem>
+                              <SelectItem value="pending">In Attesa</SelectItem>
+                              <SelectItem value="ordered">Ordinato</SelectItem>
+                              <SelectItem value="received" disabled>Ricevuto</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                         
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>Fornitore: {order.supplier}</span>
-                          <span>•</span>
-                          <span>
-                            Creato: {format(new Date(order.created_at), "dd MMM yyyy", { locale: it })}
-                          </span>
-                          {order.ordered_at && (
-                            <>
-                              <span>•</span>
-                              <span>
-                                Ordinato: {format(new Date(order.ordered_at), "dd MMM yyyy", { locale: it })}
-                              </span>
-                            </>
-                          )}
-                          {order.received_at && (
-                            <>
-                              <span>•</span>
-                              <span className="text-success">
-                                Ricevuto: {format(new Date(order.received_at), "dd MMM yyyy", { locale: it })}
-                              </span>
-                            </>
-                          )}
+                        <div className="space-y-2">
+                          <Label htmlFor={`tracking-${order.id}`} className="text-xs md:text-sm font-medium flex items-center gap-2">
+                            <Truck className="h-3 w-3 md:h-4 md:w-4" />
+                            Tracking
+                          </Label>
+                          <Input
+                            id={`tracking-${order.id}`}
+                            placeholder="Inserisci tracking..."
+                            value={order.tracking_number || ""}
+                            onChange={(e) => {
+                              setOrders(orders.map(o => 
+                                o.id === order.id 
+                                  ? { ...o, tracking_number: e.target.value }
+                                  : o
+                              ));
+                            }}
+                            onBlur={(e) => updateTrackingNumber(order.id, e.target.value)}
+                            disabled={order.status === "received"}
+                            className="h-9 text-sm"
+                          />
                         </div>
                       </div>
-                      
-                      {order.status !== "received" && (
-                        <Button
-                          onClick={() => handleReceiveOrder(order)}
-                          disabled={processingOrder === order.id}
-                          className="gap-2"
+
+                      {order.notes && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          className="p-3 bg-warning/10 border border-warning/20 rounded-lg"
                         >
-                          {processingOrder === order.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4" />
-                          )}
-                          Scarica Ordine
-                        </Button>
+                          <p className="text-xs md:text-sm text-foreground flex items-start gap-2">
+                            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-warning" />
+                            {order.notes}
+                          </p>
+                        </motion.div>
                       )}
-                    </div>
 
-                    {/* Gestione Stato e Tracking */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-muted/30 rounded-lg">
-                      <div>
-                        <Label htmlFor={`status-${order.id}`} className="text-sm font-medium mb-2">
-                          Stato Ordine
-                        </Label>
-                        <Select
-                          value={order.status}
-                          onValueChange={(value) => updateOrderStatus(order.id, value)}
-                          disabled={order.status === "received"}
-                        >
-                          <SelectTrigger id={`status-${order.id}`}>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="draft">Bozza</SelectItem>
-                            <SelectItem value="pending">In Attesa</SelectItem>
-                            <SelectItem value="ordered">Ordinato</SelectItem>
-                            <SelectItem value="received" disabled>Ricevuto</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <Label htmlFor={`tracking-${order.id}`} className="text-sm font-medium mb-2 flex items-center gap-2">
-                          <Truck className="h-4 w-4" />
-                          Numero Tracking
-                        </Label>
-                        <Input
-                          id={`tracking-${order.id}`}
-                          placeholder="Inserisci tracking..."
-                          value={order.tracking_number || ""}
-                          onChange={(e) => {
-                            // Update local state immediately
-                            setOrders(orders.map(o => 
-                              o.id === order.id 
-                                ? { ...o, tracking_number: e.target.value }
-                                : o
-                            ));
-                          }}
-                          onBlur={(e) => updateTrackingNumber(order.id, e.target.value)}
-                          disabled={order.status === "received"}
-                        />
-                      </div>
-                    </div>
+                      {/* Articoli */}
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-sm md:text-base text-foreground flex items-center gap-2 pb-2 border-b">
+                          <Package className="h-4 w-4" />
+                          Articoli ({order.order_items.length})
+                        </h4>
+                        
+                        <div className="space-y-2">
+                          {order.order_items.map((item, idx) => (
+                            <motion.div 
+                              key={item.id}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: idx * 0.05 }}
+                              className="p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium text-sm md:text-base text-foreground truncate">
+                                    {item.product_name}
+                                  </p>
+                                  {item.product_code && (
+                                    <p className="text-xs text-muted-foreground">
+                                      Cod: {item.product_code}
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <p className="font-semibold text-sm md:text-base text-foreground whitespace-nowrap">
+                                    {item.quantity}x €{item.unit_cost.toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Tot: €{(item.quantity * item.unit_cost).toFixed(2)}
+                                  </p>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
+                        </div>
 
-                    {order.notes && (
-                      <div className="mb-4 p-3 bg-muted/30 rounded-lg">
-                        <p className="text-sm text-muted-foreground flex items-start gap-2">
-                          <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                          {order.notes}
-                        </p>
-                      </div>
-                    )}
-
-                    <div className="space-y-3">
-                      <h4 className="font-semibold text-foreground flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        Articoli ({order.order_items.length})
-                      </h4>
-                      
-                      <div className="divide-y divide-border">
-                        {order.order_items.map((item) => (
-                          <div key={item.id} className="py-3 flex items-center justify-between">
-                            <div className="flex-1">
-                              <p className="font-medium text-foreground">{item.product_name}</p>
-                              {item.product_code && (
-                                <p className="text-sm text-muted-foreground">
-                                  Codice: {item.product_code}
-                                </p>
-                              )}
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold text-foreground">
-                                {item.quantity}x €{item.unit_cost.toFixed(2)}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Tot: €{(item.quantity * item.unit_cost).toFixed(2)}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
+                        {order.total_amount !== null && (
+                          <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="pt-3 mt-3 border-t-2 border-primary/20 flex justify-between items-center bg-primary/5 p-3 rounded-lg"
+                          >
+                            <span className="font-semibold text-sm md:text-base text-foreground">
+                              Totale Ordine
+                            </span>
+                            <span className="text-xl md:text-2xl font-bold text-primary">
+                              €{order.total_amount.toFixed(2)}
+                            </span>
+                          </motion.div>
+                        )}
                       </div>
 
-                      {order.total_amount !== null && (
-                        <div className="pt-3 border-t border-border flex justify-between items-center">
-                          <span className="font-semibold text-foreground">Totale Ordine</span>
-                          <span className="text-2xl font-bold text-primary">
-                            €{order.total_amount.toFixed(2)}
-                          </span>
+                      {order.repair_id && (
+                        <div className="pt-3 mt-3 border-t border-border">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(`/repairs/${order.repair_id}`, "_blank")}
+                            className="gap-2 w-full sm:w-auto hover:bg-primary/10 hover:text-primary hover:border-primary transition-colors"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Vedi Riparazione
+                          </Button>
                         </div>
                       )}
                     </div>
-
-                    {order.repair_id && (
-                      <div className="mt-4 pt-4 border-t border-border">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(`/repairs/${order.repair_id}`, "_blank")}
-                          className="gap-2"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          Vedi Riparazione
-                        </Button>
-                      </div>
-                    )}
                   </Card>
                 </motion.div>
               );
