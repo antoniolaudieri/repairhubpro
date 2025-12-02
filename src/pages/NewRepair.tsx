@@ -937,13 +937,22 @@ const NewRepair = () => {
                       </span>
                     </div>
                   ))}
-                  <div className="pt-2 border-t border-border mt-2">
+                  <div className="pt-2 border-t border-border mt-2 space-y-1">
                     <div className="flex justify-between font-semibold">
                       <span>Totale Ricambi:</span>
                       <span>
                         €{partsRevenue.toFixed(2)}
                       </span>
                     </div>
+                    {partsMargin > 0 && (
+                      <div className="flex justify-between text-sm text-success">
+                        <span>Margine Totale:</span>
+                        <span className="font-medium">
+                          €{partsMargin.toFixed(2)} 
+                          {partsCost > 0 && ` (${((partsMargin / partsCost) * 100).toFixed(0)}%)`}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
