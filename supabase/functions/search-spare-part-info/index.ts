@@ -6,36 +6,83 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Function to validate if an image URL is accessible
+// Search for images using DuckDuckGo
+async function searchDuckDuckGoImages(query: string): Promise<string[]> {
+  try {
+    console.log('Searching DuckDuckGo for:', query);
+    
+    // First, get the vqd token from DuckDuckGo
+    const tokenResponse = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+      }
+    });
+    
+    const html = await tokenResponse.text();
+    const vqdMatch = html.match(/vqd=["']?([^"'&]+)/);
+    
+    if (!vqdMatch) {
+      console.log('Could not extract vqd token');
+      return [];
+    }
+    
+    const vqd = vqdMatch[1];
+    console.log('Got vqd token:', vqd);
+    
+    // Now search for images
+    const imageSearchUrl = `https://duckduckgo.com/i.js?l=it-it&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,,,&p=1`;
+    
+    const imageResponse = await fetch(imageSearchUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json',
+        'Referer': 'https://duckduckgo.com/',
+      }
+    });
+    
+    if (!imageResponse.ok) {
+      console.log('Image search failed:', imageResponse.status);
+      return [];
+    }
+    
+    const data = await imageResponse.json();
+    const results = data.results || [];
+    
+    // Extract image URLs, preferring thumbnail for faster loading
+    const imageUrls = results
+      .slice(0, 10)
+      .map((r: any) => r.thumbnail || r.image)
+      .filter((url: string) => url && (url.startsWith('http://') || url.startsWith('https://')));
+    
+    console.log('Found', imageUrls.length, 'images from DuckDuckGo');
+    return imageUrls;
+  } catch (error) {
+    console.error('DuckDuckGo search error:', error);
+    return [];
+  }
+}
+
+// Validate if an image URL is accessible
 async function isImageAccessible(url: string): Promise<boolean> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
     const response = await fetch(url, { 
       method: 'HEAD',
+      signal: controller.signal,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       }
     });
+    
+    clearTimeout(timeoutId);
     const contentType = response.headers.get('content-type') || '';
     return response.ok && contentType.startsWith('image/');
   } catch {
     return false;
   }
-}
-
-// Generate potential image URLs based on common patterns
-function generatePotentialUrls(partName: string, brand: string, model: string): string[] {
-  const searchTerm = `${partName} ${brand} ${model}`.toLowerCase().trim();
-  const slug = searchTerm.replace(/[^a-z0-9]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-  
-  const urls: string[] = [];
-  
-  // iFixit patterns
-  if (brand.toLowerCase() === 'apple' || brand.toLowerCase() === 'iphone') {
-    const iphoneModel = model.toLowerCase().replace(/\s+/g, '-');
-    urls.push(`https://d3nevzfk7ii3be.cloudfront.net/igi/4/${slug}.jpg`);
-  }
-  
-  return urls;
 }
 
 serve(async (req) => {
@@ -48,86 +95,29 @@ serve(async (req) => {
     
     console.log('Searching spare part info for:', { partName, brand, model });
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
-    }
-
-    // Build a more specific search query
-    const searchQuery = `${partName} ${brand || ''} ${model || ''}`.trim();
-
-    const searchPrompt = `You are a spare parts image database. For the query: "${searchQuery}"
-
-Generate 5 realistic Amazon product image URLs for this spare part. Use this EXACT format:
-https://m.media-amazon.com/images/I/[ASIN_CODE]._AC_SL1500_.jpg
-
-Where [ASIN_CODE] is a realistic 10-character alphanumeric code starting with "7" or "8" followed by letters and numbers.
-
-Rules:
-- Generate 5 different UNIQUE URLs
-- Each URL must be a valid Amazon CDN format
-- Focus on smartphone/tablet repair parts
-
-Return ONLY a JSON array of URLs, nothing else:
-["url1", "url2", "url3", "url4", "url5"]`;
-
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { 
-            role: 'system', 
-            content: 'You generate realistic Amazon CDN image URLs. Return ONLY valid JSON arrays. No explanations.' 
-          },
-          { role: 'user', content: searchPrompt }
-        ],
-        temperature: 0.9,
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
-      throw new Error(`AI API request failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    // Build search query - focus on spare part + device info
+    const searchTerms = [partName];
+    if (brand) searchTerms.push(brand);
+    if (model) searchTerms.push(model);
+    searchTerms.push('ricambio'); // Add Italian term for spare part
     
-    if (!content) {
-      throw new Error('No content in AI response');
+    const searchQuery = searchTerms.join(' ');
+    console.log('Search query:', searchQuery);
+
+    // Try DuckDuckGo image search first
+    let imageUrls = await searchDuckDuckGoImages(searchQuery);
+    
+    // If no results, try English search
+    if (imageUrls.length === 0) {
+      const englishQuery = `${partName} ${brand || ''} ${model || ''} replacement part`.trim();
+      console.log('Trying English query:', englishQuery);
+      imageUrls = await searchDuckDuckGoImages(englishQuery);
     }
-
-    console.log('AI response:', content);
-
-    // Parse URLs from AI response
-    let urls: string[] = [];
-    try {
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || 
-                       content.match(/```\s*([\s\S]*?)\s*```/) ||
-                       content.match(/\[[\s\S]*?\]/);
-      const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
-      urls = JSON.parse(jsonStr);
-    } catch (e) {
-      console.error('Failed to parse AI JSON response:', e);
-      // Try to extract URLs with regex as fallback
-      const urlMatches = content.match(/https?:\/\/[^\s"]+\.(jpg|jpeg|png|webp)/gi);
-      if (urlMatches) {
-        urls = urlMatches;
-      }
-    }
-
-    console.log('Extracted URLs:', urls);
 
     // Validate URLs and find a working one
     let validImageUrl = '';
     
-    for (const url of urls) {
+    for (const url of imageUrls) {
       console.log('Validating URL:', url);
       const isValid = await isImageAccessible(url);
       if (isValid) {
@@ -137,17 +127,17 @@ Return ONLY a JSON array of URLs, nothing else:
       }
     }
 
-    // If no AI URLs work, try static fallback images based on part type
+    // If no valid URL found, use fallback based on part type
     if (!validImageUrl) {
-      console.log('No valid AI URLs, trying fallback patterns...');
+      console.log('No valid URLs found, using fallback...');
       
       const partLower = partName.toLowerCase();
       
-      // Known working placeholder images for common part types
       const fallbacks: Record<string, string> = {
         'display': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400',
         'lcd': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400',
         'screen': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400',
+        'schermo': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400',
         'battery': 'https://images.unsplash.com/photo-1609592806585-268cb97f4f8b?w=400',
         'batteria': 'https://images.unsplash.com/photo-1609592806585-268cb97f4f8b?w=400',
         'camera': 'https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=400',
@@ -156,6 +146,11 @@ Return ONLY a JSON array of URLs, nothing else:
         'caricatore': 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?w=400',
         'connector': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
         'connettore': 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
+        'vetro': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400',
+        'glass': 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400',
+        'back': 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
+        'cover': 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
+        'scocca': 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400',
       };
 
       for (const [key, url] of Object.entries(fallbacks)) {
