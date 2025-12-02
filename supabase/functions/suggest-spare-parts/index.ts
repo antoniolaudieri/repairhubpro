@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,34 +100,82 @@ serve(async (req) => {
   }
 
   try {
-    const { deviceBrand, deviceModel, reportedIssue, availableParts } = await req.json();
+    const { deviceBrand, deviceModel, deviceType, reportedIssue, availableParts } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
+    // Create Supabase client to fetch labor prices and services
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+
+    // Fetch available labor prices and services from database
+    const [laborResult, servicesResult] = await Promise.all([
+      supabase.from('labor_prices').select('*'),
+      supabase.from('additional_services').select('*').eq('is_active', true),
+    ]);
+
+    const availableLabor = laborResult.data || [];
+    const availableServices = servicesResult.data || [];
+
     console.log(`Suggesting parts for ${deviceBrand} ${deviceModel} with issue: ${reportedIssue}`);
+    console.log(`Available labor: ${availableLabor.length}, services: ${availableServices.length}`);
+
+    // Build context for AI about available options
+    const laborContext = availableLabor.map(l => `- ${l.name} (€${l.price}) - ${l.description || ''} [categoria: ${l.category}, dispositivo: ${l.device_type || 'tutti'}]`).join('\n');
+    const servicesContext = availableServices.map(s => `- ${s.name} (€${s.price}) - ${s.description || ''}`).join('\n');
 
     const systemPrompt = `Sei un esperto tecnico di riparazione smartphone e dispositivi elettronici.
-Analizza il difetto segnalato e suggerisci i ricambi necessari per la riparazione.
+Analizza il difetto segnalato e suggerisci:
+1. I RICAMBI necessari per la riparazione
+2. Le LAVORAZIONI (manodopera) appropriate
+3. I SERVIZI AGGIUNTIVI utili
 
-Rispondi SOLO con un array JSON di oggetti, senza testo aggiuntivo.
-Ogni oggetto deve avere:
-- "partName": nome specifico del ricambio (es. "Display LCD iPhone 14", "Batteria Samsung Galaxy S23")
-- "reason": breve spiegazione del perché questo ricambio è necessario
-- "estimatedPrice": prezzo stimato in euro (numero, es. 45.00)
-- "category": categoria del ricambio (es. "Display", "Batteria", "Connettore", "Fotocamera", "Speaker")
+Rispondi SOLO con un oggetto JSON con questa struttura:
+{
+  "parts": [
+    {
+      "partName": "nome specifico del ricambio (es. Display LCD iPhone 14)",
+      "reason": "breve spiegazione del perché questo ricambio è necessario",
+      "estimatedPrice": 45.00,
+      "category": "Display"
+    }
+  ],
+  "labors": [
+    {
+      "laborName": "nome esatto della lavorazione dal listino",
+      "reason": "breve spiegazione del perché questa manodopera è necessaria"
+    }
+  ],
+  "services": [
+    {
+      "serviceName": "nome esatto del servizio dal listino",
+      "reason": "breve spiegazione del perché questo servizio potrebbe essere utile"
+    }
+  ]
+}
 
-IMPORTANTE: Includi sempre marca e modello nel nome del ricambio per una ricerca precisa.
-Il prezzo deve essere realistico basato sui prezzi di mercato per ricambi smartphone.
+LISTINO MANODOPERA DISPONIBILE:
+${laborContext || 'Nessuna lavorazione predefinita disponibile'}
 
-Suggerisci da 1 a 3 ricambi più probabili per risolvere il problema.`;
+SERVIZI AGGIUNTIVI DISPONIBILI:
+${servicesContext || 'Nessun servizio disponibile'}
 
-    const userPrompt = `Dispositivo: ${deviceBrand || 'Smartphone'} ${deviceModel || ''}
+IMPORTANTE:
+- Per i ricambi, includi sempre marca e modello nel nome
+- Per manodopera e servizi, usa ESATTAMENTE i nomi dal listino fornito
+- Suggerisci solo lavorazioni/servizi pertinenti al difetto
+- Il prezzo dei ricambi deve essere realistico
+- Suggerisci da 1 a 3 ricambi, 1-2 lavorazioni, e 0-2 servizi aggiuntivi`;
+
+    const userPrompt = `Dispositivo: ${deviceBrand || 'Smartphone'} ${deviceModel || ''} (${deviceType || 'smartphone'})
 Difetto segnalato: ${reportedIssue}
 
-Quali ricambi specifici sono necessari per questa riparazione? Includi prezzo stimato.`;
+Cosa suggerisci per questa riparazione?`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -148,7 +197,7 @@ Quali ricambi specifici sono necessari per questa riparazione? Includi prezzo st
       console.error('AI gateway error:', response.status, errorText);
       
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded', suggestions: [] }), {
+        return new Response(JSON.stringify({ error: 'Rate limit exceeded', suggestions: [], laborSuggestions: [], serviceSuggestions: [] }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -163,17 +212,28 @@ Quali ricambi specifici sono necessari per questa riparazione? Includi prezzo st
     console.log('AI response:', content);
 
     // Parse JSON from response
-    let suggestions = [];
+    let parsedResponse = { parts: [], labors: [], services: [] };
     try {
-      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        suggestions = JSON.parse(jsonMatch[0]);
+        parsedResponse = JSON.parse(jsonMatch[0]);
       }
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError);
+      // Try to parse old format (array of parts)
+      try {
+        const arrayMatch = content.match(/\[[\s\S]*\]/);
+        if (arrayMatch) {
+          parsedResponse.parts = JSON.parse(arrayMatch[0]);
+        }
+      } catch {}
     }
 
-    // Enrich suggestions with images
+    const suggestions = parsedResponse.parts || [];
+    const laborSuggestions = parsedResponse.labors || [];
+    const serviceSuggestions = parsedResponse.services || [];
+
+    // Enrich part suggestions with images
     const enrichedSuggestions = await Promise.all(
       suggestions.map(async (suggestion: any) => {
         // Check if part exists in inventory
@@ -200,7 +260,44 @@ Quali ricambi specifici sono necessari per questa riparazione? Includi prezzo st
       })
     );
 
-    return new Response(JSON.stringify({ suggestions: enrichedSuggestions }), {
+    // Match labor suggestions with database entries
+    const enrichedLaborSuggestions = laborSuggestions.map((suggestion: any) => {
+      const matchedLabor = availableLabor.find((l: any) => 
+        l.name.toLowerCase().includes(suggestion.laborName.toLowerCase()) ||
+        suggestion.laborName.toLowerCase().includes(l.name.toLowerCase())
+      );
+
+      return {
+        laborName: suggestion.laborName,
+        reason: suggestion.reason,
+        matched: !!matchedLabor,
+        matchedId: matchedLabor?.id || null,
+        price: matchedLabor?.price || 0,
+        category: matchedLabor?.category || null,
+      };
+    });
+
+    // Match service suggestions with database entries
+    const enrichedServiceSuggestions = serviceSuggestions.map((suggestion: any) => {
+      const matchedService = availableServices.find((s: any) => 
+        s.name.toLowerCase().includes(suggestion.serviceName.toLowerCase()) ||
+        suggestion.serviceName.toLowerCase().includes(s.name.toLowerCase())
+      );
+
+      return {
+        serviceName: suggestion.serviceName,
+        reason: suggestion.reason,
+        matched: !!matchedService,
+        matchedId: matchedService?.id || null,
+        price: matchedService?.price || 0,
+      };
+    });
+
+    return new Response(JSON.stringify({ 
+      suggestions: enrichedSuggestions,
+      laborSuggestions: enrichedLaborSuggestions,
+      serviceSuggestions: enrichedServiceSuggestions,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
@@ -208,7 +305,9 @@ Quali ricambi specifici sono necessari per questa riparazione? Includi prezzo st
     console.error('Error in suggest-spare-parts:', error);
     return new Response(JSON.stringify({ 
       error: error instanceof Error ? error.message : 'Unknown error',
-      suggestions: []
+      suggestions: [],
+      laborSuggestions: [],
+      serviceSuggestions: [],
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
