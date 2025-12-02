@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.search-spare-part-info]
 verify_jwt = false
+
+[functions.track-repairs]
+verify_jwt = false

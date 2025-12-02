@@ -208,13 +208,13 @@ export default function CustomerHome() {
     setLoading(true);
 
     try {
-      const { data: customer } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("email", trackingEmail)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke('track-repairs', {
+        body: { email: trackingEmail }
+      });
 
-      if (!customer) {
+      if (error) throw error;
+
+      if (!data.repairs || data.repairs.length === 0) {
         toast({
           title: "Nessun risultato",
           description: "Nessuna riparazione trovata per questa email",
@@ -224,33 +224,7 @@ export default function CustomerHome() {
         return;
       }
 
-      const { data: devices } = await supabase
-        .from("devices")
-        .select("id")
-        .eq("customer_id", customer.id);
-
-      if (!devices || devices.length === 0) {
-        setRepairs([]);
-        return;
-      }
-
-      const deviceIds = devices.map((d) => d.id);
-
-      const { data: repairData } = await supabase
-        .from("repairs")
-        .select(`
-          *,
-          device:devices (
-            brand,
-            model,
-            device_type,
-            reported_issue
-          )
-        `)
-        .in("device_id", deviceIds)
-        .order("created_at", { ascending: false });
-
-      setRepairs(repairData || []);
+      setRepairs(data.repairs);
     } catch (error: any) {
       toast({
         title: "Errore",
