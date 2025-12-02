@@ -47,6 +47,14 @@ interface SelectedLabor {
   price: number;
 }
 
+interface AdditionalServiceDB {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  is_active: boolean;
+}
+
 interface AISuggestion {
   partName: string;
   reason: string;
@@ -58,15 +66,6 @@ interface AISuggestion {
   stockQuantity: number;
   actualPrice?: number;
 }
-
-const AVAILABLE_SERVICES = [
-  { id: "data_transfer", name: "Trasferimento Dati", price: 25 },
-  { id: "password_recovery", name: "Recupero Password", price: 15 },
-  { id: "full_backup", name: "Backup Completo", price: 20 },
-  { id: "software_cleanup", name: "Pulizia Software", price: 10 },
-  { id: "screen_protector", name: "Applicazione Pellicola", price: 5 },
-  { id: "deep_cleaning", name: "Pulizia Profonda", price: 15 },
-];
 
 interface SparePartsStepProps {
   deviceBrand?: string;
@@ -106,15 +105,16 @@ export const SparePartsStep = ({
   const [hasFetchedSuggestions, setHasFetchedSuggestions] = useState(false);
   const [laborPrices, setLaborPrices] = useState<LaborPrice[]>([]);
   const [customLaborCost, setCustomLaborCost] = useState<number>(0);
+  const [availableServices, setAvailableServices] = useState<AdditionalServiceDB[]>([]);
 
-  const toggleService = (service: typeof AVAILABLE_SERVICES[0]) => {
+  const toggleService = (service: AdditionalServiceDB) => {
     if (!onServicesChange) return;
     
     const isSelected = selectedServices.some(s => s.id === service.id);
     if (isSelected) {
       onServicesChange(selectedServices.filter(s => s.id !== service.id));
     } else {
-      onServicesChange([...selectedServices, service]);
+      onServicesChange([...selectedServices, { id: service.id, name: service.name, price: service.price }]);
     }
   };
 
@@ -125,6 +125,7 @@ export const SparePartsStep = ({
   useEffect(() => {
     loadSpareParts();
     loadLaborPrices();
+    loadServices();
   }, []);
 
   useEffect(() => {
@@ -150,6 +151,21 @@ export const SparePartsStep = ({
       setLaborPrices(data || []);
     } catch (error: any) {
       console.error("Error loading labor prices:", error);
+    }
+  };
+
+  const loadServices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("additional_services")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
+
+      if (error) throw error;
+      setAvailableServices(data || []);
+    } catch (error: any) {
+      console.error("Error loading services:", error);
     }
   };
 
@@ -344,29 +360,35 @@ export const SparePartsStep = ({
           </p>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-          {AVAILABLE_SERVICES.map((service) => {
-            const isSelected = selectedServices.some(s => s.id === service.id);
-            return (
-              <button
-                key={service.id}
-                type="button"
-                onClick={() => toggleService(service)}
-                className={`p-3 rounded-lg border text-left transition-all ${
-                  isSelected 
-                    ? "border-primary bg-primary/10 ring-1 ring-primary" 
-                    : "border-border hover:border-primary/50 hover:bg-accent/5"
-                }`}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-medium text-sm">{service.name}</span>
-                  {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
-                </div>
-                <span className="text-sm text-primary font-semibold">€{service.price.toFixed(2)}</span>
-              </button>
-            );
-          })}
-        </div>
+        {availableServices.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {availableServices.map((service) => {
+              const isSelected = selectedServices.some(s => s.id === service.id);
+              return (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => toggleService(service)}
+                  className={`p-3 rounded-lg border text-left transition-all ${
+                    isSelected 
+                      ? "border-primary bg-primary/10 ring-1 ring-primary" 
+                      : "border-border hover:border-primary/50 hover:bg-accent/5"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-sm">{service.name}</span>
+                    {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                  </div>
+                  <span className="text-sm text-primary font-semibold">€{service.price.toFixed(2)}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center py-2">
+            Nessun servizio disponibile
+          </p>
+        )}
 
         {selectedServices.length > 0 && (
           <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">

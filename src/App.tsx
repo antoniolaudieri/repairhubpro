@@ -22,6 +22,7 @@ import Orders from "./pages/Orders";
 import Appointments from "./pages/Appointments";
 import Feedback from "./pages/Feedback";
 import Quotes from "./pages/Quotes";
+import PricingSettings from "./pages/PricingSettings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -166,6 +167,16 @@ const App = () => (
                 <ProtectedRoute requireTechnician>
                   <TechnicianLayout>
                     <Quotes />
+                  </TechnicianLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pricing-settings"
+              element={
+                <ProtectedRoute requireTechnician>
+                  <TechnicianLayout>
+                    <PricingSettings />
                   </TechnicianLayout>
                 </ProtectedRoute>
               }
