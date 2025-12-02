@@ -17,7 +17,20 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
-  Trash2
+  Trash2,
+  User,
+  Smartphone,
+  Phone,
+  Mail,
+  MapPin,
+  Key,
+  Hash,
+  Calendar,
+  Euro,
+  Sparkles,
+  ChevronRight,
+  Shield,
+  FileText
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -83,6 +96,21 @@ interface RepairDetail {
   orders?: OrderInfo[];
   repair_parts?: RepairPart[];
 }
+
+const statusConfig = {
+  pending: { label: "In attesa", color: "bg-amber-500", bgLight: "bg-amber-500/10", text: "text-amber-600", icon: Clock },
+  waiting_parts: { label: "Attesa ricambi", color: "bg-orange-500", bgLight: "bg-orange-500/10", text: "text-orange-600", icon: Package },
+  in_progress: { label: "In corso", color: "bg-blue-500", bgLight: "bg-blue-500/10", text: "text-blue-600", icon: Wrench },
+  completed: { label: "Completata", color: "bg-emerald-500", bgLight: "bg-emerald-500/10", text: "text-emerald-600", icon: CheckCircle },
+  delivered: { label: "Consegnato", color: "bg-green-600", bgLight: "bg-green-600/10", text: "text-green-700", icon: CheckCircle },
+  cancelled: { label: "Annullata", color: "bg-red-500", bgLight: "bg-red-500/10", text: "text-red-600", icon: AlertCircle },
+};
+
+const priorityConfig = {
+  low: { label: "Bassa", color: "bg-slate-400", bgLight: "bg-slate-100", text: "text-slate-600" },
+  normal: { label: "Normale", color: "bg-blue-500", bgLight: "bg-blue-50", text: "text-blue-600" },
+  high: { label: "Alta", color: "bg-red-500", bgLight: "bg-red-50", text: "text-red-600" },
+};
 
 export default function RepairDetail() {
   const { id } = useParams();
@@ -244,7 +272,6 @@ export default function RepairDetail() {
 
       if (error) throw error;
 
-      // Show special animation when repair starts
       if (isStartingRepair) {
         setShowStartedAnimation(true);
         setTimeout(() => setShowStartedAnimation(false), 3000);
@@ -274,7 +301,6 @@ export default function RepairDetail() {
   };
 
   const handlePartsAdded = (newParts: RepairPart[]) => {
-    // Aggiorna lo stato locale aggiungendo i nuovi ricambi
     if (repair) {
       setRepair({
         ...repair,
@@ -285,7 +311,6 @@ export default function RepairDetail() {
 
   const deleteRepairPart = async (repairPartId: string) => {
     try {
-      // Aggiorna lo stato locale immediatamente per rimozione visuale
       if (repair?.repair_parts) {
         setRepair({
           ...repair,
@@ -311,7 +336,6 @@ export default function RepairDetail() {
         description: "Impossibile eliminare il ricambio",
         variant: "destructive",
       });
-      // Ricarica in caso di errore
       loadRepairDetail();
     }
   };
@@ -319,27 +343,50 @@ export default function RepairDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Caricamento dettagli...</p>
-        </div>
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto mb-4" />
+            <Wrench className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-primary" />
+          </div>
+          <p className="text-muted-foreground font-medium">Caricamento dettagli...</p>
+        </motion.div>
       </div>
     );
   }
 
   if (!repair) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="p-8 text-center">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="p-8 text-center max-w-md">
+          <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="h-8 w-8 text-destructive" />
+          </div>
           <h2 className="text-xl font-semibold mb-2">Riparazione non trovata</h2>
-          <Button onClick={() => navigate("/repairs")}>Torna alle riparazioni</Button>
+          <p className="text-muted-foreground mb-6">La riparazione richiesta non esiste o è stata rimossa.</p>
+          <Button onClick={() => navigate("/repairs")} className="gap-2">
+            <ArrowLeft className="h-4 w-4" />
+            Torna alle riparazioni
+          </Button>
         </Card>
       </div>
     );
   }
 
+  const status = statusConfig[repair.status as keyof typeof statusConfig] || statusConfig.pending;
+  const priority = priorityConfig[repair.priority as keyof typeof priorityConfig] || priorityConfig.normal;
+  const StatusIcon = status.icon;
+
+  const totalPartsAmount = repair.repair_parts?.reduce(
+    (sum, part) => sum + part.quantity * part.unit_cost,
+    0
+  ) || 0;
+
   return (
-    <div className="p-4 sm:p-6 relative">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30 relative">
       {/* Animation overlay when repair starts */}
       <AnimatePresence>
         {showStartedAnimation && (
@@ -347,424 +394,694 @@ export default function RepairDetail() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center"
+            className="fixed inset-0 z-50 pointer-events-none flex items-center justify-center bg-black/20 backdrop-blur-sm"
           >
             <motion.div
-              initial={{ scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.5, opacity: 0 }}
+              initial={{ scale: 0.5, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 1.2, opacity: 0, y: -20 }}
               transition={{ duration: 0.5, ease: "easeOut" }}
-              className="bg-primary/90 text-primary-foreground px-8 py-6 rounded-2xl shadow-2xl flex items-center gap-4"
+              className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground px-10 py-8 rounded-3xl shadow-2xl flex items-center gap-5"
             >
               <motion.div
                 animate={{ rotate: 360 }}
                 transition={{ duration: 1, repeat: 2, ease: "linear" }}
+                className="bg-white/20 rounded-2xl p-4"
               >
-                <Wrench className="h-10 w-10" />
+                <Wrench className="h-12 w-12" />
               </motion.div>
               <div>
-                <p className="text-2xl font-bold">Riparazione Iniziata!</p>
-                <p className="text-sm opacity-80">Lavori in corso...</p>
+                <p className="text-3xl font-bold">Riparazione Iniziata!</p>
+                <p className="text-lg opacity-80">Lavori in corso...</p>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="max-w-6xl mx-auto">
-        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dettagli Riparazione</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              {repair.customer.name} - {repair.device.brand} {repair.device.model}
-            </p>
-          </div>
-          <Button onClick={saveChanges} disabled={saving} className="w-full sm:w-auto">
-            {saving ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                <span className="hidden sm:inline">Salvataggio...</span>
-                <span className="sm:hidden">Salva...</span>
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                <span className="hidden sm:inline">Salva Modifiche</span>
-                <span className="sm:hidden">Salva</span>
-              </>
-            )}
-          </Button>
+      {/* Hero Header */}
+      <div className="bg-gradient-to-r from-card via-card to-primary/5 border-b border-border/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+          >
+            <div className="flex items-start gap-4">
+              {/* Device Image or Icon */}
+              <div className="relative flex-shrink-0">
+                {repair.device.photo_url ? (
+                  <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl overflow-hidden border-2 border-border shadow-lg">
+                    <img
+                      src={repair.device.photo_url}
+                      alt="Device"
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 flex items-center justify-center">
+                    <Smartphone className="h-10 w-10 text-primary" />
+                  </div>
+                )}
+                <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full ${status.color} flex items-center justify-center ring-2 ring-background`}>
+                  <StatusIcon className="h-3.5 w-3.5 text-white" />
+                </div>
+              </div>
+              
+              {/* Title & Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <Badge className={`${status.bgLight} ${status.text} border-0 font-medium`}>
+                    {status.label}
+                  </Badge>
+                  <Badge className={`${priority.bgLight} ${priority.text} border-0 font-medium`}>
+                    Priorità {priority.label}
+                  </Badge>
+                </div>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground truncate">
+                  {repair.device.brand} {repair.device.model}
+                </h1>
+                <p className="text-muted-foreground flex items-center gap-2 mt-1">
+                  <User className="h-4 w-4" />
+                  <span className="font-medium">{repair.customer.name}</span>
+                  <span className="text-border">•</span>
+                  <span className="text-sm">{repair.device.device_type}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Save Button */}
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/repairs")}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Indietro</span>
+              </Button>
+              <Button 
+                onClick={saveChanges} 
+                disabled={saving} 
+                size="lg"
+                className="gap-2 shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-primary to-primary/90"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="hidden sm:inline">Salvataggio...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-5 w-5" />
+                    <span>Salva</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </motion.div>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-            <Card className="p-4 sm:p-6">
-              <h2 className="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
-                <Wrench className="h-5 w-5 text-primary" />
-                <span className="hidden sm:inline">Informazioni Riparazione</span>
-                <span className="sm:hidden">Riparazione</span>
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label>Stato</Label>
-                  <Select
-                    value={repair.status}
-                    onValueChange={(value) => setRepair({ ...repair, status: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">In attesa</SelectItem>
-                      <SelectItem value="waiting_parts">In attesa ricambi</SelectItem>
-                      <SelectItem value="in_progress">In corso</SelectItem>
-                      <SelectItem value="completed">Completata</SelectItem>
-                      <SelectItem value="delivered">Consegnato</SelectItem>
-                      <SelectItem value="cancelled">Annullata</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Priorità</Label>
-                  <Select
-                    value={repair.priority}
-                    onValueChange={(value) => setRepair({ ...repair, priority: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Bassa</SelectItem>
-                      <SelectItem value="normal">Normale</SelectItem>
-                      <SelectItem value="high">Alta</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Costo Stimato (€)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={repair.estimated_cost || ""}
-                    onChange={(e) =>
-                      setRepair({ ...repair, estimated_cost: parseFloat(e.target.value) || null })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label>Costo Finale (€)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={repair.final_cost || ""}
-                    onChange={(e) =>
-                      setRepair({ ...repair, final_cost: parseFloat(e.target.value) || null })
-                    }
-                  />
-                </div>
-              </div>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Left Column - Main Content */}
+          <div className="xl:col-span-2 space-y-6">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-card rounded-xl border border-border p-4 text-center"
+              >
+                <Euro className="h-5 w-5 text-primary mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Stimato</p>
+                <p className="text-lg font-bold text-foreground">
+                  €{repair.estimated_cost?.toFixed(2) || "0.00"}
+                </p>
+              </motion.div>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.15 }}
+                className="bg-card rounded-xl border border-border p-4 text-center"
+              >
+                <Euro className="h-5 w-5 text-emerald-500 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Finale</p>
+                <p className="text-lg font-bold text-foreground">
+                  €{repair.final_cost?.toFixed(2) || "0.00"}
+                </p>
+              </motion.div>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-card rounded-xl border border-border p-4 text-center"
+              >
+                <Package className="h-5 w-5 text-orange-500 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Ricambi</p>
+                <p className="text-lg font-bold text-foreground">
+                  €{totalPartsAmount.toFixed(2)}
+                </p>
+              </motion.div>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="bg-card rounded-xl border border-border p-4 text-center"
+              >
+                <Calendar className="h-5 w-5 text-blue-500 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Creata</p>
+                <p className="text-sm font-bold text-foreground">
+                  {new Date(repair.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+                </p>
+              </motion.div>
+            </div>
 
-              <div className="mt-4">
-                <Label>Diagnosi</Label>
-                <Textarea
-                  placeholder="Inserisci la diagnosi del problema..."
-                  value={repair.diagnosis || ""}
-                  onChange={(e) => setRepair({ ...repair, diagnosis: e.target.value })}
-                  rows={4}
-                />
-              </div>
+            {/* Repair Info Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="overflow-hidden">
+                <div className="bg-gradient-to-r from-primary/5 to-transparent px-6 py-4 border-b border-border">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Wrench className="h-4 w-4 text-primary" />
+                    </div>
+                    Gestione Riparazione
+                  </h2>
+                </div>
+                <div className="p-6 space-y-5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Stato</Label>
+                      <Select
+                        value={repair.status}
+                        onValueChange={(value) => setRepair({ ...repair, status: value })}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">🟡 In attesa</SelectItem>
+                          <SelectItem value="waiting_parts">🟠 In attesa ricambi</SelectItem>
+                          <SelectItem value="in_progress">🔵 In corso</SelectItem>
+                          <SelectItem value="completed">🟢 Completata</SelectItem>
+                          <SelectItem value="delivered">✅ Consegnato</SelectItem>
+                          <SelectItem value="cancelled">🔴 Annullata</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Priorità</Label>
+                      <Select
+                        value={repair.priority}
+                        onValueChange={(value) => setRepair({ ...repair, priority: value })}
+                      >
+                        <SelectTrigger className="h-11">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Bassa</SelectItem>
+                          <SelectItem value="normal">Normale</SelectItem>
+                          <SelectItem value="high">🔥 Alta</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Costo Stimato (€)</Label>
+                      <div className="relative">
+                        <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={repair.estimated_cost || ""}
+                          onChange={(e) =>
+                            setRepair({ ...repair, estimated_cost: parseFloat(e.target.value) || null })
+                          }
+                          className="pl-10 h-11"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Costo Finale (€)</Label>
+                      <div className="relative">
+                        <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={repair.final_cost || ""}
+                          onChange={(e) =>
+                            setRepair({ ...repair, final_cost: parseFloat(e.target.value) || null })
+                          }
+                          className="pl-10 h-11"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                  </div>
 
-              <div className="mt-4">
-                <Label>Note Riparazione</Label>
-                <Textarea
-                  placeholder="Note tecniche, parti sostituite, procedure..."
-                  value={repair.repair_notes || ""}
-                  onChange={(e) => setRepair({ ...repair, repair_notes: e.target.value })}
-                  rows={4}
-                />
-              </div>
-            </Card>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      Diagnosi
+                    </Label>
+                    <Textarea
+                      placeholder="Inserisci la diagnosi del problema..."
+                      value={repair.diagnosis || ""}
+                      onChange={(e) => setRepair({ ...repair, diagnosis: e.target.value })}
+                      rows={3}
+                      className="resize-none"
+                    />
+                  </div>
 
-            <Card className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
-                  <Lightbulb className="h-5 w-5 text-warning" />
-                  <span className="hidden sm:inline">Suggerimenti IA</span>
-                  <span className="sm:hidden">IA</span>
-                </h2>
-                <Button
-                  onClick={getAISuggestions}
-                  disabled={loadingAI}
-                  variant="outline"
-                  size="sm"
-                  className="w-full sm:w-auto"
-                >
-                  {loadingAI ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      <span className="hidden sm:inline">Generazione...</span>
-                      <span className="sm:hidden">...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="hidden sm:inline">Genera Suggerimenti</span>
-                      <span className="sm:hidden">Genera</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-              {repair.ai_suggestions ? (
-                <div className="prose prose-sm max-w-none">
-                  <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 text-sm whitespace-pre-wrap">
-                    {repair.ai_suggestions}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                      Note Riparazione
+                    </Label>
+                    <Textarea
+                      placeholder="Note tecniche, parti sostituite, procedure..."
+                      value={repair.repair_notes || ""}
+                      onChange={(e) => setRepair({ ...repair, repair_notes: e.target.value })}
+                      rows={3}
+                      className="resize-none"
+                    />
                   </div>
                 </div>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  Clicca su "Genera Suggerimenti" per ottenere consigli dall'IA su come
-                  procedere con questa riparazione.
-                </p>
-              )}
-            </Card>
+              </Card>
+            </motion.div>
+
+            {/* AI Suggestions Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card className="overflow-hidden border-amber-200/50">
+                <div className="bg-gradient-to-r from-amber-500/10 to-orange-500/5 px-6 py-4 border-b border-amber-200/30">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
+                        <Sparkles className="h-4 w-4 text-amber-600" />
+                      </div>
+                      Assistente IA
+                    </h2>
+                    <Button
+                      onClick={getAISuggestions}
+                      disabled={loadingAI}
+                      variant="outline"
+                      size="sm"
+                      className="border-amber-300 hover:bg-amber-50 gap-2"
+                    >
+                      {loadingAI ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Generazione...
+                        </>
+                      ) : (
+                        <>
+                          <Lightbulb className="h-4 w-4" />
+                          Genera Suggerimenti
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-6">
+                  {repair.ai_suggestions ? (
+                    <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200/50 rounded-xl p-4 text-sm whitespace-pre-wrap leading-relaxed">
+                      {repair.ai_suggestions}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6">
+                      <div className="h-12 w-12 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-3">
+                        <Lightbulb className="h-6 w-6 text-amber-600" />
+                      </div>
+                      <p className="text-muted-foreground text-sm max-w-xs mx-auto">
+                        Clicca su "Genera Suggerimenti" per ottenere consigli dall'IA su come procedere con questa riparazione.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* Spare Parts Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <Card className="overflow-hidden">
+                <div className="bg-gradient-to-r from-emerald-500/10 to-teal-500/5 px-6 py-4 border-b border-emerald-200/30">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <h2 className="text-lg font-semibold flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
+                        <Package className="h-4 w-4 text-emerald-600" />
+                      </div>
+                      Ricambi Utilizzati
+                      {repair.repair_parts && repair.repair_parts.length > 0 && (
+                        <Badge variant="secondary" className="ml-2">
+                          {repair.repair_parts.length}
+                        </Badge>
+                      )}
+                    </h2>
+                    <AddRepairPartsDialog
+                      repairId={repair.id}
+                      deviceBrand={repair.device.brand}
+                      deviceModel={repair.device.model}
+                      onPartsAdded={handlePartsAdded}
+                    />
+                  </div>
+                </div>
+                <div className="p-6">
+                  {repair.repair_parts && repair.repair_parts.length > 0 ? (
+                    <div className="space-y-3">
+                      <AnimatePresence mode="popLayout">
+                        {repair.repair_parts.map((part, index) => (
+                          <motion.div
+                            key={part.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -100, height: 0 }}
+                            transition={{ duration: 0.3, delay: index * 0.05 }}
+                            className="flex items-center gap-4 p-4 bg-gradient-to-r from-muted/50 to-transparent rounded-xl border border-border/50 hover:shadow-md transition-shadow"
+                          >
+                            {part.spare_parts.image_url ? (
+                              <img
+                                src={part.spare_parts.image_url}
+                                alt={part.spare_parts.name}
+                                className="h-14 w-14 object-contain rounded-lg border bg-white p-1"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="h-14 w-14 rounded-lg bg-muted flex items-center justify-center">
+                                <Package className="h-6 w-6 text-muted-foreground" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground truncate">{part.spare_parts.name}</p>
+                              <div className="flex items-center gap-2 mt-1">
+                                {part.spare_parts.brand && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {part.spare_parts.brand}
+                                  </Badge>
+                                )}
+                                <span className="text-xs text-muted-foreground">{part.spare_parts.category}</span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Qtà: {part.quantity}</p>
+                              <p className="font-semibold text-primary">
+                                €{(part.quantity * part.unit_cost).toFixed(2)}
+                              </p>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteRepairPart(part.id)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 w-9"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                      <div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+                        <span className="text-sm text-muted-foreground">Totale Ricambi</span>
+                        <span className="text-xl font-bold text-primary">
+                          €{totalPartsAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <div className="h-14 w-14 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                        <Package className="h-7 w-7 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        Nessun ricambio associato a questa riparazione
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
           </div>
 
-          <div className="space-y-4 sm:space-y-6">
-            {/* Spare Parts Section */}
-            <Card className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  <span className="hidden sm:inline">Ricambi Utilizzati</span>
-                  <span className="sm:hidden">Ricambi</span>
-                </h3>
-                <AddRepairPartsDialog
-                  repairId={repair.id}
-                  deviceBrand={repair.device.brand}
-                  deviceModel={repair.device.model}
-                  onPartsAdded={handlePartsAdded}
-                />
-              </div>
-
-              {repair.repair_parts && repair.repair_parts.length > 0 ? (
-                <div className="space-y-2">
-                  <AnimatePresence mode="popLayout">
-                    {repair.repair_parts.map((part) => (
-                      <motion.div
-                        key={part.id}
-                        initial={{ opacity: 0, height: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, height: "auto", scale: 1 }}
-                        exit={{ opacity: 0, height: 0, scale: 0.8, x: -100 }}
-                        transition={{ duration: 0.3 }}
-                        className="flex items-center gap-3 p-3 border border-border rounded-lg bg-accent/5"
+          {/* Right Column - Sidebar */}
+          <div className="space-y-6">
+            {/* Customer Info */}
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="overflow-hidden">
+                <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/5 px-5 py-4 border-b border-blue-200/30">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                      <User className="h-3.5 w-3.5 text-blue-600" />
+                    </div>
+                    Cliente
+                  </h3>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
+                      <span className="text-lg font-bold text-primary">
+                        {repair.customer.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">{repair.customer.name}</p>
+                      <p className="text-xs text-muted-foreground">Cliente</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3 pt-2">
+                    <a 
+                      href={`tel:${repair.customer.phone}`}
+                      className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
+                    >
+                      <Phone className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                      <span className="text-sm font-medium">{repair.customer.phone}</span>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </a>
+                    {repair.customer.email && (
+                      <a 
+                        href={`mailto:${repair.customer.email}`}
+                        className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group"
                       >
-                        {part.spare_parts.image_url && (
-                          <img
-                            src={part.spare_parts.image_url}
-                            alt={part.spare_parts.name}
-                            className="h-12 w-12 object-contain rounded border bg-background"
-                            onError={(e) => {
-                              e.currentTarget.style.display = "none";
-                            }}
-                          />
-                        )}
-                        <div className="flex-1">
-                          <p className="font-medium">{part.spare_parts.name}</p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            {part.spare_parts.brand && (
-                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                                {part.spare_parts.brand}
-                              </span>
-                            )}
-                            <span>{part.spare_parts.category}</span>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium">Qtà: {part.quantity}</p>
-                          <p className="text-sm text-muted-foreground">
-                            €{part.unit_cost.toFixed(2)} cad.
-                          </p>
-                          <p className="text-sm font-semibold">
-                            Tot: €{(part.quantity * part.unit_cost).toFixed(2)}
-                          </p>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteRepairPart(part.id)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                  <div className="pt-3 border-t border-border">
-                    <p className="text-right font-semibold">
-                      Totale Ricambi: €
-                      {repair.repair_parts
-                        .reduce(
-                          (sum, part) => sum + part.quantity * part.unit_cost,
-                          0
-                        )
-                        .toFixed(2)}
-                    </p>
+                        <Mail className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        <span className="text-sm font-medium truncate">{repair.customer.email}</span>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </a>
+                    )}
+                    {repair.customer.address && (
+                      <div className="flex items-start gap-3 p-2.5 rounded-lg">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <span className="text-sm">{repair.customer.address}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nessun ricambio associato a questa riparazione
-                </p>
-              )}
-            </Card>
+              </Card>
+            </motion.div>
+
+            {/* Device Info */}
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Card className="overflow-hidden">
+                <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/5 px-5 py-4 border-b border-violet-200/30">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-violet-500/20 flex items-center justify-center">
+                      <Smartphone className="h-3.5 w-3.5 text-violet-600" />
+                    </div>
+                    Dispositivo
+                  </h3>
+                </div>
+                <div className="p-5 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-muted/30 rounded-lg p-3">
+                      <p className="text-xs text-muted-foreground mb-1">Tipo</p>
+                      <p className="font-medium text-sm">{repair.device.device_type}</p>
+                    </div>
+                    <div className="bg-muted/30 rounded-lg p-3">
+                      <p className="text-xs text-muted-foreground mb-1">Marca</p>
+                      <p className="font-medium text-sm">{repair.device.brand}</p>
+                    </div>
+                    <div className="col-span-2 bg-muted/30 rounded-lg p-3">
+                      <p className="text-xs text-muted-foreground mb-1">Modello</p>
+                      <p className="font-medium text-sm">{repair.device.model}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3">
+                    <p className="text-xs text-destructive/80 font-medium mb-1">Problema Riportato</p>
+                    <p className="text-sm text-foreground">{repair.device.reported_issue}</p>
+                  </div>
+
+                  {repair.device.initial_condition && (
+                    <div className="bg-muted/30 rounded-lg p-3">
+                      <p className="text-xs text-muted-foreground mb-1">Condizioni Iniziali</p>
+                      <p className="text-sm">{repair.device.initial_condition}</p>
+                    </div>
+                  )}
+
+                  {/* Device Access Credentials */}
+                  {(repair.device.password || repair.device.imei || repair.device.serial_number) && (
+                    <div className="border-t border-border pt-4 mt-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Shield className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold text-primary">Accesso Dispositivo</span>
+                      </div>
+                      <div className="space-y-2">
+                        {repair.device.password && (
+                          <div className="flex items-center gap-3 bg-primary/5 rounded-lg p-3">
+                            <Key className="h-4 w-4 text-primary" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">PIN/Password</p>
+                              <p className="font-mono font-semibold text-foreground">{repair.device.password}</p>
+                            </div>
+                          </div>
+                        )}
+                        {repair.device.imei && (
+                          <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
+                            <Hash className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">IMEI</p>
+                              <p className="font-mono text-sm">{repair.device.imei}</p>
+                            </div>
+                          </div>
+                        )}
+                        {repair.device.serial_number && (
+                          <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
+                            <Hash className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <p className="text-xs text-muted-foreground">Seriale</p>
+                              <p className="font-mono text-sm">{repair.device.serial_number}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </motion.div>
 
             {/* Orders Status */}
             {repair.orders && repair.orders.length > 0 && (
-              <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  Stato Ordini Ricambi
-                </h3>
-                <div className="space-y-3">
-                  {repair.orders.map((order) => {
-                    const statusInfo = order.status === "pending" 
-                      ? { label: "In Attesa", variant: "secondary" as const, icon: Clock }
-                      : order.status === "ordered"
-                      ? { label: "Ordinato", variant: "default" as const, icon: Package }
-                      : { label: "Ricevuto", variant: "default" as const, icon: CheckCircle };
-                    
-                    const StatusIcon = statusInfo.icon;
-
-                    return (
-                      <div key={order.id} className="p-3 bg-muted/30 rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium text-sm">Ordine #{order.order_number}</span>
-                          <Badge variant={statusInfo.variant} className="gap-1">
-                            <StatusIcon className="h-3 w-3" />
-                            {statusInfo.label}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-muted-foreground space-y-1">
-                          <div>Fornitore: {order.supplier}</div>
-                          <div>Creato: {new Date(order.created_at).toLocaleDateString("it-IT")}</div>
-                          {order.ordered_at && (
-                            <div>Ordinato: {new Date(order.ordered_at).toLocaleDateString("it-IT")}</div>
-                          )}
-                          {order.received_at && (
-                            <div>Ricevuto: {new Date(order.received_at).toLocaleDateString("it-IT")}</div>
-                          )}
-                        </div>
+              <motion.div
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                <Card className="overflow-hidden">
+                  <div className="bg-gradient-to-r from-orange-500/10 to-amber-500/5 px-5 py-4 border-b border-orange-200/30">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <div className="h-7 w-7 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                        <Package className="h-3.5 w-3.5 text-orange-600" />
                       </div>
-                    );
-                  })}
-                </div>
-                {repair.orders.some(o => o.status === "pending") && (
-                  <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg flex items-start gap-2">
-                    <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
-                    <p className="text-xs text-muted-foreground">
-                      La riparazione è in attesa della consegna dei ricambi ordinati
-                    </p>
+                      Ordini Ricambi
+                    </h3>
                   </div>
-                )}
-              </Card>
-            )}
+                  <div className="p-5 space-y-3">
+                    {repair.orders.map((order) => {
+                      const orderStatus = order.status === "pending" 
+                        ? { label: "In Attesa", bg: "bg-amber-100", text: "text-amber-700", icon: Clock }
+                        : order.status === "ordered"
+                        ? { label: "Ordinato", bg: "bg-blue-100", text: "text-blue-700", icon: Package }
+                        : { label: "Ricevuto", bg: "bg-emerald-100", text: "text-emerald-700", icon: CheckCircle };
+                      
+                      const OrderIcon = orderStatus.icon;
 
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Informazioni Cliente</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Nome:</span>
-                  <p className="font-medium">{repair.customer.name}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Telefono:</span>
-                  <p className="font-medium">{repair.customer.phone}</p>
-                </div>
-                {repair.customer.email && (
-                  <div>
-                    <span className="text-muted-foreground">Email:</span>
-                    <p className="font-medium">{repair.customer.email}</p>
-                  </div>
-                )}
-                {repair.customer.address && (
-                  <div>
-                    <span className="text-muted-foreground">Indirizzo:</span>
-                    <p className="font-medium">{repair.customer.address}</p>
-                  </div>
-                )}
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Informazioni Dispositivo</h3>
-              {repair.device.photo_url && (
-                <img
-                  src={repair.device.photo_url}
-                  alt="Device"
-                  className="w-full rounded-lg mb-4"
-                />
-              )}
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Tipo:</span>
-                  <p className="font-medium">{repair.device.device_type}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Marca:</span>
-                  <p className="font-medium">{repair.device.brand}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Modello:</span>
-                  <p className="font-medium">{repair.device.model}</p>
-                </div>
-                <div>
-                  <span className="text-muted-foreground">Problema Riportato:</span>
-                  <p className="font-medium">{repair.device.reported_issue}</p>
-                </div>
-                {repair.device.initial_condition && (
-                  <div>
-                    <span className="text-muted-foreground">Condizioni Iniziali:</span>
-                    <p className="font-medium">{repair.device.initial_condition}</p>
-                  </div>
-                )}
-                {(repair.device.password || repair.device.imei || repair.device.serial_number) && (
-                  <div className="mt-4 pt-4 border-t border-border">
-                    <h4 className="text-sm font-semibold text-primary mb-3">Accesso Dispositivo</h4>
-                    {repair.device.password && (
-                      <div className="mb-2">
-                        <span className="text-muted-foreground">PIN/Password:</span>
-                        <p className="font-mono font-medium bg-muted/50 px-2 py-1 rounded mt-1">
-                          {repair.device.password}
+                      return (
+                        <div key={order.id} className="p-3 bg-muted/30 rounded-xl border border-border/50">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-medium text-sm">#{order.order_number}</span>
+                            <Badge className={`${orderStatus.bg} ${orderStatus.text} border-0 gap-1`}>
+                              <OrderIcon className="h-3 w-3" />
+                              {orderStatus.label}
+                            </Badge>
+                          </div>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            <div className="flex justify-between">
+                              <span>Fornitore:</span>
+                              <span className="font-medium text-foreground">{order.supplier}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Creato:</span>
+                              <span>{new Date(order.created_at).toLocaleDateString("it-IT")}</span>
+                            </div>
+                            {order.received_at && (
+                              <div className="flex justify-between">
+                                <span>Ricevuto:</span>
+                                <span className="text-emerald-600">{new Date(order.received_at).toLocaleDateString("it-IT")}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {repair.orders.some(o => o.status === "pending") && (
+                      <div className="p-3 bg-amber-50 border border-amber-200/50 rounded-xl flex items-start gap-2">
+                        <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-xs text-amber-800">
+                          In attesa della consegna dei ricambi ordinati
                         </p>
                       </div>
                     )}
-                    {repair.device.imei && (
-                      <div className="mb-2">
-                        <span className="text-muted-foreground">IMEI:</span>
-                        <p className="font-mono font-medium">{repair.device.imei}</p>
-                      </div>
-                    )}
-                    {repair.device.serial_number && (
-                      <div>
-                        <span className="text-muted-foreground">Seriale:</span>
-                        <p className="font-mono font-medium">{repair.device.serial_number}</p>
-                      </div>
-                    )}
                   </div>
-                )}
-              </div>
-            </Card>
+                </Card>
+              </motion.div>
+            )}
 
-            <Card className="p-6">
-              <h3 className="text-lg font-semibold mb-4">Timeline</h3>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <span className="text-muted-foreground">Creata il:</span>
-                  <p className="font-medium">
-                    {new Date(repair.created_at).toLocaleString("it-IT")}
-                  </p>
+            {/* Timeline */}
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.6 }}
+            >
+              <Card className="overflow-hidden">
+                <div className="bg-gradient-to-r from-slate-500/10 to-gray-500/5 px-5 py-4 border-b border-slate-200/30">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-slate-500/20 flex items-center justify-center">
+                      <Clock className="h-3.5 w-3.5 text-slate-600" />
+                    </div>
+                    Timeline
+                  </h3>
                 </div>
-              </div>
-            </Card>
+                <div className="p-5">
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground">Creata il</p>
+                      <p className="font-medium text-sm">
+                        {new Date(repair.created_at).toLocaleString("it-IT", {
+                          day: "2-digit",
+                          month: "long",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
           </div>
         </div>
       </div>
