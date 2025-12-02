@@ -109,6 +109,7 @@ export const SparePartsStep = ({
   const [laborPrices, setLaborPrices] = useState<LaborPrice[]>([]);
   const [customLaborCost, setCustomLaborCost] = useState<number>(0);
   const [availableServices, setAvailableServices] = useState<AdditionalServiceDB[]>([]);
+  const [markupPercentage, setMarkupPercentage] = useState<number>(40);
 
   const toggleService = (service: AdditionalServiceDB) => {
     if (!onServicesChange) return;
@@ -732,10 +733,48 @@ export const SparePartsStep = ({
       {/* Ricambi Selezionati */}
       {selectedParts.length > 0 && (
         <div className="p-4 border border-border rounded-lg bg-accent/5">
-          <h4 className="font-medium mb-3 flex items-center gap-2">
-            <Package className="h-4 w-4" />
-            Ricambi Selezionati ({selectedParts.length})
-          </h4>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+            <h4 className="font-medium flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Ricambi Selezionati ({selectedParts.length})
+            </h4>
+            {/* Ricarico automatico */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground">Ricarico:</span>
+              <Input
+                type="number"
+                min="0"
+                max="500"
+                value={markupPercentage}
+                onChange={(e) => setMarkupPercentage(parseFloat(e.target.value) || 0)}
+                className="w-16 h-7 text-xs"
+              />
+              <span className="text-xs text-muted-foreground">%</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const partsWithCost = selectedParts.filter(p => p.purchase_cost && p.purchase_cost > 0);
+                  if (partsWithCost.length === 0) {
+                    toast.error("Imposta prima il costo d'acquisto dei ricambi");
+                    return;
+                  }
+                  const updatedParts = selectedParts.map(p => {
+                    if (p.purchase_cost && p.purchase_cost > 0) {
+                      return { ...p, unit_cost: Math.round(p.purchase_cost * (1 + markupPercentage / 100) * 100) / 100 };
+                    }
+                    return p;
+                  });
+                  onPartsChange(updatedParts);
+                  toast.success(`Ricarico ${markupPercentage}% applicato a ${partsWithCost.length} ricambi`);
+                }}
+                className="h-7 text-xs"
+              >
+                Applica
+              </Button>
+            </div>
+          </div>
           <div className="space-y-2">
             {selectedParts.map((part) => {
               const hasCost = part.purchase_cost && part.purchase_cost > 0;
