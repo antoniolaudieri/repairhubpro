@@ -34,6 +34,14 @@ import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { FinalCostSignatureDialog } from "@/components/customer/FinalCostSignatureDialog";
 
+interface OrderInfo {
+  id: string;
+  status: string;
+  ordered_at: string | null;
+  received_at: string | null;
+  tracking_number: string | null;
+}
+
 interface RepairDetail {
   id: string;
   status: string;
@@ -65,6 +73,7 @@ interface RepairDetail {
       image_url: string | null;
     };
   }[];
+  orders?: OrderInfo[];
 }
 
 export default function CustomerRepairDetail() {
@@ -131,6 +140,13 @@ export default function CustomerRepairDetail() {
               name,
               image_url
             )
+          ),
+          orders (
+            id,
+            status,
+            ordered_at,
+            received_at,
+            tracking_number
           )
         `)
         .eq("id", id)
@@ -180,6 +196,12 @@ export default function CustomerRepairDetail() {
         icon: <Clock className="h-5 w-5" />,
         color: "text-warning",
         bgColor: "bg-warning/10",
+      },
+      waiting_for_parts: {
+        label: "In Attesa Ricambi",
+        icon: <Package className="h-5 w-5" />,
+        color: "text-info",
+        bgColor: "bg-info/10",
       },
       in_progress: {
         label: "In Corso",
@@ -389,9 +411,7 @@ export default function CustomerRepairDetail() {
                       <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                         <CheckCircle2 className="h-5 w-5 text-primary" />
                       </div>
-                      {(repair.started_at || repair.completed_at || repair.delivered_at) && (
-                        <div className="w-0.5 h-full bg-border mt-2" />
-                      )}
+                      <div className="w-0.5 flex-1 bg-border mt-2" />
                     </div>
                     <div className="flex-1 pb-6">
                       <p className="font-semibold text-foreground">Riparazione Creata</p>
@@ -401,6 +421,65 @@ export default function CustomerRepairDetail() {
                     </div>
                   </div>
 
+                  {/* Waiting for Parts */}
+                  {repair.status === "waiting_for_parts" && !repair.orders?.some(o => o.received_at) && (
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-info/20 flex items-center justify-center animate-pulse">
+                          <Package className="h-5 w-5 text-info" />
+                        </div>
+                        <div className="w-0.5 flex-1 bg-border mt-2" />
+                      </div>
+                      <div className="flex-1 pb-6">
+                        <p className="font-semibold text-info">In Attesa Ricambi</p>
+                        <p className="text-sm text-muted-foreground">
+                          I ricambi sono stati ordinati e sono in arrivo
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Parts Ordered */}
+                  {repair.orders?.filter(o => o.ordered_at).map((order) => (
+                    <div key={`ordered-${order.id}`} className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center">
+                          <Package className="h-5 w-5 text-warning" />
+                        </div>
+                        <div className="w-0.5 flex-1 bg-border mt-2" />
+                      </div>
+                      <div className="flex-1 pb-6">
+                        <p className="font-semibold text-foreground">Ricambi Ordinati</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(order.ordered_at!), "dd MMMM yyyy 'alle' HH:mm", { locale: it })}
+                        </p>
+                        {order.tracking_number && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Tracking: {order.tracking_number}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Parts Arrived */}
+                  {repair.orders?.filter(o => o.received_at).map((order) => (
+                    <div key={`received-${order.id}`} className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
+                          <Package className="h-5 w-5 text-success" />
+                        </div>
+                        <div className="w-0.5 flex-1 bg-border mt-2" />
+                      </div>
+                      <div className="flex-1 pb-6">
+                        <p className="font-semibold text-success">Ricambi Arrivati</p>
+                        <p className="text-sm text-muted-foreground">
+                          {format(new Date(order.received_at!), "dd MMMM yyyy 'alle' HH:mm", { locale: it })}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+
                   {/* Started */}
                   {repair.started_at && (
                     <div className="flex gap-4">
@@ -408,8 +487,8 @@ export default function CustomerRepairDetail() {
                         <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                           <Wrench className="h-5 w-5 text-primary" />
                         </div>
-                        {(repair.completed_at || repair.delivered_at) && (
-                          <div className="w-0.5 h-full bg-border mt-2" />
+                        {(repair.completed_at || repair.delivered_at || repair.status === "cancelled") && (
+                          <div className="w-0.5 flex-1 bg-border mt-2" />
                         )}
                       </div>
                       <div className="flex-1 pb-6">
@@ -421,19 +500,36 @@ export default function CustomerRepairDetail() {
                     </div>
                   )}
 
+                  {/* Cancelled */}
+                  {repair.status === "cancelled" && (
+                    <div className="flex gap-4">
+                      <div className="flex flex-col items-center">
+                        <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center">
+                          <AlertCircle className="h-5 w-5 text-destructive" />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-destructive">Riparazione Annullata</p>
+                        <p className="text-sm text-muted-foreground">
+                          La riparazione è stata annullata
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Completed */}
-                  {repair.completed_at && (
+                  {repair.completed_at && repair.status !== "cancelled" && (
                     <div className="flex gap-4">
                       <div className="flex flex-col items-center">
                         <div className="w-10 h-10 rounded-full bg-success/20 flex items-center justify-center">
                           <CheckCircle2 className="h-5 w-5 text-success" />
                         </div>
                         {repair.delivered_at && (
-                          <div className="w-0.5 h-full bg-border mt-2" />
+                          <div className="w-0.5 flex-1 bg-border mt-2" />
                         )}
                       </div>
                       <div className="flex-1 pb-6">
-                        <p className="font-semibold text-foreground">Riparazione Completata</p>
+                        <p className="font-semibold text-success">Riparazione Completata</p>
                         <p className="text-sm text-muted-foreground">
                           {format(new Date(repair.completed_at), "dd MMMM yyyy 'alle' HH:mm", { locale: it })}
                         </p>
