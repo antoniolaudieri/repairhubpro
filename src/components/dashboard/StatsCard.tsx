@@ -7,9 +7,10 @@ interface StatsCardProps {
   value: number;
   icon: LucideIcon;
   variant?: "default" | "success" | "warning" | "info";
+  onClick?: () => void;
 }
 
-export const StatsCard = ({ title, value, icon: Icon, variant = "default" }: StatsCardProps) => {
+export const StatsCard = ({ title, value, icon: Icon, variant = "default", onClick }: StatsCardProps) => {
   const variantStyles = {
     default: "bg-gradient-to-br from-card to-muted/30 border-primary/20 hover:border-primary/40",
     success: "bg-gradient-to-br from-success/10 via-success/5 to-card border-success/30 hover:border-success/50",
@@ -25,10 +26,14 @@ export const StatsCard = ({ title, value, icon: Icon, variant = "default" }: Sta
   };
 
   return (
-    <Card className={cn(
-      "p-5 lg:p-6 border transition-all duration-300 hover:shadow-lg hover:scale-[1.02] group overflow-hidden relative",
-      variantStyles[variant]
-    )}>
+    <Card 
+      className={cn(
+        "p-5 lg:p-6 border transition-all duration-300 hover:shadow-lg hover:scale-[1.02] group overflow-hidden relative",
+        variantStyles[variant],
+        onClick && "cursor-pointer"
+      )}
+      onClick={onClick}
+    >
       {/* Background decoration */}
       <div className="absolute top-0 right-0 w-32 h-32 opacity-5 group-hover:opacity-10 transition-opacity">
         <Icon className="w-full h-full" />
