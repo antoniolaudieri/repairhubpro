@@ -35,6 +35,7 @@ interface Device {
   device_type: string;
   brand: string;
   model: string;
+  photo_url: string | null;
   repairs: Array<{
     id: string;
     status: string;
@@ -75,6 +76,7 @@ export default function CustomerDetail() {
           device_type,
           brand,
           model,
+          photo_url,
           repairs (
             id,
             status,
@@ -220,8 +222,23 @@ export default function CustomerDetail() {
             ) : (
               <div className="space-y-3">
                 {devices.map((device) => (
-                  <div key={device.id} className="flex items-center gap-3 p-3 rounded-lg border">
-                    <Smartphone className="h-5 w-5 text-muted-foreground" />
+                  <div key={device.id} className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent/5 transition-colors">
+                    {device.photo_url ? (
+                      <img
+                        src={device.photo_url}
+                        alt={`${device.brand} ${device.model}`}
+                        className="h-16 w-16 object-contain rounded border bg-background"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+                        }}
+                      />
+                    ) : (
+                      <div className="h-16 w-16 flex items-center justify-center rounded border bg-muted">
+                        <Smartphone className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                    )}
+                    <Smartphone className="fallback-icon hidden h-16 w-16 p-3 text-muted-foreground border rounded" />
                     <div className="flex-1">
                       <p className="font-medium">{device.brand} {device.model}</p>
                       <p className="text-sm text-muted-foreground">{device.device_type}</p>
