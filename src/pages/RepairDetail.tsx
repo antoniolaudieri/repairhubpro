@@ -43,6 +43,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
 import RepairGuide from "@/components/repair/RepairGuide";
+import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface RepairGuideData {
@@ -425,6 +426,46 @@ export default function RepairDetail() {
     }
   };
 
+  const applySavedGuide = async (savedGuide: {
+    id: string;
+    guide_data: RepairGuideData;
+    usage_count: number;
+  }) => {
+    if (!repair) return;
+
+    try {
+      // Apply the guide to UI
+      setRepairGuide(savedGuide.guide_data);
+      setGuideFromCache(true);
+      setGuideUsageCount(savedGuide.usage_count + 1);
+
+      // Save to repair record
+      await supabase
+        .from("repairs")
+        .update({ ai_suggestions: JSON.stringify(savedGuide.guide_data) })
+        .eq("id", id);
+
+      // Increment usage count
+      await supabase
+        .from("repair_guides")
+        .update({ usage_count: savedGuide.usage_count + 1 })
+        .eq("id", savedGuide.id);
+
+      toast({
+        title: "📚 Guida Applicata!",
+        description: `${savedGuide.guide_data.steps?.length || 0} step - Usata ${savedGuide.usage_count + 1} volte`,
+        className: "bg-emerald-600 text-white border-emerald-700",
+      });
+    } catch (error) {
+      console.error("Error applying saved guide:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile applicare la guida",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -801,27 +842,38 @@ export default function RepairDetail() {
                       </div>
                       Guida Riparazione IA
                     </h2>
-                    <Button
-                      onClick={getAISuggestions}
-                      disabled={loadingAI}
-                      variant="outline"
-                      size="sm"
-                      className="border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-2"
-                    >
-                      {loadingAI ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span className="hidden sm:inline">Generazione Guida...</span>
-                          <span className="sm:hidden">Generando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lightbulb className="h-4 w-4" />
-                          <span className="hidden sm:inline">Genera Guida Step-by-Step</span>
-                          <span className="sm:hidden">Genera Guida</span>
-                        </>
-                      )}
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      <SelectSavedGuideDialog
+                        deviceType={repair.device.device_type}
+                        deviceBrand={repair.device.brand}
+                        onSelectGuide={(guide) => applySavedGuide({
+                          id: guide.id,
+                          guide_data: guide.guide_data as unknown as RepairGuideData,
+                          usage_count: guide.usage_count,
+                        })}
+                      />
+                      <Button
+                        onClick={getAISuggestions}
+                        disabled={loadingAI}
+                        variant="outline"
+                        size="sm"
+                        className="border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-2"
+                      >
+                        {loadingAI ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="hidden sm:inline">Generazione Guida...</span>
+                            <span className="sm:hidden">Generando...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Lightbulb className="h-4 w-4" />
+                            <span className="hidden sm:inline">Genera Nuova Guida</span>
+                            <span className="sm:hidden">Genera</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </div>
                 <div className="p-4 sm:p-6">
