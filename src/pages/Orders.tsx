@@ -538,18 +538,19 @@ export default function Orders() {
                         <div className="flex items-center gap-4 flex-1">
                           <motion.div
                             whileHover={{ scale: 1.05 }}
-                            className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-700 shadow-md flex-shrink-0 flex items-center justify-center"
+                            className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden shadow-md flex-shrink-0"
                           >
                             {order.repairs?.devices?.photo_url ? (
                               <img 
                                 src={order.repairs.devices.photo_url} 
-                                alt="Device"
-                                className="w-full h-full object-cover"
+                                alt=""
+                                className="w-full h-full object-cover bg-muted"
                               />
                             ) : (
-                              <div className="text-white text-center">
-                                <div className="text-lg md:text-xl font-black tracking-tight">RP</div>
-                                <div className="text-[8px] md:text-[10px] font-medium opacity-80">REPAIR</div>
+                              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+                                <div className="text-white text-center">
+                                  <div className="text-xl md:text-2xl font-black">RP</div>
+                                </div>
                               </div>
                             )}
                           </motion.div>
