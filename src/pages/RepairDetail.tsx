@@ -26,6 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
 
 interface OrderInfo {
   id: string;
@@ -35,6 +36,19 @@ interface OrderInfo {
   created_at: string;
   ordered_at: string | null;
   received_at: string | null;
+}
+
+interface RepairPart {
+  id: string;
+  quantity: number;
+  unit_cost: number;
+  spare_parts: {
+    id: string;
+    name: string;
+    image_url: string | null;
+    brand: string | null;
+    category: string;
+  };
 }
 
 interface RepairDetail {
@@ -62,6 +76,7 @@ interface RepairDetail {
     address: string | null;
   };
   orders?: OrderInfo[];
+  repair_parts?: RepairPart[];
 }
 
 export default function RepairDetail() {
@@ -106,6 +121,18 @@ export default function RepairDetail() {
             created_at,
             ordered_at,
             received_at
+          ),
+          repair_parts (
+            id,
+            quantity,
+            unit_cost,
+            spare_parts (
+              id,
+              name,
+              image_url,
+              brand,
+              category
+            )
           )
         `)
         .eq("id", id)
@@ -126,6 +153,7 @@ export default function RepairDetail() {
         device: data.device,
         customer: data.device.customer,
         orders: data.orders || [],
+        repair_parts: data.repair_parts || [],
       });
     } catch (error) {
       console.error("Error loading repair:", error);
@@ -390,6 +418,79 @@ export default function RepairDetail() {
           </div>
 
           <div className="space-y-6">
+            {/* Spare Parts Section */}
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  Ricambi Utilizzati
+                </h3>
+                <AddRepairPartsDialog
+                  repairId={repair.id}
+                  deviceBrand={repair.device.brand}
+                  deviceModel={repair.device.model}
+                  onPartsAdded={loadRepairDetail}
+                />
+              </div>
+
+              {repair.repair_parts && repair.repair_parts.length > 0 ? (
+                <div className="space-y-2">
+                  {repair.repair_parts.map((part) => (
+                    <div
+                      key={part.id}
+                      className="flex items-center gap-3 p-3 border border-border rounded-lg bg-accent/5"
+                    >
+                      {part.spare_parts.image_url && (
+                        <img
+                          src={part.spare_parts.image_url}
+                          alt={part.spare_parts.name}
+                          className="h-12 w-12 object-contain rounded border bg-background"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-medium">{part.spare_parts.name}</p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          {part.spare_parts.brand && (
+                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                              {part.spare_parts.brand}
+                            </span>
+                          )}
+                          <span>{part.spare_parts.category}</span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">Qtà: {part.quantity}</p>
+                        <p className="text-sm text-muted-foreground">
+                          €{part.unit_cost.toFixed(2)} cad.
+                        </p>
+                        <p className="text-sm font-semibold">
+                          Tot: €{(part.quantity * part.unit_cost).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-right font-semibold">
+                      Totale Ricambi: €
+                      {repair.repair_parts
+                        .reduce(
+                          (sum, part) => sum + part.quantity * part.unit_cost,
+                          0
+                        )
+                        .toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nessun ricambio associato a questa riparazione
+                </p>
+              )}
+            </Card>
+
             {/* Orders Status */}
             {repair.orders && repair.orders.length > 0 && (
               <Card className="p-6">
