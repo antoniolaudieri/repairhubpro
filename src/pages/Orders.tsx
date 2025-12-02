@@ -162,6 +162,9 @@ export default function Orders() {
         if (newStatus === "ordered" && !o.ordered_at) {
           updates.ordered_at = new Date().toISOString();
         }
+        if (newStatus === "received" && !o.received_at) {
+          updates.received_at = new Date().toISOString();
+        }
         return { ...o, ...updates };
       }
       return o;
@@ -169,9 +172,14 @@ export default function Orders() {
 
     try {
       const updates: any = { status: newStatus };
+      const order = orders.find(o => o.id === orderId);
       
-      if (newStatus === "ordered" && !orders.find(o => o.id === orderId)?.ordered_at) {
+      if (newStatus === "ordered" && !order?.ordered_at) {
         updates.ordered_at = new Date().toISOString();
+      }
+
+      if (newStatus === "received" && !order?.received_at) {
+        updates.received_at = new Date().toISOString();
       }
 
       const { error } = await supabase
@@ -180,7 +188,38 @@ export default function Orders() {
         .eq("id", orderId);
 
       if (error) throw error;
-      toast.success("Stato aggiornato");
+
+      // Se lo stato è "received", aggiorna anche lo stock dei ricambi
+      if (newStatus === "received" && order) {
+        for (const item of order.order_items) {
+          if (item.spare_part_id) {
+            const { data: partData, error: fetchError } = await supabase
+              .from("spare_parts")
+              .select("stock_quantity")
+              .eq("id", item.spare_part_id)
+              .single();
+
+            if (fetchError) {
+              console.error("Error fetching spare part:", fetchError);
+              continue;
+            }
+
+            const newStock = (partData?.stock_quantity || 0) + item.quantity;
+            
+            const { error: updateError } = await supabase
+              .from("spare_parts")
+              .update({ stock_quantity: newStock })
+              .eq("id", item.spare_part_id);
+
+            if (updateError) {
+              console.error("Error updating stock:", updateError);
+            }
+          }
+        }
+        toast.success("Ordine ricevuto! Stock aggiornato");
+      } else {
+        toast.success("Stato aggiornato");
+      }
     } catch (error: any) {
       console.error("Error updating status:", error);
       toast.error("Errore aggiornamento stato");
@@ -479,7 +518,7 @@ export default function Orders() {
                               <SelectItem value="draft">Bozza</SelectItem>
                               <SelectItem value="pending">In Attesa</SelectItem>
                               <SelectItem value="ordered">Ordinato</SelectItem>
-                              <SelectItem value="received" disabled>Ricevuto</SelectItem>
+                              <SelectItem value="received">Ricevuto</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
