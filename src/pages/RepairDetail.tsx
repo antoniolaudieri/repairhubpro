@@ -70,6 +70,9 @@ interface RepairDetail {
     reported_issue: string;
     initial_condition: string | null;
     photo_url: string | null;
+    password: string | null;
+    imei: string | null;
+    serial_number: string | null;
   };
   customer: {
     name: string;
@@ -108,6 +111,9 @@ export default function RepairDetail() {
             reported_issue,
             initial_condition,
             photo_url,
+            password,
+            imei,
+            serial_number,
             customer:customers (
               name,
               phone,
@@ -667,6 +673,31 @@ export default function RepairDetail() {
                   <div>
                     <span className="text-muted-foreground">Condizioni Iniziali:</span>
                     <p className="font-medium">{repair.device.initial_condition}</p>
+                  </div>
+                )}
+                {(repair.device.password || repair.device.imei || repair.device.serial_number) && (
+                  <div className="mt-4 pt-4 border-t border-border">
+                    <h4 className="text-sm font-semibold text-primary mb-3">Accesso Dispositivo</h4>
+                    {repair.device.password && (
+                      <div className="mb-2">
+                        <span className="text-muted-foreground">PIN/Password:</span>
+                        <p className="font-mono font-medium bg-muted/50 px-2 py-1 rounded mt-1">
+                          {repair.device.password}
+                        </p>
+                      </div>
+                    )}
+                    {repair.device.imei && (
+                      <div className="mb-2">
+                        <span className="text-muted-foreground">IMEI:</span>
+                        <p className="font-mono font-medium">{repair.device.imei}</p>
+                      </div>
+                    )}
+                    {repair.device.serial_number && (
+                      <div>
+                        <span className="text-muted-foreground">Seriale:</span>
+                        <p className="font-mono font-medium">{repair.device.serial_number}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
