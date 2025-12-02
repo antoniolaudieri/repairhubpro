@@ -28,12 +28,33 @@ import {
   Filter,
   LayoutGrid,
   List,
-  ExternalLink
+  ExternalLink,
+  Pencil,
+  Trash2,
+  MoreHorizontal
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
+import EditSparePartDialog from "@/components/inventory/EditSparePartDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 interface SparePart {
   id: string;
@@ -48,6 +69,7 @@ interface SparePart {
   model_compatibility: string | null;
   supplier: string | null;
   supplier_code: string | null;
+  notes: string | null;
 }
 
 const CATEGORIES = [
@@ -72,6 +94,8 @@ export default function Inventory() {
   const [categoryFilter, setCategoryFilter] = useState("Tutti");
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [partToDelete, setPartToDelete] = useState<SparePart | null>(null);
 
   const fetchParts = async () => {
     setLoading(true);
@@ -89,6 +113,26 @@ export default function Inventory() {
   useEffect(() => {
     fetchParts();
   }, []);
+
+  const handleDeletePart = async () => {
+    if (!partToDelete) return;
+    
+    const { error } = await supabase
+      .from("spare_parts")
+      .delete()
+      .eq("id", partToDelete.id);
+    
+    if (error) {
+      toast.error("Errore durante l'eliminazione");
+      console.error(error);
+    } else {
+      toast.success("Ricambio eliminato");
+      fetchParts();
+    }
+    
+    setDeleteDialogOpen(false);
+    setPartToDelete(null);
+  };
 
   const filteredParts = parts.filter(part => {
     const matchesSearch = 
@@ -386,20 +430,51 @@ export default function Inventory() {
                               </p>
                             )}
                           </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            asChild
-                            className="border-primary/50 hover:bg-primary hover:text-primary-foreground"
-                          >
-                            <a 
-                              href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              className="border-primary/50 hover:bg-primary hover:text-primary-foreground"
                             >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
+                              <a 
+                                href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <EditSparePartDialog
+                                  part={part}
+                                  onPartUpdated={fetchParts}
+                                  trigger={
+                                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                                      <Pencil className="h-4 w-4 mr-2" />
+                                      Modifica
+                                    </DropdownMenuItem>
+                                  }
+                                />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onSelect={() => {
+                                    setPartToDelete(part);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Elimina
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                       </div>
                     </Card>
@@ -469,20 +544,41 @@ export default function Inventory() {
                         ) : "-"}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          asChild
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <a 
-                            href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            asChild
                           >
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
+                            <a 
+                              href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </a>
+                          </Button>
+                          <EditSparePartDialog
+                            part={part}
+                            onPartUpdated={fetchParts}
+                            trigger={
+                              <Button variant="ghost" size="sm">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            }
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => {
+                              setPartToDelete(part);
+                              setDeleteDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -499,6 +595,28 @@ export default function Inventory() {
           </p>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare <strong>{partToDelete?.name}</strong>? 
+              Questa azione non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePart}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
