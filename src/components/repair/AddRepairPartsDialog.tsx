@@ -170,7 +170,7 @@ export default function AddRepairPartsDialog({
         .from("orders")
         .select("id, order_number")
         .eq("repair_id", repairId)
-        .eq("status", "pending")
+        .eq("status", "draft")
         .limit(1);
 
       if (ordersError) throw ordersError;
@@ -188,7 +188,7 @@ export default function AddRepairPartsDialog({
           .insert({
             order_number: orderNumber,
             repair_id: repairId,
-            status: "pending",
+            status: "draft",
             supplier: "utopya",
             total_amount: getTotalCost(),
           })
