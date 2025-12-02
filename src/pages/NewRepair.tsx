@@ -39,6 +39,7 @@ const NewRepair = () => {
   const [showModelSuggestions, setShowModelSuggestions] = useState(false);
   const [selectedSpareParts, setSelectedSpareParts] = useState<any[]>([]);
   const [selectedServices, setSelectedServices] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [selectedLabors, setSelectedLabors] = useState<{ id: string; name: string; price: number }[]>([]);
   const [laborCost, setLaborCost] = useState<number>(0);
 
   const [customerData, setCustomerData] = useState({
@@ -455,8 +456,11 @@ const NewRepair = () => {
       if (selectedServices.length > 0) {
         notesArray.push(`Servizi richiesti: ${selectedServices.map(s => `${s.name} (€${s.price})`).join(", ")}`);
       }
+      if (selectedLabors.length > 0) {
+        notesArray.push(`Lavorazioni: ${selectedLabors.map(l => `${l.name} (€${l.price})`).join(", ")}`);
+      }
       if (laborCost > 0) {
-        notesArray.push(`Manodopera: €${laborCost.toFixed(2)}`);
+        notesArray.push(`Totale Manodopera: €${laborCost.toFixed(2)}`);
       }
       const servicesNotes = notesArray.join(" | ");
 
@@ -747,11 +751,14 @@ const NewRepair = () => {
           <SparePartsStep
             deviceBrand={deviceData.brand}
             deviceModel={deviceData.model}
+            deviceType={deviceData.device_type}
             reportedIssue={deviceData.reported_issue}
             selectedParts={selectedSpareParts}
             onPartsChange={setSelectedSpareParts}
             selectedServices={selectedServices}
             onServicesChange={setSelectedServices}
+            selectedLabors={selectedLabors}
+            onLaborsChange={setSelectedLabors}
             laborCost={laborCost}
             onLaborCostChange={setLaborCost}
           />
@@ -846,8 +853,18 @@ const NewRepair = () => {
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">Manodopera</h3>
                 <div className="border border-border rounded-lg p-4">
-                  <div className="flex justify-between font-semibold">
-                    <span>Costo Manodopera:</span>
+                  {selectedLabors.length > 0 && (
+                    <div className="space-y-2 mb-2">
+                      {selectedLabors.map((labor) => (
+                        <div key={labor.id} className="flex justify-between text-sm">
+                          <span>{labor.name}</span>
+                          <span className="text-muted-foreground">€{labor.price.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className={`flex justify-between font-semibold ${selectedLabors.length > 0 ? 'pt-2 border-t border-border' : ''}`}>
+                    <span>Totale Manodopera:</span>
                     <span>€{laborCost.toFixed(2)}</span>
                   </div>
                 </div>
