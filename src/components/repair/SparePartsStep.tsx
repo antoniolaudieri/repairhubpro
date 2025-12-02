@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Trash2, Package, Wrench, Check, Sparkles, Loader2, Hammer, ExternalLink } from "lucide-react";
+import { Search, Plus, Trash2, Package, Wrench, Check, Sparkles, Loader2, Hammer, ExternalLink, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
 
@@ -378,6 +378,14 @@ export const SparePartsStep = ({
     );
   };
 
+  const updatePurchaseCost = (partId: string, purchaseCost: number) => {
+    onPartsChange(
+      selectedParts.map((p) =>
+        p.spare_part_id === partId ? { ...p, purchase_cost: purchaseCost } : p
+      )
+    );
+  };
+
   const getTotalCost = () => {
     return selectedParts.reduce(
       (sum, part) => sum + part.unit_cost * part.quantity,
@@ -699,68 +707,102 @@ export const SparePartsStep = ({
             Ricambi Selezionati ({selectedParts.length})
           </h4>
           <div className="space-y-2">
-            {selectedParts.map((part) => (
-              <div
-                key={part.spare_part_id}
-                className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-background rounded border border-border"
-              >
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{part.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    €{part.unit_cost.toFixed(2)} cad.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        updateQuantity(part.spare_part_id, part.quantity - 1)
-                      }
-                    >
-                      -
-                    </Button>
-                    <span className="w-8 text-center">{part.quantity}</span>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        updateQuantity(part.spare_part_id, part.quantity + 1)
-                      }
-                    >
-                      +
-                    </Button>
+            {selectedParts.map((part) => {
+              const hasCost = part.purchase_cost && part.purchase_cost > 0;
+              return (
+                <div
+                  key={part.spare_part_id}
+                  className={`flex flex-col gap-3 p-3 bg-background rounded border ${!hasCost ? 'border-warning/50' : 'border-border'}`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{part.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Vendita: €{part.unit_cost.toFixed(2)} cad.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            updateQuantity(part.spare_part_id, part.quantity - 1)
+                          }
+                        >
+                          -
+                        </Button>
+                        <span className="w-8 text-center">{part.quantity}</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() =>
+                            updateQuantity(part.spare_part_id, part.quantity + 1)
+                          }
+                        >
+                          +
+                        </Button>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="border-primary/50 hover:bg-primary/10"
+                      >
+                        <a 
+                          href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          <span className="hidden sm:inline">Acquista</span>
+                        </a>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removePart(part.spare_part_id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    className="border-primary/50 hover:bg-primary/10"
-                  >
-                    <a 
-                      href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Acquista</span>
-                    </a>
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removePart(part.spare_part_id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {/* Costo acquisto inline */}
+                  <div className={`flex items-center gap-2 pt-2 border-t ${!hasCost ? 'border-warning/30' : 'border-border/50'}`}>
+                    <label className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                      {!hasCost && <span className="text-warning">⚠</span>}
+                      Costo acquisto:
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs">€</span>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={part.purchase_cost || ''}
+                        onChange={(e) => updatePurchaseCost(part.spare_part_id, parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                        className={`w-20 h-7 text-xs ${!hasCost ? 'border-warning/50 focus-visible:ring-warning' : ''}`}
+                      />
+                    </div>
+                    {hasCost && (
+                      <span className="text-xs text-success ml-auto">
+                        Margine: €{((part.unit_cost - (part.purchase_cost || 0)) * part.quantity).toFixed(2)}
+                      </span>
+                    )}
+                    {!hasCost && (
+                      <span className="text-xs text-warning ml-auto">
+                        Imposta per calcolo margine
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             <div className="pt-2 border-t border-border">
               <p className="text-sm font-semibold text-right">
                 Totale Ricambi: €{getTotalCost().toFixed(2)}
