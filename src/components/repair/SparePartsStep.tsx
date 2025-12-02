@@ -839,9 +839,9 @@ export const SparePartsStep = ({
                         className={`w-20 h-7 text-xs ${!hasCost ? 'border-warning/50 focus-visible:ring-warning' : ''}`}
                       />
                     </div>
-                    {hasCost && (
+                    {hasCost && part.purchase_cost && part.purchase_cost > 0 && (
                       <span className="text-xs text-success ml-auto">
-                        Margine: €{((part.unit_cost - (part.purchase_cost || 0)) * part.quantity).toFixed(2)}
+                        Margine: €{((part.unit_cost - part.purchase_cost) * part.quantity).toFixed(2)} ({(((part.unit_cost - part.purchase_cost) / part.purchase_cost) * 100).toFixed(0)}%)
                       </span>
                     )}
                     {!hasCost && (
