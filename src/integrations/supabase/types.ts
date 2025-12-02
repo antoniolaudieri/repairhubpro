@@ -252,6 +252,7 @@ export type Database = {
           status: string
           supplier: string
           total_amount: number | null
+          tracking_number: string | null
           updated_at: string
         }
         Insert: {
@@ -265,6 +266,7 @@ export type Database = {
           status?: string
           supplier?: string
           total_amount?: number | null
+          tracking_number?: string | null
           updated_at?: string
         }
         Update: {
@@ -278,6 +280,7 @@ export type Database = {
           status?: string
           supplier?: string
           total_amount?: number | null
+          tracking_number?: string | null
           updated_at?: string
         }
         Relationships: [

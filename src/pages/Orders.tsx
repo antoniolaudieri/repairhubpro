@@ -11,12 +11,22 @@ import {
   Clock,
   AlertCircle,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Truck
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface OrderItem {
   id: string;
@@ -35,6 +45,7 @@ interface Order {
   total_amount: number | null;
   repair_id: string | null;
   notes: string | null;
+  tracking_number: string | null;
   created_at: string;
   ordered_at: string | null;
   received_at: string | null;
@@ -100,6 +111,11 @@ export default function Orders() {
 
   const getStatusInfo = (status: string) => {
     const config: Record<string, { label: string; icon: JSX.Element; variant: any }> = {
+      draft: {
+        label: "Bozza",
+        icon: <Clock className="h-4 w-4" />,
+        variant: "secondary",
+      },
       pending: {
         label: "In Attesa",
         icon: <Clock className="h-4 w-4" />,
@@ -116,7 +132,43 @@ export default function Orders() {
         variant: "default",
       },
     };
-    return config[status] || config.pending;
+    return config[status] || config.draft;
+  };
+
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const updates: any = { status: newStatus };
+      
+      if (newStatus === "ordered" && !orders.find(o => o.id === orderId)?.ordered_at) {
+        updates.ordered_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from("orders")
+        .update(updates)
+        .eq("id", orderId);
+
+      if (error) throw error;
+      toast.success("Stato aggiornato");
+    } catch (error: any) {
+      console.error("Error updating status:", error);
+      toast.error("Errore aggiornamento stato");
+    }
+  };
+
+  const updateTrackingNumber = async (orderId: string, trackingNumber: string) => {
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ tracking_number: trackingNumber })
+        .eq("id", orderId);
+
+      if (error) throw error;
+      toast.success("Tracking aggiornato");
+    } catch (error: any) {
+      console.error("Error updating tracking:", error);
+      toast.error("Errore aggiornamento tracking");
+    }
   };
 
   const handleReceiveOrder = async (order: Order) => {
@@ -209,6 +261,7 @@ export default function Orders() {
         <Tabs value={filterStatus} onValueChange={setFilterStatus} className="mb-6">
           <TabsList>
             <TabsTrigger value="all">Tutti ({orders.length})</TabsTrigger>
+            <TabsTrigger value="draft">Bozze ({orders.filter(o => o.status === "draft").length})</TabsTrigger>
             <TabsTrigger value="pending">In Attesa ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
             <TabsTrigger value="ordered">Ordinati ({orders.filter(o => o.status === "ordered").length})</TabsTrigger>
             <TabsTrigger value="received">Ricevuti ({orders.filter(o => o.status === "received").length})</TabsTrigger>
@@ -266,6 +319,14 @@ export default function Orders() {
                           <span>
                             Creato: {format(new Date(order.created_at), "dd MMM yyyy", { locale: it })}
                           </span>
+                          {order.ordered_at && (
+                            <>
+                              <span>•</span>
+                              <span>
+                                Ordinato: {format(new Date(order.ordered_at), "dd MMM yyyy", { locale: it })}
+                              </span>
+                            </>
+                          )}
                           {order.received_at && (
                             <>
                               <span>•</span>
@@ -277,7 +338,7 @@ export default function Orders() {
                         </div>
                       </div>
                       
-                      {order.status === "pending" && (
+                      {order.status !== "received" && (
                         <Button
                           onClick={() => handleReceiveOrder(order)}
                           disabled={processingOrder === order.id}
@@ -291,6 +352,52 @@ export default function Orders() {
                           Scarica Ordine
                         </Button>
                       )}
+                    </div>
+
+                    {/* Gestione Stato e Tracking */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 p-4 bg-muted/30 rounded-lg">
+                      <div>
+                        <Label htmlFor={`status-${order.id}`} className="text-sm font-medium mb-2">
+                          Stato Ordine
+                        </Label>
+                        <Select
+                          value={order.status}
+                          onValueChange={(value) => updateOrderStatus(order.id, value)}
+                          disabled={order.status === "received"}
+                        >
+                          <SelectTrigger id={`status-${order.id}`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="draft">Bozza</SelectItem>
+                            <SelectItem value="pending">In Attesa</SelectItem>
+                            <SelectItem value="ordered">Ordinato</SelectItem>
+                            <SelectItem value="received" disabled>Ricevuto</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label htmlFor={`tracking-${order.id}`} className="text-sm font-medium mb-2 flex items-center gap-2">
+                          <Truck className="h-4 w-4" />
+                          Numero Tracking
+                        </Label>
+                        <Input
+                          id={`tracking-${order.id}`}
+                          placeholder="Inserisci tracking..."
+                          value={order.tracking_number || ""}
+                          onChange={(e) => {
+                            // Update local state immediately
+                            setOrders(orders.map(o => 
+                              o.id === order.id 
+                                ? { ...o, tracking_number: e.target.value }
+                                : o
+                            ));
+                          }}
+                          onBlur={(e) => updateTrackingNumber(order.id, e.target.value)}
+                          disabled={order.status === "received"}
+                        />
+                      </div>
                     </div>
 
                     {order.notes && (
