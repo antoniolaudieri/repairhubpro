@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Trash2, Package, Wrench, Check, Sparkles, Loader2 } from "lucide-react";
+import { Search, Plus, Trash2, Package, Wrench, Check, Sparkles, Loader2, Hammer } from "lucide-react";
 import { toast } from "sonner";
 import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
 
@@ -32,6 +32,21 @@ interface SelectedService {
   price: number;
 }
 
+interface LaborPrice {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  category: string;
+  device_type: string | null;
+}
+
+interface SelectedLabor {
+  id: string;
+  name: string;
+  price: number;
+}
+
 interface AISuggestion {
   partName: string;
   reason: string;
@@ -56,11 +71,14 @@ const AVAILABLE_SERVICES = [
 interface SparePartsStepProps {
   deviceBrand?: string;
   deviceModel?: string;
+  deviceType?: string;
   reportedIssue?: string;
   selectedParts: SelectedPart[];
   onPartsChange: (parts: SelectedPart[]) => void;
   selectedServices?: SelectedService[];
   onServicesChange?: (services: SelectedService[]) => void;
+  selectedLabors?: SelectedLabor[];
+  onLaborsChange?: (labors: SelectedLabor[]) => void;
   laborCost?: number;
   onLaborCostChange?: (cost: number) => void;
 }
@@ -68,11 +86,14 @@ interface SparePartsStepProps {
 export const SparePartsStep = ({
   deviceBrand,
   deviceModel,
+  deviceType,
   reportedIssue,
   selectedParts,
   onPartsChange,
   selectedServices = [],
   onServicesChange,
+  selectedLabors = [],
+  onLaborsChange,
   laborCost = 0,
   onLaborCostChange,
 }: SparePartsStepProps) => {
@@ -83,6 +104,8 @@ export const SparePartsStep = ({
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [hasFetchedSuggestions, setHasFetchedSuggestions] = useState(false);
+  const [laborPrices, setLaborPrices] = useState<LaborPrice[]>([]);
+  const [customLaborCost, setCustomLaborCost] = useState<number>(0);
 
   const toggleService = (service: typeof AVAILABLE_SERVICES[0]) => {
     if (!onServicesChange) return;
@@ -101,11 +124,55 @@ export const SparePartsStep = ({
 
   useEffect(() => {
     loadSpareParts();
+    loadLaborPrices();
   }, []);
 
   useEffect(() => {
     filterParts();
   }, [searchTerm, spareParts, deviceBrand, deviceModel]);
+
+  // Update total labor cost when selectedLabors or customLaborCost changes
+  useEffect(() => {
+    const laborsTotal = selectedLabors.reduce((sum, l) => sum + l.price, 0);
+    const total = laborsTotal + customLaborCost;
+    onLaborCostChange?.(total);
+  }, [selectedLabors, customLaborCost]);
+
+  const loadLaborPrices = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("labor_prices")
+        .select("*")
+        .order("category", { ascending: true })
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+      setLaborPrices(data || []);
+    } catch (error: any) {
+      console.error("Error loading labor prices:", error);
+    }
+  };
+
+  const toggleLabor = (labor: LaborPrice) => {
+    if (!onLaborsChange) return;
+    
+    const isSelected = selectedLabors.some(l => l.id === labor.id);
+    if (isSelected) {
+      onLaborsChange(selectedLabors.filter(l => l.id !== labor.id));
+    } else {
+      onLaborsChange([...selectedLabors, { id: labor.id, name: labor.name, price: labor.price }]);
+    }
+  };
+
+  const getLaborsTotalCost = () => {
+    return selectedLabors.reduce((sum, labor) => sum + labor.price, 0) + customLaborCost;
+  };
+
+  // Filter labor prices by device type
+  const filteredLaborPrices = laborPrices.filter(lp => 
+    !lp.device_type || !deviceType || 
+    lp.device_type.toLowerCase() === deviceType.toLowerCase()
+  );
 
   // Fetch AI suggestions when reportedIssue is available
   useEffect(() => {
@@ -260,7 +327,7 @@ export const SparePartsStep = ({
   };
 
   const getGrandTotal = () => {
-    return getTotalCost() + getServicesTotalCost() + laborCost;
+    return getTotalCost() + getServicesTotalCost() + getLaborsTotalCost();
   };
 
   return (
@@ -587,31 +654,100 @@ export const SparePartsStep = ({
 
       {/* Manodopera */}
       <div className="border-t border-border pt-6">
-        <div className="space-y-3">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Wrench className="h-5 w-5" />
-            Manodopera
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Inserisci il costo della manodopera per questa riparazione
-          </p>
-          <div className="flex items-center gap-3">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold flex items-center gap-2">
+              <Hammer className="h-5 w-5" />
+              Manodopera
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Seleziona le lavorazioni predefinite o inserisci un importo personalizzato
+            </p>
+          </div>
+
+          {/* Predefined Labor Prices */}
+          {filteredLaborPrices.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Lavorazioni Predefinite</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                {filteredLaborPrices.map((labor) => {
+                  const isSelected = selectedLabors.some(l => l.id === labor.id);
+                  return (
+                    <button
+                      key={labor.id}
+                      type="button"
+                      onClick={() => toggleLabor(labor)}
+                      className={`p-3 rounded-lg border text-left transition-all ${
+                        isSelected 
+                          ? "border-primary bg-primary/10 ring-1 ring-primary" 
+                          : "border-border hover:border-primary/50 hover:bg-accent/5"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-sm block truncate">{labor.name}</span>
+                          {labor.description && (
+                            <span className="text-xs text-muted-foreground block truncate">{labor.description}</span>
+                          )}
+                        </div>
+                        {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                      </div>
+                      <span className="text-sm text-primary font-semibold mt-1 block">€{labor.price.toFixed(2)}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Selected Labors Summary */}
+          {selectedLabors.length > 0 && (
+            <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+              <div className="space-y-1">
+                {selectedLabors.map((labor) => (
+                  <div key={labor.id} className="flex justify-between text-sm">
+                    <span>{labor.name}</span>
+                    <span className="font-medium">€{labor.price.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="pt-2 mt-2 border-t border-primary/20">
+                <p className="text-sm font-semibold flex justify-between">
+                  <span>Subtotale Lavorazioni:</span>
+                  <span>€{selectedLabors.reduce((sum, l) => sum + l.price, 0).toFixed(2)}</span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Custom Labor Cost */}
+          <div className="flex items-center gap-3 pt-2">
+            <span className="text-sm text-muted-foreground">Manodopera aggiuntiva:</span>
             <span className="text-lg font-medium">€</span>
             <Input
               type="number"
               min="0"
               step="0.01"
               placeholder="0.00"
-              value={laborCost || ""}
-              onChange={(e) => onLaborCostChange?.(parseFloat(e.target.value) || 0)}
-              className="w-32 text-lg font-semibold"
+              value={customLaborCost || ""}
+              onChange={(e) => setCustomLaborCost(parseFloat(e.target.value) || 0)}
+              className="w-28 text-base font-semibold"
             />
           </div>
+
+          {getLaborsTotalCost() > 0 && (
+            <div className="p-3 bg-accent/10 rounded-lg">
+              <p className="text-sm font-semibold flex justify-between">
+                <span>Totale Manodopera:</span>
+                <span className="text-primary">€{getLaborsTotalCost().toFixed(2)}</span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Totale Complessivo */}
-      {(selectedParts.length > 0 || selectedServices.length > 0 || laborCost > 0) && (
+      {(selectedParts.length > 0 || selectedServices.length > 0 || getLaborsTotalCost() > 0) && (
         <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
           <div className="space-y-1 text-sm text-muted-foreground mb-2">
             {selectedParts.length > 0 && (
@@ -626,10 +762,10 @@ export const SparePartsStep = ({
                 <span>€{getServicesTotalCost().toFixed(2)}</span>
               </div>
             )}
-            {laborCost > 0 && (
+            {getLaborsTotalCost() > 0 && (
               <div className="flex justify-between">
                 <span>Manodopera:</span>
-                <span>€{laborCost.toFixed(2)}</span>
+                <span>€{getLaborsTotalCost().toFixed(2)}</span>
               </div>
             )}
           </div>
