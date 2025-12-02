@@ -248,6 +248,7 @@ export type Database = {
           order_number: string
           ordered_at: string | null
           received_at: string | null
+          repair_id: string | null
           status: string
           supplier: string
           total_amount: number | null
@@ -260,6 +261,7 @@ export type Database = {
           order_number: string
           ordered_at?: string | null
           received_at?: string | null
+          repair_id?: string | null
           status?: string
           supplier?: string
           total_amount?: number | null
@@ -272,12 +274,21 @@ export type Database = {
           order_number?: string
           ordered_at?: string | null
           received_at?: string | null
+          repair_id?: string | null
           status?: string
           supplier?: string
           total_amount?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_repair_id_fkey"
+            columns: ["repair_id"]
+            isOneToOne: false
+            referencedRelation: "repairs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
