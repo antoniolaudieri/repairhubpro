@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface OrderInfo {
   id: string;
@@ -249,6 +250,14 @@ export default function RepairDetail() {
 
   const deleteRepairPart = async (repairPartId: string) => {
     try {
+      // Aggiorna lo stato locale immediatamente per rimozione visuale
+      if (repair?.repair_parts) {
+        setRepair({
+          ...repair,
+          repair_parts: repair.repair_parts.filter(part => part.id !== repairPartId)
+        });
+      }
+
       const { error } = await supabase
         .from("repair_parts")
         .delete()
@@ -260,8 +269,6 @@ export default function RepairDetail() {
         title: "Eliminato",
         description: "Ricambio rimosso dalla riparazione",
       });
-
-      loadRepairDetail();
     } catch (error) {
       console.error("Error deleting repair part:", error);
       toast({
@@ -269,6 +276,8 @@ export default function RepairDetail() {
         description: "Impossibile eliminare il ricambio",
         variant: "destructive",
       });
+      // Ricarica in caso di errore
+      loadRepairDetail();
     }
   };
 
@@ -461,51 +470,57 @@ export default function RepairDetail() {
 
               {repair.repair_parts && repair.repair_parts.length > 0 ? (
                 <div className="space-y-2">
-                  {repair.repair_parts.map((part) => (
-                    <div
-                      key={part.id}
-                      className="flex items-center gap-3 p-3 border border-border rounded-lg bg-accent/5"
-                    >
-                      {part.spare_parts.image_url && (
-                        <img
-                          src={part.spare_parts.image_url}
-                          alt={part.spare_parts.name}
-                          className="h-12 w-12 object-contain rounded border bg-background"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                          }}
-                        />
-                      )}
-                      <div className="flex-1">
-                        <p className="font-medium">{part.spare_parts.name}</p>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          {part.spare_parts.brand && (
-                            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                              {part.spare_parts.brand}
-                            </span>
-                          )}
-                          <span>{part.spare_parts.category}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-medium">Qtà: {part.quantity}</p>
-                        <p className="text-sm text-muted-foreground">
-                          €{part.unit_cost.toFixed(2)} cad.
-                        </p>
-                        <p className="text-sm font-semibold">
-                          Tot: €{(part.quantity * part.unit_cost).toFixed(2)}
-                        </p>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => deleteRepairPart(part.id)}
-                        className="text-destructive hover:text-destructive"
+                  <AnimatePresence mode="popLayout">
+                    {repair.repair_parts.map((part) => (
+                      <motion.div
+                        key={part.id}
+                        initial={{ opacity: 0, height: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, height: "auto", scale: 1 }}
+                        exit={{ opacity: 0, height: 0, scale: 0.8, x: -100 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex items-center gap-3 p-3 border border-border rounded-lg bg-accent/5"
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+                        {part.spare_parts.image_url && (
+                          <img
+                            src={part.spare_parts.image_url}
+                            alt={part.spare_parts.name}
+                            className="h-12 w-12 object-contain rounded border bg-background"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-medium">{part.spare_parts.name}</p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            {part.spare_parts.brand && (
+                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                {part.spare_parts.brand}
+                              </span>
+                            )}
+                            <span>{part.spare_parts.category}</span>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">Qtà: {part.quantity}</p>
+                          <p className="text-sm text-muted-foreground">
+                            €{part.unit_cost.toFixed(2)} cad.
+                          </p>
+                          <p className="text-sm font-semibold">
+                            Tot: €{(part.quantity * part.unit_cost).toFixed(2)}
+                          </p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteRepairPart(part.id)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
                   <div className="pt-3 border-t border-border">
                     <p className="text-right font-semibold">
                       Totale Ricambi: €
