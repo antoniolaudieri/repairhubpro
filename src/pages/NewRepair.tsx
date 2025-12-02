@@ -250,6 +250,30 @@ const NewRepair = () => {
       return;
     }
 
+    // Inferisci il tipo di dispositivo dal modello
+    const inferDeviceType = (brand: string, model: string): string => {
+      const modelLower = model.toLowerCase();
+      const brandLower = brand.toLowerCase();
+      
+      // Tablet
+      if (modelLower.includes('ipad') || modelLower.includes('tab') || modelLower.includes('tablet')) {
+        return 'tablet';
+      }
+      // Laptop
+      if (modelLower.includes('macbook') || modelLower.includes('laptop') || modelLower.includes('notebook') || 
+          modelLower.includes('thinkpad') || modelLower.includes('xps') || modelLower.includes('pavilion')) {
+        return 'laptop';
+      }
+      // Smartwatch
+      if (modelLower.includes('watch') || modelLower.includes('band') || modelLower.includes('fit')) {
+        return 'smartwatch';
+      }
+      // Default smartphone
+      return 'smartphone';
+    };
+
+    const inferredType = inferDeviceType(manualBrand.trim(), manualModel.trim());
+
     setLookingUpDetails(true);
     try {
       const { data: lookupData, error: lookupError } = await supabase.functions.invoke("lookup-device", {
@@ -261,7 +285,7 @@ const NewRepair = () => {
 
       if (!lookupError && lookupData?.device_info) {
         const deviceInfo = {
-          type: deviceData.device_type || "smartphone",
+          type: inferredType,
           brand: manualBrand.trim(),
           model: manualModel.trim(),
           ...lookupData.device_info,
@@ -271,6 +295,7 @@ const NewRepair = () => {
         
         setDeviceData((prev) => ({
           ...prev,
+          device_type: inferredType,
           brand: manualBrand.trim(),
           model: manualModel.trim(),
         }));
@@ -280,13 +305,14 @@ const NewRepair = () => {
       } else {
         // Anche se non troviamo il dispositivo online, permettiamo di procedere
         setDetectedDevice({
-          type: deviceData.device_type || "smartphone",
+          type: inferredType,
           brand: manualBrand.trim(),
           model: manualModel.trim(),
         });
         
         setDeviceData((prev) => ({
           ...prev,
+          device_type: inferredType,
           brand: manualBrand.trim(),
           model: manualModel.trim(),
         }));
@@ -298,13 +324,14 @@ const NewRepair = () => {
       console.error("Lookup error:", error);
       // Anche in caso di errore, permettiamo di procedere con i dati inseriti
       setDetectedDevice({
-        type: deviceData.device_type || "smartphone",
+        type: inferredType,
         brand: manualBrand.trim(),
         model: manualModel.trim(),
       });
       
       setDeviceData((prev) => ({
         ...prev,
+        device_type: inferredType,
         brand: manualBrand.trim(),
         model: manualModel.trim(),
       }));
