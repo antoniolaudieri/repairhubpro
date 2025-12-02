@@ -227,37 +227,56 @@ export default function CustomerHome() {
             </div>
             <span className="font-bold text-xl text-foreground">TechRepair</span>
           </motion.div>
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 items-center">
             {user ? (
               <>
-                <Button 
-                  onClick={() => navigate(isTechnician || isAdmin ? "/dashboard" : "/customer-dashboard")} 
-                  variant="ghost" 
-                  size="sm"
-                >
-                  Dashboard
-                </Button>
-                <Button 
-                  onClick={async () => {
-                    await signOut();
-                    navigate("/");
-                  }} 
-                  variant="ghost" 
-                  size="sm"
-                >
-                  Esci
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    onClick={() => navigate(isTechnician || isAdmin ? "/dashboard" : "/customer-dashboard")} 
+                    variant="ghost" 
+                    size="sm"
+                    className="gap-2 group"
+                  >
+                    <Zap className="h-4 w-4 transition-all group-hover:text-primary group-hover:rotate-12" />
+                    <span className="hidden sm:inline">Dashboard</span>
+                  </Button>
+                </motion.div>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button 
+                    onClick={async () => {
+                      await signOut();
+                      navigate("/");
+                    }} 
+                    variant="ghost" 
+                    size="sm"
+                    className="gap-2 group text-muted-foreground hover:text-destructive"
+                  >
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rotate-180" />
+                    <span className="hidden sm:inline">Esci</span>
+                  </Button>
+                </motion.div>
               </>
             ) : (
-              <Button onClick={() => navigate("/auth")} variant="ghost" size="sm">
-                Accedi
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button 
+                  onClick={() => navigate("/auth")} 
+                  variant="ghost" 
+                  size="sm"
+                  className="gap-2 group"
+                >
+                  <Shield className="h-4 w-4 transition-all group-hover:text-primary" />
+                  <span className="hidden sm:inline">Accedi</span>
+                </Button>
+              </motion.div>
             )}
             <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
               <DialogTrigger asChild>
-                <Button size="sm">
-                  Prenota
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button size="sm" variant="glow" className="gap-2 group">
+                    <Wrench className="h-4 w-4 transition-transform group-hover:rotate-12" />
+                    <span className="hidden sm:inline">Prenota</span>
+                  </Button>
+                </motion.div>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
