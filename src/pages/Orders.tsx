@@ -154,6 +154,19 @@ export default function Orders() {
   };
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    // Aggiorna lo stato locale immediatamente (ottimistico)
+    const previousOrders = [...orders];
+    setOrders(orders.map(o => {
+      if (o.id === orderId) {
+        const updates: any = { status: newStatus };
+        if (newStatus === "ordered" && !o.ordered_at) {
+          updates.ordered_at = new Date().toISOString();
+        }
+        return { ...o, ...updates };
+      }
+      return o;
+    }));
+
     try {
       const updates: any = { status: newStatus };
       
@@ -171,10 +184,18 @@ export default function Orders() {
     } catch (error: any) {
       console.error("Error updating status:", error);
       toast.error("Errore aggiornamento stato");
+      // Ripristina lo stato precedente in caso di errore
+      setOrders(previousOrders);
     }
   };
 
   const updateTrackingNumber = async (orderId: string, trackingNumber: string) => {
+    // Aggiorna lo stato locale immediatamente (ottimistico)
+    const previousOrders = [...orders];
+    setOrders(orders.map(o => 
+      o.id === orderId ? { ...o, tracking_number: trackingNumber } : o
+    ));
+
     try {
       const { error } = await supabase
         .from("orders")
@@ -186,6 +207,8 @@ export default function Orders() {
     } catch (error: any) {
       console.error("Error updating tracking:", error);
       toast.error("Errore aggiornamento tracking");
+      // Ripristina lo stato precedente in caso di errore
+      setOrders(previousOrders);
     }
   };
 
