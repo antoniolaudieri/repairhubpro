@@ -16,6 +16,7 @@ import {
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface OrderItem {
   id: string;
@@ -44,9 +45,30 @@ export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingOrder, setProcessingOrder] = useState<string | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   useEffect(() => {
     fetchOrders();
+
+    // Setup realtime subscription for orders
+    const channel = supabase
+      .channel('orders-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders'
+        },
+        () => {
+          fetchOrders();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchOrders = async () => {
@@ -151,6 +173,11 @@ export default function Orders() {
     }
   };
 
+  const filteredOrders = orders.filter(order => {
+    if (filterStatus === "all") return true;
+    return order.status === filterStatus;
+  });
+
   if (loading) {
     return (
       <div className="p-6">
@@ -166,24 +193,43 @@ export default function Orders() {
   return (
     <div className="p-6">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Ordini Ricambi</h1>
-          <p className="text-muted-foreground">
-            Gestisci gli ordini ai fornitori e scarica i ricambi quando arrivano
-          </p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground mb-2">Ordini Ricambi</h1>
+            <p className="text-muted-foreground">
+              Gestisci gli ordini ai fornitori e scarica i ricambi quando arrivano
+            </p>
+          </div>
+          <Badge variant="outline" className="gap-2">
+            <Clock className="h-4 w-4" />
+            Tracking Real-Time Attivo
+          </Badge>
         </div>
 
-        {orders.length === 0 ? (
+        <Tabs value={filterStatus} onValueChange={setFilterStatus} className="mb-6">
+          <TabsList>
+            <TabsTrigger value="all">Tutti ({orders.length})</TabsTrigger>
+            <TabsTrigger value="pending">In Attesa ({orders.filter(o => o.status === "pending").length})</TabsTrigger>
+            <TabsTrigger value="ordered">Ordinati ({orders.filter(o => o.status === "ordered").length})</TabsTrigger>
+            <TabsTrigger value="received">Ricevuti ({orders.filter(o => o.status === "received").length})</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {filteredOrders.length === 0 ? (
           <Card className="p-12 text-center">
             <ShoppingCart className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Nessun ordine</h2>
+            <h2 className="text-xl font-semibold mb-2">
+              {orders.length === 0 ? "Nessun ordine" : "Nessun ordine in questa categoria"}
+            </h2>
             <p className="text-muted-foreground">
-              Gli ordini creati durante le riparazioni appariranno qui
+              {orders.length === 0 
+                ? "Gli ordini creati durante le riparazioni appariranno qui"
+                : "Cambia filtro per vedere altri ordini"}
             </p>
           </Card>
         ) : (
           <div className="grid gap-6">
-            {orders.map((order, index) => {
+            {filteredOrders.map((order, index) => {
               const statusInfo = getStatusInfo(order.status);
               
               return (

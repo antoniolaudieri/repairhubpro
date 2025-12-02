@@ -10,7 +10,9 @@ import {
   XCircle, 
   Wrench,
   ArrowLeft,
-  Search
+  Search,
+  Package,
+  AlertCircle
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
@@ -31,6 +33,7 @@ interface Repair {
     name: string;
     phone: string;
   };
+  has_pending_orders?: boolean;
 }
 
 export default function Repairs() {
@@ -58,6 +61,10 @@ export default function Repairs() {
               name,
               phone
             )
+          ),
+          orders (
+            id,
+            status
           )
         `)
         .order("created_at", { ascending: false });
@@ -77,6 +84,7 @@ export default function Repairs() {
           reported_issue: repair.device.reported_issue,
         },
         customer: repair.device.customer,
+        has_pending_orders: repair.orders?.some((order: any) => order.status === "pending") || false,
       })) || [];
 
       setRepairs(formattedRepairs);
@@ -98,6 +106,8 @@ export default function Repairs() {
         return <CheckCircle2 className="h-5 w-5 text-success" />;
       case "in_progress":
         return <Wrench className="h-5 w-5 text-info" />;
+      case "waiting_for_parts":
+        return <Package className="h-5 w-5 text-warning" />;
       case "cancelled":
         return <XCircle className="h-5 w-5 text-destructive" />;
       default:
@@ -108,6 +118,7 @@ export default function Repairs() {
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       pending: "outline",
+      waiting_for_parts: "secondary",
       in_progress: "default",
       completed: "secondary",
       cancelled: "destructive",
@@ -115,6 +126,7 @@ export default function Repairs() {
     
     const labels: Record<string, string> = {
       pending: "In attesa",
+      waiting_for_parts: "In attesa ricambi",
       in_progress: "In corso",
       completed: "Completata",
       cancelled: "Annullata",
@@ -217,6 +229,12 @@ export default function Repairs() {
                         </h3>
                         {getStatusBadge(repair.status)}
                         {getPriorityBadge(repair.priority)}
+                        {repair.has_pending_orders && (
+                          <Badge variant="outline" className="gap-1 bg-warning/10 text-warning border-warning/20">
+                            <AlertCircle className="h-3 w-3" />
+                            Ordini in attesa
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-sm text-muted-foreground space-y-1">
                         <p>

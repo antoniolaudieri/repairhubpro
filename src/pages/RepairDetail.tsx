@@ -12,7 +12,11 @@ import {
   Lightbulb, 
   Loader2,
   Save,
-  Wrench
+  Wrench,
+  Package,
+  AlertCircle,
+  Clock,
+  CheckCircle
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -22,6 +26,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+interface OrderInfo {
+  id: string;
+  order_number: string;
+  status: string;
+  supplier: string;
+  created_at: string;
+  ordered_at: string | null;
+  received_at: string | null;
+}
 
 interface RepairDetail {
   id: string;
@@ -47,6 +61,7 @@ interface RepairDetail {
     email: string | null;
     address: string | null;
   };
+  orders?: OrderInfo[];
 }
 
 export default function RepairDetail() {
@@ -82,6 +97,15 @@ export default function RepairDetail() {
               email,
               address
             )
+          ),
+          orders (
+            id,
+            order_number,
+            status,
+            supplier,
+            created_at,
+            ordered_at,
+            received_at
           )
         `)
         .eq("id", id)
@@ -101,6 +125,7 @@ export default function RepairDetail() {
         created_at: data.created_at,
         device: data.device,
         customer: data.device.customer,
+        orders: data.orders || [],
       });
     } catch (error) {
       console.error("Error loading repair:", error);
@@ -259,6 +284,7 @@ export default function RepairDetail() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">In attesa</SelectItem>
+                      <SelectItem value="waiting_for_parts">In attesa ricambi</SelectItem>
                       <SelectItem value="in_progress">In corso</SelectItem>
                       <SelectItem value="completed">Completata</SelectItem>
                       <SelectItem value="cancelled">Annullata</SelectItem>
@@ -364,6 +390,57 @@ export default function RepairDetail() {
           </div>
 
           <div className="space-y-6">
+            {/* Orders Status */}
+            {repair.orders && repair.orders.length > 0 && (
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <Package className="h-5 w-5 text-primary" />
+                  Stato Ordini Ricambi
+                </h3>
+                <div className="space-y-3">
+                  {repair.orders.map((order) => {
+                    const statusInfo = order.status === "pending" 
+                      ? { label: "In Attesa", variant: "secondary" as const, icon: Clock }
+                      : order.status === "ordered"
+                      ? { label: "Ordinato", variant: "default" as const, icon: Package }
+                      : { label: "Ricevuto", variant: "default" as const, icon: CheckCircle };
+                    
+                    const StatusIcon = statusInfo.icon;
+
+                    return (
+                      <div key={order.id} className="p-3 bg-muted/30 rounded-lg border border-border">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-sm">Ordine #{order.order_number}</span>
+                          <Badge variant={statusInfo.variant} className="gap-1">
+                            <StatusIcon className="h-3 w-3" />
+                            {statusInfo.label}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          <div>Fornitore: {order.supplier}</div>
+                          <div>Creato: {new Date(order.created_at).toLocaleDateString("it-IT")}</div>
+                          {order.ordered_at && (
+                            <div>Ordinato: {new Date(order.ordered_at).toLocaleDateString("it-IT")}</div>
+                          )}
+                          {order.received_at && (
+                            <div>Ricevuto: {new Date(order.received_at).toLocaleDateString("it-IT")}</div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {repair.orders.some(o => o.status === "pending") && (
+                  <div className="mt-4 p-3 bg-warning/10 border border-warning/20 rounded-lg flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
+                    <p className="text-xs text-muted-foreground">
+                      La riparazione è in attesa della consegna dei ricambi ordinati
+                    </p>
+                  </div>
+                )}
+              </Card>
+            )}
+
             <Card className="p-6">
               <h3 className="text-lg font-semibold mb-4">Informazioni Cliente</h3>
               <div className="space-y-2 text-sm">
