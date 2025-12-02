@@ -8,7 +8,8 @@ import {
   Calendar,
   MessageSquare,
   FileText,
-  ScrollText
+  ScrollText,
+  Settings2
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -37,6 +38,7 @@ const menuItems = [
   { title: "Preventivi", url: "/quotes", icon: FileText },
   { title: "Magazzino", url: "/inventory", icon: Package },
   { title: "Ordini", url: "/orders", icon: ShoppingCart },
+  { title: "Listino Prezzi", url: "/pricing-settings", icon: Settings2 },
   { title: "Feedback", url: "/feedback", icon: MessageSquare },
   { title: "Storico Firme", url: "/signature-history", icon: ScrollText },
 ];
