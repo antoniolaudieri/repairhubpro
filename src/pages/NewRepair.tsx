@@ -39,6 +39,7 @@ const NewRepair = () => {
   const [showModelSuggestions, setShowModelSuggestions] = useState(false);
   const [selectedSpareParts, setSelectedSpareParts] = useState<any[]>([]);
   const [selectedServices, setSelectedServices] = useState<{ id: string; name: string; price: number }[]>([]);
+  const [laborCost, setLaborCost] = useState<number>(0);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -444,15 +445,20 @@ const NewRepair = () => {
 
       if (deviceError) throw deviceError;
 
-      // Calculate totals including services
+      // Calculate totals including services and labor
       const partsTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0);
       const servicesTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
-      const estimatedTotal = partsTotal + servicesTotal;
+      const estimatedTotal = partsTotal + servicesTotal + laborCost;
       
-      // Build services notes
-      const servicesNotes = selectedServices.length > 0 
-        ? `Servizi richiesti: ${selectedServices.map(s => `${s.name} (€${s.price})`).join(", ")}`
-        : "";
+      // Build services and labor notes
+      let notesArray = [];
+      if (selectedServices.length > 0) {
+        notesArray.push(`Servizi richiesti: ${selectedServices.map(s => `${s.name} (€${s.price})`).join(", ")}`);
+      }
+      if (laborCost > 0) {
+        notesArray.push(`Manodopera: €${laborCost.toFixed(2)}`);
+      }
+      const servicesNotes = notesArray.join(" | ");
 
       // Create repair entry with intake signature and diagnostic fee
       const { data: repairData, error: repairError } = await supabase
@@ -746,6 +752,8 @@ const NewRepair = () => {
             onPartsChange={setSelectedSpareParts}
             selectedServices={selectedServices}
             onServicesChange={setSelectedServices}
+            laborCost={laborCost}
+            onLaborCostChange={setLaborCost}
           />
         );
       
@@ -834,14 +842,26 @@ const NewRepair = () => {
                 </div>
               </div>
             )}
-            {(selectedSpareParts.length > 0 || selectedServices.length > 0) && (
+            {laborCost > 0 && (
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">Manodopera</h3>
+                <div className="border border-border rounded-lg p-4">
+                  <div className="flex justify-between font-semibold">
+                    <span>Costo Manodopera:</span>
+                    <span>€{laborCost.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {(selectedSpareParts.length > 0 || selectedServices.length > 0 || laborCost > 0) && (
               <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
                 <div className="flex justify-between items-center">
-                  <span className="font-bold text-lg">Totale Complessivo:</span>
+                  <span className="font-bold text-lg">Totale Preventivo:</span>
                   <span className="font-bold text-lg text-primary">
                     €{(
                       selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) +
-                      selectedServices.reduce((sum, s) => sum + s.price, 0)
+                      selectedServices.reduce((sum, s) => sum + s.price, 0) +
+                      laborCost
                     ).toFixed(2)}
                   </span>
                 </div>

@@ -61,6 +61,8 @@ interface SparePartsStepProps {
   onPartsChange: (parts: SelectedPart[]) => void;
   selectedServices?: SelectedService[];
   onServicesChange?: (services: SelectedService[]) => void;
+  laborCost?: number;
+  onLaborCostChange?: (cost: number) => void;
 }
 
 export const SparePartsStep = ({
@@ -71,6 +73,8 @@ export const SparePartsStep = ({
   onPartsChange,
   selectedServices = [],
   onServicesChange,
+  laborCost = 0,
+  onLaborCostChange,
 }: SparePartsStepProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
@@ -256,7 +260,7 @@ export const SparePartsStep = ({
   };
 
   const getGrandTotal = () => {
-    return getTotalCost() + getServicesTotalCost();
+    return getTotalCost() + getServicesTotalCost() + laborCost;
   };
 
   return (
@@ -581,12 +585,59 @@ export const SparePartsStep = ({
         </p>
       )}
 
-      {/* Totale Complessivo */}
-      {(selectedParts.length > 0 || selectedServices.length > 0) && (
-        <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
-          <p className="text-base font-bold text-right">
-            Totale Complessivo: €{getGrandTotal().toFixed(2)}
+      {/* Manodopera */}
+      <div className="border-t border-border pt-6">
+        <div className="space-y-3">
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Wrench className="h-5 w-5" />
+            Manodopera
+          </h3>
+          <p className="text-sm text-muted-foreground">
+            Inserisci il costo della manodopera per questa riparazione
           </p>
+          <div className="flex items-center gap-3">
+            <span className="text-lg font-medium">€</span>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              value={laborCost || ""}
+              onChange={(e) => onLaborCostChange?.(parseFloat(e.target.value) || 0)}
+              className="w-32 text-lg font-semibold"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Totale Complessivo */}
+      {(selectedParts.length > 0 || selectedServices.length > 0 || laborCost > 0) && (
+        <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+          <div className="space-y-1 text-sm text-muted-foreground mb-2">
+            {selectedParts.length > 0 && (
+              <div className="flex justify-between">
+                <span>Ricambi:</span>
+                <span>€{getTotalCost().toFixed(2)}</span>
+              </div>
+            )}
+            {selectedServices.length > 0 && (
+              <div className="flex justify-between">
+                <span>Servizi:</span>
+                <span>€{getServicesTotalCost().toFixed(2)}</span>
+              </div>
+            )}
+            {laborCost > 0 && (
+              <div className="flex justify-between">
+                <span>Manodopera:</span>
+                <span>€{laborCost.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+          <div className="pt-2 border-t border-primary/20">
+            <p className="text-lg font-bold text-right">
+              Totale Preventivo: €{getGrandTotal().toFixed(2)}
+            </p>
+          </div>
         </div>
       )}
     </div>
