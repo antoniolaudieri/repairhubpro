@@ -314,38 +314,41 @@ export default function RepairDetail() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-4 sm:p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Dettagli Riparazione</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dettagli Riparazione</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               {repair.customer.name} - {repair.device.brand} {repair.device.model}
             </p>
           </div>
-          <Button onClick={saveChanges} disabled={saving}>
+          <Button onClick={saveChanges} disabled={saving} className="w-full sm:w-auto">
             {saving ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Salvataggio...
+                <span className="hidden sm:inline">Salvataggio...</span>
+                <span className="sm:hidden">Salva...</span>
               </>
             ) : (
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Salva Modifiche
+                <span className="hidden sm:inline">Salva Modifiche</span>
+                <span className="sm:hidden">Salva</span>
               </>
             )}
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+            <Card className="p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-semibold mb-4 flex items-center gap-2">
                 <Wrench className="h-5 w-5 text-primary" />
-                Informazioni Riparazione
+                <span className="hidden sm:inline">Informazioni Riparazione</span>
+                <span className="sm:hidden">Riparazione</span>
               </h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label>Stato</Label>
                   <Select
@@ -425,25 +428,31 @@ export default function RepairDetail() {
               </div>
             </Card>
 
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
+            <Card className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h2 className="text-lg sm:text-xl font-semibold flex items-center gap-2">
                   <Lightbulb className="h-5 w-5 text-warning" />
-                  Suggerimenti IA
+                  <span className="hidden sm:inline">Suggerimenti IA</span>
+                  <span className="sm:hidden">IA</span>
                 </h2>
                 <Button
                   onClick={getAISuggestions}
                   disabled={loadingAI}
                   variant="outline"
                   size="sm"
+                  className="w-full sm:w-auto"
                 >
                   {loadingAI ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generazione...
+                      <span className="hidden sm:inline">Generazione...</span>
+                      <span className="sm:hidden">...</span>
                     </>
                   ) : (
-                    "Genera Suggerimenti"
+                    <>
+                      <span className="hidden sm:inline">Genera Suggerimenti</span>
+                      <span className="sm:hidden">Genera</span>
+                    </>
                   )}
                 </Button>
               </div>
@@ -462,13 +471,14 @@ export default function RepairDetail() {
             </Card>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             {/* Spare Parts Section */}
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Card className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h3 className="text-base sm:text-lg font-semibold flex items-center gap-2">
                   <Package className="h-5 w-5 text-primary" />
-                  Ricambi Utilizzati
+                  <span className="hidden sm:inline">Ricambi Utilizzati</span>
+                  <span className="sm:hidden">Ricambi</span>
                 </h3>
                 <AddRepairPartsDialog
                   repairId={repair.id}
