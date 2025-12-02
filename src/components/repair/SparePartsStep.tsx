@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Trash2, Package } from "lucide-react";
+import { Search, Plus, Trash2, Package, Wrench, Check } from "lucide-react";
 import { toast } from "sonner";
 import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
 
@@ -26,11 +26,28 @@ interface SelectedPart {
   unit_cost: number;
 }
 
+interface SelectedService {
+  id: string;
+  name: string;
+  price: number;
+}
+
+const AVAILABLE_SERVICES = [
+  { id: "data_transfer", name: "Trasferimento Dati", price: 25 },
+  { id: "password_recovery", name: "Recupero Password", price: 15 },
+  { id: "full_backup", name: "Backup Completo", price: 20 },
+  { id: "software_cleanup", name: "Pulizia Software", price: 10 },
+  { id: "screen_protector", name: "Applicazione Pellicola", price: 5 },
+  { id: "deep_cleaning", name: "Pulizia Profonda", price: 15 },
+];
+
 interface SparePartsStepProps {
   deviceBrand?: string;
   deviceModel?: string;
   selectedParts: SelectedPart[];
   onPartsChange: (parts: SelectedPart[]) => void;
+  selectedServices?: SelectedService[];
+  onServicesChange?: (services: SelectedService[]) => void;
 }
 
 export const SparePartsStep = ({
@@ -38,11 +55,28 @@ export const SparePartsStep = ({
   deviceModel,
   selectedParts,
   onPartsChange,
+  selectedServices = [],
+  onServicesChange,
 }: SparePartsStepProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [filteredParts, setFilteredParts] = useState<SparePart[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const toggleService = (service: typeof AVAILABLE_SERVICES[0]) => {
+    if (!onServicesChange) return;
+    
+    const isSelected = selectedServices.some(s => s.id === service.id);
+    if (isSelected) {
+      onServicesChange(selectedServices.filter(s => s.id !== service.id));
+    } else {
+      onServicesChange([...selectedServices, service]);
+    }
+  };
+
+  const getServicesTotalCost = () => {
+    return selectedServices.reduce((sum, service) => sum + service.price, 0);
+  };
 
   useEffect(() => {
     loadSpareParts();
@@ -140,17 +174,68 @@ export const SparePartsStep = ({
     );
   };
 
+  const getGrandTotal = () => {
+    return getTotalCost() + getServicesTotalCost();
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+      {/* Servizi Aggiuntivi */}
+      <div className="space-y-3">
         <div className="space-y-2">
-          <h3 className="text-lg font-semibold">Ricambi Necessari</h3>
+          <h3 className="text-lg font-semibold flex items-center gap-2">
+            <Wrench className="h-5 w-5" />
+            Servizi Aggiuntivi
+          </h3>
           <p className="text-sm text-muted-foreground">
-            Cerca e seleziona i ricambi necessari per questa riparazione
-            {deviceBrand && ` (Compatibili con ${deviceBrand})`}
+            Seleziona i servizi extra richiesti dal cliente
           </p>
         </div>
-        <AddSparePartDialog onPartAdded={loadSpareParts} />
+        
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          {AVAILABLE_SERVICES.map((service) => {
+            const isSelected = selectedServices.some(s => s.id === service.id);
+            return (
+              <button
+                key={service.id}
+                type="button"
+                onClick={() => toggleService(service)}
+                className={`p-3 rounded-lg border text-left transition-all ${
+                  isSelected 
+                    ? "border-primary bg-primary/10 ring-1 ring-primary" 
+                    : "border-border hover:border-primary/50 hover:bg-accent/5"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-sm">{service.name}</span>
+                  {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
+                </div>
+                <span className="text-sm text-primary font-semibold">€{service.price.toFixed(2)}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {selectedServices.length > 0 && (
+          <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+            <p className="text-sm font-medium">
+              Servizi selezionati: {selectedServices.length} • Totale: €{getServicesTotalCost().toFixed(2)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="border-t border-border pt-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold">Ricambi Necessari</h3>
+            <p className="text-sm text-muted-foreground">
+              Cerca e seleziona i ricambi necessari per questa riparazione
+              {deviceBrand && ` (Compatibili con ${deviceBrand})`}
+            </p>
+          </div>
+          <AddSparePartDialog onPartAdded={loadSpareParts} />
+        </div>
       </div>
 
       {/* Ricambi Selezionati */}
@@ -207,7 +292,7 @@ export const SparePartsStep = ({
             ))}
             <div className="pt-2 border-t border-border">
               <p className="text-sm font-semibold text-right">
-                Totale Stimato: €{getTotalCost().toFixed(2)}
+                Totale Ricambi: €{getTotalCost().toFixed(2)}
               </p>
             </div>
           </div>
@@ -308,10 +393,19 @@ export const SparePartsStep = ({
         </div>
       </div>
 
-      {selectedParts.length === 0 && (
+      {selectedParts.length === 0 && selectedServices.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-4">
-          Puoi procedere senza selezionare ricambi e aggiungerli in seguito
+          Puoi procedere senza selezionare ricambi o servizi e aggiungerli in seguito
         </p>
+      )}
+
+      {/* Totale Complessivo */}
+      {(selectedParts.length > 0 || selectedServices.length > 0) && (
+        <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-lg border border-primary/20">
+          <p className="text-base font-bold text-right">
+            Totale Complessivo: €{getGrandTotal().toFixed(2)}
+          </p>
+        </div>
       )}
     </div>
   );
