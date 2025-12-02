@@ -775,16 +775,13 @@ const NewRepair = () => {
       case 5:
         // Calcolo guadagno netto (solo per il tecnico)
         const partsRevenue = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0);
-        const partsCost = selectedSpareParts.reduce((sum, part) => sum + (part.purchase_cost || part.unit_cost * 0.6) * part.quantity, 0);
+        const partsCost = selectedSpareParts.reduce((sum, part) => sum + (part.purchase_cost || 0) * part.quantity, 0);
+        const partsMargin = partsRevenue - partsCost; // Margine sui ricambi
         const servicesRevenue = selectedServices.reduce((sum, s) => sum + s.price, 0);
         const diagnosticFee = 15; // €15 gestione diagnosi
         
-        // Ricavi = vendita ricambi + servizi + manodopera + gestione diagnosi
-        const totalRevenue = partsRevenue + servicesRevenue + laborCost + diagnosticFee;
-        // Costi = acquisto ricambi
-        const totalCost = partsCost;
-        // Guadagno netto
-        const netProfit = totalRevenue - totalCost;
+        // Guadagno netto = margine ricambi + servizi + manodopera + gestione diagnosi
+        const netProfit = partsMargin + servicesRevenue + laborCost + diagnosticFee;
         
         // Gamification: livelli di guadagno
         const getProfitLevel = (profit: number) => {
@@ -815,14 +812,28 @@ const NewRepair = () => {
                 <span className={`text-3xl font-bold ${profitLevel.color}`}>
                   €{netProfit.toFixed(2)}
                 </span>
-                <div className="text-xs text-muted-foreground text-right">
-                  <div>Ricavi: €{totalRevenue.toFixed(2)}</div>
-                  <div>Costi: €{totalCost.toFixed(2)}</div>
+              </div>
+              {/* Breakdown dettagliato */}
+              <div className="mt-3 pt-3 border-t border-border/50 grid grid-cols-2 gap-2 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Margine ricambi:</span>
+                  <span className="font-medium">€{partsMargin.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Servizi:</span>
+                  <span className="font-medium">€{servicesRevenue.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Manodopera:</span>
+                  <span className="font-medium">€{laborCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Gestione diagnosi:</span>
+                  <span className="font-medium">€{diagnosticFee.toFixed(2)}</span>
                 </div>
               </div>
-              <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground flex justify-between">
-                <span>Include €{diagnosticFee} gestione diagnosi</span>
-                <span className="opacity-60">Non visibile al cliente</span>
+              <div className="mt-2 text-xs text-muted-foreground/60 text-right">
+                Non visibile al cliente
               </div>
             </div>
 
