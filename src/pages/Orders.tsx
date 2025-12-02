@@ -106,6 +106,54 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   },
 };
 
+// Component to handle image loading with fallback
+const DeviceImage = ({ photoUrl }: { photoUrl: string | null | undefined }) => {
+  const [hasError, setHasError] = useState(false);
+  
+  if (!photoUrl || hasError) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="text-xl md:text-2xl font-black">RP</div>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <img 
+      src={photoUrl} 
+      alt=""
+      className="w-full h-full object-cover bg-muted"
+      onError={() => setHasError(true)}
+    />
+  );
+};
+
+// Component to handle spare part image loading with fallback
+const PartImage = ({ imageUrl, name }: { imageUrl: string | null | undefined; name: string }) => {
+  const [hasError, setHasError] = useState(false);
+  
+  if (!imageUrl || hasError) {
+    return (
+      <div className="w-full h-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="text-xs font-bold">RP</div>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <img 
+      src={imageUrl} 
+      alt={name}
+      className="w-full h-full object-cover"
+      onError={() => setHasError(true)}
+    />
+  );
+};
+
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -540,19 +588,7 @@ export default function Orders() {
                             whileHover={{ scale: 1.05 }}
                             className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden shadow-md flex-shrink-0"
                           >
-                            {order.repairs?.devices?.photo_url ? (
-                              <img 
-                                src={order.repairs.devices.photo_url} 
-                                alt=""
-                                className="w-full h-full object-cover bg-muted"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
-                                <div className="text-white text-center">
-                                  <div className="text-xl md:text-2xl font-black">RP</div>
-                                </div>
-                              </div>
-                            )}
+                            <DeviceImage photoUrl={order.repairs?.devices?.photo_url} />
                           </motion.div>
                           
                           <div className="flex-1 min-w-0">
@@ -730,18 +766,8 @@ export default function Orders() {
                               className="flex items-center gap-3 p-3 bg-background rounded-xl border hover:border-primary/30 hover:shadow-sm transition-all"
                             >
                               {/* Part Image */}
-                              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center bg-gradient-to-br from-primary/80 to-primary">
-                                {item.spare_parts?.image_url ? (
-                                  <img 
-                                    src={item.spare_parts.image_url} 
-                                    alt={item.product_name}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="text-white text-center">
-                                    <div className="text-xs font-bold">RP</div>
-                                  </div>
-                                )}
+                              <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                                <PartImage imageUrl={item.spare_parts?.image_url} name={item.product_name} />
                               </div>
                               
                               <div className="flex-1 min-w-0">
