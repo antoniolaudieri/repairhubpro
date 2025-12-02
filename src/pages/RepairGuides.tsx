@@ -37,6 +37,7 @@ import {
   Pencil
 } from "lucide-react";
 import EditGuideDialog from "@/components/repair/EditGuideDialog";
+import CreateGuideDialog from "@/components/repair/CreateGuideDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -240,10 +241,13 @@ export default function RepairGuides() {
                 </p>
               </div>
             </div>
-            <Button onClick={loadGuides} variant="outline" className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Aggiorna
-            </Button>
+            <div className="flex gap-2">
+              <CreateGuideDialog onCreated={loadGuides} />
+              <Button onClick={loadGuides} variant="outline" className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Aggiorna
+              </Button>
+            </div>
           </div>
         </div>
       </div>
