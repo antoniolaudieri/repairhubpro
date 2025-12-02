@@ -387,6 +387,14 @@ export const SparePartsStep = ({
     );
   };
 
+  const updateUnitCost = (partId: string, unitCost: number) => {
+    onPartsChange(
+      selectedParts.map((p) =>
+        p.spare_part_id === partId ? { ...p, unit_cost: unitCost } : p
+      )
+    );
+  };
+
   // Salva il costo d'acquisto nel database (on blur)
   const savePurchaseCostToDb = async (partId: string, purchaseCost: number) => {
     // Salta se è un part suggerito (non nel database)
@@ -739,9 +747,23 @@ export const SparePartsStep = ({
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div className="flex-1">
                       <p className="font-medium text-sm">{part.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Vendita: €{part.unit_cost.toFixed(2)} cad.
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <label className="text-xs text-muted-foreground whitespace-nowrap">
+                          Prezzo cliente:
+                        </label>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs">€</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={part.unit_cost || ''}
+                            onChange={(e) => updateUnitCost(part.spare_part_id, parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                            className="w-20 h-6 text-xs"
+                          />
+                        </div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex items-center gap-1">
