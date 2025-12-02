@@ -33,8 +33,10 @@ import {
   Package,
   AlertCircle,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  Pencil
 } from "lucide-react";
+import EditGuideDialog from "@/components/repair/EditGuideDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -115,6 +117,7 @@ export default function RepairGuides() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [deviceTypeFilter, setDeviceTypeFilter] = useState<string>("all");
   const [selectedGuide, setSelectedGuide] = useState<RepairGuide | null>(null);
+  const [editingGuide, setEditingGuide] = useState<RepairGuide | null>(null);
 
   // Get unique values for filters
   const uniqueBrands = [...new Set(guides.map(g => g.device_brand))].sort();
@@ -208,6 +211,13 @@ export default function RepairGuides() {
         description: "Impossibile eliminare la guida",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleGuideSaved = (updatedGuide: RepairGuide) => {
+    setGuides(guides.map(g => g.id === updatedGuide.id ? updatedGuide : g));
+    if (selectedGuide?.id === updatedGuide.id) {
+      setSelectedGuide(updatedGuide);
     }
   };
 
@@ -430,6 +440,13 @@ export default function RepairGuides() {
                             <Eye className="h-3.5 w-3.5" />
                             Dettagli
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingGuide(guide)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
@@ -492,9 +509,23 @@ export default function RepairGuides() {
                       {issueCategoryLabels[selectedGuide.issue_category] || selectedGuide.issue_category}
                     </p>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedGuide(null)}>
-                    ✕
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => {
+                        setEditingGuide(selectedGuide);
+                        setSelectedGuide(null);
+                      }}
+                      className="gap-1"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Modifica
+                    </Button>
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedGuide(null)}>
+                      ✕
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -579,6 +610,16 @@ export default function RepairGuides() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Edit Guide Dialog */}
+      {editingGuide && (
+        <EditGuideDialog
+          guide={editingGuide}
+          open={!!editingGuide}
+          onOpenChange={(open) => !open && setEditingGuide(null)}
+          onSaved={handleGuideSaved}
+        />
+      )}
     </div>
   );
 }
