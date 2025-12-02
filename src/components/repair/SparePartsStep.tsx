@@ -534,37 +534,66 @@ export const SparePartsStep = ({
 
             {/* AI Labor Suggestions */}
             {aiLaborSuggestions.length > 0 && (
-              <div className="mt-4 space-y-3">
-                <p className="text-sm font-medium flex items-center gap-2">
-                  <Hammer className="h-4 w-4 text-primary" />
-                  Manodopera Suggerita
-                </p>
-                <div className="grid gap-2">
+              <div className="mt-6 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Hammer className="h-5 w-5 text-amber-500" />
+                  <h4 className="text-base font-semibold">Manodopera Suggerita</h4>
+                </div>
+                <div className="grid gap-3">
                   {aiLaborSuggestions.map((suggestion, index) => {
                     const isAdded = selectedLabors.some(l => l.id === suggestion.matchedId);
                     return (
                       <div
                         key={index}
-                        className="p-3 border border-amber-500/30 rounded-lg bg-gradient-to-r from-amber-500/5 to-orange-500/5"
+                        className="p-4 border border-amber-500/30 rounded-lg bg-gradient-to-r from-amber-500/5 to-orange-500/5"
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{suggestion.laborName}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{suggestion.reason}</p>
+                        <div className="flex gap-4">
+                          {/* Icon */}
+                          <div className="shrink-0">
+                            <div className="w-16 h-16 bg-amber-500/10 rounded-lg flex items-center justify-center">
+                              <Hammer className="h-8 w-8 text-amber-500" />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {suggestion.matched && (
-                              <span className="font-bold text-amber-600">€{suggestion.price.toFixed(2)}</span>
-                            )}
+                          
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-semibold text-sm">{suggestion.laborName}</p>
+                                {suggestion.category && (
+                                  <span className="text-xs bg-amber-500/10 text-amber-600 px-2 py-0.5 rounded mt-1 inline-block">
+                                    {suggestion.category}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-right shrink-0">
+                                {suggestion.matched ? (
+                                  <>
+                                    <p className="font-bold text-lg text-amber-600">
+                                      €{suggestion.price.toFixed(2)}
+                                    </p>
+                                    <span className="text-xs text-green-600">
+                                      Disponibile
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">
+                                    Non in listino
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{suggestion.reason}</p>
+                            
                             <Button
                               type="button"
                               size="sm"
-                              variant="outline"
                               onClick={() => addSuggestedLabor(suggestion)}
                               disabled={isAdded || !suggestion.matched}
-                              className="border-amber-500/50 hover:bg-amber-500/10"
+                              className="mt-3 w-full sm:w-auto bg-amber-500 hover:bg-amber-600 text-white"
                             >
-                              {isAdded ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                              <Plus className="h-4 w-4 mr-1" />
+                              {isAdded ? "Aggiunta" : "Aggiungi alla riparazione"}
                             </Button>
                           </div>
                         </div>
