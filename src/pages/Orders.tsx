@@ -20,7 +20,8 @@ import {
   TrendingUp,
   User,
   Phone,
-  Mail
+  Mail,
+  Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -35,6 +36,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface OrderItem {
   id: string;
@@ -160,6 +171,8 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [processingOrder, setProcessingOrder] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -366,6 +379,37 @@ export default function Orders() {
       toast.error("Errore nello scarico ordine");
     } finally {
       setProcessingOrder(null);
+    }
+  };
+
+  const handleDeleteOrder = async () => {
+    if (!orderToDelete) return;
+    
+    try {
+      // Prima elimina gli order_items
+      const { error: itemsError } = await supabase
+        .from("order_items")
+        .delete()
+        .eq("order_id", orderToDelete.id);
+      
+      if (itemsError) throw itemsError;
+      
+      // Poi elimina l'ordine
+      const { error: orderError } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", orderToDelete.id);
+      
+      if (orderError) throw orderError;
+      
+      toast.success("Ordine eliminato");
+      setOrders(orders.filter(o => o.id !== orderToDelete.id));
+    } catch (error: any) {
+      console.error("Error deleting order:", error);
+      toast.error("Errore durante l'eliminazione");
+    } finally {
+      setDeleteDialogOpen(false);
+      setOrderToDelete(null);
     }
   };
 
@@ -655,6 +699,18 @@ export default function Orders() {
                               <span className="hidden sm:inline">Scarica</span>
                             </Button>
                           )}
+                          
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setOrderToDelete(order);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -836,6 +892,35 @@ export default function Orders() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina Ordine</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare l'ordine <strong className="text-foreground">{orderToDelete?.order_number}</strong>?
+              {orderToDelete?.order_items && orderToDelete.order_items.length > 0 && (
+                <span className="block mt-2">
+                  Questo ordine contiene {orderToDelete.order_items.length} articol{orderToDelete.order_items.length === 1 ? 'o' : 'i'}.
+                </span>
+              )}
+              <span className="block mt-2 text-destructive font-medium">
+                Questa azione non può essere annullata.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOrderToDelete(null)}>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteOrder}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
