@@ -101,6 +101,8 @@ export const SparePartsStep = ({
   const [filteredParts, setFilteredParts] = useState<SparePart[]>([]);
   const [loading, setLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
+  const [aiLaborSuggestions, setAiLaborSuggestions] = useState<{ laborName: string; reason: string; matched: boolean; matchedId: string | null; price: number; category: string | null }[]>([]);
+  const [aiServiceSuggestions, setAiServiceSuggestions] = useState<{ serviceName: string; reason: string; matched: boolean; matchedId: string | null; price: number }[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
   const [hasFetchedSuggestions, setHasFetchedSuggestions] = useState(false);
   const [laborPrices, setLaborPrices] = useState<LaborPrice[]>([]);
@@ -206,6 +208,7 @@ export const SparePartsStep = ({
         body: {
           deviceBrand,
           deviceModel,
+          deviceType,
           reportedIssue,
           availableParts: spareParts.map(p => ({ 
             id: p.id,
@@ -223,12 +226,44 @@ export const SparePartsStep = ({
       if (data?.suggestions) {
         setAiSuggestions(data.suggestions);
       }
+      if (data?.laborSuggestions) {
+        setAiLaborSuggestions(data.laborSuggestions);
+      }
+      if (data?.serviceSuggestions) {
+        setAiServiceSuggestions(data.serviceSuggestions);
+      }
       setHasFetchedSuggestions(true);
     } catch (error: any) {
       console.error("Error fetching AI suggestions:", error);
     } finally {
       setLoadingSuggestions(false);
     }
+  };
+
+  const addSuggestedLabor = (suggestion: { laborName: string; matchedId: string | null; price: number }) => {
+    if (!onLaborsChange || !suggestion.matchedId) return;
+    
+    const isSelected = selectedLabors.some(l => l.id === suggestion.matchedId);
+    if (isSelected) {
+      toast.info("Lavorazione già aggiunta");
+      return;
+    }
+    
+    onLaborsChange([...selectedLabors, { id: suggestion.matchedId, name: suggestion.laborName, price: suggestion.price }]);
+    toast.success(`${suggestion.laborName} aggiunta`);
+  };
+
+  const addSuggestedService = (suggestion: { serviceName: string; matchedId: string | null; price: number }) => {
+    if (!onServicesChange || !suggestion.matchedId) return;
+    
+    const isSelected = selectedServices.some(s => s.id === suggestion.matchedId);
+    if (isSelected) {
+      toast.info("Servizio già aggiunto");
+      return;
+    }
+    
+    onServicesChange([...selectedServices, { id: suggestion.matchedId, name: suggestion.serviceName, price: suggestion.price }]);
+    toast.success(`${suggestion.serviceName} aggiunto`);
   };
 
   const addSuggestedPart = (suggestion: AISuggestion) => {
@@ -491,11 +526,97 @@ export const SparePartsStep = ({
                   );
                 })}
               </div>
-            ) : hasFetchedSuggestions ? (
+            ) : hasFetchedSuggestions && aiLaborSuggestions.length === 0 && aiServiceSuggestions.length === 0 ? (
               <div className="p-4 text-center text-muted-foreground bg-muted/30 rounded-lg">
                 Nessun suggerimento specifico per questo difetto
               </div>
             ) : null}
+
+            {/* AI Labor Suggestions */}
+            {aiLaborSuggestions.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Hammer className="h-4 w-4 text-primary" />
+                  Manodopera Suggerita
+                </p>
+                <div className="grid gap-2">
+                  {aiLaborSuggestions.map((suggestion, index) => {
+                    const isAdded = selectedLabors.some(l => l.id === suggestion.matchedId);
+                    return (
+                      <div
+                        key={index}
+                        className="p-3 border border-amber-500/30 rounded-lg bg-gradient-to-r from-amber-500/5 to-orange-500/5"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{suggestion.laborName}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{suggestion.reason}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {suggestion.matched && (
+                              <span className="font-bold text-amber-600">€{suggestion.price.toFixed(2)}</span>
+                            )}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => addSuggestedLabor(suggestion)}
+                              disabled={isAdded || !suggestion.matched}
+                              className="border-amber-500/50 hover:bg-amber-500/10"
+                            >
+                              {isAdded ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* AI Service Suggestions */}
+            {aiServiceSuggestions.length > 0 && (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Wrench className="h-4 w-4 text-primary" />
+                  Servizi Suggeriti
+                </p>
+                <div className="grid gap-2">
+                  {aiServiceSuggestions.map((suggestion, index) => {
+                    const isAdded = selectedServices.some(s => s.id === suggestion.matchedId);
+                    return (
+                      <div
+                        key={index}
+                        className="p-3 border border-green-500/30 rounded-lg bg-gradient-to-r from-green-500/5 to-emerald-500/5"
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm">{suggestion.serviceName}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{suggestion.reason}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {suggestion.matched && (
+                              <span className="font-bold text-green-600">€{suggestion.price.toFixed(2)}</span>
+                            )}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => addSuggestedService(suggestion)}
+                              disabled={isAdded || !suggestion.matched}
+                              className="border-green-500/50 hover:bg-green-500/10"
+                            >
+                              {isAdded ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
