@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.track-repairs]
 verify_jwt = false
+
+[functions.suggest-spare-parts]
+verify_jwt = false
+
+[functions.create-customer-account]
+verify_jwt = false

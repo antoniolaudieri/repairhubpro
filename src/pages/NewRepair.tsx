@@ -69,12 +69,12 @@ const NewRepair = () => {
       description: "Scatta una foto per il riconoscimento automatico",
     },
     {
-      title: "Ricambi",
-      description: "Seleziona i ricambi necessari (opzionale)",
-    },
-    {
       title: "Dettagli Dispositivo",
       description: "Verifica e completa le informazioni del dispositivo",
+    },
+    {
+      title: "Ricambi e Servizi",
+      description: "Suggerimenti AI in base al difetto segnalato",
     },
     {
       title: "Firma Ritiro",
@@ -347,9 +347,9 @@ const NewRepair = () => {
       case 1:
         return true; // Foto opzionale, può essere saltata
       case 2:
-        return true; // Ricambi opzionali
-      case 3:
         return Boolean(deviceData.device_type && deviceData.brand && deviceData.model && deviceData.reported_issue);
+      case 3:
+        return true; // Ricambi opzionali
       case 4:
         return intakeSignature !== null;
       case 5:
@@ -730,21 +730,22 @@ const NewRepair = () => {
       
       case 2:
         return (
-          <SparePartsStep
-            deviceBrand={deviceData.brand}
-            deviceModel={deviceData.model}
-            selectedParts={selectedSpareParts}
-            onPartsChange={setSelectedSpareParts}
-            selectedServices={selectedServices}
-            onServicesChange={setSelectedServices}
+          <DeviceFormStep
+            deviceData={deviceData}
+            onChange={setDeviceData}
           />
         );
       
       case 3:
         return (
-          <DeviceFormStep
-            deviceData={deviceData}
-            onChange={setDeviceData}
+          <SparePartsStep
+            deviceBrand={deviceData.brand}
+            deviceModel={deviceData.model}
+            reportedIssue={deviceData.reported_issue}
+            selectedParts={selectedSpareParts}
+            onPartsChange={setSelectedSpareParts}
+            selectedServices={selectedServices}
+            onServicesChange={setSelectedServices}
           />
         );
       
