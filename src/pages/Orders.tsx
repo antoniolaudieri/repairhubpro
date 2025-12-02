@@ -782,13 +782,32 @@ export default function Orders() {
                                 )}
                               </div>
                               
-                              <div className="text-right flex-shrink-0">
-                                <p className="font-bold text-foreground">
-                                  {item.quantity}x €{item.unit_cost.toFixed(2)}
-                                </p>
-                                <p className="text-xs text-primary font-medium">
-                                  €{(item.quantity * item.unit_cost).toFixed(2)}
-                                </p>
+                              <div className="flex items-center gap-2">
+                                <div className="text-right flex-shrink-0">
+                                  <p className="font-bold text-foreground">
+                                    {item.quantity}x €{item.unit_cost.toFixed(2)}
+                                  </p>
+                                  <p className="text-xs text-primary font-medium">
+                                    €{(item.quantity * item.unit_cost).toFixed(2)}
+                                  </p>
+                                </div>
+                                
+                                {order.status !== "received" && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    asChild
+                                    className="border-primary/50 hover:bg-primary hover:text-primary-foreground"
+                                  >
+                                    <a 
+                                      href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(item.product_name)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
+                                    </a>
+                                  </Button>
+                                )}
                               </div>
                             </motion.div>
                           ))}
