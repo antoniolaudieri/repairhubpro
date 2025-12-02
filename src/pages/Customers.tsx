@@ -2,20 +2,24 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Search, Mail, Phone, Eye } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Plus, 
+  Search, 
+  Mail, 
+  Phone, 
+  Eye,
+  Users,
+  Wrench,
+  ChevronRight,
+  Calendar,
+  User
+} from "lucide-react";
 import { toast } from "sonner";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { useNavigate } from "react-router-dom";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface Customer {
   id: string;
@@ -88,157 +92,177 @@ export default function Customers() {
     setFilteredCustomers(filtered);
   }, [searchQuery, customers]);
 
-  return (
-    <div className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Clienti</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Gestisci la tua base clienti</p>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center"
+        >
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto mb-4" />
+            <Users className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-6 w-6 text-primary" />
           </div>
-          <Button onClick={() => setDialogOpen(true)} className="w-full sm:w-auto shadow-md">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuovo Cliente
-          </Button>
-        </div>
+          <p className="text-muted-foreground font-medium">Caricamento clienti...</p>
+        </motion.div>
+      </div>
+    );
+  }
 
-        <Card className="shadow-card hover:shadow-card-hover transition-shadow border-border/50">
-          <CardHeader className="space-y-4">
-            <CardTitle className="text-xl lg:text-2xl">Lista Clienti</CardTitle>
-            <div className="relative">
-              <Search className="absolute left-3 top-3.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cerca per nome, email o telefono..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 h-11 bg-background/50"
-              />
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+      {/* Hero Header */}
+      <div className="bg-gradient-to-r from-card via-card to-violet-500/5 border-b border-border/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+          >
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                Clienti
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                {filteredCustomers.length} clienti registrati
+              </p>
             </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary" />
-              </div>
-            ) : filteredCustomers.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                {searchQuery ? "Nessun cliente trovato" : "Nessun cliente registrato"}
-              </div>
-            ) : (
-              <>
-                {/* Desktop Table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="font-semibold">Nome</TableHead>
-                        <TableHead className="font-semibold">Contatti</TableHead>
-                        <TableHead className="font-semibold">Riparazioni</TableHead>
-                        <TableHead className="text-right font-semibold">Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredCustomers.map((customer) => (
-                        <TableRow key={customer.id} className="group hover:bg-muted/50">
-                          <TableCell>
-                            <div>
-                              <p className="font-medium text-foreground">{customer.name}</p>
-                              <p className="text-xs text-muted-foreground mt-0.5">
-                                Cliente dal {new Date(customer.created_at).toLocaleDateString("it-IT")}
-                              </p>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1">
-                              {customer.email && (
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                                  <span className="text-foreground">{customer.email}</span>
-                                </div>
-                              )}
-                              <div className="flex items-center gap-2 text-sm">
-                                <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-foreground">{customer.phone}</span>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="font-medium">
-                              {repairCounts[customer.id] || 0} riparazioni
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/customers/${customer.id}`)}
-                              className="hover:bg-primary/10 hover:text-primary"
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              Dettagli
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+            <Button 
+              onClick={() => setDialogOpen(true)} 
+              size="lg"
+              className="gap-2 shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-primary to-primary/90"
+            >
+              <Plus className="h-5 w-5" />
+              Nuovo Cliente
+            </Button>
+          </motion.div>
+        </div>
+      </div>
 
-                {/* Mobile Cards */}
-                <div className="md:hidden space-y-3">
-                  {filteredCustomers.map((customer) => (
-                    <div
-                      key={customer.id}
-                      className="p-4 rounded-xl border bg-gradient-card hover:shadow-md transition-all cursor-pointer"
-                      onClick={() => navigate(`/customers/${customer.id}`)}
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-foreground mb-1">{customer.name}</h3>
-                          <p className="text-xs text-muted-foreground">
-                            Cliente dal {new Date(customer.created_at).toLocaleDateString("it-IT")}
-                          </p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Search */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Cerca per nome, email o telefono..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-12 h-12 text-base bg-card border-border/50 shadow-sm"
+            />
+          </div>
+        </motion.div>
+
+        {/* Customer List */}
+        <AnimatePresence mode="popLayout">
+          {filteredCustomers.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <Card className="p-12 text-center">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <Users className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">Nessun cliente trovato</h3>
+                <p className="text-muted-foreground max-w-sm mx-auto">
+                  {searchQuery
+                    ? "Prova a modificare i criteri di ricerca"
+                    : "Inizia aggiungendo il tuo primo cliente"}
+                </p>
+              </Card>
+            </motion.div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredCustomers.map((customer, index) => (
+                <motion.div
+                  key={customer.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ delay: index * 0.05 }}
+                  layout
+                >
+                  <Card
+                    className="p-0 overflow-hidden hover:shadow-lg transition-all cursor-pointer border-border/50 group"
+                    onClick={() => navigate(`/customers/${customer.id}`)}
+                  >
+                    <div className="p-5">
+                      {/* Header */}
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/10 flex items-center justify-center flex-shrink-0">
+                          <span className="text-xl font-bold text-violet-600">
+                            {customer.name.charAt(0).toUpperCase()}
+                          </span>
                         </div>
-                        <Badge variant="secondary" className="font-medium text-xs">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground truncate text-lg">
+                            {customer.name}
+                          </h3>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Cliente dal {new Date(customer.created_at).toLocaleDateString("it-IT", { month: "short", year: "numeric" })}
+                          </div>
+                        </div>
+                        <Badge 
+                          variant="secondary" 
+                          className="flex-shrink-0 gap-1 bg-primary/10 text-primary"
+                        >
+                          <Wrench className="h-3 w-3" />
                           {repairCounts[customer.id] || 0}
                         </Badge>
                       </div>
-                      
+
+                      {/* Contact Info */}
                       <div className="space-y-2">
                         {customer.email && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                            <span className="text-foreground truncate">{customer.email}</span>
-                          </div>
+                          <a 
+                            href={`mailto:${customer.email}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group/link"
+                          >
+                            <Mail className="h-4 w-4 text-muted-foreground group-hover/link:text-primary transition-colors" />
+                            <span className="text-sm truncate">{customer.email}</span>
+                          </a>
                         )}
-                        <div className="flex items-center gap-2 text-sm">
-                          <Phone className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
-                          <span className="text-foreground">{customer.phone}</span>
-                        </div>
+                        <a 
+                          href={`tel:${customer.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-muted/50 transition-colors group/link"
+                        >
+                          <Phone className="h-4 w-4 text-muted-foreground group-hover/link:text-primary transition-colors" />
+                          <span className="text-sm font-medium">{customer.phone}</span>
+                        </a>
                       </div>
 
-                      <div className="mt-3 pt-3 border-t flex justify-end">
+                      {/* Footer */}
+                      <div className="mt-4 pt-4 border-t border-border/50 flex justify-end">
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="text-primary hover:bg-primary/10"
+                          className="gap-2 text-primary hover:bg-primary/10"
                           onClick={(e) => {
                             e.stopPropagation();
                             navigate(`/customers/${customer.id}`);
                           }}
                         >
-                          <Eye className="h-4 w-4 mr-2" />
                           Dettagli
+                          <ChevronRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                         </Button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </AnimatePresence>
 
         <CustomerDialog
           open={dialogOpen}
