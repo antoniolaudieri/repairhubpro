@@ -9,7 +9,8 @@ import {
   MessageSquare,
   FileText,
   ScrollText,
-  Settings2
+  Settings2,
+  BookOpen
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -33,6 +34,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Riparazioni", url: "/repairs", icon: Wrench },
+  { title: "Guide IA", url: "/repair-guides", icon: BookOpen },
   { title: "Prenotazioni", url: "/appointments", icon: Calendar },
   { title: "Clienti", url: "/customers", icon: Users },
   { title: "Preventivi", url: "/quotes", icon: FileText },

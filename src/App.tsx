@@ -15,6 +15,7 @@ import Auth from "./pages/Auth";
 import NewRepair from "./pages/NewRepair";
 import Repairs from "./pages/Repairs";
 import RepairDetail from "./pages/RepairDetail";
+import RepairGuides from "./pages/RepairGuides";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import Inventory from "./pages/Inventory";
@@ -97,6 +98,16 @@ const App = () => (
                 <ProtectedRoute requireTechnician>
                   <TechnicianLayout>
                     <RepairDetail />
+                  </TechnicianLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/repair-guides"
+              element={
+                <ProtectedRoute requireTechnician>
+                  <TechnicianLayout>
+                    <RepairGuides />
                   </TechnicianLayout>
                 </ProtectedRoute>
               }
