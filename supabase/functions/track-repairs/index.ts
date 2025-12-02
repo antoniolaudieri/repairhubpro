@@ -33,7 +33,7 @@ serve(async (req) => {
     // Find customer by email
     const { data: customer, error: customerError } = await supabase
       .from("customers")
-      .select("id")
+      .select("id, name, phone")
       .eq("email", email)
       .maybeSingle();
 
@@ -80,20 +80,28 @@ serve(async (req) => {
     const deviceIds = devices.map((d) => d.id);
     console.log(`Found ${deviceIds.length} devices`);
 
-    // Get repairs for these devices
+    // Get repairs for these devices with full details
     const { data: repairs, error: repairsError } = await supabase
       .from("repairs")
       .select(`
         id,
         status,
+        priority,
         final_cost,
         estimated_cost,
+        diagnosis,
+        repair_notes,
         created_at,
+        started_at,
+        completed_at,
+        delivered_at,
         device:devices (
           brand,
           model,
           device_type,
-          reported_issue
+          reported_issue,
+          photo_url,
+          initial_condition
         )
       `)
       .in("device_id", deviceIds)
@@ -107,10 +115,38 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Found ${repairs?.length || 0} repairs`);
+    // Get orders for these repairs (without prices)
+    const repairIds = repairs?.map(r => r.id) || [];
+    let ordersMap: Record<string, any> = {};
+    
+    if (repairIds.length > 0) {
+      const { data: orders } = await supabase
+        .from("orders")
+        .select("id, status, repair_id, tracking_number")
+        .in("repair_id", repairIds);
+
+      if (orders) {
+        orders.forEach(order => {
+          if (order.repair_id) {
+            ordersMap[order.repair_id] = {
+              status: order.status,
+              tracking_number: order.tracking_number
+            };
+          }
+        });
+      }
+    }
+
+    // Attach order info to repairs
+    const repairsWithOrders = repairs?.map(repair => ({
+      ...repair,
+      order: ordersMap[repair.id] || null
+    })) || [];
+
+    console.log(`Found ${repairsWithOrders.length} repairs`);
 
     return new Response(
-      JSON.stringify({ repairs: repairs || [] }),
+      JSON.stringify({ repairs: repairsWithOrders, customer: { name: customer.name } }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

@@ -123,6 +123,7 @@ export default function CustomerHome() {
 
   const [trackingEmail, setTrackingEmail] = useState("");
   const [repairs, setRepairs] = useState<any[]>([]);
+  const [selectedRepair, setSelectedRepair] = useState<any | null>(null);
 
   const [feedbackData, setFeedbackData] = useState({
     customer_name: "",
@@ -272,7 +273,9 @@ export default function CustomerHome() {
     const labels: Record<string, string> = {
       pending: "In attesa",
       in_progress: "In corso",
+      waiting_for_parts: "In attesa ricambi",
       completed: "Completata",
+      delivered: "Consegnata",
       cancelled: "Annullata",
     };
     return labels[status] || status;
@@ -477,33 +480,146 @@ export default function CustomerHome() {
                       <div className="space-y-4 mt-6">
                         <h3 className="font-semibold text-lg">Riparazioni Trovate</h3>
                         {repairs.map((repair) => (
-                          <Card key={repair.id} className="p-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-start gap-3">
-                                {repair.status === "completed" ? (
-                                  <CheckCircle2 className="h-6 w-6 text-success mt-1" />
-                                ) : (
-                                  <Clock className="h-6 w-6 text-warning mt-1" />
-                                )}
-                                <div>
-                                  <h4 className="font-semibold">
-                                    {repair.device.brand} {repair.device.model}
-                                  </h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    {repair.device.reported_issue}
-                                  </p>
-                                  <p className="text-sm font-medium text-primary mt-1">
-                                    Stato: {getStatusBadge(repair.status)}
-                                  </p>
+                          <motion.div
+                            key={repair.id}
+                            initial={false}
+                            animate={{ height: "auto" }}
+                          >
+                            <Card 
+                              className={`p-4 cursor-pointer transition-all hover:shadow-md ${selectedRepair?.id === repair.id ? 'ring-2 ring-primary' : ''}`}
+                              onClick={() => setSelectedRepair(selectedRepair?.id === repair.id ? null : repair)}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start gap-3">
+                                  {repair.status === "completed" ? (
+                                    <CheckCircle2 className="h-6 w-6 text-success mt-1" />
+                                  ) : repair.status === "in_progress" ? (
+                                    <Wrench className="h-6 w-6 text-primary mt-1 animate-pulse" />
+                                  ) : (
+                                    <Clock className="h-6 w-6 text-warning mt-1" />
+                                  )}
+                                  <div className="flex-1">
+                                    <h4 className="font-semibold">
+                                      {repair.device?.brand} {repair.device?.model}
+                                    </h4>
+                                    <p className="text-sm text-muted-foreground">
+                                      {repair.device?.reported_issue}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                                        repair.status === 'completed' ? 'bg-success/20 text-success' :
+                                        repair.status === 'in_progress' ? 'bg-primary/20 text-primary' :
+                                        repair.status === 'waiting_for_parts' ? 'bg-warning/20 text-warning' :
+                                        'bg-muted text-muted-foreground'
+                                      }`}>
+                                        {getStatusBadge(repair.status)}
+                                      </span>
+                                      {repair.order && (
+                                        <span className="text-xs px-2 py-0.5 rounded-full bg-info/20 text-info font-medium">
+                                          Ordine: {repair.order.status === 'received' ? 'Ricevuto' : repair.order.status === 'ordered' ? 'In arrivo' : 'In elaborazione'}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {repair.final_cost && (
+                                    <span className="text-xl font-bold text-primary">
+                                      €{repair.final_cost.toFixed(2)}
+                                    </span>
+                                  )}
+                                  <ArrowRight className={`h-5 w-5 text-muted-foreground transition-transform ${selectedRepair?.id === repair.id ? 'rotate-90' : ''}`} />
                                 </div>
                               </div>
-                              {repair.final_cost && (
-                                <span className="text-xl font-bold text-primary">
-                                  €{repair.final_cost.toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                          </Card>
+
+                              {/* Expanded Details */}
+                              <AnimatePresence>
+                                {selectedRepair?.id === repair.id && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="mt-4 pt-4 border-t border-border space-y-4">
+                                      {/* Device Photo */}
+                                      {repair.device?.photo_url && (
+                                        <div className="flex justify-center">
+                                          <img 
+                                            src={repair.device.photo_url} 
+                                            alt="Dispositivo" 
+                                            className="w-32 h-32 object-cover rounded-lg border"
+                                          />
+                                        </div>
+                                      )}
+
+                                      {/* Timeline */}
+                                      <div className="grid grid-cols-2 gap-3 text-sm">
+                                        <div className="p-3 rounded-lg bg-muted/50">
+                                          <p className="text-muted-foreground text-xs">Creata il</p>
+                                          <p className="font-medium">{new Date(repair.created_at).toLocaleDateString('it-IT')}</p>
+                                        </div>
+                                        {repair.started_at && (
+                                          <div className="p-3 rounded-lg bg-muted/50">
+                                            <p className="text-muted-foreground text-xs">Iniziata il</p>
+                                            <p className="font-medium">{new Date(repair.started_at).toLocaleDateString('it-IT')}</p>
+                                          </div>
+                                        )}
+                                        {repair.completed_at && (
+                                          <div className="p-3 rounded-lg bg-success/10">
+                                            <p className="text-muted-foreground text-xs">Completata il</p>
+                                            <p className="font-medium text-success">{new Date(repair.completed_at).toLocaleDateString('it-IT')}</p>
+                                          </div>
+                                        )}
+                                        {repair.delivered_at && (
+                                          <div className="p-3 rounded-lg bg-accent/10">
+                                            <p className="text-muted-foreground text-xs">Consegnata il</p>
+                                            <p className="font-medium text-accent">{new Date(repair.delivered_at).toLocaleDateString('it-IT')}</p>
+                                          </div>
+                                        )}
+                                      </div>
+
+                                      {/* Diagnosis */}
+                                      {repair.diagnosis && (
+                                        <div className="p-3 rounded-lg bg-muted/50">
+                                          <p className="text-muted-foreground text-xs mb-1">Diagnosi</p>
+                                          <p className="text-sm">{repair.diagnosis}</p>
+                                        </div>
+                                      )}
+
+                                      {/* Repair Notes */}
+                                      {repair.repair_notes && (
+                                        <div className="p-3 rounded-lg bg-muted/50">
+                                          <p className="text-muted-foreground text-xs mb-1">Note Riparazione</p>
+                                          <p className="text-sm">{repair.repair_notes}</p>
+                                        </div>
+                                      )}
+
+                                      {/* Order Tracking */}
+                                      {repair.order?.tracking_number && (
+                                        <div className="p-3 rounded-lg bg-info/10">
+                                          <p className="text-muted-foreground text-xs mb-1">Tracking Ordine Ricambi</p>
+                                          <p className="font-mono text-sm">{repair.order.tracking_number}</p>
+                                        </div>
+                                      )}
+
+                                      {/* Costs */}
+                                      <div className="flex justify-between items-center p-3 rounded-lg bg-primary/5">
+                                        <span className="text-sm font-medium">Costo Totale</span>
+                                        <span className="text-xl font-bold text-primary">
+                                          €{(repair.final_cost || repair.estimated_cost || 0).toFixed(2)}
+                                          {!repair.final_cost && repair.estimated_cost && (
+                                            <span className="text-xs text-muted-foreground ml-1">(stimato)</span>
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </Card>
+                          </motion.div>
                         ))}
                       </div>
                     )}
