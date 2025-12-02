@@ -123,7 +123,11 @@ export default function Inventory() {
       .eq("id", partToDelete.id);
     
     if (error) {
-      toast.error("Errore durante l'eliminazione");
+      if (error.code === '23503') {
+        toast.error("Impossibile eliminare: questo ricambio è utilizzato in una o più riparazioni");
+      } else {
+        toast.error("Errore durante l'eliminazione");
+      }
       console.error(error);
     } else {
       toast.success("Ricambio eliminato");
