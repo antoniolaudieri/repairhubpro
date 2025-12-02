@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Sparkles } from "lucide-react";
+import { Sparkles, TrendingUp, Trophy, Flame, Zap } from "lucide-react";
 import { PhotoUpload } from "@/components/repair/PhotoUpload";
 import { DeviceInfoCard } from "@/components/repair/DeviceInfoCard";
 import { CustomerSearch } from "@/components/repair/CustomerSearch";
@@ -773,8 +773,59 @@ const NewRepair = () => {
         );
       
       case 5:
+        // Calcolo guadagno netto (solo per il tecnico)
+        const partsRevenue = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0);
+        const partsCost = selectedSpareParts.reduce((sum, part) => sum + (part.purchase_cost || part.unit_cost * 0.6) * part.quantity, 0);
+        const servicesRevenue = selectedServices.reduce((sum, s) => sum + s.price, 0);
+        const diagnosticFee = 15; // €15 gestione diagnosi
+        
+        // Ricavi = vendita ricambi + servizi + manodopera + gestione diagnosi
+        const totalRevenue = partsRevenue + servicesRevenue + laborCost + diagnosticFee;
+        // Costi = acquisto ricambi
+        const totalCost = partsCost;
+        // Guadagno netto
+        const netProfit = totalRevenue - totalCost;
+        
+        // Gamification: livelli di guadagno
+        const getProfitLevel = (profit: number) => {
+          if (profit >= 100) return { emoji: "🔥", label: "FUOCO!", color: "text-orange-500", bg: "from-orange-500/20 to-red-500/20", icon: Flame };
+          if (profit >= 60) return { emoji: "🏆", label: "OTTIMO", color: "text-yellow-500", bg: "from-yellow-500/20 to-amber-500/20", icon: Trophy };
+          if (profit >= 30) return { emoji: "⚡", label: "BUONO", color: "text-blue-500", bg: "from-blue-500/20 to-cyan-500/20", icon: Zap };
+          if (profit > 0) return { emoji: "📈", label: "OK", color: "text-green-500", bg: "from-green-500/20 to-emerald-500/20", icon: TrendingUp };
+          return { emoji: "😐", label: "MINIMO", color: "text-muted-foreground", bg: "from-muted/30 to-muted/10", icon: TrendingUp };
+        };
+        
+        const profitLevel = getProfitLevel(netProfit);
+        const ProfitIcon = profitLevel.icon;
+        
         return (
           <div className="space-y-6">
+            {/* Card Guadagno Netto - Solo per tecnici */}
+            <div className={`p-4 rounded-xl border-2 border-dashed border-primary/30 bg-gradient-to-r ${profitLevel.bg}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <ProfitIcon className={`h-5 w-5 ${profitLevel.color}`} />
+                  <span className="text-sm font-medium text-muted-foreground">Guadagno Netto (interno)</span>
+                </div>
+                <span className={`text-xs font-bold px-2 py-1 rounded-full bg-background/50 ${profitLevel.color}`}>
+                  {profitLevel.emoji} {profitLevel.label}
+                </span>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className={`text-3xl font-bold ${profitLevel.color}`}>
+                  €{netProfit.toFixed(2)}
+                </span>
+                <div className="text-xs text-muted-foreground text-right">
+                  <div>Ricavi: €{totalRevenue.toFixed(2)}</div>
+                  <div>Costi: €{totalCost.toFixed(2)}</div>
+                </div>
+              </div>
+              <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground flex justify-between">
+                <span>Include €{diagnosticFee} gestione diagnosi</span>
+                <span className="opacity-60">Non visibile al cliente</span>
+              </div>
+            </div>
+
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Dati Cliente</h3>
               <CustomerFormStep
@@ -812,13 +863,7 @@ const NewRepair = () => {
                     <div className="flex justify-between font-semibold">
                       <span>Totale Ricambi:</span>
                       <span>
-                        €
-                        {selectedSpareParts
-                          .reduce(
-                            (sum, part) => sum + part.unit_cost * part.quantity,
-                            0
-                          )
-                          .toFixed(2)}
+                        €{partsRevenue.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -842,7 +887,7 @@ const NewRepair = () => {
                     <div className="flex justify-between font-semibold">
                       <span>Totale Servizi:</span>
                       <span>
-                        €{selectedServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}
+                        €{servicesRevenue.toFixed(2)}
                       </span>
                     </div>
                   </div>
@@ -875,11 +920,7 @@ const NewRepair = () => {
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-lg">Totale Preventivo:</span>
                   <span className="font-bold text-lg text-primary">
-                    €{(
-                      selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) +
-                      selectedServices.reduce((sum, s) => sum + s.price, 0) +
-                      laborCost
-                    ).toFixed(2)}
+                    €{(partsRevenue + servicesRevenue + laborCost).toFixed(2)}
                   </span>
                 </div>
               </div>

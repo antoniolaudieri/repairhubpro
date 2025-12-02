@@ -23,7 +23,8 @@ interface SelectedPart {
   spare_part_id: string;
   name: string;
   quantity: number;
-  unit_cost: number;
+  unit_cost: number; // Prezzo vendita al cliente
+  purchase_cost?: number; // Costo acquisto fornitore (opzionale)
 }
 
 interface SelectedService {
@@ -278,11 +279,17 @@ export const SparePartsStep = ({
       return;
     }
 
+    // Trova il ricambio nel magazzino per ottenere il costo d'acquisto
+    const matchedPart = spareParts.find(p => p.id === suggestion.matchedPartId);
+    const sellingPrice = suggestion.actualPrice || suggestion.estimatedPrice;
+    const purchaseCost = matchedPart?.cost || sellingPrice * 0.6; // Stima 60% se non disponibile
+
     const newPart: SelectedPart = {
       spare_part_id: suggestion.matchedPartId || `suggested-${Date.now()}`,
       name: suggestion.partName,
       quantity: 1,
-      unit_cost: suggestion.actualPrice || suggestion.estimatedPrice,
+      unit_cost: sellingPrice,
+      purchase_cost: purchaseCost,
     };
 
     onPartsChange([...selectedParts, newPart]);
@@ -350,7 +357,8 @@ export const SparePartsStep = ({
       spare_part_id: part.id,
       name: part.name,
       quantity: 1,
-      unit_cost: part.cost || part.selling_price || 0,
+      unit_cost: part.selling_price || part.cost || 0, // Prezzo vendita
+      purchase_cost: part.cost || 0, // Costo acquisto
     };
 
     onPartsChange([...selectedParts, newPart]);
