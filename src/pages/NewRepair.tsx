@@ -443,7 +443,7 @@ const NewRepair = () => {
 
       if (deviceError) throw deviceError;
 
-      // Create repair entry with intake signature
+      // Create repair entry with intake signature and diagnostic fee
       const { data: repairData, error: repairError } = await supabase
         .from("repairs")
         .insert({
@@ -452,6 +452,8 @@ const NewRepair = () => {
           priority: "normal",
           intake_signature: intakeSignature,
           intake_signature_date: new Date().toISOString(),
+          diagnostic_fee: 15.00,
+          diagnostic_fee_paid: false,
         })
         .select()
         .single();

@@ -443,6 +443,8 @@ export type Database = {
           delivered_at: string | null
           device_id: string
           diagnosis: string | null
+          diagnostic_fee: number | null
+          diagnostic_fee_paid: boolean | null
           estimated_cost: number | null
           final_cost: number | null
           final_cost_accepted_at: string | null
@@ -465,6 +467,8 @@ export type Database = {
           delivered_at?: string | null
           device_id: string
           diagnosis?: string | null
+          diagnostic_fee?: number | null
+          diagnostic_fee_paid?: boolean | null
           estimated_cost?: number | null
           final_cost?: number | null
           final_cost_accepted_at?: string | null
@@ -487,6 +491,8 @@ export type Database = {
           delivered_at?: string | null
           device_id?: string
           diagnosis?: string | null
+          diagnostic_fee?: number | null
+          diagnostic_fee_paid?: boolean | null
           estimated_cost?: number | null
           final_cost?: number | null
           final_cost_accepted_at?: string | null
