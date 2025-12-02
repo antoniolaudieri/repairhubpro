@@ -694,7 +694,7 @@ export const SparePartsStep = ({
             {selectedParts.map((part) => (
               <div
                 key={part.spare_part_id}
-                className="flex items-center gap-3 p-2 bg-background rounded border border-border"
+                className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 bg-background rounded border border-border"
               >
                 <div className="flex-1">
                   <p className="font-medium text-sm">{part.name}</p>
@@ -702,27 +702,45 @@ export const SparePartsStep = ({
                     €{part.unit_cost.toFixed(2)} cad.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        updateQuantity(part.spare_part_id, part.quantity - 1)
+                      }
+                    >
+                      -
+                    </Button>
+                    <span className="w-8 text-center">{part.quantity}</span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        updateQuantity(part.spare_part_id, part.quantity + 1)
+                      }
+                    >
+                      +
+                    </Button>
+                  </div>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() =>
-                      updateQuantity(part.spare_part_id, part.quantity - 1)
-                    }
+                    asChild
+                    className="border-primary/50 hover:bg-primary/10"
                   >
-                    -
-                  </Button>
-                  <span className="w-8 text-center">{part.quantity}</span>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      updateQuantity(part.spare_part_id, part.quantity + 1)
-                    }
-                  >
-                    +
+                    <a 
+                      href={`https://www.utopya.it/ricerca?q=${encodeURIComponent(part.name)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Acquista</span>
+                    </a>
                   </Button>
                   <Button
                     type="button"
