@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,6 +97,8 @@ export default function Inventory() {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [partToDelete, setPartToDelete] = useState<SparePart | null>(null);
+  const [linkedRepairs, setLinkedRepairs] = useState<any[]>([]);
+  const [checkingLinks, setCheckingLinks] = useState(false);
 
   const fetchParts = async () => {
     setLoading(true);
@@ -113,6 +116,33 @@ export default function Inventory() {
   useEffect(() => {
     fetchParts();
   }, []);
+
+  const checkLinkedRepairs = async (part: SparePart) => {
+    setCheckingLinks(true);
+    setPartToDelete(part);
+    
+    const { data } = await supabase
+      .from("repair_parts")
+      .select(`
+        id,
+        quantity,
+        repair:repairs(
+          id,
+          status,
+          created_at,
+          device:devices(
+            brand,
+            model,
+            customer:customers(name)
+          )
+        )
+      `)
+      .eq("spare_part_id", part.id);
+    
+    setLinkedRepairs(data || []);
+    setCheckingLinks(false);
+    setDeleteDialogOpen(true);
+  };
 
   const handleDeletePart = async () => {
     if (!partToDelete) return;
@@ -136,6 +166,7 @@ export default function Inventory() {
     
     setDeleteDialogOpen(false);
     setPartToDelete(null);
+    setLinkedRepairs([]);
   };
 
   const filteredParts = parts.filter(part => {
@@ -468,10 +499,7 @@ export default function Inventory() {
                                 />
                                 <DropdownMenuItem
                                   className="text-destructive focus:text-destructive"
-                                  onSelect={() => {
-                                    setPartToDelete(part);
-                                    setDeleteDialogOpen(true);
-                                  }}
+                                  onSelect={() => checkLinkedRepairs(part)}
                                 >
                                   <Trash2 className="h-4 w-4 mr-2" />
                                   Elimina
@@ -575,10 +603,7 @@ export default function Inventory() {
                             variant="ghost"
                             size="sm"
                             className="text-destructive hover:text-destructive"
-                            onClick={() => {
-                              setPartToDelete(part);
-                              setDeleteDialogOpen(true);
-                            }}
+                            onClick={() => checkLinkedRepairs(part)}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -601,23 +626,70 @@ export default function Inventory() {
       </div>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) {
+          setLinkedRepairs([]);
+          setPartToDelete(null);
+        }
+      }}>
+        <AlertDialogContent className="max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sei sicuro di voler eliminare <strong>{partToDelete?.name}</strong>? 
-              Questa azione non può essere annullata.
+            <AlertDialogTitle>
+              {linkedRepairs.length > 0 ? "Attenzione" : "Conferma Eliminazione"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                {linkedRepairs.length > 0 ? (
+                  <>
+                    <p>
+                      Il ricambio <strong className="text-foreground">{partToDelete?.name}</strong> è utilizzato in {linkedRepairs.length} riparazion{linkedRepairs.length === 1 ? 'e' : 'i'}:
+                    </p>
+                    <div className="max-h-40 overflow-y-auto space-y-2">
+                      {linkedRepairs.map((rp) => (
+                        <Link
+                          key={rp.id}
+                          to={`/repairs/${rp.repair?.id}`}
+                          className="flex items-center justify-between p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors text-sm"
+                          onClick={() => setDeleteDialogOpen(false)}
+                        >
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {rp.repair?.device?.brand} {rp.repair?.device?.model}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {rp.repair?.device?.customer?.name} • Qtà: {rp.quantity}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {rp.repair?.status}
+                          </Badge>
+                        </Link>
+                      ))}
+                    </div>
+                    <p className="text-destructive text-sm font-medium">
+                      Non puoi eliminare questo ricambio finché è collegato a delle riparazioni.
+                    </p>
+                  </>
+                ) : (
+                  <p>
+                    Sei sicuro di voler eliminare <strong className="text-foreground">{partToDelete?.name}</strong>? 
+                    Questa azione non può essere annullata.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeletePart}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Elimina
-            </AlertDialogAction>
+            {linkedRepairs.length === 0 && (
+              <AlertDialogAction
+                onClick={handleDeletePart}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Elimina
+              </AlertDialogAction>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
