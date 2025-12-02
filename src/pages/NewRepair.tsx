@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Sparkles, TrendingUp, Trophy, Flame, Zap } from "lucide-react";
+import { Sparkles, TrendingUp, Trophy, Flame, Zap, AlertTriangle } from "lucide-react";
 import { PhotoUpload } from "@/components/repair/PhotoUpload";
 import { DeviceInfoCard } from "@/components/repair/DeviceInfoCard";
 import { CustomerSearch } from "@/components/repair/CustomerSearch";
@@ -780,6 +780,10 @@ const NewRepair = () => {
         const servicesRevenue = selectedServices.reduce((sum, s) => sum + s.price, 0);
         const diagnosticFee = 15; // €15 gestione diagnosi
         
+        // Controlla ricambi senza costo acquisto
+        const partsWithoutCost = selectedSpareParts.filter(part => !part.purchase_cost || part.purchase_cost === 0);
+        const hasMissingCosts = partsWithoutCost.length > 0;
+        
         // Guadagno netto = margine ricambi + servizi + manodopera + gestione diagnosi
         const netProfit = partsMargin + servicesRevenue + laborCost + diagnosticFee;
         
@@ -836,6 +840,32 @@ const NewRepair = () => {
                 Non visibile al cliente
               </div>
             </div>
+
+            {/* Avviso ricambi senza costo */}
+            {hasMissingCosts && (
+              <div className="p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-warning">Attenzione: costi mancanti</p>
+                  <p className="text-muted-foreground mt-1">
+                    {partsWithoutCost.length === 1 
+                      ? `Il ricambio "${partsWithoutCost[0].name}" non ha il costo d'acquisto impostato.`
+                      : `${partsWithoutCost.length} ricambi non hanno il costo d'acquisto impostato:`
+                    }
+                  </p>
+                  {partsWithoutCost.length > 1 && (
+                    <ul className="mt-1 text-xs text-muted-foreground list-disc list-inside">
+                      {partsWithoutCost.map(p => (
+                        <li key={p.spare_part_id}>{p.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Il margine mostrato potrebbe non essere accurato. Aggiorna i costi nell'inventario per un calcolo preciso.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               <h3 className="font-semibold text-lg">Dati Cliente</h3>
