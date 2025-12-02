@@ -16,7 +16,8 @@ import {
   Package,
   AlertCircle,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Trash2
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -246,6 +247,31 @@ export default function RepairDetail() {
     }
   };
 
+  const deleteRepairPart = async (repairPartId: string) => {
+    try {
+      const { error } = await supabase
+        .from("repair_parts")
+        .delete()
+        .eq("id", repairPartId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Eliminato",
+        description: "Ricambio rimosso dalla riparazione",
+      });
+
+      loadRepairDetail();
+    } catch (error) {
+      console.error("Error deleting repair part:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il ricambio",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -470,6 +496,14 @@ export default function RepairDetail() {
                           Tot: €{(part.quantity * part.unit_cost).toFixed(2)}
                         </p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteRepairPart(part.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   ))}
                   <div className="pt-3 border-t border-border">
