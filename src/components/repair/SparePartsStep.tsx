@@ -379,11 +379,33 @@ export const SparePartsStep = ({
   };
 
   const updatePurchaseCost = (partId: string, purchaseCost: number) => {
+    // Aggiorna lo stato locale
     onPartsChange(
       selectedParts.map((p) =>
         p.spare_part_id === partId ? { ...p, purchase_cost: purchaseCost } : p
       )
     );
+  };
+
+  // Salva il costo d'acquisto nel database (on blur)
+  const savePurchaseCostToDb = async (partId: string, purchaseCost: number) => {
+    // Salta se è un part suggerito (non nel database)
+    if (partId.startsWith('suggested-')) return;
+    
+    try {
+      const { error } = await supabase
+        .from("spare_parts")
+        .update({ cost: purchaseCost })
+        .eq("id", partId);
+      
+      if (error) {
+        console.error("Errore salvataggio costo:", error);
+      } else {
+        toast.success("Costo acquisto salvato nell'inventario", { duration: 2000 });
+      }
+    } catch (err) {
+      console.error("Errore salvataggio costo:", err);
+    }
   };
 
   const getTotalCost = () => {
@@ -785,6 +807,12 @@ export const SparePartsStep = ({
                         min="0"
                         value={part.purchase_cost || ''}
                         onChange={(e) => updatePurchaseCost(part.spare_part_id, parseFloat(e.target.value) || 0)}
+                        onBlur={(e) => {
+                          const cost = parseFloat(e.target.value) || 0;
+                          if (cost > 0) {
+                            savePurchaseCostToDb(part.spare_part_id, cost);
+                          }
+                        }}
                         placeholder="0.00"
                         className={`w-20 h-7 text-xs ${!hasCost ? 'border-warning/50 focus-visible:ring-warning' : ''}`}
                       />
