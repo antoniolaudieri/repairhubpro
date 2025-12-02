@@ -74,24 +74,28 @@ const Dashboard = () => {
             value={stats.pendingRepairs}
             icon={Smartphone}
             variant="default"
+            onClick={() => navigate("/repairs?status=pending")}
           />
           <StatsCard
             title="In Lavorazione"
             value={stats.inProgressRepairs}
             icon={Wrench}
             variant="info"
+            onClick={() => navigate("/repairs?status=in_progress")}
           />
           <StatsCard
             title="Completate Oggi"
             value={stats.completedToday}
             icon={Package}
             variant="success"
+            onClick={() => navigate("/repairs?status=completed")}
           />
           <StatsCard
             title="Scorte Basse"
             value={stats.lowStockItems}
             icon={ShoppingCart}
             variant="warning"
+            onClick={() => navigate("/inventory?low_stock=true")}
           />
         </div>
 

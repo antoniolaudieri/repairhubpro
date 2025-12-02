@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -12,7 +12,8 @@ import {
   ArrowLeft,
   Search,
   Package,
-  AlertCircle
+  AlertCircle,
+  X
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
@@ -38,9 +39,12 @@ interface Repair {
 
 export default function Repairs() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  const statusFilter = searchParams.get("status");
 
   useEffect(() => {
     loadRepairs();
@@ -159,12 +163,31 @@ export default function Repairs() {
     );
   };
 
-  const filteredRepairs = repairs.filter(
-    (repair) =>
+  const filteredRepairs = repairs.filter((repair) => {
+    const matchesSearch =
       repair.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       repair.device.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.device.model.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      repair.device.model.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = !statusFilter || repair.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
+
+  const clearStatusFilter = () => {
+    setSearchParams({});
+  };
+
+  const getStatusFilterLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      pending: "In attesa",
+      waiting_parts: "In attesa ricambi",
+      in_progress: "In corso",
+      completed: "Completata",
+      cancelled: "Annullata",
+    };
+    return labels[status] || status;
+  };
 
   if (loading) {
     return (
@@ -189,7 +212,7 @@ export default function Repairs() {
           </p>
         </div>
 
-        <div className="mb-4 sm:mb-6">
+        <div className="mb-4 sm:mb-6 space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -199,6 +222,18 @@ export default function Repairs() {
               className="pl-10 h-11"
             />
           </div>
+          
+          {statusFilter && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Filtro attivo:</span>
+              <Badge variant="secondary" className="gap-1">
+                {getStatusFilterLabel(statusFilter)}
+                <button onClick={clearStatusFilter} className="ml-1 hover:bg-muted rounded">
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            </div>
+          )}
         </div>
 
         <div className="grid gap-4">
