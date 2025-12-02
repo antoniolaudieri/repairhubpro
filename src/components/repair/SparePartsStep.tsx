@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Trash2, Package, Wrench, Check } from "lucide-react";
+import { Search, Plus, Trash2, Package, Wrench, Check, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
 
@@ -32,6 +32,12 @@ interface SelectedService {
   price: number;
 }
 
+interface AISuggestion {
+  partName: string;
+  reason: string;
+  matchedPart?: SparePart;
+}
+
 const AVAILABLE_SERVICES = [
   { id: "data_transfer", name: "Trasferimento Dati", price: 25 },
   { id: "password_recovery", name: "Recupero Password", price: 15 },
@@ -44,6 +50,7 @@ const AVAILABLE_SERVICES = [
 interface SparePartsStepProps {
   deviceBrand?: string;
   deviceModel?: string;
+  reportedIssue?: string;
   selectedParts: SelectedPart[];
   onPartsChange: (parts: SelectedPart[]) => void;
   selectedServices?: SelectedService[];
@@ -53,6 +60,7 @@ interface SparePartsStepProps {
 export const SparePartsStep = ({
   deviceBrand,
   deviceModel,
+  reportedIssue,
   selectedParts,
   onPartsChange,
   selectedServices = [],
@@ -62,6 +70,9 @@ export const SparePartsStep = ({
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [filteredParts, setFilteredParts] = useState<SparePart[]>([]);
   const [loading, setLoading] = useState(false);
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [hasFetchedSuggestions, setHasFetchedSuggestions] = useState(false);
 
   const toggleService = (service: typeof AVAILABLE_SERVICES[0]) => {
     if (!onServicesChange) return;
@@ -85,6 +96,52 @@ export const SparePartsStep = ({
   useEffect(() => {
     filterParts();
   }, [searchTerm, spareParts, deviceBrand, deviceModel]);
+
+  // Fetch AI suggestions when reportedIssue is available
+  useEffect(() => {
+    if (reportedIssue && spareParts.length > 0 && !hasFetchedSuggestions) {
+      fetchAISuggestions();
+    }
+  }, [reportedIssue, spareParts, hasFetchedSuggestions]);
+
+  const fetchAISuggestions = async () => {
+    if (!reportedIssue) return;
+    
+    setLoadingSuggestions(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("suggest-spare-parts", {
+        body: {
+          deviceBrand,
+          deviceModel,
+          reportedIssue,
+          availableParts: spareParts.map(p => ({ name: p.name, category: p.category })),
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.suggestions) {
+        // Match suggested parts with actual inventory
+        const matchedSuggestions: AISuggestion[] = data.suggestions.map((suggestion: any) => {
+          const matchedPart = spareParts.find(p => 
+            p.name.toLowerCase().includes(suggestion.partName.toLowerCase()) ||
+            suggestion.partName.toLowerCase().includes(p.name.toLowerCase()) ||
+            p.category.toLowerCase().includes(suggestion.partName.toLowerCase())
+          );
+          return {
+            ...suggestion,
+            matchedPart,
+          };
+        });
+        setAiSuggestions(matchedSuggestions);
+      }
+      setHasFetchedSuggestions(true);
+    } catch (error: any) {
+      console.error("Error fetching AI suggestions:", error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
 
   const loadSpareParts = async () => {
     setLoading(true);
@@ -224,6 +281,65 @@ export const SparePartsStep = ({
           </div>
         )}
       </div>
+
+      {/* AI Suggestions Section */}
+      {reportedIssue && (
+        <div className="border-t border-border pt-6">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Suggerimenti IA</h3>
+              {loadingSuggestions && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Ricambi suggeriti in base al difetto: "{reportedIssue}"
+            </p>
+            
+            {loadingSuggestions ? (
+              <div className="p-4 text-center text-muted-foreground bg-muted/30 rounded-lg">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                Analisi del difetto in corso...
+              </div>
+            ) : aiSuggestions.length > 0 ? (
+              <div className="grid gap-2">
+                {aiSuggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className="p-3 border border-primary/30 rounded-lg bg-primary/5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{suggestion.partName}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{suggestion.reason}</p>
+                      </div>
+                      {suggestion.matchedPart ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => addPart(suggestion.matchedPart!)}
+                          disabled={selectedParts.some(p => p.spare_part_id === suggestion.matchedPart!.id)}
+                          className="shrink-0"
+                        >
+                          <Plus className="h-4 w-4 mr-1" />
+                          {selectedParts.some(p => p.spare_part_id === suggestion.matchedPart!.id) ? "Aggiunto" : "Aggiungi"}
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded shrink-0">
+                          Non in magazzino
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : hasFetchedSuggestions ? (
+              <div className="p-4 text-center text-muted-foreground bg-muted/30 rounded-lg">
+                Nessun suggerimento specifico per questo difetto
+              </div>
+            ) : null}
+          </div>
+        </div>
+      )}
 
       <div className="border-t border-border pt-6">
         <div className="flex items-start justify-between gap-4">
