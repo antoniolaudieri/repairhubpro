@@ -11,7 +11,7 @@ import { Wrench, Star } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, signIn, signUp, isTechnician, isAdmin } = useAuth();
+  const { user, signIn, signUp, isTechnician, isAdmin, userRole, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   
   // Stati per il form cliente
@@ -25,7 +25,8 @@ const Auth = () => {
   const [techPassword, setTechPassword] = useState("");
 
   useEffect(() => {
-    if (user) {
+    // Wait for auth to finish loading and for role to be fetched
+    if (user && !authLoading && userRole) {
       // Redirect technicians and admins to dashboard, customers to customer dashboard
       if (isTechnician || isAdmin) {
         navigate("/dashboard");
@@ -33,7 +34,7 @@ const Auth = () => {
         navigate("/customer-dashboard");
       }
     }
-  }, [user, isTechnician, isAdmin, navigate]);
+  }, [user, isTechnician, isAdmin, userRole, authLoading, navigate]);
 
   const handleCustomerSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
