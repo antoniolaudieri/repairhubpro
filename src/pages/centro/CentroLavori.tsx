@@ -360,7 +360,7 @@ export default function CentroLavori() {
                 <UserPlus className="h-4 w-4 mr-2" />
                 Nuovo Cliente
               </Button>
-              <Button onClick={() => navigate("/new-repair")}>
+              <Button onClick={() => navigate("/centro/nuovo-ritiro")}>
                 <Plus className="h-4 w-4 mr-2" />
                 Nuovo Lavoro
               </Button>
