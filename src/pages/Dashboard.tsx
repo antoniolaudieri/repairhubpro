@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { NotificationPermissionBanner } from "@/components/notifications/NotificationPermissionBanner";
 
 interface RecentRepair {
   id: string;
@@ -327,6 +328,9 @@ const Dashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Notification Permission Banner */}
+        <NotificationPermissionBanner />
+        
         {/* Forfeiture Warning Alert */}
         {forfeitureWarnings.length > 0 && (
           <motion.div
