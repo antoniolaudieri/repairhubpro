@@ -101,7 +101,7 @@ export function CentroSidebar() {
             transition={{ duration: 0.3 }}
           >
             <motion.div 
-              className="h-9 w-9 rounded-xl overflow-hidden bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-elegant"
+              className={`h-9 w-9 rounded-xl overflow-hidden flex items-center justify-center ${!logoUrl ? 'bg-gradient-to-br from-primary to-primary-glow shadow-elegant' : ''}`}
               whileHover={{ scale: 1.05, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
