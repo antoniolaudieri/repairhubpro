@@ -283,21 +283,25 @@ export const SparePartsStep = ({
       return;
     }
 
-    // Trova il ricambio nel magazzino per ottenere il costo d'acquisto
+    // Prezzo Utopya = costo acquisto
+    const utopyaPrice = suggestion.actualPrice || suggestion.estimatedPrice;
+    
+    // Trova il ricambio nel magazzino per vedere se c'è già un prezzo vendita
     const matchedPart = spareParts.find(p => p.id === suggestion.matchedPartId);
-    const sellingPrice = suggestion.actualPrice || suggestion.estimatedPrice;
-    const purchaseCost = matchedPart?.cost || sellingPrice * 0.6; // Stima 60% se non disponibile
+    
+    // Prezzo vendita = prezzo magazzino se esiste, altrimenti applica markup del 40%
+    const sellingPrice = matchedPart?.selling_price || utopyaPrice * (1 + markupPercentage / 100);
 
     const newPart: SelectedPart = {
       spare_part_id: suggestion.matchedPartId || `suggested-${Date.now()}`,
       name: suggestion.partName,
       quantity: 1,
-      unit_cost: sellingPrice,
-      purchase_cost: purchaseCost,
+      unit_cost: sellingPrice, // Prezzo vendita al cliente (modificabile)
+      purchase_cost: utopyaPrice, // Costo acquisto da Utopya
     };
 
     onPartsChange([...selectedParts, newPart]);
-    toast.success(`${suggestion.partName} aggiunto`);
+    toast.success(`${suggestion.partName} aggiunto - Imposta il prezzo di vendita`);
   };
 
   const loadSpareParts = async () => {
@@ -552,6 +556,7 @@ export const SparePartsStep = ({
                               </div>
                             </div>
                             <div className="text-right shrink-0">
+                              <p className="text-xs text-muted-foreground">Costo Utopya:</p>
                               <p className="font-bold text-lg text-primary">
                                 €{(suggestion.actualPrice || suggestion.estimatedPrice).toFixed(2)}
                               </p>
