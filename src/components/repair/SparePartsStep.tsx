@@ -113,6 +113,57 @@ export const SparePartsStep = ({
   const [customLaborCost, setCustomLaborCost] = useState<number>(0);
   const [availableServices, setAvailableServices] = useState<AdditionalServiceDB[]>([]);
   const [markupPercentage, setMarkupPercentage] = useState<number>(40);
+  
+  // Utopya manual search
+  const [utopyaSearchQuery, setUtopyaSearchQuery] = useState("");
+  const [utopyaSearchResults, setUtopyaSearchResults] = useState<any[]>([]);
+  const [utopyaSearchLoading, setUtopyaSearchLoading] = useState(false);
+
+  const searchUtopya = async () => {
+    if (!utopyaSearchQuery.trim()) {
+      toast.error("Inserisci un termine di ricerca");
+      return;
+    }
+    
+    setUtopyaSearchLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-utopya', {
+        body: { query: utopyaSearchQuery }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.products && data.products.length > 0) {
+        setUtopyaSearchResults(data.products);
+        toast.success(`Trovati ${data.products.length} prodotti su Utopya`);
+      } else {
+        setUtopyaSearchResults([]);
+        toast.info("Nessun prodotto trovato su Utopya");
+      }
+    } catch (err: any) {
+      console.error("Utopya search error:", err);
+      toast.error("Errore nella ricerca su Utopya");
+      setUtopyaSearchResults([]);
+    } finally {
+      setUtopyaSearchLoading(false);
+    }
+  };
+
+  const addUtopyaProduct = (product: any) => {
+    const price = product.priceNumeric || 0;
+    const sellingPrice = price * (1 + markupPercentage / 100);
+    
+    const newPart: SelectedPart = {
+      spare_part_id: `utopya-${Date.now()}`,
+      name: product.name,
+      quantity: 1,
+      unit_cost: Math.round(sellingPrice * 100) / 100,
+      purchase_cost: price,
+    };
+    
+    onPartsChange([...selectedParts, newPart]);
+    toast.success(`${product.name} aggiunto`);
+  };
 
   const toggleService = (service: AdditionalServiceDB) => {
     if (!onServicesChange) return;
@@ -642,6 +693,111 @@ export const SparePartsStep = ({
                 Nessun suggerimento specifico per questo difetto
               </div>
             ) : null}
+
+            {/* Manual Utopya Search */}
+            <div className="mt-6 p-4 border border-dashed border-border rounded-lg bg-muted/20">
+              <div className="flex items-center gap-2 mb-3">
+                <Search className="h-5 w-5 text-primary" />
+                <h4 className="text-base font-semibold">Cerca su Utopya</h4>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Non trovi il ricambio? Cerca manualmente nel catalogo Utopya
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Es: iPhone 14 Pro display OLED"
+                  value={utopyaSearchQuery}
+                  onChange={(e) => setUtopyaSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && searchUtopya()}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={searchUtopya}
+                  disabled={utopyaSearchLoading}
+                >
+                  {utopyaSearchLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              
+              {/* Search Results */}
+              {utopyaSearchResults.length > 0 && (
+                <div className="mt-4 space-y-2 max-h-80 overflow-y-auto">
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {utopyaSearchResults.length} risultati trovati
+                  </p>
+                  {utopyaSearchResults.map((product, index) => {
+                    const isAdded = selectedParts.some(p => 
+                      p.name.toLowerCase() === product.name?.toLowerCase()
+                    );
+                    return (
+                      <div
+                        key={index}
+                        className="p-3 border border-border rounded-lg bg-background flex gap-3 items-center"
+                      >
+                        {product.image ? (
+                          <img 
+                            src={product.image} 
+                            alt={product.name}
+                            className="w-14 h-14 object-cover rounded border"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                        ) : (
+                          <div className="w-14 h-14 bg-muted rounded flex items-center justify-center">
+                            <Package className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{product.name}</p>
+                          {product.sku && (
+                            <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-1">
+                            {product.priceNumeric > 0 ? (
+                              <span className="text-sm font-bold text-primary">
+                                €{product.priceNumeric.toFixed(2)}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-amber-600">Prezzo su richiesta</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => addUtopyaProduct(product)}
+                            disabled={isAdded || product.priceNumeric <= 0}
+                            className="text-xs"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            {isAdded ? "Aggiunto" : "Aggiungi"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            asChild
+                            className="text-xs"
+                          >
+                            <a href={product.url} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="h-3 w-3 mr-1" />
+                              Vedi
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {/* AI Labor Suggestions */}
             {aiLaborSuggestions.length > 0 && (
