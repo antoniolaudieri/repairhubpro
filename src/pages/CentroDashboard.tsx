@@ -616,7 +616,10 @@ export default function CentroDashboard() {
               className="grid grid-cols-2 sm:grid-cols-4 gap-3"
             >
               <motion.div variants={itemVariants}>
-                <Card className="p-4 border-border/50 hover:border-border transition-colors">
+                <Card 
+                  className="p-4 border-border/50 hover:border-border transition-colors cursor-pointer"
+                  onClick={() => navigate("/centro/clienti")}
+                >
                   <div className="flex items-center gap-3">
                     <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center">
                       <Users className="h-4 w-4 text-violet-600" />
