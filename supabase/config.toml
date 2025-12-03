@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.check-forfeiture]
 verify_jwt = false
+
+[functions.scrape-utopya]
+verify_jwt = false
+
+[functions.dispatch-repair]
+verify_jwt = false
