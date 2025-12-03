@@ -18,9 +18,10 @@ interface Customer {
 interface CustomerSearchProps {
   onSelectCustomer: (customer: Customer | null) => void;
   onCreateNew: () => void;
+  centroId?: string | null;
 }
 
-export const CustomerSearch = ({ onSelectCustomer, onCreateNew }: CustomerSearchProps) => {
+export const CustomerSearch = ({ onSelectCustomer, onCreateNew, centroId }: CustomerSearchProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,11 +37,18 @@ export const CustomerSearch = ({ onSelectCustomer, onCreateNew }: CustomerSearch
 
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("customers")
           .select("*")
           .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
           .limit(5);
+        
+        // Filter by centro_id if provided
+        if (centroId) {
+          query = query.eq("centro_id", centroId);
+        }
+
+        const { data, error } = await query;
 
         if (error) throw error;
         setCustomers(data || []);
@@ -55,7 +63,7 @@ export const CustomerSearch = ({ onSelectCustomer, onCreateNew }: CustomerSearch
 
     const debounce = setTimeout(searchCustomers, 300);
     return () => clearTimeout(debounce);
-  }, [searchTerm]);
+  }, [searchTerm, centroId]);
 
   const handleSelectCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);

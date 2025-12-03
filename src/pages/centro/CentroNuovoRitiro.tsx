@@ -547,6 +547,7 @@ export default function CentroNuovoRitiro() {
               <CustomerSearch
                 onSelectCustomer={handleSelectCustomer}
                 onCreateNew={handleCreateNewCustomer}
+                centroId={centroId}
               />
             ) : (
               <CustomerFormStep customerData={customerData} onChange={setCustomerData} />
