@@ -138,6 +138,7 @@ const statusConfig = {
   completed: { label: "Completata", color: "bg-emerald-500", bgLight: "bg-emerald-500/10", text: "text-emerald-600", icon: CheckCircle },
   delivered: { label: "Consegnato", color: "bg-green-600", bgLight: "bg-green-600/10", text: "text-green-700", icon: CheckCircle },
   cancelled: { label: "Annullata", color: "bg-red-500", bgLight: "bg-red-500/10", text: "text-red-600", icon: AlertCircle },
+  forfeited: { label: "Alienato", color: "bg-rose-900", bgLight: "bg-rose-900/10", text: "text-rose-900", icon: AlertCircle },
 };
 
 const priorityConfig = {
@@ -719,6 +720,7 @@ export default function RepairDetail() {
                           <SelectItem value="completed">🟢 Completata</SelectItem>
                           <SelectItem value="delivered">✅ Consegnato</SelectItem>
                           <SelectItem value="cancelled">🔴 Annullata</SelectItem>
+                          <SelectItem value="forfeited">⚫ Alienato</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

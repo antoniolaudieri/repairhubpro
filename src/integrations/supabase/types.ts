@@ -554,6 +554,8 @@ export type Database = {
           final_cost: number | null
           final_cost_accepted_at: string | null
           final_cost_signature: string | null
+          forfeited_at: string | null
+          forfeiture_warning_sent_at: string | null
           id: string
           intake_signature: string | null
           intake_signature_date: string | null
@@ -578,6 +580,8 @@ export type Database = {
           final_cost?: number | null
           final_cost_accepted_at?: string | null
           final_cost_signature?: string | null
+          forfeited_at?: string | null
+          forfeiture_warning_sent_at?: string | null
           id?: string
           intake_signature?: string | null
           intake_signature_date?: string | null
@@ -602,6 +606,8 @@ export type Database = {
           final_cost?: number | null
           final_cost_accepted_at?: string | null
           final_cost_signature?: string | null
+          forfeited_at?: string | null
+          forfeiture_warning_sent_at?: string | null
           id?: string
           intake_signature?: string | null
           intake_signature_date?: string | null

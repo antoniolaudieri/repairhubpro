@@ -34,6 +34,9 @@ interface Repair {
   priority: string;
   created_at: string;
   estimated_cost: number | null;
+  completed_at: string | null;
+  delivered_at: string | null;
+  forfeited_at: string | null;
   device: {
     brand: string;
     model: string;
@@ -55,6 +58,7 @@ const statusConfig: Record<string, { label: string; bg: string; bgLight: string;
   completed: { label: "Completata", bg: "bg-emerald-500", bgLight: "bg-emerald-100", text: "text-emerald-700", icon: CheckCircle2 },
   delivered: { label: "Consegnato", bg: "bg-green-600", bgLight: "bg-green-100", text: "text-green-700", icon: CheckCircle2 },
   cancelled: { label: "Annullata", bg: "bg-red-500", bgLight: "bg-red-100", text: "text-red-700", icon: XCircle },
+  forfeited: { label: "Alienato", bg: "bg-rose-900", bgLight: "bg-rose-100", text: "text-rose-900", icon: AlertCircle },
 };
 
 const priorityConfig: Record<string, { label: string; bg: string; text: string }> = {
@@ -128,6 +132,9 @@ export default function Repairs() {
         priority: repair.priority,
         created_at: repair.created_at,
         estimated_cost: repair.estimated_cost,
+        completed_at: repair.completed_at,
+        delivered_at: repair.delivered_at,
+        forfeited_at: repair.forfeited_at,
         device: {
           brand: repair.device.brand,
           model: repair.device.model,
@@ -173,8 +180,18 @@ export default function Repairs() {
     { status: "in_progress", label: "In corso", icon: Wrench },
     { status: "waiting_parts", label: "Ricambi", icon: Package },
     { status: "completed", label: "Completate", icon: CheckCircle2 },
+    { status: "forfeited", label: "Alienati", icon: AlertCircle },
     { status: "cancelled", label: "Annullate", icon: XCircle },
   ];
+
+  // Calculate days until forfeiture for completed repairs
+  const getDaysUntilForfeiture = (repair: Repair) => {
+    if (repair.status !== "completed" || repair.delivered_at || !repair.completed_at) return null;
+    const completedAt = new Date(repair.completed_at);
+    const now = new Date();
+    const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
+    return 30 - daysSinceCompletion;
+  };
 
   if (loading) {
     return (
@@ -343,6 +360,22 @@ export default function Repairs() {
                             </Badge>
                           </div>
                         )}
+
+                        {/* Forfeiture Warning Badge */}
+                        {(() => {
+                          const daysLeft = getDaysUntilForfeiture(repair);
+                          if (daysLeft !== null && daysLeft <= 7 && daysLeft > 0) {
+                            return (
+                              <div className="absolute bottom-3 left-3">
+                                <Badge className="bg-rose-100 text-rose-700 border-0 gap-1 shadow-sm animate-pulse">
+                                  <Clock className="h-3 w-3" />
+                                  ⚠️ Scade in {daysLeft}g
+                                </Badge>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
 
                         {/* Gradient Overlay */}
                         <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background/80 to-transparent" />
