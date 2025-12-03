@@ -38,6 +38,8 @@ interface Repair {
   id: string;
   status: string;
   created_at: string;
+  completed_at: string | null;
+  delivered_at: string | null;
   estimated_cost: number | null;
   final_cost: number | null;
   final_cost_signature: string | null;
@@ -190,8 +192,21 @@ export default function CustomerDashboard() {
         icon: <CheckCircle2 className="h-4 w-4" />,
         color: "text-success",
       },
+      forfeited: {
+        label: "Alienato",
+        icon: <Clock className="h-4 w-4" />,
+        color: "text-rose-900",
+      },
     };
     return config[status] || config.pending;
+  };
+
+  const getDaysUntilForfeiture = (repair: Repair) => {
+    if (repair.status !== "completed" || repair.delivered_at || !repair.completed_at) return null;
+    const completedAt = new Date(repair.completed_at);
+    const now = new Date();
+    const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
+    return 30 - daysSinceCompletion;
   };
 
   const getInitials = () => {
@@ -462,10 +477,11 @@ export default function CustomerDashboard() {
               <div className="space-y-4">
                 {repairs.map((repair) => {
                   const statusInfo = getStatusBadge(repair.status);
+                  const daysLeft = getDaysUntilForfeiture(repair);
                   return (
                     <Card 
                       key={repair.id} 
-                      className="p-6 cursor-pointer hover:shadow-lg transition-shadow"
+                      className={`p-6 cursor-pointer hover:shadow-lg transition-shadow ${daysLeft !== null && daysLeft <= 7 ? 'border-rose-500/50' : ''}`}
                       onClick={() => navigate(`/customer-repairs/${repair.id}`)}
                     >
                       <div className="flex items-start justify-between">
@@ -474,13 +490,25 @@ export default function CustomerDashboard() {
                             {statusInfo.icon}
                           </div>
                           <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2">
+                            <div className="flex items-center gap-3 mb-2 flex-wrap">
                               <h3 className="font-semibold text-lg">
                                 {repair.device.brand} {repair.device.model}
                               </h3>
                               <span className={`text-sm font-medium ${statusInfo.color}`}>
                                 {statusInfo.label}
                               </span>
+                              {/* Forfeiture countdown badge */}
+                              {daysLeft !== null && daysLeft <= 7 && daysLeft > 0 && (
+                                <Badge className={`${daysLeft <= 3 ? 'bg-rose-600 animate-pulse' : 'bg-rose-500'} text-white gap-1`}>
+                                  <Clock className="h-3 w-3" />
+                                  ⚠️ Ritira entro {daysLeft}g
+                                </Badge>
+                              )}
+                              {repair.status === "forfeited" && (
+                                <Badge className="bg-rose-900 text-white">
+                                  Alienato
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-muted-foreground mb-2">
                               {repair.device.reported_issue}
@@ -493,6 +521,12 @@ export default function CustomerDashboard() {
                             <p className="text-xs text-muted-foreground mt-2">
                               Creata il {new Date(repair.created_at).toLocaleDateString("it-IT")}
                             </p>
+                            {/* Warning message for devices nearing forfeiture */}
+                            {daysLeft !== null && daysLeft <= 7 && daysLeft > 0 && (
+                              <p className="text-xs text-rose-600 mt-2 font-medium">
+                                ⚠️ Ritira il dispositivo entro {daysLeft} giorni o diventerà proprietà del laboratorio
+                              </p>
+                            )}
                           </div>
                         </div>
                         <div className="text-right">
