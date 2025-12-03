@@ -219,6 +219,8 @@ export type Database = {
           centro_rate: number | null
           corner_commission: number | null
           corner_id: string | null
+          corner_paid: boolean | null
+          corner_paid_at: string | null
           corner_rate: number | null
           created_at: string
           gross_margin: number
@@ -228,6 +230,8 @@ export type Database = {
           paid_at: string | null
           parts_cost: number
           platform_commission: number
+          platform_paid: boolean | null
+          platform_paid_at: string | null
           platform_rate: number
           repair_id: string | null
           repair_request_id: string | null
@@ -244,6 +248,8 @@ export type Database = {
           centro_rate?: number | null
           corner_commission?: number | null
           corner_id?: string | null
+          corner_paid?: boolean | null
+          corner_paid_at?: string | null
           corner_rate?: number | null
           created_at?: string
           gross_margin: number
@@ -253,6 +259,8 @@ export type Database = {
           paid_at?: string | null
           parts_cost?: number
           platform_commission: number
+          platform_paid?: boolean | null
+          platform_paid_at?: string | null
           platform_rate?: number
           repair_id?: string | null
           repair_request_id?: string | null
@@ -269,6 +277,8 @@ export type Database = {
           centro_rate?: number | null
           corner_commission?: number | null
           corner_id?: string | null
+          corner_paid?: boolean | null
+          corner_paid_at?: string | null
           corner_rate?: number | null
           created_at?: string
           gross_margin?: number
@@ -278,6 +288,8 @@ export type Database = {
           paid_at?: string | null
           parts_cost?: number
           platform_commission?: number
+          platform_paid?: boolean | null
+          platform_paid_at?: string | null
           platform_rate?: number
           repair_id?: string | null
           repair_request_id?: string | null

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -44,14 +45,12 @@ interface Commission {
   corner_id: string | null;
   status: string;
   paid_at: string | null;
+  platform_paid: boolean;
+  platform_paid_at: string | null;
+  corner_paid: boolean;
+  corner_paid_at: string | null;
   created_at: string;
 }
-
-const statusConfig: Record<string, { label: string; color: string }> = {
-  pending: { label: "Da Pagare", color: "bg-yellow-500/20 text-yellow-600" },
-  approved: { label: "Approvato", color: "bg-blue-500/20 text-blue-600" },
-  paid: { label: "Pagato", color: "bg-green-500/20 text-green-600" },
-};
 
 export default function CentroCommissioni() {
   const { user } = useAuth();
@@ -59,6 +58,7 @@ export default function CentroCommissioni() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>("current");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const getMonthRange = (monthKey: string) => {
     const now = new Date();
@@ -117,19 +117,87 @@ export default function CentroCommissioni() {
     fetchData();
   }, [user, selectedMonth]);
 
+  const handleTogglePlatformPaid = async (commission: Commission) => {
+    setUpdatingId(commission.id);
+    try {
+      const newValue = !commission.platform_paid;
+      const { error } = await supabase
+        .from("commission_ledger")
+        .update({
+          platform_paid: newValue,
+          platform_paid_at: newValue ? new Date().toISOString() : null,
+        })
+        .eq("id", commission.id);
+
+      if (error) throw error;
+      
+      setCommissions(prev => prev.map(c => 
+        c.id === commission.id 
+          ? { ...c, platform_paid: newValue, platform_paid_at: newValue ? new Date().toISOString() : null }
+          : c
+      ));
+      
+      toast.success(newValue ? "Commissione piattaforma segnata come pagata" : "Commissione piattaforma segnata come non pagata");
+    } catch (error) {
+      console.error("Error updating platform paid:", error);
+      toast.error("Errore nell'aggiornamento");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleToggleCornerPaid = async (commission: Commission) => {
+    setUpdatingId(commission.id);
+    try {
+      const newValue = !commission.corner_paid;
+      const { error } = await supabase
+        .from("commission_ledger")
+        .update({
+          corner_paid: newValue,
+          corner_paid_at: newValue ? new Date().toISOString() : null,
+        })
+        .eq("id", commission.id);
+
+      if (error) throw error;
+      
+      setCommissions(prev => prev.map(c => 
+        c.id === commission.id 
+          ? { ...c, corner_paid: newValue, corner_paid_at: newValue ? new Date().toISOString() : null }
+          : c
+      ));
+      
+      toast.success(newValue ? "Commissione corner segnata come pagata" : "Commissione corner segnata come non pagata");
+    } catch (error) {
+      console.error("Error updating corner paid:", error);
+      toast.error("Errore nell'aggiornamento");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
   // Calcoli per il report mensile
   const totalRevenue = commissions.reduce((sum, c) => sum + c.gross_revenue, 0);
   const totalPartsCost = commissions.reduce((sum, c) => sum + c.parts_cost, 0);
   const totalMargin = commissions.reduce((sum, c) => sum + c.gross_margin, 0);
   
-  // Commissione dovuta alla piattaforma (20%)
+  // Commissione dovuta alla piattaforma (non pagata)
   const platformCommissionDue = commissions
-    .filter(c => c.status === "pending")
+    .filter(c => !c.platform_paid)
     .reduce((sum, c) => sum + c.platform_commission, 0);
   
-  // Commissione dovuta ai Corner (10% quando presente)
+  // Commissione già pagata alla piattaforma
+  const platformCommissionPaid = commissions
+    .filter(c => c.platform_paid)
+    .reduce((sum, c) => sum + c.platform_commission, 0);
+  
+  // Commissione dovuta ai Corner (non pagata)
   const cornerCommissionDue = commissions
-    .filter(c => c.status === "pending" && c.corner_id)
+    .filter(c => c.corner_id && !c.corner_paid)
+    .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
+  
+  // Commissione già pagata ai Corner
+  const cornerCommissionPaid = commissions
+    .filter(c => c.corner_id && c.corner_paid)
     .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
   
   // Totale da pagare
@@ -254,7 +322,7 @@ export default function CentroCommissioni() {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                Commissioni Dovute - {monthLabel}
+                Commissioni - {monthLabel}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -265,10 +333,16 @@ export default function CentroCommissioni() {
                     <p className="font-medium">Commissione Piattaforma</p>
                   </div>
                   <p className="text-xs text-muted-foreground mb-2">20% del margine lordo</p>
-                  <p className="text-2xl font-bold text-primary">€{platformCommissionDue.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Fattura emessa dalla piattaforma a fine mese
-                  </p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Da pagare:</span>
+                      <span className="text-xl font-bold text-warning">€{platformCommissionDue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Già pagato:</span>
+                      <span className="text-lg font-medium text-green-600">€{platformCommissionPaid.toFixed(2)}</span>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="p-4 rounded-lg border border-border bg-card/50">
@@ -277,10 +351,16 @@ export default function CentroCommissioni() {
                     <p className="font-medium">Commissione Corner</p>
                   </div>
                   <p className="text-xs text-muted-foreground mb-2">10% del margine (se segnalazione)</p>
-                  <p className="text-2xl font-bold text-blue-500">€{cornerCommissionDue.toFixed(2)}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Fattura emessa dai Corner a fine mese
-                  </p>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Da pagare:</span>
+                      <span className="text-xl font-bold text-warning">€{cornerCommissionDue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Già pagato:</span>
+                      <span className="text-lg font-medium text-green-600">€{cornerCommissionPaid.toFixed(2)}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               
@@ -311,53 +391,111 @@ export default function CentroCommissioni() {
                       key={commission.id}
                       className="p-4 rounded-lg border border-border bg-card/50"
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                          <div className="flex items-center gap-2 mb-2">
-                            <Badge className={statusConfig[commission.status]?.color || "bg-muted"}>
-                              {statusConfig[commission.status]?.label || commission.status}
-                            </Badge>
-                            {commission.corner_id && (
-                              <Badge variant="outline" className="text-blue-500 border-blue-500/30">
-                                <Store className="h-3 w-3 mr-1" />
-                                Via Corner
-                              </Badge>
-                            )}
-                            <span className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(commission.created_at), "dd MMM yyyy", { locale: it })}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-sm">
-                            <div>
-                              <p className="text-muted-foreground">Fatturato</p>
-                              <p className="font-medium">€{commission.gross_revenue.toFixed(2)}</p>
+                      <div className="flex flex-col gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              {commission.corner_id && (
+                                <Badge variant="outline" className="text-blue-500 border-blue-500/30">
+                                  <Store className="h-3 w-3 mr-1" />
+                                  Via Corner
+                                </Badge>
+                              )}
+                              <span className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {format(new Date(commission.created_at), "dd MMM yyyy", { locale: it })}
+                              </span>
                             </div>
-                            <div>
-                              <p className="text-muted-foreground">Ricambi</p>
-                              <p className="font-medium">€{commission.parts_cost.toFixed(2)}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Margine</p>
-                              <p className="font-medium">€{commission.gross_margin.toFixed(2)}</p>
-                            </div>
-                            <div>
-                              <p className="text-muted-foreground">Comm. Piattaforma</p>
-                              <p className="font-medium text-primary">-€{commission.platform_commission.toFixed(2)}</p>
-                            </div>
-                            {commission.corner_id && (
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                               <div>
-                                <p className="text-muted-foreground">Comm. Corner</p>
-                                <p className="font-medium text-blue-500">-€{(commission.corner_commission || 0).toFixed(2)}</p>
+                                <p className="text-muted-foreground">Fatturato</p>
+                                <p className="font-medium">€{commission.gross_revenue.toFixed(2)}</p>
                               </div>
-                            )}
+                              <div>
+                                <p className="text-muted-foreground">Ricambi</p>
+                                <p className="font-medium">€{commission.parts_cost.toFixed(2)}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Margine</p>
+                                <p className="font-medium">€{commission.gross_margin.toFixed(2)}</p>
+                              </div>
+                              <div>
+                                <p className="text-muted-foreground">Tuo Guadagno</p>
+                                <p className="font-medium text-green-600">€{(commission.centro_commission || 0).toFixed(2)}</p>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-muted-foreground text-sm">Tuo Guadagno</p>
-                          <p className="text-xl font-bold text-green-600">
-                            €{(commission.centro_commission || 0).toFixed(2)}
-                          </p>
+                        
+                        {/* Payment tracking */}
+                        <div className="flex flex-col sm:flex-row gap-4 pt-3 border-t border-border/50">
+                          {/* Platform commission */}
+                          <div className="flex items-center justify-between sm:justify-start gap-3 flex-1 p-3 rounded-lg bg-muted/30">
+                            <div className="flex items-center gap-2">
+                              <Checkbox
+                                id={`platform-${commission.id}`}
+                                checked={commission.platform_paid}
+                                onCheckedChange={() => handleTogglePlatformPaid(commission)}
+                                disabled={updatingId === commission.id}
+                              />
+                              <label 
+                                htmlFor={`platform-${commission.id}`}
+                                className="text-sm cursor-pointer flex items-center gap-2"
+                              >
+                                <Building2 className="h-4 w-4 text-primary" />
+                                Piattaforma
+                              </label>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-primary">€{commission.platform_commission.toFixed(2)}</p>
+                              {commission.platform_paid ? (
+                                <Badge className="bg-green-500/20 text-green-600 text-xs">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Pagato
+                                </Badge>
+                              ) : (
+                                <Badge className="bg-yellow-500/20 text-yellow-600 text-xs">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  Da pagare
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Corner commission (if applicable) */}
+                          {commission.corner_id && (
+                            <div className="flex items-center justify-between sm:justify-start gap-3 flex-1 p-3 rounded-lg bg-muted/30">
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id={`corner-${commission.id}`}
+                                  checked={commission.corner_paid}
+                                  onCheckedChange={() => handleToggleCornerPaid(commission)}
+                                  disabled={updatingId === commission.id}
+                                />
+                                <label 
+                                  htmlFor={`corner-${commission.id}`}
+                                  className="text-sm cursor-pointer flex items-center gap-2"
+                                >
+                                  <Store className="h-4 w-4 text-blue-500" />
+                                  Corner
+                                </label>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-medium text-blue-500">€{(commission.corner_commission || 0).toFixed(2)}</p>
+                                {commission.corner_paid ? (
+                                  <Badge className="bg-green-500/20 text-green-600 text-xs">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Pagato
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-yellow-500/20 text-yellow-600 text-xs">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Da pagare
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
