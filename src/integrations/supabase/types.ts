@@ -98,6 +98,215 @@ export type Database = {
         }
         Relationships: []
       }
+      centri_assistenza: {
+        Row: {
+          address: string
+          approved_at: string | null
+          approved_by: string | null
+          business_name: string
+          commission_rate: number
+          created_at: string
+          email: string
+          id: string
+          latitude: number | null
+          logo_url: string | null
+          longitude: number | null
+          notes: string | null
+          owner_user_id: string
+          phone: string
+          settings: Json | null
+          status: string
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          address: string
+          approved_at?: string | null
+          approved_by?: string | null
+          business_name: string
+          commission_rate?: number
+          created_at?: string
+          email: string
+          id?: string
+          latitude?: number | null
+          logo_url?: string | null
+          longitude?: number | null
+          notes?: string | null
+          owner_user_id: string
+          phone: string
+          settings?: Json | null
+          status?: string
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          address?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          business_name?: string
+          commission_rate?: number
+          created_at?: string
+          email?: string
+          id?: string
+          latitude?: number | null
+          logo_url?: string | null
+          longitude?: number | null
+          notes?: string | null
+          owner_user_id?: string
+          phone?: string
+          settings?: Json | null
+          status?: string
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: []
+      }
+      centro_collaboratori: {
+        Row: {
+          centro_id: string
+          commission_share: number | null
+          created_at: string
+          id: string
+          is_active: boolean
+          riparatore_id: string | null
+          role: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          centro_id: string
+          commission_share?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          riparatore_id?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          centro_id?: string
+          commission_share?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          riparatore_id?: string | null
+          role?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_collaboratori_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "centro_collaboratori_riparatore_id_fkey"
+            columns: ["riparatore_id"]
+            isOneToOne: false
+            referencedRelation: "riparatori"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      corner_partnerships: {
+        Row: {
+          corner_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          priority: number
+          provider_id: string
+          provider_type: string
+          updated_at: string
+        }
+        Insert: {
+          corner_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          provider_id: string
+          provider_type: string
+          updated_at?: string
+        }
+        Update: {
+          corner_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          provider_id?: string
+          provider_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corner_partnerships_corner_id_fkey"
+            columns: ["corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      corners: {
+        Row: {
+          address: string
+          approved_at: string | null
+          approved_by: string | null
+          business_name: string
+          commission_rate: number
+          created_at: string
+          email: string
+          id: string
+          latitude: number | null
+          longitude: number | null
+          notes: string | null
+          phone: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address: string
+          approved_at?: string | null
+          approved_by?: string | null
+          business_name: string
+          commission_rate?: number
+          created_at?: string
+          email: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          phone: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          business_name?: string
+          commission_rate?: number
+          created_at?: string
+          email?: string
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          phone?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null
@@ -640,6 +849,69 @@ export type Database = {
           },
         ]
       }
+      riparatori: {
+        Row: {
+          address: string | null
+          approved_at: string | null
+          approved_by: string | null
+          commission_rate: number
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          is_mobile: boolean
+          latitude: number | null
+          longitude: number | null
+          notes: string | null
+          phone: string
+          service_radius_km: number
+          specializations: Json | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_rate?: number
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          is_mobile?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          phone: string
+          service_radius_km?: number
+          specializations?: Json | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          commission_rate?: number
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          is_mobile?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          notes?: string | null
+          phone?: string
+          service_radius_km?: number
+          specializations?: Json | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       spare_parts: {
         Row: {
           brand: string | null
@@ -718,9 +990,18 @@ export type Database = {
     }
     Functions: {
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "technician" | "customer"
+      app_role:
+        | "admin"
+        | "technician"
+        | "customer"
+        | "corner"
+        | "riparatore"
+        | "centro_admin"
+        | "centro_tech"
+        | "platform_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -848,7 +1129,16 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "technician", "customer"],
+      app_role: [
+        "admin",
+        "technician",
+        "customer",
+        "corner",
+        "riparatore",
+        "centro_admin",
+        "centro_tech",
+        "platform_admin",
+      ],
     },
   },
 } as const
