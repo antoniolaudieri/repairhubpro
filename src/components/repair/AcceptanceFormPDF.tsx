@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Printer, Mail, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface AcceptanceFormPDFProps {
   open: boolean;
@@ -30,10 +31,9 @@ interface AcceptanceFormPDFProps {
       address?: string | null;
     };
   };
-  onSendEmail?: () => void;
 }
 
-export function AcceptanceFormPDF({ open, onOpenChange, repairData, onSendEmail }: AcceptanceFormPDFProps) {
+export function AcceptanceFormPDF({ open, onOpenChange, repairData }: AcceptanceFormPDFProps) {
   const contentRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = () => {
@@ -82,6 +82,94 @@ export function AcceptanceFormPDF({ open, onOpenChange, repairData, onSendEmail 
     }
   };
 
+  const handleSendEmail = () => {
+    if (!repairData.customer.email) {
+      toast.error("Email cliente non disponibile");
+      return;
+    }
+
+    const baseUrl = window.location.origin;
+    const loginUrl = `${baseUrl}/auth?email=${encodeURIComponent(repairData.customer.email)}`;
+    const repairTrackingUrl = `${baseUrl}/customer-repair/${repairData.id}`;
+    
+    const subject = encodeURIComponent(`🔧 TechRepair - Conferma Accettazione Riparazione #${repairData.id.slice(0, 8).toUpperCase()}`);
+    
+    const body = encodeURIComponent(`
+══════════════════════════════════════════
+          🔧 TECHREPAIR
+    Centro Assistenza Tecnica
+══════════════════════════════════════════
+
+Gentile ${repairData.customer.name},
+
+La ringraziamo per aver scelto TechRepair per la riparazione del suo dispositivo.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 DETTAGLI DISPOSITIVO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Tipo: ${repairData.device.device_type}
+• Marca: ${repairData.device.brand}
+• Modello: ${repairData.device.model}
+• N° Pratica: #${repairData.id.slice(0, 8).toUpperCase()}
+• Data Accettazione: ${format(new Date(repairData.created_at), "dd MMMM yyyy", { locale: it })}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 RIEPILOGO COSTI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Gestione Diagnosi: € ${(repairData.diagnostic_fee ?? 15).toFixed(2)}
+${repairData.estimated_cost ? `• Preventivo Stimato: € ${repairData.estimated_cost.toFixed(2)} (soggetto a variazione)` : ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 ACCEDI ALLA TUA AREA PERSONALE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Può seguire lo stato della sua riparazione in tempo reale 
+accedendo alla sua area personale:
+
+👉 ACCEDI QUI: ${loginUrl}
+
+Le sue credenziali di accesso:
+• Email: ${repairData.customer.email}
+• Password: 12345678
+
+Una volta effettuato l'accesso, potrà:
+✅ Visualizzare lo stato della riparazione
+✅ Vedere i dettagli dei costi e ricambi
+✅ Firmare digitalmente l'accettazione del preventivo finale
+✅ Ricevere notifiche in tempo reale
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 LINK DIRETTO RIPARAZIONE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${repairTrackingUrl}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ IMPORTANTE - CLAUSOLA DI ALIENAZIONE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Le ricordiamo che, come da accordi firmati, il dispositivo 
+dovrà essere ritirato entro 30 giorni dalla comunicazione 
+di completamento della riparazione (Art. 2756 c.c.).
+
+══════════════════════════════════════════
+
+Cordiali saluti,
+Il Team TechRepair
+
+📞 Contatti: XXX-XXXXXXX
+📧 Email: info@techrepair.it
+🌐 Web: www.techrepair.it
+
+══════════════════════════════════════════
+    `);
+
+    window.location.href = `mailto:${repairData.customer.email}?subject=${subject}&body=${body}`;
+    toast.success("Client email aperto con il messaggio preparato");
+  };
+
   const diagnosticFee = repairData.diagnostic_fee ?? 15;
 
   return (
@@ -99,12 +187,10 @@ export function AcceptanceFormPDF({ open, onOpenChange, repairData, onSendEmail 
             <Printer className="h-4 w-4" />
             Stampa / Salva PDF
           </Button>
-          {onSendEmail && (
-            <Button onClick={onSendEmail} variant="outline" className="gap-2">
-              <Mail className="h-4 w-4" />
-              Invia via Email
-            </Button>
-          )}
+          <Button onClick={handleSendEmail} variant="outline" className="gap-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0 hover:from-blue-600 hover:to-cyan-600">
+            <Mail className="h-4 w-4" />
+            Invia Email al Cliente
+          </Button>
         </div>
 
         <div ref={contentRef} className="bg-white p-6 text-black border rounded-lg text-sm">
