@@ -14,11 +14,6 @@ const browserHeaders = {
   'Accept-Encoding': 'identity',
   'Connection': 'keep-alive',
   'Upgrade-Insecure-Requests': '1',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'none',
-  'Sec-Fetch-User': '?1',
-  'Cache-Control': 'max-age=0',
 };
 
 interface UtopyaProduct {
@@ -43,7 +38,7 @@ async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: bool
     return { cookies: '', isAuthenticated: false };
   }
   
-  console.log('Attempting Utopya login with username:', username);
+  console.log('Attempting Utopya login...');
   
   try {
     // First, get the login page to extract form_key
@@ -68,11 +63,9 @@ async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: bool
     }
     
     const formKey = formKeyMatch[1];
-    console.log('Found form_key:', formKey.substring(0, 10) + '...');
     
     // Get cookies from login page response
     const initialCookies = loginPageResponse.headers.get('set-cookie') || '';
-    console.log('Initial cookies received');
     
     // Perform login
     const loginFormData = new URLSearchParams();
@@ -106,11 +99,7 @@ async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: bool
       .filter(Boolean)
       .join('; ');
     
-    // Check if login was successful by looking for redirect to account page
-    const isAuthenticated = loginResponse.status === 302 || 
-                           loginResponse.status === 301 ||
-                           loginCookies.includes('customer');
-    
+    const isAuthenticated = loginResponse.status === 302 || loginResponse.status === 301;
     console.log('Login authenticated:', isAuthenticated);
     
     return { cookies: allCookies, isAuthenticated };
@@ -137,7 +126,6 @@ serve(async (req) => {
 
     // Try to login first
     const { cookies, isAuthenticated } = await loginToUtopya();
-    console.log('Session established, authenticated:', isAuthenticated);
 
     // Encode search query for URL
     const encodedQuery = encodeURIComponent(searchQuery).replace(/%20/g, '+');
@@ -156,7 +144,6 @@ serve(async (req) => {
     });
 
     if (!response.ok) {
-      console.error(`Failed to fetch Utopya: ${response.status} ${response.statusText}`);
       throw new Error(`Failed to fetch Utopya: ${response.status}`);
     }
 
@@ -165,135 +152,99 @@ serve(async (req) => {
     
     const products: UtopyaProduct[] = [];
 
-    // Method 1: Extract from JSON-LD structured data
-    const jsonLdMatches = html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
-    for (const jsonLdMatch of jsonLdMatches) {
-      try {
-        const jsonData = JSON.parse(jsonLdMatch[1]);
-        if (jsonData['@type'] === 'ItemList' && jsonData.itemListElement) {
-          console.log('Found JSON-LD ItemList with', jsonData.itemListElement.length, 'items');
-          for (const item of jsonData.itemListElement) {
-            if (item.item && item.item.name) {
-              const price = item.item.offers?.price;
-              products.push({
-                name: item.item.name,
-                price: price ? `€${parseFloat(price).toFixed(2)}` : 'Accedi per prezzo',
-                priceNumeric: parseFloat(price || '0'),
-                image: item.item.image || '',
-                url: item.item.url || item.item['@id'] || '',
-                sku: item.item.sku || '',
-                brand: item.item.brand?.name || '',
-                inStock: item.item.offers?.availability?.includes('InStock') ?? true,
-                requiresLogin: !price,
-              });
-            }
-          }
-        } else if (jsonData['@type'] === 'Product') {
-          const price = jsonData.offers?.price;
-          products.push({
-            name: jsonData.name,
-            price: price ? `€${parseFloat(price).toFixed(2)}` : 'Accedi per prezzo',
-            priceNumeric: parseFloat(price || '0'),
-            image: jsonData.image || '',
-            url: jsonData.url || '',
-            sku: jsonData.sku || '',
-            brand: jsonData.brand?.name || '',
-            inStock: jsonData.offers?.availability?.includes('InStock') ?? true,
-            requiresLogin: !price,
-          });
-        }
-      } catch (e) {
-        // Ignore JSON parse errors
-      }
-    }
-
-    // Method 2: Parse from HTML product items
-    if (products.length === 0) {
-      console.log('Trying HTML parsing method...');
+    // Method 1: Look for product grid items with class "product-item"
+    // Utopya uses a standard Magento structure
+    const productGridMatch = html.match(/class="products[^"]*product-items[^"]*"[^>]*>([\s\S]*?)<\/ol>/i) ||
+                            html.match(/class="[^"]*search[^"]*results[^"]*"[^>]*>([\s\S]*?)<\/(?:ol|ul|div)>/i);
+    
+    if (productGridMatch) {
+      console.log('Found product grid');
+      const gridHtml = productGridMatch[1] || productGridMatch[0];
       
-      // Look for product URLs and names
-      const productUrlRegex = /href="(https:\/\/www\.utopya\.it\/[a-z0-9\-]+\.html)"[^>]*>([^<]*)</gi;
-      const urlMatches = html.matchAll(productUrlRegex);
+      // Extract individual product items
+      const productItemRegex = /<li[^>]*class="[^"]*product-item[^"]*"[^>]*>([\s\S]*?)<\/li>/gi;
+      const productItems = gridHtml.matchAll(productItemRegex);
       
-      const seenUrls = new Set<string>();
-      for (const match of urlMatches) {
-        const url = match[1];
-        let name = match[2].trim();
+      for (const item of productItems) {
+        const itemHtml = item[1];
         
-        // Skip non-product URLs and duplicates
-        if (seenUrls.has(url) ||
-            url.includes('/checkout') || 
-            url.includes('/customer') || 
-            url.includes('/catalogsearch') ||
-            url.includes('/wishlist') ||
-            url.includes('/privacy') ||
-            url.includes('/terms') ||
-            url.includes('/cookie')) {
-          continue;
-        }
+        // Extract product URL
+        const urlMatch = itemHtml.match(/href="(https:\/\/www\.utopya\.it\/[^"]+\.html)"/i);
+        if (!urlMatch) continue;
+        const url = urlMatch[1];
         
-        seenUrls.add(url);
+        // Skip category URLs
+        if (url.includes('/category/') || url.includes('/checkout/') || url.includes('/customer/')) continue;
         
-        // If name is empty, try to extract from URL
-        if (!name) {
-          const slug = url.replace('https://www.utopya.it/', '').replace('.html', '');
-          name = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        }
+        // Extract product name from link title or alt
+        const nameMatch = itemHtml.match(/class="[^"]*product-item-link[^"]*"[^>]*>([^<]+)</i) ||
+                         itemHtml.match(/alt="([^"]+)"/i) ||
+                         itemHtml.match(/title="([^"]+)"/i);
+        const name = nameMatch ? nameMatch[1].trim() : '';
         
-        // Try to find image for this product
-        const urlEscaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const imgRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*>[\\s\\S]*?<img[^>]*src="([^"]+)"`, 'i');
-        const imgMatch = html.match(imgRegex);
+        if (!name) continue;
+        
+        // Extract image
+        const imgMatch = itemHtml.match(/src="(https:\/\/www\.utopya\.it\/media\/catalog\/product[^"]+)"/i) ||
+                        itemHtml.match(/data-src="(https:\/\/www\.utopya\.it\/media\/catalog\/product[^"]+)"/i);
         const image = imgMatch ? imgMatch[1] : '';
         
-        // Try to find price
-        let price = '';
+        // Extract price (only visible if authenticated)
+        let price = 'Accedi per prezzo';
         let priceNumeric = 0;
-        const priceRegex = new RegExp(`href="${urlEscaped}"[\\s\\S]*?(?:€|EUR)\\s*([0-9]+[.,][0-9]{2})`, 'i');
-        const priceMatch = html.match(priceRegex);
+        const priceMatch = itemHtml.match(/data-price-amount="([0-9.]+)"/i) ||
+                          itemHtml.match(/class="[^"]*price[^"]*"[^>]*>€?\s*([0-9]+[.,][0-9]{2})/i);
         if (priceMatch) {
           priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
-          price = `€${priceNumeric.toFixed(2)}`;
+          if (priceNumeric > 0) {
+            price = `€${priceNumeric.toFixed(2)}`;
+          }
         }
         
-        if (name && name.length > 3) {
-          products.push({
-            name,
-            price: price || 'Accedi per prezzo',
-            priceNumeric,
-            image,
-            url,
-            sku: '',
-            brand: '',
-            inStock: true,
-            requiresLogin: !price,
-          });
-        }
+        // Extract SKU if available
+        const skuMatch = itemHtml.match(/data-sku="([^"]+)"/i) ||
+                        itemHtml.match(/sku['":\s]+['"]?([A-Z0-9\-]+)/i);
+        const sku = skuMatch ? skuMatch[1] : '';
+        
+        // Extract brand label
+        const brandMatch = itemHtml.match(/class="[^"]*amlabel[^"]*"[^>]*>([^<]+)</i);
+        const brand = brandMatch ? brandMatch[1].trim() : '';
+        
+        products.push({
+          name,
+          price,
+          priceNumeric,
+          image,
+          url,
+          sku,
+          brand,
+          inStock: true,
+          requiresLogin: priceNumeric === 0,
+        });
       }
     }
 
-    // Method 3: Look for product data in JavaScript variables
+    // Method 2: Fallback - look for JSON-LD structured data
     if (products.length === 0) {
-      const jsDataRegex = /(?:products|items)\s*[=:]\s*(\[[\s\S]*?\])\s*[;,]/gi;
-      const jsMatches = html.matchAll(jsDataRegex);
-      
-      for (const jsMatch of jsMatches) {
+      console.log('Trying JSON-LD method...');
+      const jsonLdMatches = html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
+      for (const jsonLdMatch of jsonLdMatches) {
         try {
-          const jsProducts = JSON.parse(jsMatch[1]);
-          if (Array.isArray(jsProducts)) {
-            console.log('Found JS product data:', jsProducts.length);
-            for (const p of jsProducts) {
-              if (p.name || p.title) {
+          const jsonData = JSON.parse(jsonLdMatch[1]);
+          if (jsonData['@type'] === 'ItemList' && jsonData.itemListElement) {
+            for (const item of jsonData.itemListElement) {
+              if (item.item && item.item.name) {
+                const itemPrice = item.item.offers?.price;
                 products.push({
-                  name: p.name || p.title || '',
-                  price: p.price ? `€${parseFloat(p.price).toFixed(2)}` : 'Accedi per prezzo',
-                  priceNumeric: parseFloat(p.price || '0'),
-                  image: p.image || p.thumbnail || '',
-                  url: p.url || p.product_url || '',
-                  sku: p.sku || p.id || '',
-                  brand: p.brand || '',
-                  inStock: p.is_salable !== false,
-                  requiresLogin: !p.price,
+                  name: item.item.name,
+                  price: itemPrice ? `€${parseFloat(itemPrice).toFixed(2)}` : 'Accedi per prezzo',
+                  priceNumeric: parseFloat(itemPrice || '0'),
+                  image: item.item.image || '',
+                  url: item.item.url || item.item['@id'] || '',
+                  sku: item.item.sku || '',
+                  brand: item.item.brand?.name || '',
+                  inStock: true,
+                  requiresLogin: !itemPrice,
                 });
               }
             }
@@ -304,12 +255,51 @@ serve(async (req) => {
       }
     }
 
-    // Remove duplicates based on URL
+    // Method 3: Fallback - direct product link extraction with strict filtering
+    if (products.length === 0) {
+      console.log('Trying direct link extraction...');
+      
+      // Look specifically for product links with images (real products always have images)
+      const productWithImageRegex = /<a[^>]*href="(https:\/\/www\.utopya\.it\/[a-z0-9\-]+\.html)"[^>]*>[\s\S]*?<img[^>]*alt="([^"]+)"[^>]*src="([^"]+)"[\s\S]*?<\/a>/gi;
+      const matches = html.matchAll(productWithImageRegex);
+      
+      const seenUrls = new Set<string>();
+      for (const match of matches) {
+        const url = match[1];
+        const name = match[2];
+        const image = match[3];
+        
+        if (seenUrls.has(url)) continue;
+        seenUrls.add(url);
+        
+        // Strict filtering - only product URLs
+        if (url.includes('/category') || 
+            url.includes('/customer') ||
+            url.includes('/checkout') ||
+            url.includes('/page') ||
+            !name ||
+            name.length < 5) continue;
+        
+        products.push({
+          name: name.trim(),
+          price: 'Accedi per prezzo',
+          priceNumeric: 0,
+          image,
+          url,
+          sku: '',
+          brand: '',
+          inStock: true,
+          requiresLogin: true,
+        });
+      }
+    }
+
+    // Remove duplicates
     const uniqueProducts = Array.from(
-      new Map(products.filter(p => p.url).map(p => [p.url, p])).values()
+      new Map(products.filter(p => p.url && p.name).map(p => [p.url, p])).values()
     );
 
-    console.log(`Found ${uniqueProducts.length} unique products`);
+    console.log(`Found ${uniqueProducts.length} products`);
 
     return new Response(
       JSON.stringify({ 
