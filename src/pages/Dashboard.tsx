@@ -25,11 +25,13 @@ import {
   Gamepad2,
   Sparkles,
   Zap,
-  ArrowUpRight
+  ArrowUpRight,
+  BarChart3
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { NotificationPermissionBanner } from "@/components/notifications/NotificationPermissionBanner";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 
 interface RecentRepair {
   id: string;
@@ -60,6 +62,12 @@ interface ForfeitureWarning {
   };
 }
 
+interface WeeklyData {
+  day: string;
+  riparazioni: number;
+  completate: number;
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -73,12 +81,14 @@ const Dashboard = () => {
   });
   const [recentRepairs, setRecentRepairs] = useState<RecentRepair[]>([]);
   const [forfeitureWarnings, setForfeitureWarnings] = useState<ForfeitureWarning[]>([]);
+  const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadStats();
     loadRecentRepairs();
     loadForfeitureWarnings();
+    loadWeeklyData();
   }, []);
 
   const loadStats = async () => {
@@ -126,6 +136,36 @@ const Dashboard = () => {
       forfeitureWarnings: forfeitureCount,
     });
     setLoading(false);
+  };
+
+  const loadWeeklyData = async () => {
+    const days = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+    const today = new Date();
+    const weekAgo = new Date(today);
+    weekAgo.setDate(today.getDate() - 6);
+
+    const { data: repairs } = await supabase
+      .from("repairs")
+      .select("created_at, status, completed_at")
+      .gte("created_at", weekAgo.toISOString());
+
+    const weekData: WeeklyData[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      const dayName = days[date.getDay()];
+      
+      const created = repairs?.filter(r => r.created_at.startsWith(dateStr)).length || 0;
+      const completed = repairs?.filter(r => r.completed_at?.startsWith(dateStr)).length || 0;
+      
+      weekData.push({
+        day: dayName,
+        riparazioni: created,
+        completate: completed
+      });
+    }
+    setWeeklyData(weekData);
   };
 
   const loadForfeitureWarnings = async () => {
@@ -549,6 +589,98 @@ const Dashboard = () => {
               </div>
             </Card>
           </motion.div>
+        </motion.div>
+
+        {/* Weekly Chart */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, type: "spring" }}
+        >
+          <Card className="overflow-hidden glass-card-strong border-0 shadow-xl">
+            <div className="relative bg-gradient-to-r from-indigo-500/15 via-indigo-500/10 to-violet-500/5 px-6 py-5 border-b border-indigo-200/20">
+              <div className="absolute inset-0 bg-pattern-dots opacity-20" />
+              <div className="relative flex items-center gap-3">
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md shadow-indigo-500/25">
+                  <BarChart3 className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">Andamento Settimanale</h2>
+                  <p className="text-sm text-muted-foreground">Riparazioni degli ultimi 7 giorni</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={weeklyData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorRiparazioni" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorCompletate" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.5} />
+                    <XAxis 
+                      dataKey="day" 
+                      stroke="hsl(var(--muted-foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      stroke="hsl(var(--muted-foreground))" 
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                      allowDecimals={false}
+                    />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: 'hsl(var(--card))', 
+                        border: '1px solid hsl(var(--border))',
+                        borderRadius: '12px',
+                        boxShadow: '0 10px 40px -10px rgba(0,0,0,0.2)'
+                      }}
+                      labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="riparazioni" 
+                      stroke="hsl(var(--primary))" 
+                      strokeWidth={2.5}
+                      fillOpacity={1} 
+                      fill="url(#colorRiparazioni)" 
+                      name="Nuove"
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="completate" 
+                      stroke="#10b981" 
+                      strokeWidth={2.5}
+                      fillOpacity={1} 
+                      fill="url(#colorCompletate)" 
+                      name="Completate"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="flex items-center justify-center gap-6 mt-4 pt-4 border-t border-border/50">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-primary" />
+                  <span className="text-sm text-muted-foreground">Nuove riparazioni</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full bg-emerald-500" />
+                  <span className="text-sm text-muted-foreground">Completate</span>
+                </div>
+              </div>
+            </div>
+          </Card>
         </motion.div>
 
         {/* Main Grid */}
