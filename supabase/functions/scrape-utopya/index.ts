@@ -473,12 +473,20 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
 
     console.log(`HTML scraping found ${products.length} products`);
     
-    // Method 5: Fallback - search for product blocks with more context
+    // Method 5: Extract SKU data from Magento init scripts first
+    const skuMap = new Map<string, string>();
+    const magentoSkuMatches = html.matchAll(/"product_sku":\s*"([^"]+)"/gi);
+    for (const match of magentoSkuMatches) {
+      const sku = match[1].replace(/\\u002D/g, '-');
+      console.log('Found SKU in Magento data:', sku);
+    }
+
+    // Method 6: Fallback - search for product blocks with more context
     if (products.length === 0) {
       console.log('Trying enhanced fallback extraction...');
       
-      // Look for product links with surrounding context (within ~2000 chars)
-      const productBlockRegex = /<(?:div|li|article)[^>]*class="[^"]*(?:product|item)[^"]*"[^>]*>([\s\S]{100,3000}?)<\/(?:div|li|article)>/gi;
+      // Look for product links with surrounding context
+      const productBlockRegex = /<(?:div|li|article)[^>]*class="[^"]*(?:product|item)[^"]*"[^>]*>([\s\S]{100,5000}?)<\/(?:div|li|article)>/gi;
       let blockMatch;
       
       while ((blockMatch = productBlockRegex.exec(html)) !== null && products.length < 20) {
@@ -491,11 +499,10 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
         const url = urlMatch[1];
         if (products.some(p => p.url === url)) continue;
         
-        // Extract name from title or link text
+        // Extract name
         let name = '';
         const titleMatch = block.match(/title="([^"]{5,})"/i) || 
-                          block.match(/class="[^"]*product[^"]*name[^"]*"[^>]*>([^<]+)</i) ||
-                          block.match(/<a[^>]*href="[^"]*\.html"[^>]*>([^<]{5,})</i);
+                          block.match(/class="[^"]*product[^"]*name[^"]*"[^>]*>([^<]+)</i);
         if (titleMatch) {
           name = decodeHtmlEntities(titleMatch[1].trim());
         }
@@ -503,22 +510,38 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
         // Extract image
         let image = '';
         const imgMatch = block.match(/src="(https:\/\/[^"]*(?:\.jpg|\.jpeg|\.png|\.webp)[^"]*)"/i) ||
-                        block.match(/data-src="(https:\/\/[^"]*(?:\.jpg|\.jpeg|\.png|\.webp)[^"]*)"/i) ||
-                        block.match(/srcset="([^\s"]+)/i);
+                        block.match(/data-src="(https:\/\/[^"]*(?:\.jpg|\.jpeg|\.png|\.webp)[^"]*)"/i);
         if (imgMatch) {
-          image = imgMatch[1].split(' ')[0]; // Get first URL from srcset if present
+          image = imgMatch[1].split(' ')[0];
         }
         
-        // Extract price
+        // Extract price - multiple patterns
         let price: string | null = null;
         let priceNumeric = 0;
-        const priceMatch = block.match(/data-price-amount="([\d.]+)"/) ||
-                          block.match(/€\s*([\d,]+(?:\.\d{2})?)/);
-        if (priceMatch) {
-          priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
-          if (priceNumeric > 0) {
-            price = `€${priceNumeric.toFixed(2)}`;
+        const pricePatterns = [
+          /data-price-amount="([\d.]+)"/,
+          /"finalPrice":\s*{\s*"amount":\s*([\d.]+)/,
+          /class="price"[^>]*>€?\s*([\d,]+(?:\.\d{2})?)/,
+          />€\s*([\d,]+(?:\.\d{2})?)</
+        ];
+        for (const pattern of pricePatterns) {
+          const priceMatch = block.match(pattern);
+          if (priceMatch) {
+            priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
+            if (priceNumeric > 0) {
+              price = `€${priceNumeric.toFixed(2)}`;
+              break;
+            }
           }
+        }
+        
+        // Extract SKU
+        let sku = '';
+        const skuMatch = block.match(/data-product-sku="([^"]+)"/i) ||
+                        block.match(/"product_sku":\s*"([^"]+)"/i) ||
+                        block.match(/sku['"]\s*:\s*['"]([^'"]+)['"]/i);
+        if (skuMatch) {
+          sku = skuMatch[1].replace(/\\u002D/g, '-');
         }
         
         if (name && name.length > 5) {
@@ -528,7 +551,7 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
             priceNumeric,
             image,
             url,
-            sku: '',
+            sku,
             brand: '',
             inStock: !block.includes('out-of-stock'),
             requiresLogin: !price
@@ -538,7 +561,7 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
       
       console.log(`Enhanced fallback found ${products.length} products`);
       
-      // If still no products, try simple URL extraction as last resort
+      // If still no products, try simple URL extraction with context search
       if (products.length === 0) {
         console.log('Trying simple URL extraction...');
         const urlRegex = /href="(https:\/\/www\.utopya\.it\/([a-z0-9]+-[a-z0-9\-]+)\.html)"/gi;
@@ -557,24 +580,43 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
           
           seenUrls.add(url);
           
-          // Try to find image and price near this URL
+          // Search larger context around this URL
           const urlPos = html.indexOf(url);
-          const context = html.substring(Math.max(0, urlPos - 1500), Math.min(html.length, urlPos + 1500));
+          const context = html.substring(Math.max(0, urlPos - 3000), Math.min(html.length, urlPos + 3000));
           
+          // Find image
           let image = '';
           const imgMatch = context.match(/src="(https:\/\/www\.utopya\.(?:it|fr)\/media\/catalog\/product[^"]+)"/i);
           if (imgMatch) image = imgMatch[1];
           
+          // Find price with multiple patterns
           let price: string | null = null;
           let priceNumeric = 0;
-          const priceMatch = context.match(/data-price-amount="([\d.]+)"/) ||
-                            context.match(/"price":\s*([\d.]+)/) ||
-                            context.match(/€\s*([\d,]+(?:\.\d{2})?)/);
-          if (priceMatch) {
-            priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
-            if (priceNumeric > 0) {
-              price = `€${priceNumeric.toFixed(2)}`;
+          const pricePatterns = [
+            /data-price-amount="([\d.]+)"/,
+            /"finalPrice":\s*{\s*"amount":\s*([\d.]+)/,
+            /"price":\s*([\d.]+)/,
+            /class="price"[^>]*>\s*€?\s*([\d,]+(?:\.\d{2})?)/,
+            />€\s*([\d,]+(?:\.\d{2})?)</
+          ];
+          for (const pattern of pricePatterns) {
+            const priceMatch = context.match(pattern);
+            if (priceMatch) {
+              priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
+              if (priceNumeric > 0 && priceNumeric < 10000) {
+                price = `€${priceNumeric.toFixed(2)}`;
+                break;
+              }
             }
+          }
+          
+          // Find SKU
+          let sku = '';
+          const skuMatch = context.match(/data-product-sku="([^"]+)"/i) ||
+                          context.match(/"product_sku":\s*"([^"]+)"/i) ||
+                          context.match(/product_sku['"]\s*:\s*['"]([^'"]+)['"]/i);
+          if (skuMatch) {
+            sku = skuMatch[1].replace(/\\u002D/g, '-');
           }
           
           const titleMatch = context.match(new RegExp(`href="${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*title="([^"]+)"`, 'i'));
@@ -587,7 +629,7 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
               priceNumeric,
               image,
               url,
-              sku: '',
+              sku,
               brand: '',
               inStock: true,
               requiresLogin: !price
