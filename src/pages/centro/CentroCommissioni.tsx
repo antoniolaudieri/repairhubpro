@@ -5,9 +5,7 @@ import { CentroLayout } from "@/layouts/CentroLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -58,7 +56,6 @@ export default function CentroCommissioni() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>("current");
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const getMonthRange = (monthKey: string) => {
     const now = new Date();
@@ -116,64 +113,6 @@ export default function CentroCommissioni() {
   useEffect(() => {
     fetchData();
   }, [user, selectedMonth]);
-
-  const handleTogglePlatformPaid = async (commission: Commission) => {
-    setUpdatingId(commission.id);
-    try {
-      const newValue = !commission.platform_paid;
-      const { error } = await supabase
-        .from("commission_ledger")
-        .update({
-          platform_paid: newValue,
-          platform_paid_at: newValue ? new Date().toISOString() : null,
-        })
-        .eq("id", commission.id);
-
-      if (error) throw error;
-      
-      setCommissions(prev => prev.map(c => 
-        c.id === commission.id 
-          ? { ...c, platform_paid: newValue, platform_paid_at: newValue ? new Date().toISOString() : null }
-          : c
-      ));
-      
-      toast.success(newValue ? "Commissione piattaforma segnata come pagata" : "Commissione piattaforma segnata come non pagata");
-    } catch (error) {
-      console.error("Error updating platform paid:", error);
-      toast.error("Errore nell'aggiornamento");
-    } finally {
-      setUpdatingId(null);
-    }
-  };
-
-  const handleToggleCornerPaid = async (commission: Commission) => {
-    setUpdatingId(commission.id);
-    try {
-      const newValue = !commission.corner_paid;
-      const { error } = await supabase
-        .from("commission_ledger")
-        .update({
-          corner_paid: newValue,
-          corner_paid_at: newValue ? new Date().toISOString() : null,
-        })
-        .eq("id", commission.id);
-
-      if (error) throw error;
-      
-      setCommissions(prev => prev.map(c => 
-        c.id === commission.id 
-          ? { ...c, corner_paid: newValue, corner_paid_at: newValue ? new Date().toISOString() : null }
-          : c
-      ));
-      
-      toast.success(newValue ? "Commissione corner segnata come pagata" : "Commissione corner segnata come non pagata");
-    } catch (error) {
-      console.error("Error updating corner paid:", error);
-      toast.error("Errore nell'aggiornamento");
-    } finally {
-      setUpdatingId(null);
-    }
-  };
 
   // Calcoli per il report mensile
   const totalRevenue = commissions.reduce((sum, c) => sum + c.gross_revenue, 0);
@@ -427,27 +366,16 @@ export default function CentroCommissioni() {
                           </div>
                         </div>
                         
-                        {/* Payment tracking */}
+                        {/* Payment status (read-only) */}
                         <div className="flex flex-col sm:flex-row gap-4 pt-3 border-t border-border/50">
                           {/* Platform commission */}
-                          <div className="flex items-center justify-between sm:justify-start gap-3 flex-1 p-3 rounded-lg bg-muted/30">
+                          <div className="flex items-center justify-between gap-3 flex-1 p-3 rounded-lg bg-muted/30">
                             <div className="flex items-center gap-2">
-                              <Checkbox
-                                id={`platform-${commission.id}`}
-                                checked={commission.platform_paid}
-                                onCheckedChange={() => handleTogglePlatformPaid(commission)}
-                                disabled={updatingId === commission.id}
-                              />
-                              <label 
-                                htmlFor={`platform-${commission.id}`}
-                                className="text-sm cursor-pointer flex items-center gap-2"
-                              >
-                                <Building2 className="h-4 w-4 text-primary" />
-                                Piattaforma
-                              </label>
+                              <Building2 className="h-4 w-4 text-primary" />
+                              <span className="text-sm">Piattaforma</span>
                             </div>
-                            <div className="text-right">
-                              <p className="font-medium text-primary">€{commission.platform_commission.toFixed(2)}</p>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-primary">€{commission.platform_commission.toFixed(2)}</span>
                               {commission.platform_paid ? (
                                 <Badge className="bg-green-500/20 text-green-600 text-xs">
                                   <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -464,24 +392,13 @@ export default function CentroCommissioni() {
                           
                           {/* Corner commission (if applicable) */}
                           {commission.corner_id && (
-                            <div className="flex items-center justify-between sm:justify-start gap-3 flex-1 p-3 rounded-lg bg-muted/30">
+                            <div className="flex items-center justify-between gap-3 flex-1 p-3 rounded-lg bg-muted/30">
                               <div className="flex items-center gap-2">
-                                <Checkbox
-                                  id={`corner-${commission.id}`}
-                                  checked={commission.corner_paid}
-                                  onCheckedChange={() => handleToggleCornerPaid(commission)}
-                                  disabled={updatingId === commission.id}
-                                />
-                                <label 
-                                  htmlFor={`corner-${commission.id}`}
-                                  className="text-sm cursor-pointer flex items-center gap-2"
-                                >
-                                  <Store className="h-4 w-4 text-blue-500" />
-                                  Corner
-                                </label>
+                                <Store className="h-4 w-4 text-blue-500" />
+                                <span className="text-sm">Corner</span>
                               </div>
-                              <div className="text-right">
-                                <p className="font-medium text-blue-500">€{(commission.corner_commission || 0).toFixed(2)}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-blue-500">€{(commission.corner_commission || 0).toFixed(2)}</span>
                                 {commission.corner_paid ? (
                                   <Badge className="bg-green-500/20 text-green-600 text-xs">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />

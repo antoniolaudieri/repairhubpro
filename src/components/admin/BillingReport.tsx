@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Building2, 
   Store, 
@@ -11,31 +12,43 @@ import {
   Calendar,
   FileText,
   TrendingUp,
-  Download
+  Download,
+  CheckCircle2,
+  Clock,
+  Filter
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
-interface CommissionSummary {
-  centro_id: string;
-  centro_name: string;
-  total_revenue: number;
-  total_parts_cost: number;
-  total_margin: number;
+interface Commission {
+  id: string;
+  centro_id: string | null;
+  corner_id: string | null;
+  gross_revenue: number;
+  parts_cost: number;
+  gross_margin: number;
   platform_commission: number;
-  repairs_count: number;
+  platform_rate: number;
+  corner_commission: number | null;
+  corner_rate: number | null;
+  platform_paid: boolean;
+  platform_paid_at: string | null;
+  corner_paid: boolean;
+  corner_paid_at: string | null;
+  created_at: string;
+  centro?: { business_name: string };
+  corner?: { business_name: string };
 }
 
-interface CornerSummary {
-  corner_id: string;
-  corner_name: string;
-  total_commission: number;
-  referrals_count: number;
-}
+type PaymentFilter = "all" | "unpaid" | "paid";
 
 export function BillingReport() {
   const [selectedMonth, setSelectedMonth] = useState<string>("current");
+  const [platformFilter, setPlatformFilter] = useState<PaymentFilter>("all");
+  const [cornerFilter, setCornerFilter] = useState<PaymentFilter>("all");
+  const queryClient = useQueryClient();
 
   const getMonthRange = (monthKey: string) => {
     const now = new Date();
@@ -58,137 +71,145 @@ export function BillingReport() {
   const { start, end } = getMonthRange(selectedMonth);
   const monthLabel = format(start, "MMMM yyyy", { locale: it });
 
-  // Fetch commission data for all Centri
-  const { data: centroSummaries = [], isLoading: loadingCentri } = useQuery({
-    queryKey: ["billing-centri", selectedMonth],
+  // Fetch all commissions with details
+  const { data: commissions = [], isLoading } = useQuery({
+    queryKey: ["admin-commissions", selectedMonth],
     queryFn: async () => {
       const { start, end } = getMonthRange(selectedMonth);
       
-      // Get all commissions for the month
-      const { data: commissions, error } = await supabase
+      const { data, error } = await supabase
         .from("commission_ledger")
         .select(`
-          centro_id,
-          gross_revenue,
-          parts_cost,
-          gross_margin,
-          platform_commission,
-          status
+          *,
+          centro:centri_assistenza!commission_ledger_centro_id_fkey(business_name),
+          corner:corners!commission_ledger_corner_id_fkey(business_name)
         `)
-        .not("centro_id", "is", null)
         .gte("created_at", start.toISOString())
-        .lte("created_at", end.toISOString());
+        .lte("created_at", end.toISOString())
+        .order("created_at", { ascending: false });
 
       if (error) throw error;
-
-      // Get centro names
-      const centroIds = [...new Set(commissions?.map(c => c.centro_id).filter(Boolean))];
-      const { data: centri } = await supabase
-        .from("centri_assistenza")
-        .select("id, business_name")
-        .in("id", centroIds);
-
-      const centroMap = new Map(centri?.map(c => [c.id, c.business_name]) || []);
-
-      // Aggregate by centro
-      const summaryMap = new Map<string, CommissionSummary>();
-      
-      commissions?.forEach(c => {
-        if (!c.centro_id) return;
-        
-        const existing = summaryMap.get(c.centro_id) || {
-          centro_id: c.centro_id,
-          centro_name: centroMap.get(c.centro_id) || "Centro Sconosciuto",
-          total_revenue: 0,
-          total_parts_cost: 0,
-          total_margin: 0,
-          platform_commission: 0,
-          repairs_count: 0,
-        };
-        
-        existing.total_revenue += c.gross_revenue || 0;
-        existing.total_parts_cost += c.parts_cost || 0;
-        existing.total_margin += c.gross_margin || 0;
-        existing.platform_commission += c.platform_commission || 0;
-        existing.repairs_count += 1;
-        
-        summaryMap.set(c.centro_id, existing);
-      });
-
-      return Array.from(summaryMap.values()).sort((a, b) => b.platform_commission - a.platform_commission);
+      return data as Commission[];
     },
   });
 
-  // Fetch commission data for all Corners
-  const { data: cornerSummaries = [], isLoading: loadingCorners } = useQuery({
-    queryKey: ["billing-corners", selectedMonth],
-    queryFn: async () => {
-      const { start, end } = getMonthRange(selectedMonth);
-      
-      const { data: commissions, error } = await supabase
+  // Update payment status mutation
+  const updatePaymentMutation = useMutation({
+    mutationFn: async ({ 
+      id, 
+      field, 
+      value 
+    }: { 
+      id: string; 
+      field: "platform_paid" | "corner_paid"; 
+      value: boolean 
+    }) => {
+      const timestampField = field === "platform_paid" ? "platform_paid_at" : "corner_paid_at";
+      const { error } = await supabase
         .from("commission_ledger")
-        .select(`
-          corner_id,
-          corner_commission
-        `)
-        .not("corner_id", "is", null)
-        .gte("created_at", start.toISOString())
-        .lte("created_at", end.toISOString());
+        .update({
+          [field]: value,
+          [timestampField]: value ? new Date().toISOString() : null,
+        })
+        .eq("id", id);
 
       if (error) throw error;
-
-      // Get corner names
-      const cornerIds = [...new Set(commissions?.map(c => c.corner_id).filter(Boolean))];
-      const { data: corners } = await supabase
-        .from("corners")
-        .select("id, business_name")
-        .in("id", cornerIds);
-
-      const cornerMap = new Map(corners?.map(c => [c.id, c.business_name]) || []);
-
-      // Aggregate by corner
-      const summaryMap = new Map<string, CornerSummary>();
-      
-      commissions?.forEach(c => {
-        if (!c.corner_id) return;
-        
-        const existing = summaryMap.get(c.corner_id) || {
-          corner_id: c.corner_id,
-          corner_name: cornerMap.get(c.corner_id) || "Corner Sconosciuto",
-          total_commission: 0,
-          referrals_count: 0,
-        };
-        
-        existing.total_commission += c.corner_commission || 0;
-        existing.referrals_count += 1;
-        
-        summaryMap.set(c.corner_id, existing);
-      });
-
-      return Array.from(summaryMap.values()).sort((a, b) => b.total_commission - a.total_commission);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-commissions"] });
+      toast.success("Stato pagamento aggiornato");
+    },
+    onError: () => {
+      toast.error("Errore nell'aggiornamento");
     },
   });
 
-  const totalPlatformCommission = centroSummaries.reduce((sum, c) => sum + c.platform_commission, 0);
-  const totalCornerCommission = cornerSummaries.reduce((sum, c) => sum + c.total_commission, 0);
-  const totalRepairs = centroSummaries.reduce((sum, c) => sum + c.repairs_count, 0);
+  // Bulk update mutations
+  const markAllPlatformPaid = useMutation({
+    mutationFn: async () => {
+      const unpaidIds = commissions
+        .filter(c => !c.platform_paid && c.centro_id)
+        .map(c => c.id);
+      
+      if (unpaidIds.length === 0) return;
+      
+      const { error } = await supabase
+        .from("commission_ledger")
+        .update({
+          platform_paid: true,
+          platform_paid_at: new Date().toISOString(),
+        })
+        .in("id", unpaidIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-commissions"] });
+      toast.success("Tutte le commissioni piattaforma segnate come pagate");
+    },
+  });
+
+  const markAllCornerPaid = useMutation({
+    mutationFn: async () => {
+      const unpaidIds = commissions
+        .filter(c => !c.corner_paid && c.corner_id)
+        .map(c => c.id);
+      
+      if (unpaidIds.length === 0) return;
+      
+      const { error } = await supabase
+        .from("commission_ledger")
+        .update({
+          corner_paid: true,
+          corner_paid_at: new Date().toISOString(),
+        })
+        .in("id", unpaidIds);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-commissions"] });
+      toast.success("Tutte le commissioni corner segnate come pagate");
+    },
+  });
+
+  // Filter commissions
+  const filteredCommissions = commissions.filter(c => {
+    if (platformFilter === "paid" && !c.platform_paid) return false;
+    if (platformFilter === "unpaid" && c.platform_paid) return false;
+    if (cornerFilter === "paid" && c.corner_id && !c.corner_paid) return false;
+    if (cornerFilter === "unpaid" && c.corner_id && c.corner_paid) return false;
+    return true;
+  });
+
+  // Calculate totals
+  const platformTotal = commissions.reduce((sum, c) => sum + c.platform_commission, 0);
+  const platformPaid = commissions.filter(c => c.platform_paid).reduce((sum, c) => sum + c.platform_commission, 0);
+  const platformUnpaid = platformTotal - platformPaid;
+
+  const cornerTotal = commissions.filter(c => c.corner_id).reduce((sum, c) => sum + (c.corner_commission || 0), 0);
+  const cornerPaid = commissions.filter(c => c.corner_id && c.corner_paid).reduce((sum, c) => sum + (c.corner_commission || 0), 0);
+  const cornerUnpaid = cornerTotal - cornerPaid;
 
   const exportCSV = () => {
-    const headers = ["Centro", "Riparazioni", "Fatturato", "Costi Ricambi", "Margine", "Commissione da Fatturare"];
-    const rows = centroSummaries.map(c => [
-      c.centro_name,
-      c.repairs_count,
-      c.total_revenue.toFixed(2),
-      c.total_parts_cost.toFixed(2),
-      c.total_margin.toFixed(2),
+    const headers = ["Data", "Centro", "Corner", "Fatturato", "Margine", "Comm. Piattaforma", "Piatt. Pagata", "Comm. Corner", "Corner Pagata"];
+    const rows = filteredCommissions.map(c => [
+      format(new Date(c.created_at), "dd/MM/yyyy"),
+      c.centro?.business_name || "-",
+      c.corner?.business_name || "-",
+      c.gross_revenue.toFixed(2),
+      c.gross_margin.toFixed(2),
       c.platform_commission.toFixed(2),
+      c.platform_paid ? "Sì" : "No",
+      (c.corner_commission || 0).toFixed(2),
+      c.corner_id ? (c.corner_paid ? "Sì" : "No") : "-",
     ]);
     
     const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `fatturazione-${format(start, "yyyy-MM")}.csv`;
+    link.download = `commissioni-${format(start, "yyyy-MM")}.csv`;
     link.click();
   };
 
@@ -199,10 +220,10 @@ export function BillingReport() {
         <div>
           <h2 className="text-xl font-bold flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Report Fatturazione Mensile
+            Gestione Pagamenti Commissioni
           </h2>
           <p className="text-muted-foreground text-sm">
-            Commissioni da fatturare ai Centri e dovute ai Corner
+            Gestisci lo stato dei pagamenti per piattaforma e corner
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -225,7 +246,7 @@ export function BillingReport() {
       </div>
 
       {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
@@ -233,8 +254,22 @@ export function BillingReport() {
                 <Euro className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-primary">€{totalPlatformCommission.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">Da Fatturare ai Centri (20%)</p>
+                <p className="text-2xl font-bold text-primary">€{platformUnpaid.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Piattaforma Da Incassare</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-green-500/20">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-500">€{platformPaid.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Piattaforma Incassato</p>
               </div>
             </div>
           </CardContent>
@@ -247,78 +282,215 @@ export function BillingReport() {
                 <Store className="h-5 w-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-500">€{totalCornerCommission.toFixed(2)}</p>
-                <p className="text-xs text-muted-foreground">Commissioni Corner (10%)</p>
+                <p className="text-2xl font-bold text-blue-500">€{cornerUnpaid.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Corner Da Pagare</p>
               </div>
             </div>
           </CardContent>
         </Card>
         
-        <Card className="bg-card/50">
+        <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/20">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <TrendingUp className="h-5 w-5 text-green-500" />
+              <div className="p-2 rounded-lg bg-emerald-500/20">
+                <TrendingUp className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{totalRepairs}</p>
-                <p className="text-xs text-muted-foreground">Riparazioni Completate</p>
+                <p className="text-2xl font-bold text-emerald-500">€{cornerPaid.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground">Corner Pagato</p>
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Centri Billing */}
+      {/* Filters and Bulk Actions */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-wrap gap-4 items-center">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Filtri:</span>
+              </div>
+              <Select value={platformFilter} onValueChange={(v) => setPlatformFilter(v as PaymentFilter)}>
+                <SelectTrigger className="w-[160px]">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Piattaforma: Tutti</SelectItem>
+                  <SelectItem value="unpaid">Piattaforma: Non pagati</SelectItem>
+                  <SelectItem value="paid">Piattaforma: Pagati</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={cornerFilter} onValueChange={(v) => setCornerFilter(v as PaymentFilter)}>
+                <SelectTrigger className="w-[160px]">
+                  <Store className="h-4 w-4 mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Corner: Tutti</SelectItem>
+                  <SelectItem value="unpaid">Corner: Non pagati</SelectItem>
+                  <SelectItem value="paid">Corner: Pagati</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => markAllPlatformPaid.mutate()}
+                disabled={markAllPlatformPaid.isPending || platformUnpaid === 0}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Segna Tutti Piattaforma
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => markAllCornerPaid.mutate()}
+                disabled={markAllCornerPaid.isPending || cornerUnpaid === 0}
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Segna Tutti Corner
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Commission List */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
-            <Building2 className="h-5 w-5" />
-            Fatturazione Centri - {monthLabel}
+            <FileText className="h-5 w-5" />
+            Dettaglio Commissioni - {monthLabel} ({filteredCommissions.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loadingCentri ? (
+          {isLoading ? (
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
             </div>
-          ) : centroSummaries.length === 0 ? (
+          ) : filteredCommissions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nessuna commissione da fatturare in {monthLabel}</p>
+              <Euro className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nessuna commissione trovata</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {centroSummaries.map((centro) => (
+              {filteredCommissions.map((commission) => (
                 <div
-                  key={centro.centro_id}
+                  key={commission.id}
                   className="p-4 rounded-lg border border-border bg-card/50"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div className="flex-1">
-                      <h4 className="font-semibold">{centro.centro_name}</h4>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2 text-sm">
-                        <div>
-                          <p className="text-muted-foreground">Riparazioni</p>
-                          <p className="font-medium">{centro.repairs_count}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Fatturato</p>
-                          <p className="font-medium">€{centro.total_revenue.toFixed(2)}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Margine</p>
-                          <p className="font-medium">€{centro.total_margin.toFixed(2)}</p>
-                        </div>
-                        <div>
-                          <p className="text-muted-foreground">Ricambi</p>
-                          <p className="font-medium">€{centro.total_parts_cost.toFixed(2)}</p>
-                        </div>
+                  <div className="flex flex-col gap-4">
+                    {/* Header row */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(commission.created_at), "dd MMM yyyy", { locale: it })}
+                        </span>
+                        {commission.centro && (
+                          <Badge variant="outline" className="text-primary border-primary/30">
+                            <Building2 className="h-3 w-3 mr-1" />
+                            {commission.centro.business_name}
+                          </Badge>
+                        )}
+                        {commission.corner && (
+                          <Badge variant="outline" className="text-blue-500 border-blue-500/30">
+                            <Store className="h-3 w-3 mr-1" />
+                            {commission.corner.business_name}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Fatturato: €{commission.gross_revenue.toFixed(2)} | Margine: €{commission.gross_margin.toFixed(2)}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-muted-foreground text-sm">Da Fatturare</p>
-                      <p className="text-xl font-bold text-primary">€{centro.platform_commission.toFixed(2)}</p>
+
+                    {/* Payment controls */}
+                    <div className="flex flex-col sm:flex-row gap-4 pt-3 border-t border-border/50">
+                      {/* Platform payment */}
+                      <div className="flex-1 flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-3">
+                          <Checkbox
+                            checked={commission.platform_paid}
+                            onCheckedChange={(checked) => {
+                              updatePaymentMutation.mutate({
+                                id: commission.id,
+                                field: "platform_paid",
+                                value: checked as boolean,
+                              });
+                            }}
+                            disabled={updatePaymentMutation.isPending}
+                          />
+                          <div>
+                            <p className="text-sm font-medium">Commissione Piattaforma</p>
+                            <p className="text-xs text-muted-foreground">
+                              {commission.platform_paid && commission.platform_paid_at
+                                ? `Pagato il ${format(new Date(commission.platform_paid_at), "dd/MM/yyyy")}`
+                                : "Non pagato"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold">€{commission.platform_commission.toFixed(2)}</span>
+                          {commission.platform_paid ? (
+                            <Badge className="bg-green-500/10 text-green-500 border-green-500/30">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Pagato
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-warning border-warning/30">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Da pagare
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Corner payment (if applicable) */}
+                      {commission.corner_id && (
+                        <div className="flex-1 flex items-center justify-between p-3 rounded-lg bg-muted/30">
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={commission.corner_paid}
+                              onCheckedChange={(checked) => {
+                                updatePaymentMutation.mutate({
+                                  id: commission.id,
+                                  field: "corner_paid",
+                                  value: checked as boolean,
+                                });
+                              }}
+                              disabled={updatePaymentMutation.isPending}
+                            />
+                            <div>
+                              <p className="text-sm font-medium">Commissione Corner</p>
+                              <p className="text-xs text-muted-foreground">
+                                {commission.corner_paid && commission.corner_paid_at
+                                  ? `Pagato il ${format(new Date(commission.corner_paid_at), "dd/MM/yyyy")}`
+                                  : "Non pagato"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold">€{(commission.corner_commission || 0).toFixed(2)}</span>
+                            {commission.corner_paid ? (
+                              <Badge className="bg-green-500/10 text-green-500 border-green-500/30">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Pagato
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-warning border-warning/30">
+                                <Clock className="h-3 w-3 mr-1" />
+                                Da pagare
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -327,47 +499,6 @@ export function BillingReport() {
           )}
         </CardContent>
       </Card>
-
-      {/* Corner Commissions */}
-      {cornerSummaries.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Store className="h-5 w-5" />
-              Commissioni Corner - {monthLabel}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingCorners ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {cornerSummaries.map((corner) => (
-                  <div
-                    key={corner.corner_id}
-                    className="p-4 rounded-lg border border-border bg-card/50"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="font-semibold">{corner.corner_name}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {corner.referrals_count} segnalazioni
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-muted-foreground text-sm">Commissione</p>
-                        <p className="text-xl font-bold text-blue-500">€{corner.total_commission.toFixed(2)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
