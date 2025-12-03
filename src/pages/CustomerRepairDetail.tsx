@@ -377,22 +377,38 @@ const getStatusInfo = (status: string) => {
           )}
 
           {/* Header Section */}
-          <div className="flex items-start justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-foreground mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
                 Dettaglio Riparazione
               </h1>
               <p className="text-muted-foreground">
                 {repair.device.brand} {repair.device.model}
               </p>
             </div>
-            <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${statusInfo.bgColor}`}>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <div className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg ${statusInfo.bgColor}`}>
                 {statusInfo.icon}
-                <span className={`font-semibold ${statusInfo.color}`}>
+                <span className={`font-semibold text-sm sm:text-base ${statusInfo.color}`}>
                   {statusInfo.label}
                 </span>
               </div>
+              {/* Forfeiture countdown badge */}
+              {repair.status === "completed" && !repair.delivered_at && repair.completed_at && (() => {
+                const completedAt = new Date(repair.completed_at);
+                const now = new Date();
+                const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
+                const daysLeft = 30 - daysSinceCompletion;
+                if (daysLeft <= 7 && daysLeft > 0) {
+                  return (
+                    <Badge className={`${daysLeft <= 3 ? 'bg-rose-600 animate-pulse' : 'bg-rose-500'} text-white gap-1`}>
+                      <Clock className="h-3 w-3" />
+                      ⚠️ {daysLeft}g al ritiro
+                    </Badge>
+                  );
+                }
+                return null;
+              })()}
               <Badge variant={priorityInfo.variant}>
                 Priorità: {priorityInfo.label}
               </Badge>
