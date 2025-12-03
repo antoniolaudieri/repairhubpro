@@ -341,7 +341,55 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
 
     const products: UtopyaProduct[] = [];
     
-    // Parse product items - look for li.product-item
+    // Method 1: Look for Magento widget data in script tags
+    const magentoInitMatches = html.matchAll(/<script type="text\/x-magento-init">([\s\S]*?)<\/script>/gi);
+    for (const match of magentoInitMatches) {
+      try {
+        const jsonStr = match[1].trim();
+        if (jsonStr.includes('product') || jsonStr.includes('item')) {
+          console.log('Magento init data sample:', jsonStr.substring(0, 500));
+        }
+      } catch (e) {}
+    }
+
+    // Method 2: Look for product data in window variables
+    const windowDataMatch = html.match(/window\.products\s*=\s*(\[[\s\S]*?\]);/i) ||
+                           html.match(/var\s+products\s*=\s*(\[[\s\S]*?\]);/i) ||
+                           html.match(/"items"\s*:\s*(\[[\s\S]*?\])/i);
+    if (windowDataMatch) {
+      try {
+        const productsData = JSON.parse(windowDataMatch[1]);
+        console.log('Found window products data:', productsData.length);
+        for (const p of productsData) {
+          if (p.name && (p.url || p.product_url)) {
+            products.push({
+              name: p.name,
+              price: p.price ? `€${p.price}` : null,
+              priceNumeric: parseFloat(p.price) || 0,
+              image: p.image || p.thumbnail || '',
+              url: p.url || p.product_url || '',
+              sku: p.sku || '',
+              brand: '',
+              inStock: true,
+              requiresLogin: !p.price
+            });
+          }
+        }
+      } catch (e) {}
+    }
+
+    // Method 3: Look for data-mage-init attributes with product info
+    const dataMageMatches = html.matchAll(/data-mage-init='([^']+)'/gi);
+    for (const match of dataMageMatches) {
+      try {
+        const data = JSON.parse(match[1]);
+        if (data.configurable || data.Magento_Catalog) {
+          console.log('Found mage-init product data');
+        }
+      } catch (e) {}
+    }
+
+    // Method 4: Parse product items - look for li.product-item
     const productItemRegex = /<li[^>]*class="[^"]*product-item[^"]*"[^>]*>([\s\S]*?)<\/li>/gi;
     let itemMatch;
     
@@ -424,6 +472,49 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
     }
 
     console.log(`HTML scraping found ${products.length} products`);
+    
+    // Method 5: Fallback - extract all product URLs and fetch names from them
+    if (products.length === 0) {
+      console.log('Trying URL extraction fallback...');
+      const urlRegex = /href="(https:\/\/www\.utopya\.it\/([a-z0-9]+-[a-z0-9\-]+)\.html)"/gi;
+      const seenUrls = new Set<string>();
+      let urlMatch;
+      
+      const excludePatterns = ['/customer/', '/checkout/', '/wishlist/', '/catalogsearch/', '/privacy', '/terms'];
+      
+      while ((urlMatch = urlRegex.exec(html)) !== null) {
+        const url = urlMatch[1];
+        const slug = urlMatch[2];
+        
+        if (seenUrls.has(url)) continue;
+        if (excludePatterns.some(p => url.includes(p))) continue;
+        if (slug.length < 10) continue;
+        
+        seenUrls.add(url);
+        
+        // Get name from nearby title attribute or slug
+        const titleMatch = html.match(new RegExp(`href="${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*title="([^"]+)"`, 'i'));
+        const name = titleMatch ? decodeHtmlEntities(titleMatch[1]) : slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        
+        if (name.length > 5) {
+          products.push({
+            name,
+            price: null,
+            priceNumeric: 0,
+            image: '',
+            url,
+            sku: '',
+            brand: '',
+            inStock: true,
+            requiresLogin: true
+          });
+        }
+        
+        if (products.length >= 20) break;
+      }
+      
+      console.log(`URL fallback found ${products.length} products`);
+    }
     
     if (products.length > 0) {
       console.log('First product:', JSON.stringify(products[0]));
