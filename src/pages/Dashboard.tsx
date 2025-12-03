@@ -35,6 +35,20 @@ interface RecentRepair {
   };
 }
 
+interface ForfeitureWarning {
+  id: string;
+  completed_at: string;
+  daysLeft: number;
+  device: {
+    brand: string;
+    model: string;
+  };
+  customer: {
+    name: string;
+    phone: string;
+  };
+}
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [stats, setStats] = useState({
@@ -44,19 +58,22 @@ const Dashboard = () => {
     lowStockItems: 0,
     totalCustomers: 0,
     totalRevenue: 0,
+    forfeitureWarnings: 0,
   });
   const [recentRepairs, setRecentRepairs] = useState<RecentRepair[]>([]);
+  const [forfeitureWarnings, setForfeitureWarnings] = useState<ForfeitureWarning[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadStats();
     loadRecentRepairs();
+    loadForfeitureWarnings();
   }, []);
 
   const loadStats = async () => {
     const { data: repairs } = await supabase
       .from("repairs")
-      .select("status, created_at, final_cost");
+      .select("status, created_at, final_cost, completed_at, delivered_at");
 
     const { data: spareParts } = await supabase
       .from("spare_parts")
@@ -80,6 +97,15 @@ const Dashboard = () => {
 
     const totalRevenue = repairs?.reduce((sum, r) => sum + (r.final_cost || 0), 0) || 0;
 
+    // Count forfeiture warnings (completed but not delivered, 23+ days)
+    const now = new Date();
+    const forfeitureCount = repairs?.filter((r) => {
+      if (r.status !== "completed" || r.delivered_at || !r.completed_at) return false;
+      const completedAt = new Date(r.completed_at);
+      const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
+      return daysSinceCompletion >= 23;
+    }).length || 0;
+
     setStats({
       pendingRepairs: pending,
       inProgressRepairs: inProgress,
@@ -87,8 +113,56 @@ const Dashboard = () => {
       lowStockItems: lowStock,
       totalCustomers: customerCount || 0,
       totalRevenue,
+      forfeitureWarnings: forfeitureCount,
     });
     setLoading(false);
+  };
+
+  const loadForfeitureWarnings = async () => {
+    const { data } = await supabase
+      .from("repairs")
+      .select(`
+        id,
+        completed_at,
+        delivered_at,
+        status,
+        device:devices (
+          brand,
+          model,
+          customer:customers (
+            name,
+            phone
+          )
+        )
+      `)
+      .eq("status", "completed")
+      .is("delivered_at", null)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: true });
+
+    if (data) {
+      const now = new Date();
+      const warnings = data
+        .map((r: any) => {
+          const completedAt = new Date(r.completed_at);
+          const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
+          const daysLeft = 30 - daysSinceCompletion;
+          return {
+            id: r.id,
+            completed_at: r.completed_at,
+            daysLeft,
+            device: {
+              brand: r.device.brand,
+              model: r.device.model,
+            },
+            customer: r.device.customer,
+          };
+        })
+        .filter((r: ForfeitureWarning) => r.daysLeft <= 7 && r.daysLeft > 0)
+        .sort((a: ForfeitureWarning, b: ForfeitureWarning) => a.daysLeft - b.daysLeft);
+
+      setForfeitureWarnings(warnings);
+    }
   };
 
   const loadRecentRepairs = async () => {
@@ -129,6 +203,7 @@ const Dashboard = () => {
     waiting_parts: { label: "Attesa ricambi", bg: "bg-orange-100", text: "text-orange-700" },
     completed: { label: "Completata", bg: "bg-emerald-100", text: "text-emerald-700" },
     cancelled: { label: "Annullata", bg: "bg-red-100", text: "text-red-700" },
+    forfeited: { label: "Alienato", bg: "bg-rose-100", text: "text-rose-900" },
   };
 
   const statsCards = [
@@ -167,6 +242,16 @@ const Dashboard = () => {
       bgLight: "bg-red-500/10",
       textColor: "text-red-600",
       onClick: () => navigate("/inventory?low_stock=true"),
+    },
+    {
+      title: "In Scadenza",
+      value: stats.forfeitureWarnings,
+      icon: Clock,
+      color: "from-rose-700 to-rose-900",
+      bgLight: "bg-rose-900/10",
+      textColor: "text-rose-900",
+      onClick: () => navigate("/repairs?status=completed"),
+      highlight: stats.forfeitureWarnings > 0,
     },
   ];
 
@@ -219,8 +304,70 @@ const Dashboard = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Forfeiture Warning Alert */}
+        {forfeitureWarnings.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Card className="p-4 bg-gradient-to-r from-rose-500/10 to-rose-900/5 border-rose-500/30">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-rose-500/20 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-rose-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-rose-900 flex items-center gap-2">
+                    ⚠️ Dispositivi in Scadenza
+                    <Badge className="bg-rose-500 text-white">{forfeitureWarnings.length}</Badge>
+                  </h3>
+                  <p className="text-sm text-rose-700 mb-3">
+                    I seguenti dispositivi devono essere ritirati entro 7 giorni o verranno alienati.
+                  </p>
+                  <div className="space-y-2">
+                    {forfeitureWarnings.slice(0, 5).map((warning) => (
+                      <div 
+                        key={warning.id}
+                        className="flex items-center justify-between p-2 rounded-lg bg-background/50 cursor-pointer hover:bg-background transition-colors"
+                        onClick={() => navigate(`/repairs/${warning.id}`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Smartphone className="h-4 w-4 text-rose-600" />
+                          <div>
+                            <p className="text-sm font-medium text-foreground">
+                              {warning.device.brand} {warning.device.model}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {warning.customer.name} - {warning.customer.phone}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge 
+                          className={`${warning.daysLeft <= 3 ? 'bg-rose-600 animate-pulse' : 'bg-rose-500'} text-white`}
+                        >
+                          {warning.daysLeft}g rimasti
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                  {forfeitureWarnings.length > 5 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="mt-2 text-rose-700"
+                      onClick={() => navigate("/repairs?status=completed")}
+                    >
+                      Vedi tutti ({forfeitureWarnings.length})
+                      <ChevronRight className="h-4 w-4 ml-1" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {statsCards.map((card, index) => (
             <motion.div
               key={card.title}
