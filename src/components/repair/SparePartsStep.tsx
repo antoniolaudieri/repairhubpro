@@ -197,12 +197,12 @@ export const SparePartsStep = ({
     lp.device_type.toLowerCase() === deviceType.toLowerCase()
   );
 
-  // Fetch AI suggestions when reportedIssue is available
+  // Fetch AI suggestions when reportedIssue is available (even without inventory)
   useEffect(() => {
-    if (reportedIssue && spareParts.length > 0 && !hasFetchedSuggestions) {
+    if (reportedIssue && !hasFetchedSuggestions && !loading) {
       fetchAISuggestions();
     }
-  }, [reportedIssue, spareParts, hasFetchedSuggestions]);
+  }, [reportedIssue, hasFetchedSuggestions, loading]);
 
   const fetchAISuggestions = async () => {
     if (!reportedIssue) return;
