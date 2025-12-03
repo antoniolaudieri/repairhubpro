@@ -107,6 +107,7 @@ interface RepairDetail {
   repair_notes: string | null;
   estimated_cost: number | null;
   final_cost: number | null;
+  acconto: number | null;
   ai_suggestions: string | null;
   diagnostic_fee: number | null;
   diagnostic_fee_paid: boolean | null;
@@ -228,6 +229,7 @@ export default function RepairDetail() {
         repair_notes: data.repair_notes,
         estimated_cost: data.estimated_cost,
         final_cost: data.final_cost,
+        acconto: data.acconto,
         ai_suggestions: data.ai_suggestions,
         diagnostic_fee: data.diagnostic_fee,
         diagnostic_fee_paid: data.diagnostic_fee_paid,
@@ -357,6 +359,7 @@ export default function RepairDetail() {
           repair_notes: repair.repair_notes,
           estimated_cost: repair.estimated_cost,
           final_cost: repair.final_cost,
+          acconto: repair.acconto,
           diagnostic_fee_paid: repair.diagnostic_fee_paid,
           started_at: repair.status === "in_progress" ? new Date().toISOString() : null,
           completed_at: repair.status === "completed" ? new Date().toISOString() : null,
@@ -784,6 +787,24 @@ export default function RepairDetail() {
                           className="pl-10 h-11"
                           placeholder="0.00"
                         />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Acconto (€)</Label>
+                      <div className="relative">
+                        <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={repair.acconto || ""}
+                          onChange={(e) =>
+                            setRepair({ ...repair, acconto: parseFloat(e.target.value) || null })
+                          }
+                          className="pl-10 h-11"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Diagnostic Fee Toggle */}
@@ -807,8 +828,6 @@ export default function RepairDetail() {
                         checked={repair.diagnostic_fee_paid || false}
                         onCheckedChange={(checked) => setRepair({ ...repair, diagnostic_fee_paid: checked })}
                       />
-                    </div>
-                  </div>
                     </div>
                   </div>
 
