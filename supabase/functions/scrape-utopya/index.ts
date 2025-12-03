@@ -473,47 +473,130 @@ async function searchViaHTML(query: string, cookies: string): Promise<{ success:
 
     console.log(`HTML scraping found ${products.length} products`);
     
-    // Method 5: Fallback - extract all product URLs and fetch names from them
+    // Method 5: Fallback - search for product blocks with more context
     if (products.length === 0) {
-      console.log('Trying URL extraction fallback...');
-      const urlRegex = /href="(https:\/\/www\.utopya\.it\/([a-z0-9]+-[a-z0-9\-]+)\.html)"/gi;
-      const seenUrls = new Set<string>();
-      let urlMatch;
+      console.log('Trying enhanced fallback extraction...');
       
-      const excludePatterns = ['/customer/', '/checkout/', '/wishlist/', '/catalogsearch/', '/privacy', '/terms'];
+      // Look for product links with surrounding context (within ~2000 chars)
+      const productBlockRegex = /<(?:div|li|article)[^>]*class="[^"]*(?:product|item)[^"]*"[^>]*>([\s\S]{100,3000}?)<\/(?:div|li|article)>/gi;
+      let blockMatch;
       
-      while ((urlMatch = urlRegex.exec(html)) !== null) {
+      while ((blockMatch = productBlockRegex.exec(html)) !== null && products.length < 20) {
+        const block = blockMatch[1];
+        
+        // Extract URL
+        const urlMatch = block.match(/href="(https:\/\/www\.utopya\.it\/[a-z0-9][a-z0-9\-]+\.html)"/i);
+        if (!urlMatch) continue;
+        
         const url = urlMatch[1];
-        const slug = urlMatch[2];
+        if (products.some(p => p.url === url)) continue;
         
-        if (seenUrls.has(url)) continue;
-        if (excludePatterns.some(p => url.includes(p))) continue;
-        if (slug.length < 10) continue;
+        // Extract name from title or link text
+        let name = '';
+        const titleMatch = block.match(/title="([^"]{5,})"/i) || 
+                          block.match(/class="[^"]*product[^"]*name[^"]*"[^>]*>([^<]+)</i) ||
+                          block.match(/<a[^>]*href="[^"]*\.html"[^>]*>([^<]{5,})</i);
+        if (titleMatch) {
+          name = decodeHtmlEntities(titleMatch[1].trim());
+        }
         
-        seenUrls.add(url);
+        // Extract image
+        let image = '';
+        const imgMatch = block.match(/src="(https:\/\/[^"]*(?:\.jpg|\.jpeg|\.png|\.webp)[^"]*)"/i) ||
+                        block.match(/data-src="(https:\/\/[^"]*(?:\.jpg|\.jpeg|\.png|\.webp)[^"]*)"/i) ||
+                        block.match(/srcset="([^\s"]+)/i);
+        if (imgMatch) {
+          image = imgMatch[1].split(' ')[0]; // Get first URL from srcset if present
+        }
         
-        // Get name from nearby title attribute or slug
-        const titleMatch = html.match(new RegExp(`href="${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*title="([^"]+)"`, 'i'));
-        const name = titleMatch ? decodeHtmlEntities(titleMatch[1]) : slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        // Extract price
+        let price: string | null = null;
+        let priceNumeric = 0;
+        const priceMatch = block.match(/data-price-amount="([\d.]+)"/) ||
+                          block.match(/€\s*([\d,]+(?:\.\d{2})?)/);
+        if (priceMatch) {
+          priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
+          if (priceNumeric > 0) {
+            price = `€${priceNumeric.toFixed(2)}`;
+          }
+        }
         
-        if (name.length > 5) {
+        if (name && name.length > 5) {
           products.push({
             name,
-            price: null,
-            priceNumeric: 0,
-            image: '',
+            price,
+            priceNumeric,
+            image,
             url,
             sku: '',
             brand: '',
-            inStock: true,
-            requiresLogin: true
+            inStock: !block.includes('out-of-stock'),
+            requiresLogin: !price
           });
         }
-        
-        if (products.length >= 20) break;
       }
       
-      console.log(`URL fallback found ${products.length} products`);
+      console.log(`Enhanced fallback found ${products.length} products`);
+      
+      // If still no products, try simple URL extraction as last resort
+      if (products.length === 0) {
+        console.log('Trying simple URL extraction...');
+        const urlRegex = /href="(https:\/\/www\.utopya\.it\/([a-z0-9]+-[a-z0-9\-]+)\.html)"/gi;
+        const seenUrls = new Set<string>();
+        let urlMatch;
+        
+        const excludePatterns = ['/customer/', '/checkout/', '/wishlist/', '/catalogsearch/', '/privacy', '/terms'];
+        
+        while ((urlMatch = urlRegex.exec(html)) !== null && products.length < 20) {
+          const url = urlMatch[1];
+          const slug = urlMatch[2];
+          
+          if (seenUrls.has(url)) continue;
+          if (excludePatterns.some(p => url.includes(p))) continue;
+          if (slug.length < 10) continue;
+          
+          seenUrls.add(url);
+          
+          // Try to find image and price near this URL
+          const urlPos = html.indexOf(url);
+          const context = html.substring(Math.max(0, urlPos - 1500), Math.min(html.length, urlPos + 1500));
+          
+          let image = '';
+          const imgMatch = context.match(/src="(https:\/\/www\.utopya\.(?:it|fr)\/media\/catalog\/product[^"]+)"/i);
+          if (imgMatch) image = imgMatch[1];
+          
+          let price: string | null = null;
+          let priceNumeric = 0;
+          const priceMatch = context.match(/data-price-amount="([\d.]+)"/) ||
+                            context.match(/"price":\s*([\d.]+)/) ||
+                            context.match(/€\s*([\d,]+(?:\.\d{2})?)/);
+          if (priceMatch) {
+            priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
+            if (priceNumeric > 0) {
+              price = `€${priceNumeric.toFixed(2)}`;
+            }
+          }
+          
+          const titleMatch = context.match(new RegExp(`href="${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*title="([^"]+)"`, 'i'));
+          const name = titleMatch ? decodeHtmlEntities(titleMatch[1]) : slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          
+          if (name.length > 5) {
+            products.push({
+              name,
+              price,
+              priceNumeric,
+              image,
+              url,
+              sku: '',
+              brand: '',
+              inStock: true,
+              requiresLogin: !price
+            });
+          }
+        }
+        
+        console.log(`Simple URL fallback found ${products.length} products`);
+      }
     }
     
     if (products.length > 0) {
