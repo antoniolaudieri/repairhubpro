@@ -519,7 +519,7 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
                               size="sm"
                               className="h-7 text-xs"
                               onClick={() => addUtopyaToCart(product)}
-                              disabled={!product.priceNumeric}
+                              disabled={false}
                             >
                               <Plus className="h-3 w-3 mr-1" />
                               Aggiungi
