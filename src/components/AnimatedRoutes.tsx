@@ -1,0 +1,192 @@
+import { Routes, Route, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { PageTransition } from "@/components/PageTransition";
+import TechnicianLayout from "@/layouts/TechnicianLayout";
+import CustomerHome from "@/pages/CustomerHome";
+import CustomerDashboard from "@/pages/CustomerDashboard";
+import CustomerRepairDetail from "@/pages/CustomerRepairDetail";
+import SignatureHistory from "@/pages/SignatureHistory";
+import Dashboard from "@/pages/Dashboard";
+import Auth from "@/pages/Auth";
+import NewRepair from "@/pages/NewRepair";
+import Repairs from "@/pages/Repairs";
+import RepairDetail from "@/pages/RepairDetail";
+import RepairGuides from "@/pages/RepairGuides";
+import Customers from "@/pages/Customers";
+import CustomerDetail from "@/pages/CustomerDetail";
+import Inventory from "@/pages/Inventory";
+import Orders from "@/pages/Orders";
+import Appointments from "@/pages/Appointments";
+import Feedback from "@/pages/Feedback";
+import Quotes from "@/pages/Quotes";
+import PricingSettings from "@/pages/PricingSettings";
+import NotFound from "@/pages/NotFound";
+
+export const AnimatedRoutes = () => {
+  const location = useLocation();
+
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
+        <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
+        <Route
+          path="/customer-dashboard"
+          element={
+            <ProtectedRoute>
+              <PageTransition><CustomerDashboard /></PageTransition>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/signature-history"
+          element={
+            <ProtectedRoute>
+              <PageTransition><SignatureHistory /></PageTransition>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customer-repairs/:id"
+          element={
+            <ProtectedRoute>
+              <PageTransition><CustomerRepairDetail /></PageTransition>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><Dashboard /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/new-repair"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><NewRepair /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/repairs"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><Repairs /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/repairs/:id"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><RepairDetail /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/repair-guides"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><RepairGuides /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><Customers /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers/:id"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><CustomerDetail /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><Inventory /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><Orders /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/appointments"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><Appointments /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/feedback"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><Feedback /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/quotes"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><Quotes /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pricing-settings"
+          element={
+            <ProtectedRoute requireTechnician>
+              <TechnicianLayout>
+                <PageTransition><PricingSettings /></PageTransition>
+              </TechnicianLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
+      </Routes>
+    </AnimatePresence>
+  );
+};
