@@ -90,16 +90,30 @@ async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: bool
   }
 }
 
+// Decode HTML entities
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
 // Clean product name - remove placeholders and invalid text
 function cleanProductName(name: string): string {
   if (!name) return '';
+  
+  // First decode HTML entities
+  let cleaned = decodeHtmlEntities(name).trim();
   
   const invalidNames = [
     'loading', 'caricamento', 'placeholder', '...', 
     'undefined', 'null', 'image', 'foto', 'photo'
   ];
   
-  const cleaned = name.trim();
   const lowerCleaned = cleaned.toLowerCase();
   
   // Check if name is invalid
@@ -113,6 +127,31 @@ function cleanProductName(name: string): string {
   }
   
   return cleaned;
+}
+
+// Check if URL is a category page (not a product)
+function isCategoryUrl(url: string): boolean {
+  const slug = url.replace('https://www.utopya.it/', '').replace('.html', '');
+  
+  // Category pages are typically short slugs without hyphens
+  const categoryPatterns = [
+    'apple', 'samsung', 'xiaomi', 'motorola', 'altri', 'accessori',
+    'protection', 'informatica', 'attrezzature', 'dispositivi', 'laptops',
+    'brand', 'huawei', 'oppo', 'realme', 'oneplus', 'google', 'sony',
+    'lg', 'nokia', 'honor', 'asus', 'lenovo', 'tablet', 'watch'
+  ];
+  
+  // Check exact match with known categories
+  if (categoryPatterns.includes(slug.toLowerCase())) {
+    return true;
+  }
+  
+  // Category URLs are usually single words without hyphens
+  if (!slug.includes('-') && slug.length < 20) {
+    return true;
+  }
+  
+  return false;
 }
 
 // Convert URL slug to readable name
@@ -181,6 +220,8 @@ serve(async (req) => {
       if (seenUrls.has(url)) continue;
       if (excludePatterns.some(p => url.includes(p))) continue;
       if (slug.length < 5) continue;
+      // Filter out category pages - only keep actual product URLs
+      if (isCategoryUrl(url)) continue;
       
       seenUrls.add(url);
     }
