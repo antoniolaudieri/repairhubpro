@@ -344,11 +344,11 @@ const getStatusInfo = (status: string) => {
                         ? 'bg-rose-500/10 border border-rose-500/30'
                         : 'bg-amber-500/10 border border-amber-500/30'
                   }`}>
-                    <div className="flex items-center gap-3">
-                      <Clock className={`h-6 w-6 flex-shrink-0 ${
+                    <div className="flex items-start gap-3">
+                      <Clock className={`h-6 w-6 flex-shrink-0 mt-0.5 ${
                         isCritical ? 'text-red-600' : isUrgent ? 'text-rose-600' : 'text-amber-600'
                       }`} />
-                      <div>
+                      <div className="space-y-2">
                         <p className={`font-bold ${
                           isCritical ? 'text-red-700' : isUrgent ? 'text-rose-700' : 'text-amber-700'
                         }`}>
@@ -362,6 +362,15 @@ const getStatusInfo = (status: string) => {
                             : `Ricorda di ritirare il dispositivo. Hai ancora ${daysLeft} giorni.`
                           }
                         </p>
+                        <div className={`text-xs pt-2 border-t ${
+                          isCritical ? 'border-red-300 text-red-600/80' : isUrgent ? 'border-rose-300 text-rose-600/80' : 'border-amber-300 text-amber-600/80'
+                        }`}>
+                          <p className="font-semibold">📋 Art. 2756 c.c. - Diritto di Ritenzione</p>
+                          <p className="mt-1">
+                            Questa clausola è stata accettata e firmata digitalmente al momento della consegna 
+                            del dispositivo. La firma costituisce prova dell'accettazione dei termini contrattuali.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

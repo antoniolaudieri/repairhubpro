@@ -91,16 +91,22 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
               <div className="pt-2 border-t border-rose-200 mt-2">
                 <p className="text-rose-600 font-semibold flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                  Clausola di Alienazione
+                  Clausola di Alienazione (Art. 2756 c.c.)
                 </p>
                 <p className="text-rose-600/80 mt-1">
-                  Il dispositivo non ritirato entro 30 giorni dalla comunicazione di completamento 
+                  In conformità all'Art. 2756 del Codice Civile italiano (Diritto di Ritenzione), 
+                  il dispositivo non ritirato entro 30 giorni dalla comunicazione di completamento 
                   della riparazione sarà considerato abbandonato e diventerà di proprietà del laboratorio.
+                </p>
+                <p className="text-rose-600/80 mt-1 text-[10px]">
+                  Il laboratorio si riserva il diritto di alienare, vendere o smaltire il dispositivo 
+                  abbandonato per recuperare i costi delle prestazioni eseguite.
                 </p>
               </div>
               <p className="pt-2 text-foreground font-medium">
-                Firmando, il cliente autorizza gli interventi, accetta il pagamento di €15 per la diagnosi 
-                e la clausola di alienazione.
+                Firmando digitalmente, il cliente autorizza gli interventi, accetta il pagamento di €15 
+                per la diagnosi e la clausola di alienazione. La firma digitale costituisce prova 
+                dell'accettazione dei termini contrattuali ai sensi della normativa vigente.
               </p>
             </div>
           </ScrollArea>
