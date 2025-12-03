@@ -21,12 +21,14 @@ import {
   MapPin,
   Phone,
   Mail,
-  BarChart3
+  BarChart3,
+  Settings2
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { CommissionAnalytics } from "@/components/admin/CommissionAnalytics";
 import { BillingReport } from "@/components/admin/BillingReport";
+import { CommissionSettings } from "@/components/admin/CommissionSettings";
 
 interface Corner {
   id: string;
@@ -303,7 +305,7 @@ export default function PlatformAdmin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="corners" className="relative">
               <Store className="h-4 w-4 mr-2" />
               Corner
@@ -330,6 +332,10 @@ export default function PlatformAdmin() {
                   {pendingCentri}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings2 className="h-4 w-4 mr-2" />
+              Commissioni
             </TabsTrigger>
             <TabsTrigger value="billing">
               <Euro className="h-4 w-4 mr-2" />
@@ -715,6 +721,11 @@ export default function PlatformAdmin() {
           {/* Billing Tab */}
           <TabsContent value="billing" className="space-y-4">
             <BillingReport />
+          </TabsContent>
+
+          {/* Commission Settings Tab */}
+          <TabsContent value="settings" className="space-y-4">
+            <CommissionSettings />
           </TabsContent>
         </Tabs>
       </div>
