@@ -17,7 +17,13 @@ import {
   ChevronRight,
   Calendar,
   Euro,
-  Activity
+  Activity,
+  Tablet,
+  Laptop,
+  Watch,
+  Monitor,
+  Gamepad2,
+  Sparkles
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -29,6 +35,8 @@ interface RecentRepair {
   device: {
     brand: string;
     model: string;
+    photo_url: string | null;
+    device_type: string;
   };
   customer: {
     name: string;
@@ -175,6 +183,8 @@ const Dashboard = () => {
         device:devices (
           brand,
           model,
+          photo_url,
+          device_type,
           customer:customers (
             name
           )
@@ -191,19 +201,32 @@ const Dashboard = () => {
         device: {
           brand: r.device.brand,
           model: r.device.model,
+          photo_url: r.device.photo_url,
+          device_type: r.device.device_type,
         },
         customer: r.device.customer,
       })));
     }
   };
 
-  const statusConfig: Record<string, { label: string; bg: string; text: string }> = {
-    pending: { label: "In attesa", bg: "bg-amber-100", text: "text-amber-700" },
-    in_progress: { label: "In corso", bg: "bg-blue-100", text: "text-blue-700" },
-    waiting_parts: { label: "Attesa ricambi", bg: "bg-orange-100", text: "text-orange-700" },
-    completed: { label: "Completata", bg: "bg-emerald-100", text: "text-emerald-700" },
-    cancelled: { label: "Annullata", bg: "bg-red-100", text: "text-red-700" },
-    forfeited: { label: "Alienato", bg: "bg-rose-100", text: "text-rose-900" },
+  const statusConfig: Record<string, { label: string; bg: string; text: string; icon: typeof Clock }> = {
+    pending: { label: "In attesa", bg: "bg-amber-100", text: "text-amber-700", icon: Clock },
+    in_progress: { label: "In corso", bg: "bg-blue-100", text: "text-blue-700", icon: Wrench },
+    waiting_parts: { label: "Attesa ricambi", bg: "bg-orange-100", text: "text-orange-700", icon: Package },
+    completed: { label: "Completata", bg: "bg-emerald-100", text: "text-emerald-700", icon: CheckCircle2 },
+    cancelled: { label: "Annullata", bg: "bg-red-100", text: "text-red-700", icon: AlertTriangle },
+    forfeited: { label: "Alienato", bg: "bg-rose-100", text: "text-rose-900", icon: AlertTriangle },
+  };
+
+  const getDeviceIcon = (deviceType: string) => {
+    switch (deviceType?.toLowerCase()) {
+      case 'tablet': return Tablet;
+      case 'laptop': return Laptop;
+      case 'smartwatch': return Watch;
+      case 'console': return Gamepad2;
+      case 'pc': return Monitor;
+      default: return Smartphone;
+    }
   };
 
   const statsCards = [
@@ -496,17 +519,31 @@ const Dashboard = () => {
                   <div className="space-y-3">
                     {recentRepairs.map((repair, index) => {
                       const status = statusConfig[repair.status] || statusConfig.pending;
+                      const DeviceIcon = getDeviceIcon(repair.device.device_type);
+                      const StatusIcon = status.icon;
                       return (
                         <motion.div
                           key={repair.id}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.8 + index * 0.05 }}
-                          className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted/50 transition-colors cursor-pointer group"
+                          className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted/50 transition-all cursor-pointer group hover:shadow-md"
                           onClick={() => navigate(`/repairs/${repair.id}`)}
                         >
-                          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center">
-                            <Smartphone className="h-5 w-5 text-primary" />
+                          {/* Device Image or Icon */}
+                          <div className="relative h-12 w-12 rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                            {repair.device.photo_url ? (
+                              <img 
+                                src={repair.device.photo_url} 
+                                alt={`${repair.device.brand} ${repair.device.model}`}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  e.currentTarget.style.display = 'none';
+                                  e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                            ) : null}
+                            <DeviceIcon className={`h-6 w-6 text-primary ${repair.device.photo_url ? 'hidden' : ''}`} />
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium text-foreground truncate">
@@ -516,9 +553,12 @@ const Dashboard = () => {
                               {repair.customer.name}
                             </p>
                           </div>
-                          <Badge className={`${status.bg} ${status.text} border-0`}>
-                            {status.label}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge className={`${status.bg} ${status.text} border-0 flex items-center gap-1`}>
+                              <StatusIcon className="h-3 w-3" />
+                              <span className="hidden sm:inline">{status.label}</span>
+                            </Badge>
+                          </div>
                           <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                         </motion.div>
                       );
