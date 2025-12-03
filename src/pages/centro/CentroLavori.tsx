@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CentroLayout } from "@/layouts/CentroLayout";
@@ -7,10 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { 
   Plus, 
   Search, 
@@ -24,7 +23,7 @@ import {
   Wrench,
   CheckCircle2,
   Package,
-  User,
+  UserPlus,
   Phone
 } from "lucide-react";
 import { toast } from "sonner";
@@ -75,24 +74,13 @@ const statusConfig: Record<string, { label: string; color: string }> = {
 
 export default function CentroLavori() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [centro, setCentro] = useState<Centro | null>(null);
   const [repairs, setRepairs] = useState<RepairRequest[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  
-  // New repair form state
-  const [newRepair, setNewRepair] = useState({
-    customer_id: "",
-    device_type: "smartphone",
-    device_brand: "",
-    device_model: "",
-    issue_description: "",
-    estimated_cost: "",
-  });
-  const [isCreating, setIsCreating] = useState(false);
+  const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -122,14 +110,6 @@ export default function CentroLavori() {
 
         if (repairsError) throw repairsError;
         setRepairs(repairsData || []);
-
-        // Fetch customers for creating new repairs
-        const { data: customersData } = await supabase
-          .from("customers")
-          .select("id, name, phone, email")
-          .order("name");
-
-        setCustomers(customersData || []);
       }
     } catch (error: any) {
       console.error("Error fetching data:", error);
@@ -142,48 +122,6 @@ export default function CentroLavori() {
   useEffect(() => {
     fetchData();
   }, [user]);
-
-  const handleCreateRepair = async () => {
-    if (!centro || !newRepair.customer_id || !newRepair.issue_description) {
-      toast.error("Compila tutti i campi obbligatori");
-      return;
-    }
-
-    setIsCreating(true);
-    try {
-      const { error } = await supabase.from("repair_requests").insert({
-        customer_id: newRepair.customer_id,
-        device_type: newRepair.device_type,
-        device_brand: newRepair.device_brand || null,
-        device_model: newRepair.device_model || null,
-        issue_description: newRepair.issue_description,
-        estimated_cost: newRepair.estimated_cost ? parseFloat(newRepair.estimated_cost) : null,
-        assigned_provider_id: centro.id,
-        assigned_provider_type: "centro",
-        assigned_at: new Date().toISOString(),
-        status: "assigned",
-      });
-
-      if (error) throw error;
-
-      toast.success("Lavoro creato con successo");
-      setIsCreateDialogOpen(false);
-      setNewRepair({
-        customer_id: "",
-        device_type: "smartphone",
-        device_brand: "",
-        device_model: "",
-        issue_description: "",
-        estimated_cost: "",
-      });
-      fetchData();
-    } catch (error: any) {
-      console.error("Error creating repair:", error);
-      toast.error("Errore nella creazione del lavoro");
-    } finally {
-      setIsCreating(false);
-    }
-  };
 
   const handleUpdateStatus = async (repairId: string, newStatus: string) => {
     try {
@@ -240,123 +178,16 @@ export default function CentroLavori() {
               </p>
             </div>
 
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuovo Lavoro
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Crea Nuovo Lavoro</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label>Cliente *</Label>
-                    <Select
-                      value={newRepair.customer_id}
-                      onValueChange={(value) =>
-                        setNewRepair({ ...newRepair, customer_id: value })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleziona cliente" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {customers.map((customer) => (
-                          <SelectItem key={customer.id} value={customer.id}>
-                            {customer.name} - {customer.phone}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Tipo Dispositivo</Label>
-                      <Select
-                        value={newRepair.device_type}
-                        onValueChange={(value) =>
-                          setNewRepair({ ...newRepair, device_type: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="smartphone">Smartphone</SelectItem>
-                          <SelectItem value="tablet">Tablet</SelectItem>
-                          <SelectItem value="laptop">Laptop</SelectItem>
-                          <SelectItem value="smartwatch">Smartwatch</SelectItem>
-                          <SelectItem value="computer">Computer</SelectItem>
-                          <SelectItem value="console">Console</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Costo Stimato (€)</Label>
-                      <Input
-                        type="number"
-                        value={newRepair.estimated_cost}
-                        onChange={(e) =>
-                          setNewRepair({ ...newRepair, estimated_cost: e.target.value })
-                        }
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Marca</Label>
-                      <Input
-                        value={newRepair.device_brand}
-                        onChange={(e) =>
-                          setNewRepair({ ...newRepair, device_brand: e.target.value })
-                        }
-                        placeholder="es. Apple, Samsung"
-                      />
-                    </div>
-                    <div>
-                      <Label>Modello</Label>
-                      <Input
-                        value={newRepair.device_model}
-                        onChange={(e) =>
-                          setNewRepair({ ...newRepair, device_model: e.target.value })
-                        }
-                        placeholder="es. iPhone 14, Galaxy S23"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Descrizione Problema *</Label>
-                    <Textarea
-                      value={newRepair.issue_description}
-                      onChange={(e) =>
-                        setNewRepair({ ...newRepair, issue_description: e.target.value })
-                      }
-                      placeholder="Descrivi il problema del dispositivo..."
-                      rows={3}
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsCreateDialogOpen(false)}
-                    >
-                      Annulla
-                    </Button>
-                    <Button onClick={handleCreateRepair} disabled={isCreating}>
-                      {isCreating ? "Creazione..." : "Crea Lavoro"}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsCustomerDialogOpen(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Nuovo Cliente
+              </Button>
+              <Button onClick={() => navigate("/new-repair")}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nuovo Lavoro
+              </Button>
+            </div>
           </div>
 
           {/* Filters */}
@@ -473,48 +304,40 @@ export default function CentroLavori() {
                             {DeviceIcon(repair.device_type)}
                           </div>
                           <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium">
-                                {repair.device_brand || "N/D"} {repair.device_model || ""}
-                              </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold">
+                                {repair.device_brand} {repair.device_model}
+                              </h3>
                               <Badge
-                                className={
-                                  statusConfig[repair.status]?.color || "bg-muted"
-                                }
+                                variant="secondary"
+                                className={statusConfig[repair.status]?.color}
                               >
                                 {statusConfig[repair.status]?.label || repair.status}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground line-clamp-1">
+                            <p className="text-sm text-muted-foreground mt-1">
                               {repair.issue_description}
                             </p>
-                            {repair.customers && (
-                              <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                                <span className="flex items-center gap-1">
-                                  <User className="h-3 w-3" />
-                                  {repair.customers.name}
+                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {repair.customers?.name} - {repair.customers?.phone}
+                              </span>
+                              <span>
+                                {format(new Date(repair.created_at), "dd MMM yyyy", {
+                                  locale: it,
+                                })}
+                              </span>
+                              {repair.estimated_cost && (
+                                <span className="font-medium text-foreground">
+                                  €{repair.estimated_cost.toFixed(2)}
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
-                                  {repair.customers.phone}
-                                </span>
-                              </div>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Creato:{" "}
-                              {format(new Date(repair.created_at), "dd MMM yyyy HH:mm", {
-                                locale: it,
-                              })}
-                            </p>
+                              )}
+                            </div>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {repair.estimated_cost && (
-                            <span className="text-sm font-medium">
-                              €{repair.estimated_cost.toFixed(2)}
-                            </span>
-                          )}
                           <Select
                             value={repair.status}
                             onValueChange={(value) =>
@@ -541,6 +364,15 @@ export default function CentroLavori() {
           </Card>
         </div>
       </PageTransition>
+
+      {/* Customer Dialog - reusing original component */}
+      <CustomerDialog
+        open={isCustomerDialogOpen}
+        onOpenChange={setIsCustomerDialogOpen}
+        onSuccess={() => {
+          toast.success("Cliente creato con successo");
+        }}
+      />
     </CentroLayout>
   );
 }
