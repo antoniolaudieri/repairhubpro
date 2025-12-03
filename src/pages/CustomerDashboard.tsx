@@ -478,57 +478,65 @@ export default function CustomerDashboard() {
                 {repairs.map((repair) => {
                   const statusInfo = getStatusBadge(repair.status);
                   const daysLeft = getDaysUntilForfeiture(repair);
-                  return (
-                    <Card 
-                      key={repair.id} 
-                      className={`p-6 cursor-pointer hover:shadow-lg transition-shadow ${daysLeft !== null && daysLeft <= 7 ? 'border-rose-500/50' : ''}`}
-                      onClick={() => navigate(`/customer-repairs/${repair.id}`)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-4 flex-1">
-                          <div className={`p-3 rounded-lg bg-muted ${statusInfo.color}`}>
-                            {statusInfo.icon}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-2 flex-wrap">
-                              <h3 className="font-semibold text-lg">
-                                {repair.device.brand} {repair.device.model}
-                              </h3>
-                              <span className={`text-sm font-medium ${statusInfo.color}`}>
-                                {statusInfo.label}
-                              </span>
-                              {/* Forfeiture countdown badge */}
-                              {daysLeft !== null && daysLeft <= 7 && daysLeft > 0 && (
-                                <Badge className={`${daysLeft <= 3 ? 'bg-rose-600 animate-pulse' : 'bg-rose-500'} text-white gap-1`}>
-                                  <Clock className="h-3 w-3" />
-                                  ⚠️ Ritira entro {daysLeft}g
-                                </Badge>
+                    const isUrgent = daysLeft !== null && daysLeft <= 7;
+                    const isCritical = daysLeft !== null && daysLeft <= 3;
+                    return (
+                      <Card 
+                        key={repair.id} 
+                        className={`p-6 cursor-pointer hover:shadow-lg transition-shadow ${isCritical ? 'border-red-500' : isUrgent ? 'border-rose-500/50' : ''}`}
+                        onClick={() => navigate(`/customer-repairs/${repair.id}`)}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-start gap-4 flex-1">
+                            <div className={`p-3 rounded-lg bg-muted ${statusInfo.color}`}>
+                              {statusInfo.icon}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2 flex-wrap">
+                                <h3 className="font-semibold text-lg">
+                                  {repair.device.brand} {repair.device.model}
+                                </h3>
+                                <span className={`text-sm font-medium ${statusInfo.color}`}>
+                                  {statusInfo.label}
+                                </span>
+                                {/* Forfeiture countdown badge - always show for completed but not delivered */}
+                                {daysLeft !== null && daysLeft > 0 && (
+                                  <Badge className={`gap-1 ${
+                                    isCritical 
+                                      ? 'bg-red-500 text-white animate-pulse' 
+                                      : isUrgent 
+                                        ? 'bg-rose-500 text-white animate-pulse'
+                                        : 'bg-amber-500 text-white'
+                                  }`}>
+                                    <Clock className="h-3 w-3" />
+                                    {isCritical ? '⚠️ ' : ''}{daysLeft}g al ritiro
+                                  </Badge>
+                                )}
+                                {repair.status === "forfeited" && (
+                                  <Badge className="bg-rose-900 text-white">
+                                    Alienato
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-muted-foreground mb-2">
+                                {repair.device.reported_issue}
+                              </p>
+                              {repair.diagnosis && (
+                                <p className="text-sm text-muted-foreground">
+                                  <span className="font-medium">Diagnosi:</span> {repair.diagnosis}
+                                </p>
                               )}
-                              {repair.status === "forfeited" && (
-                                <Badge className="bg-rose-900 text-white">
-                                  Alienato
-                                </Badge>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Creata il {new Date(repair.created_at).toLocaleDateString("it-IT")}
+                              </p>
+                              {/* Warning message for devices nearing forfeiture */}
+                              {daysLeft !== null && daysLeft > 0 && isUrgent && (
+                                <p className="text-xs text-rose-600 mt-2 font-medium">
+                                  ⚠️ Ritira il dispositivo entro {daysLeft} giorni o diventerà proprietà del laboratorio
+                                </p>
                               )}
                             </div>
-                            <p className="text-muted-foreground mb-2">
-                              {repair.device.reported_issue}
-                            </p>
-                            {repair.diagnosis && (
-                              <p className="text-sm text-muted-foreground">
-                                <span className="font-medium">Diagnosi:</span> {repair.diagnosis}
-                              </p>
-                            )}
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Creata il {new Date(repair.created_at).toLocaleDateString("it-IT")}
-                            </p>
-                            {/* Warning message for devices nearing forfeiture */}
-                            {daysLeft !== null && daysLeft <= 7 && daysLeft > 0 && (
-                              <p className="text-xs text-rose-600 mt-2 font-medium">
-                                ⚠️ Ritira il dispositivo entro {daysLeft} giorni o diventerà proprietà del laboratorio
-                              </p>
-                            )}
                           </div>
-                        </div>
                         <div className="text-right">
                           {repair.final_cost && (
                             <p className="text-2xl font-bold text-primary">
