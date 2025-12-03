@@ -12,7 +12,8 @@ import {
   Menu, 
   X,
   Settings,
-  Share2
+  Share2,
+  UserRound
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +24,7 @@ interface CentroLayoutProps {
 const navItems = [
   { to: "/centro", icon: Home, label: "Dashboard" },
   { to: "/centro/lavori", icon: Briefcase, label: "Lavori" },
+  { to: "/centro/clienti", icon: UserRound, label: "Clienti" },
   { to: "/centro/collaboratori", icon: Users, label: "Collaboratori" },
   { to: "/centro/inventario", icon: Package, label: "Inventario" },
   { to: "/centro/accessi", icon: Share2, label: "Accessi Condivisi" },
