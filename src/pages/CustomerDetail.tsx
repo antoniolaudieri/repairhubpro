@@ -9,6 +9,7 @@ import {
   Calendar, User, Laptop, Tablet, Monitor, Gamepad2, Watch, HelpCircle,
   ChevronRight, Clock, Euro
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { CustomerStats } from "@/components/customers/CustomerStats";
 import { CustomerCharts } from "@/components/customers/CustomerCharts";
@@ -161,10 +162,37 @@ export default function CustomerDetail() {
     return deviceIcons[type] || <HelpCircle className="h-5 w-5" />;
   };
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.4,
+        ease: [0.25, 0.1, 0.25, 1] as const
+      }
+    }
+  };
+
   return (
-    <div className="p-2.5 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6 max-w-7xl mx-auto">
+    <motion.div 
+      className="p-2.5 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6 max-w-7xl mx-auto"
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+    >
       {/* Header */}
-      <div className="flex flex-col gap-2.5 sm:gap-4">
+      <motion.div variants={itemVariants} className="flex flex-col gap-2.5 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3">
           <Button 
             variant="ghost" 
@@ -175,9 +203,13 @@ export default function CustomerDetail() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           
-          <div className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <motion.div 
+            className="h-9 w-9 sm:h-11 sm:w-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
             <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-          </div>
+          </motion.div>
           
           <div className="min-w-0 flex-1">
             <h1 className="text-base sm:text-lg lg:text-xl font-bold truncate">{customer.name}</h1>
@@ -189,19 +221,24 @@ export default function CustomerDetail() {
         </div>
         
         <div className="flex gap-2">
-          <Button onClick={() => setQuoteOpen(true)} size="sm" className="flex-1 sm:flex-none h-8 text-xs sm:text-sm">
-            <FileText className="h-3.5 w-3.5 mr-1" />
-            Preventivo
-          </Button>
-          <Button onClick={() => setEditOpen(true)} variant="outline" size="sm" className="flex-1 sm:flex-none h-8 text-xs sm:text-sm">
-            <Edit className="h-3.5 w-3.5 mr-1" />
-            Modifica
-          </Button>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-none">
+            <Button onClick={() => setQuoteOpen(true)} size="sm" className="w-full h-8 text-xs sm:text-sm">
+              <FileText className="h-3.5 w-3.5 mr-1" />
+              Preventivo
+            </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-none">
+            <Button onClick={() => setEditOpen(true)} variant="outline" size="sm" className="w-full h-8 text-xs sm:text-sm">
+              <Edit className="h-3.5 w-3.5 mr-1" />
+              Modifica
+            </Button>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Stats */}
-      <CustomerStats
+      <motion.div variants={itemVariants}>
+        <CustomerStats
         totalRepairs={allRepairs.length}
         totalSpent={totalSpent}
         avgRepairTime={avgRepairTime}
@@ -209,15 +246,18 @@ export default function CustomerDetail() {
         pendingRepairs={pendingRepairs}
         inProgressRepairs={inProgressRepairs}
         lastRepairDate={lastRepairDate}
-      />
+        />
+      </motion.div>
 
       {/* Charts */}
-      <CustomerCharts devices={devices} allRepairs={allRepairs} />
+      <motion.div variants={itemVariants}>
+        <CustomerCharts devices={devices} allRepairs={allRepairs} />
+      </motion.div>
 
       {/* Contact & Devices Grid */}
-      <div className="grid gap-3 sm:gap-4 lg:grid-cols-2">
+      <motion.div variants={itemVariants} className="grid gap-3 sm:gap-4 lg:grid-cols-2">
         {/* Contact Info */}
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
             <CardTitle className="text-xs sm:text-sm font-medium">Contatti</CardTitle>
           </CardHeader>
@@ -325,10 +365,11 @@ export default function CustomerDetail() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </motion.div>
 
       {/* Repairs History */}
-      <Card>
+      <motion.div variants={itemVariants}>
+        <Card>
         <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs sm:text-sm font-medium">Storico Riparazioni</CardTitle>
@@ -413,6 +454,7 @@ export default function CustomerDetail() {
           )}
         </CardContent>
       </Card>
+      </motion.div>
 
       <CustomerDialog
         open={editOpen}
@@ -427,6 +469,6 @@ export default function CustomerDetail() {
         customerId={id!}
         onSuccess={loadCustomerData}
       />
-    </div>
+    </motion.div>
   );
 }
