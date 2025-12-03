@@ -41,6 +41,7 @@ const NewRepair = () => {
   const [selectedServices, setSelectedServices] = useState<{ id: string; name: string; price: number }[]>([]);
   const [selectedLabors, setSelectedLabors] = useState<{ id: string; name: string; price: number }[]>([]);
   const [laborCost, setLaborCost] = useState<number>(0);
+  const [diagnosticFee, setDiagnosticFee] = useState<number>(15);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -862,6 +863,8 @@ const NewRepair = () => {
             partsTotal={sigPartsTotal}
             servicesTotal={sigServicesTotal}
             laborTotal={sigLaborTotal}
+            diagnosticFee={diagnosticFee}
+            onDiagnosticFeeChange={setDiagnosticFee}
           />
         );
       
@@ -871,7 +874,7 @@ const NewRepair = () => {
         const partsCost = selectedSpareParts.reduce((sum, part) => sum + (part.purchase_cost || 0) * part.quantity, 0);
         const partsMargin = partsRevenue - partsCost; // Margine sui ricambi
         const servicesRevenue = selectedServices.reduce((sum, s) => sum + s.price, 0);
-        const diagnosticFee = 15; // €15 gestione diagnosi
+        // Usa il diagnosticFee dallo state (può essere 0 se scontato)
         
         // Controlla ricambi senza costo acquisto
         const partsWithoutCost = selectedSpareParts.filter(part => !part.purchase_cost || part.purchase_cost === 0);
