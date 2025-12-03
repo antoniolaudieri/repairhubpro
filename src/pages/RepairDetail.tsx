@@ -110,6 +110,8 @@ interface RepairDetail {
   ai_suggestions: string | null;
   diagnostic_fee: number | null;
   diagnostic_fee_paid: boolean | null;
+  intake_signature: string | null;
+  intake_signature_date: string | null;
   created_at: string;
   device: {
     brand: string;
@@ -229,6 +231,8 @@ export default function RepairDetail() {
         ai_suggestions: data.ai_suggestions,
         diagnostic_fee: data.diagnostic_fee,
         diagnostic_fee_paid: data.diagnostic_fee_paid,
+        intake_signature: data.intake_signature,
+        intake_signature_date: data.intake_signature_date,
         created_at: data.created_at,
         device: data.device,
         customer: data.device.customer,
@@ -1284,8 +1288,8 @@ export default function RepairDetail() {
         repairData={{
           id: repair.id,
           created_at: repair.created_at,
-          intake_signature: (repair as any).intake_signature,
-          intake_signature_date: (repair as any).intake_signature_date,
+          intake_signature: repair.intake_signature,
+          intake_signature_date: repair.intake_signature_date,
           estimated_cost: repair.estimated_cost,
           diagnostic_fee: repair.diagnostic_fee || 15,
           device: {
