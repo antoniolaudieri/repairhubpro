@@ -196,7 +196,6 @@ const NewRepair = () => {
       imei: updatedInfo.imei || prev.imei,
       serial_number: updatedInfo.serial || prev.serial_number,
     }));
-    toast.success("Informazioni dispositivo confermate!");
   };
 
   const handleDeviceEdit = () => {
@@ -293,7 +292,7 @@ const NewRepair = () => {
         };
         
         setDetectedDevice(deviceInfo);
-        
+                
         setDeviceData((prev) => ({
           ...prev,
           device_type: inferredType,
@@ -301,7 +300,6 @@ const NewRepair = () => {
           model: manualModel.trim(),
         }));
         
-        toast.success("Dispositivo trovato!");
         setShowManualEntry(false);
         setCurrentStep(2);
       } else {
@@ -319,7 +317,6 @@ const NewRepair = () => {
           model: manualModel.trim(),
         }));
         
-        toast.info("Dispositivo confermato");
         setShowManualEntry(false);
         setCurrentStep(2);
       }
@@ -339,7 +336,6 @@ const NewRepair = () => {
         model: manualModel.trim(),
       }));
       
-      toast.info("Dispositivo confermato");
       setShowManualEntry(false);
       setCurrentStep(2);
     } finally {
