@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CentroLayout } from "@/layouts/CentroLayout";
@@ -14,7 +14,10 @@ import {
   MapPin,
   Phone,
   Mail,
-  Save
+  Save,
+  Upload,
+  Image as ImageIcon,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +32,7 @@ interface Centro {
   longitude: number | null;
   commission_rate: number;
   notes: string | null;
+  logo_url: string | null;
 }
 
 export default function CentroImpostazioni() {
@@ -36,6 +40,8 @@ export default function CentroImpostazioni() {
   const [centro, setCentro] = useState<Centro | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     business_name: "",
@@ -107,6 +113,92 @@ export default function CentroImpostazioni() {
     }
   };
 
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !centro) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error("Seleziona un file immagine");
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Il file deve essere inferiore a 2MB");
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${centro.id}.${fileExt}`;
+      const filePath = `${fileName}`;
+
+      // Upload to storage
+      const { error: uploadError } = await supabase.storage
+        .from('centro-logos')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('centro-logos')
+        .getPublicUrl(filePath);
+
+      // Update centro record with logo URL
+      const { error: updateError } = await supabase
+        .from('centri_assistenza')
+        .update({ logo_url: publicUrl })
+        .eq('id', centro.id);
+
+      if (updateError) throw updateError;
+
+      toast.success("Logo caricato con successo");
+      fetchData();
+    } catch (error: any) {
+      console.error("Error uploading logo:", error);
+      toast.error("Errore nel caricamento del logo");
+    } finally {
+      setIsUploadingLogo(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveLogo = async () => {
+    if (!centro) return;
+
+    setIsUploadingLogo(true);
+    try {
+      // Remove from storage
+      const fileName = centro.logo_url?.split('/').pop();
+      if (fileName) {
+        await supabase.storage
+          .from('centro-logos')
+          .remove([fileName]);
+      }
+
+      // Update centro record
+      const { error } = await supabase
+        .from('centri_assistenza')
+        .update({ logo_url: null })
+        .eq('id', centro.id);
+
+      if (error) throw error;
+
+      toast.success("Logo rimosso");
+      fetchData();
+    } catch (error: any) {
+      console.error("Error removing logo:", error);
+      toast.error("Errore nella rimozione del logo");
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <CentroLayout>
@@ -127,6 +219,70 @@ export default function CentroImpostazioni() {
               Gestisci le informazioni del tuo centro assistenza
             </p>
           </div>
+
+          {/* Logo Upload */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5" />
+                Logo Attività
+              </CardTitle>
+              <CardDescription>
+                Carica il logo della tua attività (max 2MB)
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-6">
+                <div className="relative">
+                  {centro?.logo_url ? (
+                    <div className="h-24 w-24 rounded-xl overflow-hidden border-2 border-border shadow-md">
+                      <img 
+                        src={centro.logo_url} 
+                        alt="Logo" 
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-24 w-24 rounded-xl bg-muted flex items-center justify-center border-2 border-dashed border-border">
+                      <Building2 className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingLogo}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isUploadingLogo ? "Caricamento..." : "Carica Logo"}
+                  </Button>
+                  {centro?.logo_url && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveLogo}
+                      disabled={isUploadingLogo}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Rimuovi
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Business Info */}
           <Card>
