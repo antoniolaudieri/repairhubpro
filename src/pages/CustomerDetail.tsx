@@ -576,6 +576,7 @@ export default function CustomerDetail() {
         open={!!selectedOrderId}
         onOpenChange={(open) => !open && setSelectedOrderId(null)}
         orderId={selectedOrderId}
+        onOrderUpdated={loadCustomerData}
       />
     </motion.div>
   );

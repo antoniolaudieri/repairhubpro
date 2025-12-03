@@ -6,11 +6,20 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Package, Calendar, Truck, ExternalLink } from "lucide-react";
+import { Package, Calendar, Truck, ExternalLink, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
 
 interface OrderItem {
   id: string;
@@ -24,6 +33,7 @@ interface OrderDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   orderId: string | null;
+  onOrderUpdated?: () => void;
 }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -33,10 +43,12 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   received: { label: "Ricevuto", className: "bg-accent/10 text-accent border-accent/20" },
 };
 
-export function OrderDetailDialog({ open, onOpenChange, orderId }: OrderDetailDialogProps) {
+export function OrderDetailDialog({ open, onOpenChange, orderId, onOrderUpdated }: OrderDetailDialogProps) {
   const [order, setOrder] = useState<any>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [updating, setUpdating] = useState(false);
+  const [trackingNumber, setTrackingNumber] = useState("");
 
   useEffect(() => {
     if (open && orderId) {
@@ -53,12 +65,65 @@ export function OrderDetailDialog({ open, onOpenChange, orderId }: OrderDetailDi
         supabase.from("order_items").select("*").eq("order_id", orderId),
       ]);
 
-      if (orderRes.data) setOrder(orderRes.data);
+      if (orderRes.data) {
+        setOrder(orderRes.data);
+        setTrackingNumber(orderRes.data.tracking_number || "");
+      }
       if (itemsRes.data) setItems(itemsRes.data);
     } catch (error) {
       console.error("Error loading order details:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateStatus = async (newStatus: string) => {
+    if (!orderId) return;
+    setUpdating(true);
+    try {
+      const updateData: any = { status: newStatus };
+      
+      if (newStatus === "ordered") {
+        updateData.ordered_at = new Date().toISOString();
+      } else if (newStatus === "received") {
+        updateData.received_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from("orders")
+        .update(updateData)
+        .eq("id", orderId);
+
+      if (error) throw error;
+      
+      setOrder({ ...order, status: newStatus, ...updateData });
+      toast.success("Stato aggiornato");
+      onOrderUpdated?.();
+    } catch (error: any) {
+      toast.error(error.message || "Errore nell'aggiornamento");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const updateTracking = async () => {
+    if (!orderId) return;
+    setUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("orders")
+        .update({ tracking_number: trackingNumber })
+        .eq("id", orderId);
+
+      if (error) throw error;
+      
+      setOrder({ ...order, tracking_number: trackingNumber });
+      toast.success("Tracking aggiornato");
+      onOrderUpdated?.();
+    } catch (error: any) {
+      toast.error(error.message || "Errore nell'aggiornamento");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -82,22 +147,56 @@ export function OrderDetailDialog({ open, onOpenChange, orderId }: OrderDetailDi
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Status & Date */}
-            <div className="flex items-center justify-between">
-              <Badge variant="outline" className={className}>{label}</Badge>
-              <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {format(new Date(order.created_at), "dd MMM yyyy", { locale: it })}
-              </span>
+            {/* Status Selector */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Stato Ordine</p>
+              <Select
+                value={order.status}
+                onValueChange={updateStatus}
+                disabled={updating}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue>
+                    <Badge variant="outline" className={className}>{label}</Badge>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(statusConfig).map(([key, config]) => (
+                    <SelectItem key={key} value={key}>
+                      <Badge variant="outline" className={config.className}>{config.label}</Badge>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            {/* Tracking */}
-            {order.tracking_number && (
-              <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
-                <Truck className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">{order.tracking_number}</span>
+            {/* Date */}
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3" />
+              Creato il {format(new Date(order.created_at), "dd MMM yyyy", { locale: it })}
+            </div>
+
+            {/* Tracking Number */}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">Numero Tracking</p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Inserisci tracking..."
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  className="flex-1 h-8 text-sm"
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={updateTracking}
+                  disabled={updating || trackingNumber === (order.tracking_number || "")}
+                  className="h-8"
+                >
+                  {updating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Truck className="h-3.5 w-3.5" />}
+                </Button>
               </div>
-            )}
+            </div>
 
             {/* Items */}
             <div className="space-y-2">
