@@ -25,10 +25,11 @@ interface SparePart {
 interface UtopyaProduct {
   name: string;
   sku: string;
-  price: number | null;
-  imageUrl: string | null;
-  productUrl: string | null;
-  available: boolean;
+  price: string | null;
+  priceNumeric: number;
+  image: string;
+  url: string;
+  inStock: boolean;
 }
 
 interface OrderItem {
@@ -164,9 +165,9 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
           spare_part_id: key,
           product_name: product.name,
           quantity: 1,
-          unit_cost: product.price || 0,
+          unit_cost: product.priceNumeric || 0,
           isUtopya: true,
-          utopyaUrl: product.productUrl || undefined,
+          utopyaUrl: product.url || undefined,
         },
       ]);
     }
@@ -446,9 +447,9 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
                         }`}
                       >
                         {/* Image */}
-                        {product.imageUrl ? (
+                        {product.image ? (
                           <img
-                            src={product.imageUrl}
+                            src={product.image}
                             alt={product.name}
                             className="h-12 w-12 object-contain rounded-md border bg-background"
                           />
@@ -468,16 +469,16 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
                             <span className="text-[10px] text-muted-foreground">{product.sku}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            {product.price != null && !isNaN(Number(product.price)) ? (
+                            {product.priceNumeric > 0 ? (
                               <span className="text-sm font-semibold text-accent">
-                                €{Number(product.price).toFixed(2)}
+                                €{product.priceNumeric.toFixed(2)}
                               </span>
                             ) : (
                               <span className="text-xs text-muted-foreground">Prezzo N/D</span>
                             )}
-                            {product.productUrl && (
+                            {product.url && (
                               <a
-                                href={product.productUrl}
+                                href={product.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
@@ -518,7 +519,7 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
                               size="sm"
                               className="h-7 text-xs"
                               onClick={() => addUtopyaToCart(product)}
-                              disabled={!product.price}
+                              disabled={!product.priceNumeric}
                             >
                               <Plus className="h-3 w-3 mr-1" />
                               Aggiungi
