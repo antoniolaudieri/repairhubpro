@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -154,6 +154,7 @@ const priorityConfig = {
 export default function RepairDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [repair, setRepair] = useState<RepairDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -164,6 +165,10 @@ export default function RepairDetail() {
   const [guideFromCache, setGuideFromCache] = useState(false);
   const [guideUsageCount, setGuideUsageCount] = useState<number | undefined>();
   const [acceptanceFormOpen, setAcceptanceFormOpen] = useState(false);
+
+  // Determine back route based on current path
+  const isCentroContext = location.pathname.startsWith("/centro");
+  const backRoute = isCentroContext ? "/centro/lavori" : "/repairs";
 
   useEffect(() => {
     if (id) {
@@ -503,7 +508,7 @@ export default function RepairDetail() {
           </div>
           <h2 className="text-xl font-semibold mb-2">Riparazione non trovata</h2>
           <p className="text-muted-foreground mb-6">La riparazione richiesta non esiste o è stata rimossa.</p>
-          <Button onClick={() => navigate("/repairs")} className="gap-2">
+          <Button onClick={() => navigate(backRoute)} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Torna alle riparazioni
           </Button>
@@ -610,7 +615,7 @@ export default function RepairDetail() {
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <Button 
                 variant="outline" 
-                onClick={() => navigate("/repairs")}
+                onClick={() => navigate(backRoute)}
                 className="gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />

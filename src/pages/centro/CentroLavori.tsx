@@ -575,7 +575,7 @@ export default function CentroLavori() {
                               <Button 
                                 variant="ghost" 
                                 size="sm"
-                                onClick={() => navigate(`/repairs/${repair.id}`)}
+                                onClick={() => navigate(`/centro/lavori/${repair.id}`)}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
