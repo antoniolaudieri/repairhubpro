@@ -468,9 +468,9 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
                             <span className="text-[10px] text-muted-foreground">{product.sku}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            {product.price ? (
+                            {product.price != null ? (
                               <span className="text-sm font-semibold text-accent">
-                                €{product.price.toFixed(2)}
+                                €{Number(product.price).toFixed(2)}
                               </span>
                             ) : (
                               <span className="text-xs text-muted-foreground">Prezzo N/D</span>
