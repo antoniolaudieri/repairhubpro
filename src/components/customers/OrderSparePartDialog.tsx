@@ -217,6 +217,7 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
           supplier: "interno",
           status: "pending",
           total_amount: totalAmount,
+          customer_id: customerId,
           notes: `Ordine per cliente: ${customerName}`,
         })
         .select()

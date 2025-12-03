@@ -309,6 +309,7 @@ export type Database = {
       orders: {
         Row: {
           created_at: string
+          customer_id: string | null
           id: string
           notes: string | null
           order_number: string
@@ -323,6 +324,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          customer_id?: string | null
           id?: string
           notes?: string | null
           order_number: string
@@ -337,6 +339,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          customer_id?: string | null
           id?: string
           notes?: string | null
           order_number?: string
@@ -350,6 +353,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_repair_id_fkey"
             columns: ["repair_id"]
