@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useRoleBasedRedirect } from "@/hooks/useRoleBasedRedirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +12,8 @@ import { Wrench, Star } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, signIn, signUp, isTechnician, isAdmin, userRole, loading: authLoading } = useAuth();
+  const { user, signIn, signUp, userRole, loading: authLoading } = useAuth();
+  const { getRedirectPath } = useRoleBasedRedirect();
   const [loading, setLoading] = useState(false);
   
   // Stati per il form cliente
@@ -27,14 +29,10 @@ const Auth = () => {
   useEffect(() => {
     // Wait for auth to finish loading and for role to be fetched
     if (user && !authLoading && userRole) {
-      // Redirect technicians and admins to dashboard, customers to customer dashboard
-      if (isTechnician || isAdmin) {
-        navigate("/dashboard");
-      } else {
-        navigate("/customer-dashboard");
-      }
+      const redirectPath = getRedirectPath();
+      navigate(redirectPath, { replace: true });
     }
-  }, [user, isTechnician, isAdmin, userRole, authLoading, navigate]);
+  }, [user, userRole, authLoading, navigate, getRedirectPath]);
 
   const handleCustomerSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

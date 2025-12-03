@@ -25,6 +25,7 @@ import PlatformAdmin from "@/pages/PlatformAdmin";
 import ProviderRegistration from "@/pages/ProviderRegistration";
 import CornerDashboard from "@/pages/CornerDashboard";
 import RiparatoreDashboard from "@/pages/RiparatoreDashboard";
+import CentroDashboard from "@/pages/CentroDashboard";
 import NotFound from "@/pages/NotFound";
 
 export const AnimatedRoutes = () => {
@@ -92,6 +93,15 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireRiparatore>
               <RiparatoreDashboard />
+            </ProtectedRoute>
+          }
+        />
+        {/* Centro Dashboard */}
+        <Route
+          path="/centro"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroDashboard />
             </ProtectedRoute>
           }
         />
