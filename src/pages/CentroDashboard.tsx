@@ -32,11 +32,16 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { toast } from "sonner";
+import { CreditBalanceWidget } from "@/components/credit/CreditBalanceWidget";
+import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
 
 interface Centro {
   id: string;
   business_name: string;
   status: string;
+  credit_balance: number;
+  credit_warning_threshold: number;
+  payment_status: string;
 }
 
 interface RecentRepair {
@@ -105,7 +110,7 @@ export default function CentroDashboard() {
       // Fetch centro profile first
       const { data: centroData, error: centroError } = await supabase
         .from("centri_assistenza")
-        .select("id, business_name, status")
+        .select("id, business_name, status, credit_balance, credit_warning_threshold, payment_status")
         .eq("owner_user_id", user.id)
         .single();
 
@@ -528,6 +533,14 @@ export default function CentroDashboard() {
               <span className="hidden sm:inline">Nuovo Lavoro</span>
             </Button>
           </div>
+            {/* Credit Status Banner */}
+            {centro && (centro.payment_status === "warning" || centro.payment_status === "suspended") && (
+              <CreditStatusBanner
+                paymentStatus={centro.payment_status || "good_standing"}
+                creditBalance={centro.credit_balance || 0}
+              />
+            )}
+
             {/* Forfeiture Warning Alert */}
             {forfeitureWarnings.length > 0 && (
               <motion.div
@@ -615,6 +628,20 @@ export default function CentroDashboard() {
               animate="visible"
               className="grid grid-cols-2 sm:grid-cols-4 gap-3"
             >
+              {/* Credit Balance Widget */}
+              {centro && (
+                <motion.div variants={itemVariants} className="col-span-2 sm:col-span-1">
+                  <CreditBalanceWidget
+                    entityType="centro"
+                    entityId={centro.id}
+                    creditBalance={centro.credit_balance || 0}
+                    warningThreshold={centro.credit_warning_threshold || 50}
+                    paymentStatus={centro.payment_status || "good_standing"}
+                    onTopupSuccess={fetchCentroAndData}
+                  />
+                </motion.div>
+              )}
+
               <motion.div variants={itemVariants}>
                 <Card 
                   className="p-4 border-border/50 hover:border-border transition-colors cursor-pointer"

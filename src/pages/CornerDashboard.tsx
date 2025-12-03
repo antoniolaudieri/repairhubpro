@@ -9,11 +9,16 @@ import { CommissionHistory } from "@/components/corner/CommissionHistory";
 import { PageTransition } from "@/components/PageTransition";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { CreditBalanceWidget } from "@/components/credit/CreditBalanceWidget";
+import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
 
 interface Corner {
   id: string;
   business_name: string;
   status: string;
+  credit_balance: number;
+  credit_warning_threshold: number;
+  payment_status: string;
 }
 
 export default function CornerDashboard() {
@@ -30,7 +35,7 @@ export default function CornerDashboard() {
       // Fetch corner profile
       const { data: cornerData, error: cornerError } = await supabase
         .from("corners")
-        .select("id, business_name, status")
+        .select("id, business_name, status, credit_balance, credit_warning_threshold, payment_status")
         .eq("user_id", user.id)
         .single();
 
@@ -164,21 +169,52 @@ export default function CornerDashboard() {
             </p>
           </div>
 
-          <CornerStats {...stats} />
+          {/* Credit Status Banner */}
+          {corner && (corner.payment_status === "warning" || corner.payment_status === "suspended") && (
+            <CreditStatusBanner
+              paymentStatus={corner.payment_status || "good_standing"}
+              creditBalance={corner.credit_balance || 0}
+            />
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {/* Credit Balance Widget */}
+            {corner && (
+              <CreditBalanceWidget
+                entityType="corner"
+                entityId={corner.id}
+                creditBalance={corner.credit_balance || 0}
+                warningThreshold={corner.credit_warning_threshold || 50}
+                paymentStatus={corner.payment_status || "good_standing"}
+                onTopupSuccess={fetchCornerData}
+              />
+            )}
+            <div className="md:col-span-3">
+              <CornerStats {...stats} />
+            </div>
+          </div>
 
           <Tabs defaultValue="new" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="new">Nuova Segnalazione</TabsTrigger>
+              <TabsTrigger value="new" disabled={corner?.payment_status === "suspended"}>
+                Nuova Segnalazione
+              </TabsTrigger>
               <TabsTrigger value="requests">Segnalazioni</TabsTrigger>
               <TabsTrigger value="commissions">Commissioni</TabsTrigger>
             </TabsList>
 
             <TabsContent value="new" className="mt-4">
-              {corner && (
+              {corner && corner.payment_status !== "suspended" && (
                 <RepairRequestForm
                   cornerId={corner.id}
                   onSuccess={fetchCornerData}
                 />
+              )}
+              {corner?.payment_status === "suspended" && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Non puoi creare nuove segnalazioni con account sospeso.</p>
+                  <p className="text-sm">Ricarica il credito per riattivare l'account.</p>
+                </div>
               )}
             </TabsContent>
 
