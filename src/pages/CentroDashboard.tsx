@@ -785,8 +785,8 @@ export default function CentroDashboard() {
                       { icon: Wrench, label: "Gestione Lavori", path: "/centro/lavori", color: "text-blue-500 bg-blue-100" },
                       { icon: Users, label: "Clienti", path: "/centro/clienti", color: "text-violet-500 bg-violet-100" },
                       { icon: Package, label: "Inventario", path: "/centro/inventario", color: "text-orange-500 bg-orange-100" },
+                      { icon: ShoppingCart, label: "Ordini Ricambi", path: "/centro/ordini", color: "text-emerald-500 bg-emerald-100" },
                       { icon: UserPlus, label: "Collaboratori", path: "/centro/collaboratori", color: "text-pink-500 bg-pink-100" },
-                      { icon: Euro, label: "Commissioni", path: "/centro/commissioni", color: "text-emerald-500 bg-emerald-100" },
                     ].map((item) => (
                       <Button
                         key={item.path}
