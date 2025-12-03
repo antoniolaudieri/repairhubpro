@@ -111,6 +111,51 @@ export default function CentroDashboard() {
     fetchCentroData();
   }, [user]);
 
+  // Set up realtime subscription for repair_requests and job_offers
+  useEffect(() => {
+    if (!centro) return;
+
+    const repairChannel = supabase
+      .channel("centro-repair-requests")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "repair_requests",
+          filter: `assigned_provider_id=eq.${centro.id}`,
+        },
+        (payload) => {
+          console.log("Repair request updated:", payload);
+          fetchCentroData();
+        }
+      )
+      .subscribe();
+
+    const jobOffersChannel = supabase
+      .channel("centro-job-offers")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "job_offers",
+          filter: `provider_id=eq.${centro.id}`,
+        },
+        (payload) => {
+          console.log("New job offer:", payload);
+          toast.info("Nuova offerta di lavoro ricevuta!");
+          fetchCentroData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(repairChannel);
+      supabase.removeChannel(jobOffersChannel);
+    };
+  }, [centro]);
+
   // Calculate stats
   const stats = {
     totalCollaborators: collaborators.length,
