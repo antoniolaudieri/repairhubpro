@@ -464,27 +464,21 @@ export default function CentroDashboard() {
   return (
     <CentroLayout>
       <PageTransition>
-        <div className="min-h-screen bg-background">
-          {/* Header */}
-          <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{centro?.business_name}</h1>
-                  <p className="text-sm text-muted-foreground">Panoramica attività</p>
-                </div>
-                <Button
-                  onClick={() => navigate("/new-repair")}
-                  className="gap-2 shadow-sm"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Nuovo Lavoro</span>
-                </Button>
-              </div>
+        <div className="p-4 sm:p-6 space-y-6">
+          {/* Page Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{centro?.business_name}</h1>
+              <p className="text-sm text-muted-foreground">Panoramica attività</p>
             </div>
+            <Button
+              onClick={() => navigate("/new-repair")}
+              className="gap-2 shadow-sm"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Nuovo Lavoro</span>
+            </Button>
           </div>
-
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
             {/* Forfeiture Warning Alert */}
             {forfeitureWarnings.length > 0 && (
               <motion.div
@@ -812,8 +806,7 @@ export default function CentroDashboard() {
               </motion.div>
             </div>
           </div>
-        </div>
-      </PageTransition>
-    </CentroLayout>
-  );
+        </PageTransition>
+      </CentroLayout>
+    );
 }
