@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, ExternalLink, ShoppingCart, Loader2, Package, AlertCircle, TrendingDown, TrendingUp } from 'lucide-react';
+import { Search, ExternalLink, ShoppingCart, Loader2, Package, AlertCircle, LogIn, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -15,8 +15,10 @@ interface UtopyaProduct {
   priceNumeric: number;
   image: string;
   url: string;
+  sku: string;
   brand: string;
   inStock: boolean;
+  requiresLogin: boolean;
 }
 
 interface UtopyaPriceLookupProps {
@@ -71,20 +73,6 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
     }
   };
 
-  const getLowestPrice = () => {
-    if (products.length === 0) return null;
-    return Math.min(...products.map(p => p.priceNumeric));
-  };
-
-  const getHighestPrice = () => {
-    if (products.length === 0) return null;
-    return Math.max(...products.map(p => p.priceNumeric));
-  };
-
-  const formatPrice = (price: number) => {
-    return `€${price.toFixed(2).replace('.', ',')}`;
-  };
-
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -128,34 +116,19 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
             </Button>
           </div>
 
-          {/* Price Summary */}
+          {/* Info Banner - Prices require login */}
           {products.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
-              <Card className="p-3 bg-gradient-to-br from-green-500/10 to-green-600/5 border-green-500/20">
-                <div className="flex items-center gap-2 text-green-600">
-                  <TrendingDown className="h-4 w-4" />
-                  <span className="text-xs font-medium">Prezzo Minimo</span>
-                </div>
-                <p className="text-xl font-bold text-green-600 mt-1">
-                  {formatPrice(getLowestPrice()!)}
-                </p>
-              </Card>
-              <Card className="p-3 bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-500/20">
-                <div className="flex items-center gap-2 text-blue-600">
-                  <Package className="h-4 w-4" />
-                  <span className="text-xs font-medium">Prodotti Trovati</span>
-                </div>
-                <p className="text-xl font-bold text-blue-600 mt-1">{products.length}</p>
-              </Card>
-              <Card className="p-3 bg-gradient-to-br from-orange-500/10 to-orange-600/5 border-orange-500/20">
-                <div className="flex items-center gap-2 text-orange-600">
-                  <TrendingUp className="h-4 w-4" />
-                  <span className="text-xs font-medium">Prezzo Massimo</span>
-                </div>
-                <p className="text-xl font-bold text-orange-600 mt-1">
-                  {formatPrice(getHighestPrice()!)}
-                </p>
-              </Card>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <LogIn className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-700">I prezzi richiedono login su Utopya</p>
+                <p className="text-xs text-amber-600/80">Clicca su un prodotto per vedere il prezzo sul sito</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Package className="h-4 w-4 text-blue-600" />
+                <span className="text-lg font-bold text-blue-600">{products.length}</span>
+                <span className="text-xs text-muted-foreground">prodotti</span>
+              </div>
             </div>
           )}
 
@@ -204,29 +177,23 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
                         </div>
                         <div className="flex items-center justify-between mt-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg font-bold text-primary">
-                              {product.price}
-                            </span>
-                            {product.inStock ? (
-                              <Badge variant="default" className="bg-green-500 text-xs">
-                                Disponibile
-                              </Badge>
-                            ) : (
-                              <Badge variant="destructive" className="text-xs">
-                                Non disponibile
-                              </Badge>
+                            {product.sku && (
+                              <span className="text-xs text-muted-foreground font-mono">
+                                {product.sku}
+                              </span>
                             )}
                           </div>
                           <Button 
                             size="sm" 
-                            variant="ghost"
-                            className="h-8 w-8 p-0"
+                            variant="default"
+                            className="gap-1 bg-orange-500 hover:bg-orange-600"
                             onClick={(e) => {
                               e.stopPropagation();
                               window.open(product.url, '_blank');
                             }}
                           >
-                            <ExternalLink className="h-4 w-4" />
+                            <ExternalLink className="h-3 w-3" />
+                            Vedi prezzo
                           </Button>
                         </div>
                       </div>
