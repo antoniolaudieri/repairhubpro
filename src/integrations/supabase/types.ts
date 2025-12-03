@@ -424,6 +424,7 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          centro_id: string | null
           created_at: string
           email: string | null
           id: string
@@ -434,6 +435,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          centro_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -444,6 +446,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          centro_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -452,7 +455,15 @@ export type Database = {
           phone?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       devices: {
         Row: {
@@ -1290,6 +1301,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_centro_id: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_centro_collaborator: {
         Args: { _centro_id: string; _user_id: string }
