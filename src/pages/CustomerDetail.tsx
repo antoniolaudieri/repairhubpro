@@ -41,6 +41,7 @@ interface Device {
     status: string;
     diagnosis: string | null;
     final_cost: number | null;
+    acconto: number | null;
     created_at: string;
     completed_at: string | null;
   }>;
@@ -102,6 +103,7 @@ export default function CustomerDetail() {
             status,
             diagnosis,
             final_cost,
+            acconto,
             created_at,
             completed_at
           )
@@ -476,6 +478,12 @@ export default function CustomerDetail() {
                             {repair.final_cost && (
                               <span className="text-xs sm:text-sm font-semibold text-accent flex items-center">
                                 €{repair.final_cost.toFixed(0)}
+                              </span>
+                            )}
+                            {repair.acconto && repair.acconto > 0 && (
+                              <span className="text-[10px] text-info flex items-center gap-0.5">
+                                <Euro className="h-2.5 w-2.5" />
+                                Acconto: €{repair.acconto.toFixed(0)}
                               </span>
                             )}
                           </div>
