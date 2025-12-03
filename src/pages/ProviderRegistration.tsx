@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,9 @@ import {
   Mail,
   User,
   Briefcase,
-  CheckCircle
+  CheckCircle,
+  Locate,
+  Loader2
 } from "lucide-react";
 
 type ProviderType = "corner" | "riparatore" | "centro" | null;
@@ -31,6 +34,8 @@ interface CornerForm {
   address: string;
   phone: string;
   email: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface RiparatoreForm {
@@ -41,6 +46,8 @@ interface RiparatoreForm {
   service_radius_km: number;
   is_mobile: boolean;
   specializations: string[];
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface CentroForm {
@@ -49,6 +56,8 @@ interface CentroForm {
   address: string;
   phone: string;
   email: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 const specializations = [
@@ -66,6 +75,7 @@ const specializations = [
 export default function ProviderRegistration() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { latitude, longitude, loading: geoLoading, error: geoError, requestLocation } = useGeolocation();
   const [selectedType, setSelectedType] = useState<ProviderType>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -75,6 +85,8 @@ export default function ProviderRegistration() {
     address: "",
     phone: "",
     email: user?.email || "",
+    latitude: null,
+    longitude: null,
   });
 
   const [riparatoreForm, setRiparatoreForm] = useState<RiparatoreForm>({
@@ -85,6 +97,8 @@ export default function ProviderRegistration() {
     service_radius_km: 15,
     is_mobile: true,
     specializations: [],
+    latitude: null,
+    longitude: null,
   });
 
   const [centroForm, setCentroForm] = useState<CentroForm>({
@@ -93,7 +107,29 @@ export default function ProviderRegistration() {
     address: "",
     phone: "",
     email: user?.email || "",
+    latitude: null,
+    longitude: null,
   });
+
+  // Update forms when geolocation is retrieved
+  useEffect(() => {
+    if (latitude && longitude) {
+      if (selectedType === "corner") {
+        setCornerForm(prev => ({ ...prev, latitude, longitude }));
+      } else if (selectedType === "riparatore") {
+        setRiparatoreForm(prev => ({ ...prev, latitude, longitude }));
+      } else if (selectedType === "centro") {
+        setCentroForm(prev => ({ ...prev, latitude, longitude }));
+      }
+      toast.success("Posizione rilevata con successo");
+    }
+  }, [latitude, longitude, selectedType]);
+
+  useEffect(() => {
+    if (geoError) {
+      toast.error(geoError);
+    }
+  }, [geoError]);
 
   const handleSubmit = async () => {
     if (!user) {
@@ -112,6 +148,8 @@ export default function ProviderRegistration() {
           address: cornerForm.address,
           phone: cornerForm.phone,
           email: cornerForm.email,
+          latitude: cornerForm.latitude,
+          longitude: cornerForm.longitude,
         });
         if (error) throw error;
       } else if (selectedType === "riparatore") {
@@ -124,6 +162,8 @@ export default function ProviderRegistration() {
           service_radius_km: riparatoreForm.service_radius_km,
           is_mobile: riparatoreForm.is_mobile,
           specializations: riparatoreForm.specializations,
+          latitude: riparatoreForm.latitude,
+          longitude: riparatoreForm.longitude,
         });
         if (error) throw error;
       } else if (selectedType === "centro") {
@@ -134,6 +174,8 @@ export default function ProviderRegistration() {
           address: centroForm.address,
           phone: centroForm.phone,
           email: centroForm.email,
+          latitude: centroForm.latitude,
+          longitude: centroForm.longitude,
         });
         if (error) throw error;
       }
@@ -332,6 +374,35 @@ export default function ProviderRegistration() {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Geolocation Button */}
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={requestLocation}
+                      disabled={geoLoading}
+                    >
+                      {geoLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Locate className="h-4 w-4 mr-2" />
+                      )}
+                      Rileva Posizione
+                    </Button>
+                    {cornerForm.latitude && cornerForm.longitude ? (
+                      <span className="text-sm text-success flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Posizione rilevata
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        La posizione aiuta i clienti a trovarti
+                      </span>
+                    )}
+                  </div>
+
                   <Button
                     className="w-full mt-6"
                     onClick={handleSubmit}
@@ -463,6 +534,34 @@ export default function ProviderRegistration() {
                     </div>
                   </div>
 
+                  {/* Geolocation Button */}
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={requestLocation}
+                      disabled={geoLoading}
+                    >
+                      {geoLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Locate className="h-4 w-4 mr-2" />
+                      )}
+                      Rileva Posizione
+                    </Button>
+                    {riparatoreForm.latitude && riparatoreForm.longitude ? (
+                      <span className="text-sm text-success flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Posizione rilevata
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Necessaria per ricevere offerte di lavoro
+                      </span>
+                    )}
+                  </div>
+
                   <Button
                     className="w-full mt-6"
                     onClick={handleSubmit}
@@ -559,6 +658,35 @@ export default function ProviderRegistration() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Geolocation Button */}
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={requestLocation}
+                      disabled={geoLoading}
+                    >
+                      {geoLoading ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Locate className="h-4 w-4 mr-2" />
+                      )}
+                      Rileva Posizione
+                    </Button>
+                    {centroForm.latitude && centroForm.longitude ? (
+                      <span className="text-sm text-success flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Posizione rilevata
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">
+                        Necessaria per ricevere offerte di lavoro
+                      </span>
+                    )}
+                  </div>
+
                   <Button
                     className="w-full mt-6"
                     onClick={handleSubmit}
