@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { 
   LayoutDashboard, 
   Wrench, 
@@ -18,6 +19,7 @@ import {
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Sidebar,
   SidebarContent,
@@ -54,9 +56,30 @@ export function CentroSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [businessName, setBusinessName] = useState<string>("Centro");
+
+  useEffect(() => {
+    const fetchCentroInfo = async () => {
+      if (!user) return;
+      
+      const { data } = await supabase
+        .from("centri_assistenza")
+        .select("logo_url, business_name")
+        .eq("owner_user_id", user.id)
+        .single();
+      
+      if (data) {
+        setLogoUrl(data.logo_url);
+        setBusinessName(data.business_name || "Centro");
+      }
+    };
+
+    fetchCentroInfo();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -78,23 +101,27 @@ export function CentroSidebar() {
             transition={{ duration: 0.3 }}
           >
             <motion.div 
-              className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-elegant"
+              className="h-9 w-9 rounded-xl overflow-hidden bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-elegant"
               whileHover={{ scale: 1.05, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
-              <Building2 className="h-5 w-5 text-primary-foreground" />
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
+              ) : (
+                <Building2 className="h-5 w-5 text-primary-foreground" />
+              )}
             </motion.div>
             <AnimatePresence mode="wait">
               {!isCollapsed && (
                 <motion.div 
-                  className="flex flex-col"
+                  className="flex flex-col overflow-hidden"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <span className="text-sm font-bold text-sidebar-foreground">Centro</span>
+                  <span className="text-sm font-bold text-sidebar-foreground truncate max-w-[140px]">{businessName}</span>
                   <span className="text-xs text-sidebar-foreground/60">Assistenza</span>
                 </motion.div>
               )}
