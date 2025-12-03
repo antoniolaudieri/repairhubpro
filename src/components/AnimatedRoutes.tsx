@@ -26,6 +26,12 @@ import ProviderRegistration from "@/pages/ProviderRegistration";
 import CornerDashboard from "@/pages/CornerDashboard";
 import RiparatoreDashboard from "@/pages/RiparatoreDashboard";
 import CentroDashboard from "@/pages/CentroDashboard";
+import CentroLavori from "@/pages/centro/CentroLavori";
+import CentroInventario from "@/pages/centro/CentroInventario";
+import CentroCollaboratori from "@/pages/centro/CentroCollaboratori";
+import CentroAccessi from "@/pages/centro/CentroAccessi";
+import CentroCommissioni from "@/pages/centro/CentroCommissioni";
+import CentroImpostazioni from "@/pages/centro/CentroImpostazioni";
 import NotFound from "@/pages/NotFound";
 
 export const AnimatedRoutes = () => {
@@ -102,6 +108,54 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCentro>
               <CentroDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/lavori"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroLavori />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/inventario"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroInventario />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/collaboratori"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroCollaboratori />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/accessi"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroAccessi />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/commissioni"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroCommissioni />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/impostazioni"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroImpostazioni />
             </ProtectedRoute>
           }
         />
