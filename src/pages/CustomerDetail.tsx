@@ -254,6 +254,7 @@ export default function CustomerDetail() {
             <OrderSparePartDialog
               customerId={id!}
               customerName={customer.name}
+              onOrderCreated={loadCustomerData}
               trigger={
                 <Button variant="secondary" size="sm" className="w-full h-8 text-xs sm:text-sm">
                   <ShoppingCart className="h-3.5 w-3.5 mr-1" />
