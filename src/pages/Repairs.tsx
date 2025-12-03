@@ -361,15 +361,23 @@ export default function Repairs() {
                           </div>
                         )}
 
-                        {/* Forfeiture Warning Badge */}
+                        {/* Forfeiture Countdown Badge */}
                         {(() => {
                           const daysLeft = getDaysUntilForfeiture(repair);
-                          if (daysLeft !== null && daysLeft <= 7 && daysLeft > 0) {
+                          if (daysLeft !== null && daysLeft > 0) {
+                            const isUrgent = daysLeft <= 7;
+                            const isCritical = daysLeft <= 3;
                             return (
                               <div className="absolute bottom-3 left-3">
-                                <Badge className="bg-rose-100 text-rose-700 border-0 gap-1 shadow-sm animate-pulse">
+                                <Badge className={`border-0 gap-1 shadow-sm ${
+                                  isCritical 
+                                    ? "bg-red-500 text-white animate-pulse" 
+                                    : isUrgent 
+                                      ? "bg-rose-100 text-rose-700 animate-pulse"
+                                      : "bg-amber-100 text-amber-700"
+                                }`}>
                                   <Clock className="h-3 w-3" />
-                                  ⚠️ Scade in {daysLeft}g
+                                  {isCritical ? "⚠️ " : ""}{daysLeft}g al ritiro
                                 </Badge>
                               </div>
                             );
