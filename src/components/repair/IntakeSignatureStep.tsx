@@ -10,9 +10,20 @@ import { motion } from "framer-motion";
 interface IntakeSignatureStepProps {
   onSignatureComplete: (signatureData: string) => void;
   currentSignature: string | null;
+  estimatedCost?: number;
+  partsTotal?: number;
+  servicesTotal?: number;
+  laborTotal?: number;
 }
 
-export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: IntakeSignatureStepProps) {
+export function IntakeSignatureStep({ 
+  onSignatureComplete, 
+  currentSignature,
+  estimatedCost = 0,
+  partsTotal = 0,
+  servicesTotal = 0,
+  laborTotal = 0,
+}: IntakeSignatureStepProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
 
   const handleClear = () => {
@@ -28,6 +39,60 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
 
   return (
     <div className="space-y-4">
+      {/* Estimated Cost Card - Main focus for customer signature */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card className="p-4 md:p-5 border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5">
+          <div className="text-center mb-4">
+            <h3 className="text-sm md:text-base font-bold text-foreground mb-1">
+              Preventivo Iniziale
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              Importo stimato per la riparazione
+            </p>
+          </div>
+          
+          <div className="text-center mb-4">
+            <span className="text-3xl md:text-4xl font-bold text-primary">
+              €{(estimatedCost + 15).toFixed(2)}
+            </span>
+          </div>
+          
+          {/* Cost breakdown */}
+          <div className="grid grid-cols-2 gap-2 text-xs border-t border-primary/20 pt-3">
+            {partsTotal > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Ricambi:</span>
+                <span className="font-medium">€{partsTotal.toFixed(2)}</span>
+              </div>
+            )}
+            {servicesTotal > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Servizi:</span>
+                <span className="font-medium">€{servicesTotal.toFixed(2)}</span>
+              </div>
+            )}
+            {laborTotal > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Manodopera:</span>
+                <span className="font-medium">€{laborTotal.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Diagnosi:</span>
+              <span className="font-medium">€15.00</span>
+            </div>
+          </div>
+          
+          <p className="text-[10px] text-center text-muted-foreground mt-3 italic">
+            Il preventivo può variare in base ai danni effettivi riscontrati
+          </p>
+        </Card>
+      </motion.div>
+
       {/* Diagnostic Fee Card */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}

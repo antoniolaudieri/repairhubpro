@@ -848,10 +848,20 @@ const NewRepair = () => {
         );
       
       case 4:
+        // Calculate totals for signature step
+        const sigPartsTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0);
+        const sigServicesTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
+        const sigLaborTotal = laborCost;
+        const sigEstimatedCost = sigPartsTotal + sigServicesTotal + sigLaborTotal;
+        
         return (
           <IntakeSignatureStep
             onSignatureComplete={setIntakeSignature}
             currentSignature={intakeSignature}
+            estimatedCost={sigEstimatedCost}
+            partsTotal={sigPartsTotal}
+            servicesTotal={sigServicesTotal}
+            laborTotal={sigLaborTotal}
           />
         );
       
