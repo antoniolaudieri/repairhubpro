@@ -6,53 +6,44 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Search for images using DuckDuckGo
-async function searchDuckDuckGoImages(query: string): Promise<string[]> {
+// Search Utopya for parts
+async function searchUtopya(query: string): Promise<{ name: string; price: number | null; image: string; url: string }[]> {
+  console.log('Searching Utopya for:', query);
+  
   try {
-    console.log('Searching DuckDuckGo for:', query);
+    const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
+    const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY');
     
-    const tokenResponse = await fetch(`https://duckduckgo.com/?q=${encodeURIComponent(query)}&iax=images&ia=images`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-      }
-    });
-    
-    const html = await tokenResponse.text();
-    const vqdMatch = html.match(/vqd=["']?([^"'&]+)/);
-    
-    if (!vqdMatch) {
-      console.log('Could not extract vqd token');
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+      console.log('Missing Supabase env vars for Utopya search');
       return [];
     }
-    
-    const vqd = vqdMatch[1];
-    
-    const imageSearchUrl = `https://duckduckgo.com/i.js?l=it-it&o=json&q=${encodeURIComponent(query)}&vqd=${vqd}&f=,,,,,&p=1`;
-    
-    const imageResponse = await fetch(imageSearchUrl, {
+
+    const response = await fetch(`${SUPABASE_URL}/functions/v1/scrape-utopya`, {
+      method: 'POST',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/json',
-        'Referer': 'https://duckduckgo.com/',
-      }
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({ searchQuery: query }),
     });
-    
-    if (!imageResponse.ok) {
+
+    if (!response.ok) {
+      console.log('Utopya search failed:', response.status);
       return [];
     }
+
+    const data = await response.json();
+    console.log(`Utopya found ${data.products?.length || 0} products`);
     
-    const data = await imageResponse.json();
-    const results = data.results || [];
-    
-    const imageUrls = results
-      .slice(0, 5)
-      .map((r: any) => r.thumbnail || r.image)
-      .filter((url: string) => url && (url.startsWith('http://') || url.startsWith('https://')));
-    
-    return imageUrls;
+    return (data.products || []).slice(0, 10).map((p: any) => ({
+      name: p.name,
+      price: p.priceNumeric || null,
+      image: p.image || '',
+      url: p.url,
+    }));
   } catch (error) {
-    console.error('DuckDuckGo search error:', error);
+    console.error('Utopya search error:', error);
     return [];
   }
 }
@@ -125,9 +116,19 @@ serve(async (req) => {
     console.log(`Suggesting parts for ${deviceBrand} ${deviceModel} with issue: ${reportedIssue}`);
     console.log(`Available labor: ${availableLabor.length}, services: ${availableServices.length}`);
 
+    // Search Utopya for parts related to the device and issue
+    const utopyaSearchQuery = `${deviceBrand || ''} ${deviceModel || ''} ${reportedIssue?.split(' ').slice(0, 3).join(' ') || ''}`.trim();
+    const utopyaProducts = await searchUtopya(utopyaSearchQuery);
+    console.log(`Utopya products found: ${utopyaProducts.length}`);
+
     // Build context for AI about available options
     const laborContext = availableLabor.map(l => `- ${l.name} (€${l.price}) - ${l.description || ''} [categoria: ${l.category}, dispositivo: ${l.device_type || 'tutti'}]`).join('\n');
     const servicesContext = availableServices.map(s => `- ${s.name} (€${s.price}) - ${s.description || ''}`).join('\n');
+    
+    // Include Utopya products in AI context
+    const utopyaContext = utopyaProducts.length > 0 
+      ? `\nPRODOTTI TROVATI SU UTOPYA (prezzi reali fornitore):\n${utopyaProducts.map(p => `- ${p.name} (${p.price ? '€' + p.price.toFixed(2) : 'prezzo riservato'}) - ${p.url}`).join('\n')}`
+      : '';
 
     const systemPrompt = `Sei un esperto tecnico di riparazione smartphone e dispositivi elettronici.
 Analizza il difetto segnalato e suggerisci:
@@ -142,7 +143,8 @@ Rispondi SOLO con un oggetto JSON con questa struttura:
       "partName": "nome specifico del ricambio (es. Display LCD iPhone 14)",
       "reason": "breve spiegazione del perché questo ricambio è necessario",
       "estimatedPrice": 45.00,
-      "category": "Display"
+      "category": "Display",
+      "utopyaMatch": "nome prodotto Utopya corrispondente (se trovato)"
     }
   ],
   "labors": [
@@ -164,12 +166,13 @@ ${laborContext || 'Nessuna lavorazione predefinita disponibile'}
 
 SERVIZI AGGIUNTIVI DISPONIBILI:
 ${servicesContext || 'Nessun servizio disponibile'}
+${utopyaContext}
 
 IMPORTANTE:
 - Per i ricambi, includi sempre marca e modello nel nome
 - Per manodopera e servizi, usa ESATTAMENTE i nomi dal listino fornito
 - Suggerisci solo lavorazioni/servizi pertinenti al difetto
-- Il prezzo dei ricambi deve essere realistico
+- Se trovi un prodotto Utopya corrispondente, usa il suo prezzo come estimatedPrice e indica il nome in utopyaMatch
 - Suggerisci da 1 a 3 ricambi, 1-2 lavorazioni, e 0-2 servizi aggiuntivi`;
 
     const userPrompt = `Dispositivo: ${deviceBrand || 'Smartphone'} ${deviceModel || ''} (${deviceType || 'smartphone'})
@@ -233,32 +236,45 @@ Cosa suggerisci per questa riparazione?`;
     const laborSuggestions = parsedResponse.labors || [];
     const serviceSuggestions = parsedResponse.services || [];
 
-    // Enrich part suggestions with images
-    const enrichedSuggestions = await Promise.all(
-      suggestions.map(async (suggestion: any) => {
-        // Check if part exists in inventory
-        const matchedPart = availableParts?.find((p: any) => 
-          p.name.toLowerCase().includes(suggestion.partName.toLowerCase()) ||
-          suggestion.partName.toLowerCase().includes(p.name.toLowerCase()) ||
-          p.category?.toLowerCase() === suggestion.category?.toLowerCase()
-        );
+    // Enrich part suggestions with Utopya data and images
+    const enrichedSuggestions = suggestions.map((suggestion: any) => {
+      // Check if part exists in inventory
+      const matchedPart = availableParts?.find((p: any) => 
+        p.name.toLowerCase().includes(suggestion.partName.toLowerCase()) ||
+        suggestion.partName.toLowerCase().includes(p.name.toLowerCase()) ||
+        p.category?.toLowerCase() === suggestion.category?.toLowerCase()
+      );
 
-        // Search for image
-        const searchQuery = `${suggestion.partName} ricambio smartphone`;
-        let imageUrls = await searchDuckDuckGoImages(searchQuery);
+      // Find matching Utopya product
+      const utopyaMatch = utopyaProducts.find(up => {
+        const upLower = up.name.toLowerCase();
+        const suggLower = suggestion.partName.toLowerCase();
+        const utopyaMatchName = suggestion.utopyaMatch?.toLowerCase();
         
-        let imageUrl = imageUrls[0] || getFallbackImage(suggestion.partName);
+        return (utopyaMatchName && upLower.includes(utopyaMatchName)) ||
+               upLower.includes(suggLower) ||
+               suggLower.split(' ').some((word: string) => word.length > 3 && upLower.includes(word));
+      });
 
-        return {
-          ...suggestion,
-          imageUrl,
-          inStock: !!matchedPart,
-          matchedPartId: matchedPart?.id || null,
-          stockQuantity: matchedPart?.stock_quantity || 0,
-          actualPrice: matchedPart?.selling_price || matchedPart?.cost || suggestion.estimatedPrice,
-        };
-      })
-    );
+      // Use Utopya image/price if available
+      let imageUrl = utopyaMatch?.image || getFallbackImage(suggestion.partName);
+      let price = utopyaMatch?.price || suggestion.estimatedPrice;
+      let utopyaUrl = utopyaMatch?.url || null;
+      let utopyaName = utopyaMatch?.name || null;
+
+      return {
+        ...suggestion,
+        imageUrl,
+        estimatedPrice: price,
+        inStock: !!matchedPart,
+        matchedPartId: matchedPart?.id || null,
+        stockQuantity: matchedPart?.stock_quantity || 0,
+        actualPrice: matchedPart?.selling_price || matchedPart?.cost || price,
+        utopyaUrl,
+        utopyaName,
+        hasUtopyaMatch: !!utopyaMatch,
+      };
+    });
 
     // Match labor suggestions with database entries
     const enrichedLaborSuggestions = laborSuggestions.map((suggestion: any) => {
@@ -297,6 +313,7 @@ Cosa suggerisci per questa riparazione?`;
       suggestions: enrichedSuggestions,
       laborSuggestions: enrichedLaborSuggestions,
       serviceSuggestions: enrichedServiceSuggestions,
+      utopyaProducts: utopyaProducts.slice(0, 5), // Include raw Utopya results for reference
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
