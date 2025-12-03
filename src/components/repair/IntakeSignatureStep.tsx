@@ -52,7 +52,7 @@ export function IntakeSignatureStep({
     }
   };
 
-  const totalWithDiagnostic = estimatedCost + diagnosticFee;
+  const totalWithDiagnostic = Math.ceil(estimatedCost + diagnosticFee);
 
   return (
     <div className="space-y-4">
