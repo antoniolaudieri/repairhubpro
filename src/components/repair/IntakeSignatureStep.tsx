@@ -2,9 +2,10 @@ import { useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileSignature, X, Euro, Shield, CheckCircle2 } from "lucide-react";
+import { FileSignature, X, Euro, Shield, CheckCircle2, Gift } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import { motion } from "framer-motion";
 
 interface IntakeSignatureStepProps {
@@ -14,6 +15,8 @@ interface IntakeSignatureStepProps {
   partsTotal?: number;
   servicesTotal?: number;
   laborTotal?: number;
+  diagnosticFee?: number;
+  onDiagnosticFeeChange?: (fee: number) => void;
 }
 
 export function IntakeSignatureStep({ 
@@ -23,8 +26,14 @@ export function IntakeSignatureStep({
   partsTotal = 0,
   servicesTotal = 0,
   laborTotal = 0,
+  diagnosticFee = 15,
+  onDiagnosticFeeChange,
 }: IntakeSignatureStepProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
+  
+  // Suggerimento sconto diagnosi per preventivi sopra €100
+  const suggestDiscount = estimatedCost >= 100;
+  const isDiscounted = diagnosticFee === 0;
 
   const handleClear = () => {
     sigCanvas.current?.clear();
@@ -36,6 +45,14 @@ export function IntakeSignatureStep({
       onSignatureComplete(signatureData);
     }
   };
+  
+  const toggleDiagnosticDiscount = () => {
+    if (onDiagnosticFeeChange) {
+      onDiagnosticFeeChange(isDiscounted ? 15 : 0);
+    }
+  };
+
+  const totalWithDiagnostic = estimatedCost + diagnosticFee;
 
   return (
     <div className="space-y-4">
@@ -57,8 +74,13 @@ export function IntakeSignatureStep({
           
           <div className="text-center mb-4">
             <span className="text-3xl md:text-4xl font-bold text-primary">
-              €{(estimatedCost + 15).toFixed(2)}
+              €{totalWithDiagnostic.toFixed(2)}
             </span>
+            {isDiscounted && (
+              <span className="ml-2 text-sm line-through text-muted-foreground">
+                €{(estimatedCost + 15).toFixed(2)}
+              </span>
+            )}
           </div>
           
           {/* Cost breakdown */}
@@ -83,9 +105,33 @@ export function IntakeSignatureStep({
             )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Diagnosi:</span>
-              <span className="font-medium">€15.00</span>
+              <span className={`font-medium ${isDiscounted ? "line-through text-muted-foreground" : ""}`}>
+                €{isDiscounted ? "15.00" : diagnosticFee.toFixed(2)}
+              </span>
+              {isDiscounted && (
+                <span className="font-medium text-green-600">GRATIS</span>
+              )}
             </div>
           </div>
+          
+          {/* Discount Toggle for high estimates */}
+          {suggestDiscount && onDiagnosticFeeChange && (
+            <div className="mt-4 p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-green-600" />
+                  <div>
+                    <p className="text-xs font-medium text-green-700">Sconta diagnosi</p>
+                    <p className="text-[10px] text-green-600/80">Preventivo alto (€{estimatedCost.toFixed(0)}+)</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={isDiscounted}
+                  onCheckedChange={toggleDiagnosticDiscount}
+                />
+              </div>
+            </div>
+          )}
           
           <p className="text-[10px] text-center text-muted-foreground mt-3 italic">
             Il preventivo può variare in base ai danni effettivi riscontrati
