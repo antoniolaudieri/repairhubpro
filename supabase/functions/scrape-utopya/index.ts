@@ -6,14 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Common browser headers to avoid bot detection
 const browserHeaders = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
   'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7',
   'Accept-Encoding': 'identity',
-  'Connection': 'keep-alive',
-  'Upgrade-Insecure-Requests': '1',
 };
 
 interface UtopyaProduct {
@@ -28,7 +25,6 @@ interface UtopyaProduct {
   requiresLogin: boolean;
 }
 
-// Login to Utopya and get session cookies
 async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: boolean }> {
   const username = Deno.env.get('UTOPYA_USERNAME');
   const password = Deno.env.get('UTOPYA_PASSWORD');
@@ -38,36 +34,25 @@ async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: bool
     return { cookies: '', isAuthenticated: false };
   }
   
-  console.log('Attempting Utopya login...');
-  
   try {
-    // First, get the login page to extract form_key
     const loginPageResponse = await fetch('https://www.utopya.it/customer/account/login/', {
       headers: browserHeaders,
     });
     
     if (!loginPageResponse.ok) {
-      console.error('Failed to fetch login page:', loginPageResponse.status);
       return { cookies: '', isAuthenticated: false };
     }
     
     const loginPageHtml = await loginPageResponse.text();
-    
-    // Extract form_key from login page
-    const formKeyMatch = loginPageHtml.match(/name="form_key"\s+value="([^"]+)"/i) ||
-                         loginPageHtml.match(/form_key.*?value="([^"]+)"/i);
+    const formKeyMatch = loginPageHtml.match(/name="form_key"\s+value="([^"]+)"/i);
     
     if (!formKeyMatch) {
-      console.error('Could not find form_key in login page');
       return { cookies: '', isAuthenticated: false };
     }
     
     const formKey = formKeyMatch[1];
-    
-    // Get cookies from login page response
     const initialCookies = loginPageResponse.headers.get('set-cookie') || '';
     
-    // Perform login
     const loginFormData = new URLSearchParams();
     loginFormData.append('form_key', formKey);
     loginFormData.append('login[username]', username);
@@ -87,9 +72,6 @@ async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: bool
       redirect: 'manual',
     });
     
-    console.log('Login response status:', loginResponse.status);
-    
-    // Collect all cookies
     const loginCookies = loginResponse.headers.get('set-cookie') || '';
     const allCookies = [initialCookies, loginCookies]
       .filter(Boolean)
@@ -124,24 +106,17 @@ serve(async (req) => {
       );
     }
 
-    // Try to login first
     const { cookies, isAuthenticated } = await loginToUtopya();
 
-    // Encode search query for URL
     const encodedQuery = encodeURIComponent(searchQuery).replace(/%20/g, '+');
     const utopyaUrl = `https://www.utopya.it/catalogsearch/result/?q=${encodedQuery}`;
     
-    console.log('Fetching Utopya URL:', utopyaUrl);
+    console.log('Fetching:', utopyaUrl, 'Authenticated:', isAuthenticated);
 
-    // Fetch the search results with session cookies
     const searchHeaders: Record<string, string> = { ...browserHeaders };
-    if (cookies) {
-      searchHeaders['Cookie'] = cookies;
-    }
+    if (cookies) searchHeaders['Cookie'] = cookies;
     
-    const response = await fetch(utopyaUrl, {
-      headers: searchHeaders,
-    });
+    const response = await fetch(utopyaUrl, { headers: searchHeaders });
 
     if (!response.ok) {
       throw new Error(`Failed to fetch Utopya: ${response.status}`);
@@ -151,68 +126,108 @@ serve(async (req) => {
     console.log('HTML length:', html.length);
     
     const products: UtopyaProduct[] = [];
+    const seenUrls = new Set<string>();
 
-    // Method 1: Look for product grid items with class "product-item"
-    // Utopya uses a standard Magento structure
-    const productGridMatch = html.match(/class="products[^"]*product-items[^"]*"[^>]*>([\s\S]*?)<\/ol>/i) ||
-                            html.match(/class="[^"]*search[^"]*results[^"]*"[^>]*>([\s\S]*?)<\/(?:ol|ul|div)>/i);
+    // Extract all product URLs that end with .html (excluding system pages)
+    const excludePatterns = [
+      '/customer/', '/checkout/', '/wishlist/', '/catalogsearch/',
+      '/privacy', '/terms', '/cookie', '/contact', '/about',
+      '/category/', '/cms/', '/account/'
+    ];
+
+    // Find all .html links that look like products
+    const urlRegex = /href="(https:\/\/www\.utopya\.it\/([a-z0-9\-]+)\.html)"/gi;
+    let urlMatch;
     
-    if (productGridMatch) {
-      console.log('Found product grid');
-      const gridHtml = productGridMatch[1] || productGridMatch[0];
+    while ((urlMatch = urlRegex.exec(html)) !== null) {
+      const url = urlMatch[1];
+      const slug = urlMatch[2];
       
-      // Extract individual product items
-      const productItemRegex = /<li[^>]*class="[^"]*product-item[^"]*"[^>]*>([\s\S]*?)<\/li>/gi;
-      const productItems = gridHtml.matchAll(productItemRegex);
+      // Skip excluded patterns and duplicates
+      if (seenUrls.has(url)) continue;
+      if (excludePatterns.some(p => url.includes(p))) continue;
+      if (slug.length < 5) continue; // Skip very short slugs
       
-      for (const item of productItems) {
-        const itemHtml = item[1];
-        
-        // Extract product URL
-        const urlMatch = itemHtml.match(/href="(https:\/\/www\.utopya\.it\/[^"]+\.html)"/i);
-        if (!urlMatch) continue;
-        const url = urlMatch[1];
-        
-        // Skip category URLs
-        if (url.includes('/category/') || url.includes('/checkout/') || url.includes('/customer/')) continue;
-        
-        // Extract product name from link title or alt
-        const nameMatch = itemHtml.match(/class="[^"]*product-item-link[^"]*"[^>]*>([^<]+)</i) ||
-                         itemHtml.match(/alt="([^"]+)"/i) ||
-                         itemHtml.match(/title="([^"]+)"/i);
-        const name = nameMatch ? nameMatch[1].trim() : '';
-        
-        if (!name) continue;
-        
-        // Extract image
-        const imgMatch = itemHtml.match(/src="(https:\/\/www\.utopya\.it\/media\/catalog\/product[^"]+)"/i) ||
-                        itemHtml.match(/data-src="(https:\/\/www\.utopya\.it\/media\/catalog\/product[^"]+)"/i);
-        const image = imgMatch ? imgMatch[1] : '';
-        
-        // Extract price (only visible if authenticated)
-        let price = 'Accedi per prezzo';
-        let priceNumeric = 0;
-        const priceMatch = itemHtml.match(/data-price-amount="([0-9.]+)"/i) ||
-                          itemHtml.match(/class="[^"]*price[^"]*"[^>]*>€?\s*([0-9]+[.,][0-9]{2})/i);
-        if (priceMatch) {
-          priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
-          if (priceNumeric > 0) {
-            price = `€${priceNumeric.toFixed(2)}`;
-          }
+      seenUrls.add(url);
+    }
+
+    console.log('Found', seenUrls.size, 'potential product URLs');
+
+    // Now for each URL, try to find associated name, image, and price
+    for (const url of seenUrls) {
+      const urlEscaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
+      // Look for context around this URL (product card)
+      // Search for name in alt, title, or link text
+      let name = '';
+      let image = '';
+      let price = '';
+      let priceNumeric = 0;
+      let sku = '';
+      let brand = '';
+
+      // Try to find product name from alt attribute near the URL
+      const altRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*>[\\s\\S]*?<img[^>]*alt="([^"]+)"`, 'i');
+      const altMatch = html.match(altRegex);
+      if (altMatch) {
+        name = altMatch[1].trim();
+      }
+
+      // Try to find name from title attribute
+      if (!name) {
+        const titleRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*title="([^"]+)"`, 'i');
+        const titleMatch = html.match(titleRegex);
+        if (titleMatch) {
+          name = titleMatch[1].trim();
         }
-        
-        // Extract SKU if available
-        const skuMatch = itemHtml.match(/data-sku="([^"]+)"/i) ||
-                        itemHtml.match(/sku['":\s]+['"]?([A-Z0-9\-]+)/i);
-        const sku = skuMatch ? skuMatch[1] : '';
-        
-        // Extract brand label
-        const brandMatch = itemHtml.match(/class="[^"]*amlabel[^"]*"[^>]*>([^<]+)</i);
-        const brand = brandMatch ? brandMatch[1].trim() : '';
-        
+      }
+
+      // Try to find product image
+      const imgRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*>[\\s\\S]*?<img[^>]*src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"`, 'i');
+      const imgMatch = html.match(imgRegex);
+      if (imgMatch) {
+        image = imgMatch[1];
+      }
+
+      // Alternative: image before the link
+      if (!image) {
+        const imgBeforeRegex = new RegExp(`<img[^>]*src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"[^>]*>[\\s\\S]{0,500}?href="${urlEscaped}"`, 'i');
+        const imgBeforeMatch = html.match(imgBeforeRegex);
+        if (imgBeforeMatch) {
+          image = imgBeforeMatch[1];
+        }
+      }
+
+      // Try to find price near the URL
+      const priceRegex = new RegExp(`href="${urlEscaped}"[\\s\\S]{0,1000}?(?:data-price-amount="|€\\s*)([0-9]+[.,][0-9]{2})`, 'i');
+      const priceMatch = html.match(priceRegex);
+      if (priceMatch) {
+        priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
+        if (priceNumeric > 0) {
+          price = `€${priceNumeric.toFixed(2)}`;
+        }
+      }
+
+      // Try to find SKU
+      const skuRegex = new RegExp(`href="${urlEscaped}"[\\s\\S]{0,500}?data-sku="([^"]+)"`, 'i');
+      const skuMatch = html.match(skuRegex);
+      if (skuMatch) {
+        sku = skuMatch[1];
+      }
+
+      // If no name found, derive from URL slug
+      if (!name) {
+        const slug = url.replace('https://www.utopya.it/', '').replace('.html', '');
+        name = slug
+          .replace(/-/g, ' ')
+          .replace(/\b\w/g, l => l.toUpperCase());
+      }
+
+      // Only add if we have at least a name
+      if (name && name.length > 5) {
         products.push({
           name,
-          price,
+          price: price || 'Accedi per prezzo',
           priceNumeric,
           image,
           url,
@@ -224,101 +239,25 @@ serve(async (req) => {
       }
     }
 
-    // Method 2: Fallback - look for JSON-LD structured data
-    if (products.length === 0) {
-      console.log('Trying JSON-LD method...');
-      const jsonLdMatches = html.matchAll(/<script type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi);
-      for (const jsonLdMatch of jsonLdMatches) {
-        try {
-          const jsonData = JSON.parse(jsonLdMatch[1]);
-          if (jsonData['@type'] === 'ItemList' && jsonData.itemListElement) {
-            for (const item of jsonData.itemListElement) {
-              if (item.item && item.item.name) {
-                const itemPrice = item.item.offers?.price;
-                products.push({
-                  name: item.item.name,
-                  price: itemPrice ? `€${parseFloat(itemPrice).toFixed(2)}` : 'Accedi per prezzo',
-                  priceNumeric: parseFloat(itemPrice || '0'),
-                  image: item.item.image || '',
-                  url: item.item.url || item.item['@id'] || '',
-                  sku: item.item.sku || '',
-                  brand: item.item.brand?.name || '',
-                  inStock: true,
-                  requiresLogin: !itemPrice,
-                });
-              }
-            }
-          }
-        } catch (e) {
-          // Ignore JSON parse errors
-        }
-      }
-    }
-
-    // Method 3: Fallback - direct product link extraction with strict filtering
-    if (products.length === 0) {
-      console.log('Trying direct link extraction...');
-      
-      // Look specifically for product links with images (real products always have images)
-      const productWithImageRegex = /<a[^>]*href="(https:\/\/www\.utopya\.it\/[a-z0-9\-]+\.html)"[^>]*>[\s\S]*?<img[^>]*alt="([^"]+)"[^>]*src="([^"]+)"[\s\S]*?<\/a>/gi;
-      const matches = html.matchAll(productWithImageRegex);
-      
-      const seenUrls = new Set<string>();
-      for (const match of matches) {
-        const url = match[1];
-        const name = match[2];
-        const image = match[3];
-        
-        if (seenUrls.has(url)) continue;
-        seenUrls.add(url);
-        
-        // Strict filtering - only product URLs
-        if (url.includes('/category') || 
-            url.includes('/customer') ||
-            url.includes('/checkout') ||
-            url.includes('/page') ||
-            !name ||
-            name.length < 5) continue;
-        
-        products.push({
-          name: name.trim(),
-          price: 'Accedi per prezzo',
-          priceNumeric: 0,
-          image,
-          url,
-          sku: '',
-          brand: '',
-          inStock: true,
-          requiresLogin: true,
-        });
-      }
-    }
-
-    // Remove duplicates
-    const uniqueProducts = Array.from(
-      new Map(products.filter(p => p.url && p.name).map(p => [p.url, p])).values()
-    );
-
-    console.log(`Found ${uniqueProducts.length} products`);
+    console.log('Extracted', products.length, 'products with details');
 
     return new Response(
       JSON.stringify({ 
-        products: uniqueProducts.slice(0, 30),
+        products: products.slice(0, 30),
         searchUrl: utopyaUrl,
-        totalFound: uniqueProducts.length,
+        totalFound: products.length,
         requiresLogin: !isAuthenticated,
         isAuthenticated,
         message: isAuthenticated 
-          ? 'Prezzi aggiornati in tempo reale da Utopya.' 
-          : 'I prezzi su Utopya richiedono login. Clicca sui prodotti per vedere i prezzi sul sito.'
+          ? 'Prezzi aggiornati in tempo reale.' 
+          : 'I prezzi richiedono login su Utopya.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error scraping Utopya:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
