@@ -19,7 +19,7 @@ import { SparePartsStep } from "@/components/repair/SparePartsStep";
 
 const NewRepair = () => {
   const navigate = useNavigate();
-  const { user, isCentroAdmin, isCentroTech } = useAuth();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
@@ -431,23 +431,11 @@ const NewRepair = () => {
           }
         }
 
-        // Get centro_id if user is centro_admin
-        let centroId = null;
-        if (isCentroAdmin) {
-          const { data: centroData } = await supabase
-            .from("centri_assistenza")
-            .select("id")
-            .eq("owner_user_id", user?.id)
-            .maybeSingle();
-          centroId = centroData?.id;
-        }
-
-        // Then create customer record linked to centro
+        // Create customer record (generic - not linked to any centro)
         const { data: customer, error: customerError } = await supabase
           .from("customers")
           .insert({
             ...customerData,
-            centro_id: centroId,
           })
           .select()
           .single();
@@ -624,9 +612,7 @@ const NewRepair = () => {
       }
 
       toast.success("Dispositivo registrato con successo!");
-      // Redirect based on user role
-      const redirectPath = (isCentroAdmin || isCentroTech) ? "/centro/lavori" : "/dashboard";
-      navigate(redirectPath);
+      navigate("/dashboard");
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(error.message || "Errore durante la registrazione");
