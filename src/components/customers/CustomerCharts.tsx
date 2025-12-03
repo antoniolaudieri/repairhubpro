@@ -95,28 +95,28 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
 
   return (
     <div className="grid gap-2 sm:gap-4">
-      {/* Status and Spending - Stack on mobile */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-4">
+      {/* Status and Spending - Single column on mobile */}
+      <div className="grid gap-2 sm:gap-4 sm:grid-cols-2">
         {/* Status Distribution */}
         {statusData.length > 0 && (
           <Card className="overflow-hidden">
-            <CardHeader className="pb-1 px-2 sm:px-4 pt-2 sm:pt-4">
-              <CardTitle className="text-[10px] sm:text-sm font-medium flex items-center gap-1">
-                <PieChartIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-primary" />
-                <span className="truncate">Stato</span>
+            <CardHeader className="pb-1.5 px-3 sm:px-4 pt-2.5 sm:pt-4">
+              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+                <PieChartIcon className="h-3.5 w-3.5 text-primary" />
+                Stato Riparazioni
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-2 sm:px-4 pb-2 sm:pb-4">
-              <div className="flex flex-col sm:flex-row items-center gap-2">
-                <div className="w-[70px] h-[70px] sm:w-[100px] sm:h-[100px] flex-shrink-0">
+            <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] flex-shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={statusData}
                         cx="50%"
                         cy="50%"
-                        innerRadius={isMobile ? 18 : 28}
-                        outerRadius={isMobile ? 30 : 42}
+                        innerRadius={isMobile ? 20 : 28}
+                        outerRadius={isMobile ? 35 : 42}
                         paddingAngle={2}
                         dataKey="value"
                       >
@@ -131,15 +131,15 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex flex-wrap justify-center sm:flex-col gap-1 flex-1 min-w-0">
-                  {statusData.slice(0, isMobile ? 3 : statusData.length).map((item, index) => (
-                    <div key={index} className="flex items-center gap-1">
+                <div className="flex flex-col gap-1 flex-1 min-w-0">
+                  {statusData.map((item, index) => (
+                    <div key={index} className="flex items-center gap-1.5">
                       <div 
-                        className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0"
+                        className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: statusColors[item.status] || "hsl(215 16% 47%)" }}
                       />
-                      <span className="text-[8px] sm:text-xs truncate">
-                        {isMobile ? item.name.slice(0, 6) : item.name}: <strong>{item.value}</strong>
+                      <span className="text-[10px] sm:text-xs truncate">
+                        {item.name}: <strong>{item.value}</strong>
                       </span>
                     </div>
                   ))}
@@ -152,16 +152,16 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
         {/* Spending Trend */}
         {monthlySpending.length > 0 && (
           <Card className="overflow-hidden">
-            <CardHeader className="pb-1 px-2 sm:px-4 pt-2 sm:pt-4">
-              <CardTitle className="text-[10px] sm:text-sm font-medium flex items-center gap-1">
-                <TrendingUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-accent" />
-                <span className="truncate">Spesa</span>
+            <CardHeader className="pb-1.5 px-3 sm:px-4 pt-2.5 sm:pt-4">
+              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+                <TrendingUp className="h-3.5 w-3.5 text-accent" />
+                Andamento Spesa
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-2 sm:px-4 pb-2 sm:pb-4">
-              <div className="h-[80px] sm:h-[100px]">
+            <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4">
+              <div className="h-[90px] sm:h-[100px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlySpending} margin={{ top: 5, right: 0, left: -25, bottom: 0 }}>
+                  <AreaChart data={monthlySpending} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorSpesa" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="hsl(142 76% 36%)" stopOpacity={0.3}/>
@@ -171,19 +171,18 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(214 32% 88%)" vertical={false} />
                     <XAxis 
                       dataKey="month" 
-                      tick={{ fontSize: isMobile ? 8 : 10 }}
+                      tick={{ fontSize: 10 }}
                       stroke="hsl(215 16% 47%)"
                       axisLine={false}
                       tickLine={false}
-                      interval={isMobile ? 1 : 0}
                     />
                     <YAxis 
-                      tick={{ fontSize: isMobile ? 8 : 10 }}
+                      tick={{ fontSize: 10 }}
                       stroke="hsl(215 16% 47%)"
                       axisLine={false}
                       tickLine={false}
                       tickFormatter={(value) => `€${value}`}
-                      width={isMobile ? 28 : 35}
+                      width={35}
                     />
                     <Tooltip 
                       formatter={(value: number) => [`€${value.toFixed(2)}`, "Spesa"]}
@@ -191,7 +190,7 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
                         backgroundColor: "hsl(0 0% 100%)",
                         border: "1px solid hsl(214 32% 88%)",
                         borderRadius: "6px",
-                        fontSize: "10px",
+                        fontSize: "11px",
                         padding: "4px 8px"
                       }}
                     />
@@ -199,7 +198,7 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
                       type="monotone" 
                       dataKey="spesa" 
                       stroke="hsl(142 76% 36%)" 
-                      strokeWidth={1.5}
+                      strokeWidth={2}
                       fill="url(#colorSpesa)" 
                     />
                   </AreaChart>
@@ -210,27 +209,27 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
         )}
       </div>
 
-      {/* Device Types and Brands - Stack on mobile */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-4">
+      {/* Device Types and Brands - Single column on mobile */}
+      <div className="grid gap-2 sm:gap-4 sm:grid-cols-2">
         {/* Device Types */}
         {deviceTypeData.length > 0 && (
           <Card className="overflow-hidden">
-            <CardHeader className="pb-1 px-2 sm:px-4 pt-2 sm:pt-4">
-              <CardTitle className="text-[10px] sm:text-sm font-medium flex items-center gap-1">
-                <Activity className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-info" />
-                <span className="truncate">Dispositivi</span>
+            <CardHeader className="pb-1.5 px-3 sm:px-4 pt-2.5 sm:pt-4">
+              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+                <Activity className="h-3.5 w-3.5 text-info" />
+                Tipi Dispositivi
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-2 sm:px-4 pb-2 sm:pb-4">
-              <div className="flex flex-col sm:flex-row items-center gap-2">
-                <div className="w-[65px] h-[65px] sm:w-[85px] sm:h-[85px] flex-shrink-0">
+            <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-[75px] h-[75px] sm:w-[85px] sm:h-[85px] flex-shrink-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={deviceTypeData}
                         cx="50%"
                         cy="50%"
-                        outerRadius={isMobile ? 28 : 36}
+                        outerRadius={isMobile ? 32 : 36}
                         dataKey="value"
                       >
                         {deviceTypeData.map((entry, index) => (
@@ -244,15 +243,15 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex flex-wrap justify-center sm:flex-col gap-1 flex-1 min-w-0">
-                  {deviceTypeData.slice(0, isMobile ? 3 : deviceTypeData.length).map((item, index) => (
-                    <div key={index} className="flex items-center gap-1">
+                <div className="flex flex-col gap-1 flex-1 min-w-0">
+                  {deviceTypeData.map((item, index) => (
+                    <div key={index} className="flex items-center gap-1.5">
                       <div 
-                        className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0"
+                        className="w-2 h-2 rounded-full flex-shrink-0"
                         style={{ backgroundColor: deviceColors[index % deviceColors.length] }}
                       />
-                      <span className="text-[8px] sm:text-xs truncate">
-                        {isMobile ? item.name.slice(0, 5) : item.name}: <strong>{item.value}</strong>
+                      <span className="text-[10px] sm:text-xs truncate">
+                        {item.name}: <strong>{item.value}</strong>
                       </span>
                     </div>
                   ))}
@@ -265,25 +264,25 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
         {/* Top Brands */}
         {brandData.length > 0 && (
           <Card className="overflow-hidden">
-            <CardHeader className="pb-1 px-2 sm:px-4 pt-2 sm:pt-4">
-              <CardTitle className="text-[10px] sm:text-sm font-medium flex items-center gap-1">
-                <BarChart3 className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-warning" />
-                <span className="truncate">Brand</span>
+            <CardHeader className="pb-1.5 px-3 sm:px-4 pt-2.5 sm:pt-4">
+              <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+                <BarChart3 className="h-3.5 w-3.5 text-warning" />
+                Top Brand
               </CardTitle>
             </CardHeader>
-            <CardContent className="px-2 sm:px-4 pb-2 sm:pb-4">
-              <div className="h-[75px] sm:h-[85px]">
+            <CardContent className="px-3 sm:px-4 pb-3 sm:pb-4">
+              <div className="h-[80px] sm:h-[85px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={brandData.slice(0, isMobile ? 3 : 5)} layout="vertical" margin={{ top: 0, right: 5, left: 0, bottom: 0 }}>
+                  <BarChart data={brandData.slice(0, 4)} layout="vertical" margin={{ top: 0, right: 5, left: 0, bottom: 0 }}>
                     <XAxis type="number" hide />
                     <YAxis 
                       dataKey="name" 
                       type="category" 
-                      tick={{ fontSize: isMobile ? 8 : 10 }}
+                      tick={{ fontSize: 10 }}
                       stroke="hsl(215 16% 47%)"
                       axisLine={false}
                       tickLine={false}
-                      width={isMobile ? 40 : 55}
+                      width={55}
                     />
                     <Tooltip 
                       formatter={(value: number) => [value, "Dispositivi"]}
@@ -291,15 +290,15 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
                         backgroundColor: "hsl(0 0% 100%)",
                         border: "1px solid hsl(214 32% 88%)",
                         borderRadius: "6px",
-                        fontSize: "10px",
+                        fontSize: "11px",
                         padding: "4px 8px"
                       }}
                     />
                     <Bar 
                       dataKey="riparazioni" 
                       fill="hsl(38 92% 50%)" 
-                      radius={[0, 3, 3, 0]}
-                      barSize={isMobile ? 10 : 12}
+                      radius={[0, 4, 4, 0]}
+                      barSize={12}
                     />
                   </BarChart>
                 </ResponsiveContainer>
