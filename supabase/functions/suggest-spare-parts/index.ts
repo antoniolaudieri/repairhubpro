@@ -116,8 +116,30 @@ serve(async (req) => {
     console.log(`Suggesting parts for ${deviceBrand} ${deviceModel} with issue: ${reportedIssue}`);
     console.log(`Available labor: ${availableLabor.length}, services: ${availableServices.length}`);
 
-    // Search Utopya for parts related to the device and issue
-    const utopyaSearchQuery = `${deviceBrand || ''} ${deviceModel || ''} ${reportedIssue?.split(' ').slice(0, 3).join(' ') || ''}`.trim();
+    // Extract part keywords from issue for better Utopya search
+    const partKeywords: Record<string, string[]> = {
+      'display': ['display', 'schermo', 'lcd', 'oled', 'screen', 'vetro'],
+      'batteria': ['batteria', 'battery', 'carica', 'spegne'],
+      'fotocamera': ['fotocamera', 'camera', 'foto', 'obiettivo'],
+      'connettore': ['connettore', 'ricarica', 'charging', 'usb', 'lightning', 'type-c'],
+      'altoparlante': ['altoparlante', 'speaker', 'audio', 'suono', 'microfono'],
+      'scocca': ['scocca', 'back', 'cover', 'posteriore', 'vetro posteriore'],
+    };
+
+    // Find matching part type from issue
+    let partType = '';
+    const issueLower = (reportedIssue || '').toLowerCase();
+    for (const [type, keywords] of Object.entries(partKeywords)) {
+      if (keywords.some(k => issueLower.includes(k))) {
+        partType = type;
+        break;
+      }
+    }
+
+    // Build simpler search query: "brand model partType" e.g. "iPhone XR display"
+    const utopyaSearchQuery = `${deviceBrand || ''} ${deviceModel || ''} ${partType}`.trim().replace(/\s+/g, ' ');
+    console.log('Utopya search query:', utopyaSearchQuery);
+    
     const utopyaProducts = await searchUtopya(utopyaSearchQuery);
     console.log(`Utopya products found: ${utopyaProducts.length}`);
 
