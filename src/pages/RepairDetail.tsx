@@ -571,19 +571,20 @@ export default function RepairDetail() {
             <div className="flex items-start gap-4">
               {/* Device Image or Icon */}
               <div className="relative flex-shrink-0">
-                {repair.device.photo_url ? (
-                  <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl overflow-hidden border-2 border-border shadow-lg">
+                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl overflow-hidden border-2 border-border shadow-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+                  {repair.device.photo_url ? (
                     <img
                       src={repair.device.photo_url}
                       alt="Device"
                       className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+                      }}
                     />
-                  </div>
-                ) : (
-                  <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 flex items-center justify-center">
-                    <Smartphone className="h-10 w-10 text-primary" />
-                  </div>
-                )}
+                  ) : null}
+                  <Smartphone className={`fallback-icon h-10 w-10 text-primary ${repair.device.photo_url ? 'hidden' : ''}`} />
+                </div>
                 <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full ${status.color} flex items-center justify-center ring-2 ring-background`}>
                   <StatusIcon className="h-3.5 w-3.5 text-white" />
                 </div>
