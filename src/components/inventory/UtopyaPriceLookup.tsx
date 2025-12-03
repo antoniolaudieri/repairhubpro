@@ -34,6 +34,7 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
   const [isLoading, setIsLoading] = useState(false);
   const [searchUrl, setSearchUrl] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -53,11 +54,13 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
 
       setProducts(data.products || []);
       setSearchUrl(data.searchUrl || '');
+      setIsAuthenticated(data.isAuthenticated || false);
       
       if (data.products?.length === 0) {
         toast.info('Nessun prodotto trovato su Utopya');
       } else {
-        toast.success(`Trovati ${data.products.length} prodotti`);
+        const authStatus = data.isAuthenticated ? '(con prezzi)' : '(senza prezzi)';
+        toast.success(`Trovati ${data.products.length} prodotti ${authStatus}`);
       }
     } catch (error) {
       console.error('Error searching Utopya:', error);
@@ -116,17 +119,31 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
             </Button>
           </div>
 
-          {/* Info Banner - Prices require login */}
+          {/* Status Banner */}
           {products.length > 0 && (
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <LogIn className="h-5 w-5 text-amber-600 flex-shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-amber-700">I prezzi richiedono login su Utopya</p>
-                <p className="text-xs text-amber-600/80">Clicca su un prodotto per vedere il prezzo sul sito</p>
-              </div>
+            <div className={`flex items-center gap-3 p-3 rounded-lg ${isAuthenticated ? 'bg-green-500/10 border border-green-500/20' : 'bg-amber-500/10 border border-amber-500/20'}`}>
+              {isAuthenticated ? (
+                <>
+                  <div className="h-5 w-5 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs">✓</span>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-700">Connesso a Utopya</p>
+                    <p className="text-xs text-green-600/80">Prezzi aggiornati in tempo reale</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-5 w-5 text-amber-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-amber-700">I prezzi richiedono login su Utopya</p>
+                    <p className="text-xs text-amber-600/80">Configura le credenziali per vedere i prezzi</p>
+                  </div>
+                </>
+              )}
               <div className="flex items-center gap-2">
-                <Package className="h-4 w-4 text-blue-600" />
-                <span className="text-lg font-bold text-blue-600">{products.length}</span>
+                <Package className="h-4 w-4 text-primary" />
+                <span className="text-lg font-bold text-primary">{products.length}</span>
                 <span className="text-xs text-muted-foreground">prodotti</span>
               </div>
             </div>
@@ -182,6 +199,11 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
                                 {product.sku}
                               </span>
                             )}
+                            {!product.requiresLogin && product.priceNumeric > 0 && (
+                              <span className="text-sm font-bold text-green-600">
+                                {product.price}
+                              </span>
+                            )}
                           </div>
                           <Button 
                             size="sm" 
@@ -193,7 +215,7 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
                             }}
                           >
                             <ExternalLink className="h-3 w-3" />
-                            Vedi prezzo
+                            {product.requiresLogin ? 'Vedi prezzo' : 'Acquista'}
                           </Button>
                         </div>
                       </div>
