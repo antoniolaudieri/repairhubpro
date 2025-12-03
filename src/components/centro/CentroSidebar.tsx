@@ -8,7 +8,11 @@ import {
   Settings,
   Share2,
   UserRound,
-  Building2
+  Building2,
+  BookOpen,
+  FileText,
+  ShoppingCart,
+  Settings2
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -32,9 +36,13 @@ import { motion, AnimatePresence } from "framer-motion";
 const menuItems = [
   { title: "Dashboard", url: "/centro", icon: LayoutDashboard },
   { title: "Lavori", url: "/centro/lavori", icon: Wrench },
+  { title: "Guide IA", url: "/centro/guide", icon: BookOpen },
   { title: "Clienti", url: "/centro/clienti", icon: UserRound },
-  { title: "Collaboratori", url: "/centro/collaboratori", icon: Users },
+  { title: "Preventivi", url: "/centro/preventivi", icon: FileText },
   { title: "Inventario", url: "/centro/inventario", icon: Package },
+  { title: "Ordini", url: "/centro/ordini", icon: ShoppingCart },
+  { title: "Listino Prezzi", url: "/centro/listino", icon: Settings2 },
+  { title: "Collaboratori", url: "/centro/collaboratori", icon: Users },
   { title: "Accessi Condivisi", url: "/centro/accessi", icon: Share2 },
   { title: "Commissioni", url: "/centro/commissioni", icon: DollarSign },
   { title: "Impostazioni", url: "/centro/impostazioni", icon: Settings },
