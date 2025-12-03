@@ -400,7 +400,7 @@ const Dashboard = () => {
                           <span className="font-medium text-foreground truncate">
                             {warning.device.brand} {warning.device.model}
                           </span>
-                          <span className="text-muted-foreground truncate">• {warning.customer.name}</span>
+                          <span className="text-muted-foreground truncate">• {warning.customer?.name || "N/A"}</span>
                         </div>
                         <Badge className={`${warning.daysLeft <= 3 ? 'bg-rose-600' : 'bg-rose-500'} text-white text-xs ml-2`}>
                           {warning.daysLeft}g
@@ -647,7 +647,7 @@ const Dashboard = () => {
                               {repair.device.brand} {repair.device.model}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">
-                              {repair.customer.name}
+                              {repair.customer?.name || "Cliente sconosciuto"}
                             </p>
                           </div>
                           <Badge className={`${status.bg} ${status.text} border-0 text-xs px-2 py-0.5`}>
