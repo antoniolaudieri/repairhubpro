@@ -212,6 +212,120 @@ export type Database = {
           },
         ]
       }
+      commission_ledger: {
+        Row: {
+          centro_commission: number | null
+          centro_id: string | null
+          centro_rate: number | null
+          corner_commission: number | null
+          corner_id: string | null
+          corner_rate: number | null
+          created_at: string
+          gross_margin: number
+          gross_revenue: number
+          id: string
+          notes: string | null
+          paid_at: string | null
+          parts_cost: number
+          platform_commission: number
+          platform_rate: number
+          repair_id: string | null
+          repair_request_id: string | null
+          riparatore_commission: number | null
+          riparatore_id: string | null
+          riparatore_rate: number | null
+          status: string
+          stripe_transfer_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          centro_commission?: number | null
+          centro_id?: string | null
+          centro_rate?: number | null
+          corner_commission?: number | null
+          corner_id?: string | null
+          corner_rate?: number | null
+          created_at?: string
+          gross_margin: number
+          gross_revenue: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          parts_cost?: number
+          platform_commission: number
+          platform_rate?: number
+          repair_id?: string | null
+          repair_request_id?: string | null
+          riparatore_commission?: number | null
+          riparatore_id?: string | null
+          riparatore_rate?: number | null
+          status?: string
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          centro_commission?: number | null
+          centro_id?: string | null
+          centro_rate?: number | null
+          corner_commission?: number | null
+          corner_id?: string | null
+          corner_rate?: number | null
+          created_at?: string
+          gross_margin?: number
+          gross_revenue?: number
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          parts_cost?: number
+          platform_commission?: number
+          platform_rate?: number
+          repair_id?: string | null
+          repair_request_id?: string | null
+          riparatore_commission?: number | null
+          riparatore_id?: string | null
+          riparatore_rate?: number | null
+          status?: string
+          stripe_transfer_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_ledger_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_ledger_corner_id_fkey"
+            columns: ["corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_ledger_repair_id_fkey"
+            columns: ["repair_id"]
+            isOneToOne: false
+            referencedRelation: "repairs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_ledger_repair_request_id_fkey"
+            columns: ["repair_request_id"]
+            isOneToOne: false
+            referencedRelation: "repair_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_ledger_riparatore_id_fkey"
+            columns: ["riparatore_id"]
+            isOneToOne: false
+            referencedRelation: "riparatori"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corner_partnerships: {
         Row: {
           corner_id: string
@@ -430,6 +544,101 @@ export type Database = {
             columns: ["repair_id"]
             isOneToOne: false
             referencedRelation: "repairs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_access: {
+        Row: {
+          can_reserve: boolean
+          can_view: boolean
+          centro_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          riparatore_id: string
+          updated_at: string
+        }
+        Insert: {
+          can_reserve?: boolean
+          can_view?: boolean
+          centro_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          riparatore_id: string
+          updated_at?: string
+        }
+        Update: {
+          can_reserve?: boolean
+          can_view?: boolean
+          centro_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          riparatore_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_access_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_access_riparatore_id_fkey"
+            columns: ["riparatore_id"]
+            isOneToOne: false
+            referencedRelation: "riparatori"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      job_offers: {
+        Row: {
+          created_at: string
+          distance_km: number | null
+          expires_at: string
+          id: string
+          offered_at: string
+          provider_id: string
+          provider_type: string
+          repair_request_id: string
+          response_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          distance_km?: number | null
+          expires_at: string
+          id?: string
+          offered_at?: string
+          provider_id: string
+          provider_type: string
+          repair_request_id: string
+          response_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          distance_km?: number | null
+          expires_at?: string
+          id?: string
+          offered_at?: string
+          provider_id?: string
+          provider_type?: string
+          repair_request_id?: string
+          response_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_offers_repair_request_id_fkey"
+            columns: ["repair_request_id"]
+            isOneToOne: false
+            referencedRelation: "repair_requests"
             referencedColumns: ["id"]
           },
         ]
@@ -757,6 +966,87 @@ export type Database = {
           },
         ]
       }
+      repair_requests: {
+        Row: {
+          assigned_at: string | null
+          assigned_provider_id: string | null
+          assigned_provider_type: string | null
+          corner_id: string | null
+          created_at: string
+          customer_id: string
+          customer_latitude: number | null
+          customer_longitude: number | null
+          device_brand: string | null
+          device_model: string | null
+          device_type: string
+          estimated_cost: number | null
+          expires_at: string | null
+          id: string
+          issue_description: string
+          photos: Json | null
+          service_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_provider_id?: string | null
+          assigned_provider_type?: string | null
+          corner_id?: string | null
+          created_at?: string
+          customer_id: string
+          customer_latitude?: number | null
+          customer_longitude?: number | null
+          device_brand?: string | null
+          device_model?: string | null
+          device_type: string
+          estimated_cost?: number | null
+          expires_at?: string | null
+          id?: string
+          issue_description: string
+          photos?: Json | null
+          service_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_provider_id?: string | null
+          assigned_provider_type?: string | null
+          corner_id?: string | null
+          created_at?: string
+          customer_id?: string
+          customer_latitude?: number | null
+          customer_longitude?: number | null
+          device_brand?: string | null
+          device_model?: string | null
+          device_type?: string
+          estimated_cost?: number | null
+          expires_at?: string | null
+          id?: string
+          issue_description?: string
+          photos?: Json | null
+          service_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_requests_corner_id_fkey"
+            columns: ["corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repair_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       repairs: {
         Row: {
           acconto: number | null
@@ -916,6 +1206,7 @@ export type Database = {
         Row: {
           brand: string | null
           category: string
+          centro_id: string | null
           cost: number | null
           created_at: string
           id: string
@@ -933,6 +1224,7 @@ export type Database = {
         Insert: {
           brand?: string | null
           category: string
+          centro_id?: string | null
           cost?: number | null
           created_at?: string
           id?: string
@@ -950,6 +1242,7 @@ export type Database = {
         Update: {
           brand?: string | null
           category?: string
+          centro_id?: string | null
           cost?: number | null
           created_at?: string
           id?: string
@@ -964,7 +1257,15 @@ export type Database = {
           supplier_code?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "spare_parts_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
