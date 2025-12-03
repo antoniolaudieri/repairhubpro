@@ -29,6 +29,7 @@ import { it } from "date-fns/locale";
 import { CommissionAnalytics } from "@/components/admin/CommissionAnalytics";
 import { BillingReport } from "@/components/admin/BillingReport";
 import { CommissionSettings } from "@/components/admin/CommissionSettings";
+import { CreditManagement } from "@/components/admin/CreditManagement";
 
 interface Corner {
   id: string;
@@ -305,7 +306,7 @@ export default function PlatformAdmin() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="corners" className="relative">
               <Store className="h-4 w-4 mr-2" />
               Corner
@@ -332,6 +333,10 @@ export default function PlatformAdmin() {
                   {pendingCentri}
                 </span>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="credits">
+              <Euro className="h-4 w-4 mr-2" />
+              Crediti
             </TabsTrigger>
             <TabsTrigger value="settings">
               <Settings2 className="h-4 w-4 mr-2" />
@@ -716,6 +721,11 @@ export default function PlatformAdmin() {
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-4">
             <CommissionAnalytics />
+          </TabsContent>
+
+          {/* Credits Tab */}
+          <TabsContent value="credits" className="space-y-4">
+            <CreditManagement />
           </TabsContent>
 
           {/* Billing Tab */}

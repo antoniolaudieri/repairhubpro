@@ -106,13 +106,17 @@ export type Database = {
           business_name: string
           commission_rate: number
           created_at: string
+          credit_balance: number | null
+          credit_warning_threshold: number | null
           email: string
           id: string
+          last_credit_update: string | null
           latitude: number | null
           logo_url: string | null
           longitude: number | null
           notes: string | null
           owner_user_id: string
+          payment_status: string | null
           phone: string
           settings: Json | null
           status: string
@@ -126,13 +130,17 @@ export type Database = {
           business_name: string
           commission_rate?: number
           created_at?: string
+          credit_balance?: number | null
+          credit_warning_threshold?: number | null
           email: string
           id?: string
+          last_credit_update?: string | null
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
           notes?: string | null
           owner_user_id: string
+          payment_status?: string | null
           phone: string
           settings?: Json | null
           status?: string
@@ -146,13 +154,17 @@ export type Database = {
           business_name?: string
           commission_rate?: number
           created_at?: string
+          credit_balance?: number | null
+          credit_warning_threshold?: number | null
           email?: string
           id?: string
+          last_credit_update?: string | null
           latitude?: number | null
           logo_url?: string | null
           longitude?: number | null
           notes?: string | null
           owner_user_id?: string
+          payment_status?: string | null
           phone?: string
           settings?: Json | null
           status?: string
@@ -387,11 +399,15 @@ export type Database = {
           business_name: string
           commission_rate: number
           created_at: string
+          credit_balance: number | null
+          credit_warning_threshold: number | null
           email: string
           id: string
+          last_credit_update: string | null
           latitude: number | null
           longitude: number | null
           notes: string | null
+          payment_status: string | null
           phone: string
           status: string
           updated_at: string
@@ -404,11 +420,15 @@ export type Database = {
           business_name: string
           commission_rate?: number
           created_at?: string
+          credit_balance?: number | null
+          credit_warning_threshold?: number | null
           email: string
           id?: string
+          last_credit_update?: string | null
           latitude?: number | null
           longitude?: number | null
           notes?: string | null
+          payment_status?: string | null
           phone: string
           status?: string
           updated_at?: string
@@ -421,17 +441,68 @@ export type Database = {
           business_name?: string
           commission_rate?: number
           created_at?: string
+          credit_balance?: number | null
+          credit_warning_threshold?: number | null
           email?: string
           id?: string
+          last_credit_update?: string | null
           latitude?: number | null
           longitude?: number | null
           notes?: string | null
+          payment_status?: string | null
           phone?: string
           status?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: []
+      }
+      credit_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          commission_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          entity_id: string
+          entity_type: string
+          id: string
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          commission_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          commission_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_transactions_commission_id_fkey"
+            columns: ["commission_id"]
+            isOneToOne: false
+            referencedRelation: "commission_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customers: {
         Row: {
@@ -1326,6 +1397,48 @@ export type Database = {
           },
         ]
       }
+      topup_requests: {
+        Row: {
+          amount: number
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          notes: string | null
+          payment_method: string | null
+          payment_reference: string | null
+          status: string
+        }
+        Insert: {
+          amount: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          status?: string
+        }
+        Update: {
+          amount?: number
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          notes?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -1349,6 +1462,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_topup: {
+        Args: { p_confirmed_by: string; p_topup_id: string }
+        Returns: undefined
+      }
       get_user_centro_id: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_centro_collaborator: {
