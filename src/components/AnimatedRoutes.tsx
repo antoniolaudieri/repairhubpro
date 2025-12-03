@@ -23,6 +23,7 @@ import Quotes from "@/pages/Quotes";
 import PricingSettings from "@/pages/PricingSettings";
 import PlatformAdmin from "@/pages/PlatformAdmin";
 import ProviderRegistration from "@/pages/ProviderRegistration";
+import CornerDashboard from "@/pages/CornerDashboard";
 import NotFound from "@/pages/NotFound";
 
 export const AnimatedRoutes = () => {
@@ -72,6 +73,15 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute>
               <PageTransition><ProviderRegistration /></PageTransition>
+            </ProtectedRoute>
+          }
+        />
+        {/* Corner Dashboard */}
+        <Route
+          path="/corner"
+          element={
+            <ProtectedRoute requireCorner>
+              <CornerDashboard />
             </ProtectedRoute>
           }
         />
