@@ -66,6 +66,9 @@ interface AISuggestion {
   matchedPartId?: string;
   stockQuantity: number;
   actualPrice?: number;
+  utopyaUrl?: string;
+  utopyaName?: string;
+  hasUtopyaMatch?: boolean;
 }
 
 interface SparePartsStepProps {
@@ -536,9 +539,17 @@ export const SparePartsStep = ({
                           <div className="flex items-start justify-between gap-2">
                             <div>
                               <p className="font-semibold text-sm">{suggestion.partName}</p>
-                              <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded mt-1 inline-block">
-                                {suggestion.category}
-                              </span>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                  {suggestion.category}
+                                </span>
+                                {suggestion.hasUtopyaMatch && (
+                                  <span className="text-xs bg-green-500/10 text-green-600 px-2 py-0.5 rounded flex items-center gap-1">
+                                    <Check className="h-3 w-3" />
+                                    Utopya
+                                  </span>
+                                )}
+                              </div>
                             </div>
                             <div className="text-right shrink-0">
                               <p className="font-bold text-lg text-primary">
@@ -556,6 +567,11 @@ export const SparePartsStep = ({
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground mt-2 line-clamp-2">{suggestion.reason}</p>
+                          {suggestion.utopyaName && (
+                            <p className="text-xs text-primary/70 mt-1">
+                              Utopya: {suggestion.utopyaName}
+                            </p>
+                          )}
                           
                           <div className="flex flex-wrap gap-2 mt-3">
                             <Button
@@ -568,24 +584,22 @@ export const SparePartsStep = ({
                               <Plus className="h-4 w-4 mr-1" />
                               {isAdded ? "Aggiunto" : "Aggiungi alla riparazione"}
                             </Button>
-                            {isAdded && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                asChild
-                                className="w-full sm:w-auto border-primary/50 hover:bg-primary/10"
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              asChild
+                              className="w-full sm:w-auto border-primary/50 hover:bg-primary/10"
+                            >
+                              <a 
+                                href={suggestion.utopyaUrl || `https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(suggestion.partName)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
                               >
-                                <a 
-                                  href={`https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(suggestion.partName)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <ExternalLink className="h-4 w-4 mr-1" />
-                                  Acquista su Utopya
-                                </a>
-                              </Button>
-                            )}
+                                <ExternalLink className="h-4 w-4 mr-1" />
+                                {suggestion.hasUtopyaMatch ? "Vedi su Utopya" : "Cerca su Utopya"}
+                              </a>
+                            </Button>
                           </div>
                         </div>
                       </div>
