@@ -12,7 +12,8 @@ import {
   BookOpen,
   FileText,
   ShoppingCart,
-  Settings2
+  Settings2,
+  PlusCircle
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -35,6 +36,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const menuItems = [
   { title: "Dashboard", url: "/centro", icon: LayoutDashboard },
+  { title: "Nuovo Ritiro", url: "/centro/nuovo-ritiro", icon: PlusCircle },
   { title: "Lavori", url: "/centro/lavori", icon: Wrench },
   { title: "Guide IA", url: "/centro/guide", icon: BookOpen },
   { title: "Clienti", url: "/centro/clienti", icon: UserRound },
