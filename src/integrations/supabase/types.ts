@@ -550,6 +550,7 @@ export type Database = {
       }
       repairs: {
         Row: {
+          acconto: number | null
           ai_suggestions: string | null
           assigned_to: string | null
           completed_at: string | null
@@ -576,6 +577,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          acconto?: number | null
           ai_suggestions?: string | null
           assigned_to?: string | null
           completed_at?: string | null
@@ -602,6 +604,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          acconto?: number | null
           ai_suggestions?: string | null
           assigned_to?: string | null
           completed_at?: string | null
