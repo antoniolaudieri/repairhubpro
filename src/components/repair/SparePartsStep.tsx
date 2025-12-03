@@ -128,7 +128,7 @@ export const SparePartsStep = ({
     setUtopyaSearchLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('scrape-utopya', {
-        body: { query: utopyaSearchQuery }
+        body: { searchQuery: utopyaSearchQuery.trim() }
       });
       
       if (error) throw error;
