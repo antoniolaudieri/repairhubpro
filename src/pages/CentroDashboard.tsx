@@ -86,6 +86,8 @@ export default function CentroDashboard() {
     totalCustomers: 0,
     totalRevenue: 0,
     forfeitureWarnings: 0,
+    platformCommission: 0,
+    centroEarnings: 0,
   });
   const [recentRepairs, setRecentRepairs] = useState<RecentRepair[]>([]);
   const [forfeitureWarnings, setForfeitureWarnings] = useState<ForfeitureWarning[]>([]);
@@ -129,7 +131,7 @@ export default function CentroDashboard() {
   const loadStats = async (centroId: string) => {
     const { data: repairs } = await supabase
       .from("repairs")
-      .select("status, created_at, final_cost, completed_at, delivered_at, device:devices!inner(customer:customers!inner(centro_id))")
+      .select("status, created_at, final_cost, estimated_cost, completed_at, delivered_at, device:devices!inner(customer:customers!inner(centro_id))")
       .eq("device.customer.centro_id", centroId);
 
     const { data: spareParts } = await supabase
@@ -140,6 +142,12 @@ export default function CentroDashboard() {
     const { count: customerCount } = await supabase
       .from("customers")
       .select("*", { count: "exact", head: true })
+      .eq("centro_id", centroId);
+
+    // Fetch commission data from commission_ledger
+    const { data: commissions } = await supabase
+      .from("commission_ledger")
+      .select("gross_revenue, gross_margin, platform_commission, centro_commission")
       .eq("centro_id", centroId);
 
     const pending = repairs?.filter((r) => r.status === "pending").length || 0;
@@ -154,7 +162,15 @@ export default function CentroDashboard() {
       (sp) => sp.stock_quantity <= (sp.minimum_stock || 5)
     ).length || 0;
 
-    const totalRevenue = repairs?.reduce((sum, r) => sum + (r.final_cost || 0), 0) || 0;
+    // Calculate revenue from commissions or fallback to repairs
+    const totalRevenue = commissions?.reduce((sum, c) => sum + (c.gross_revenue || 0), 0) || 
+      repairs?.reduce((sum, r: any) => sum + (r.final_cost || r.estimated_cost || 0), 0) || 0;
+    
+    // Calculate platform commission owed
+    const platformCommission = commissions?.reduce((sum, c) => sum + (c.platform_commission || 0), 0) || 0;
+    
+    // Calculate centro earnings
+    const centroEarnings = commissions?.reduce((sum, c) => sum + (c.centro_commission || 0), 0) || 0;
 
     const now = new Date();
     const forfeitureCount = repairs?.filter((r) => {
@@ -172,6 +188,8 @@ export default function CentroDashboard() {
       totalCustomers: customerCount || 0,
       totalRevenue,
       forfeitureWarnings: forfeitureCount,
+      platformCommission,
+      centroEarnings,
     });
   };
 
@@ -390,6 +408,37 @@ export default function CentroDashboard() {
     },
   ];
 
+  const financeCards = [
+    {
+      title: "Fatturato Totale",
+      value: `€${stats.totalRevenue.toFixed(2)}`,
+      icon: TrendingUp,
+      gradient: "from-primary to-primary/80",
+      bgLight: "bg-gradient-to-br from-primary/15 to-primary/5",
+      iconBg: "bg-gradient-to-br from-primary to-primary/80",
+      onClick: () => navigate("/centro/commissioni"),
+    },
+    {
+      title: "Tuo Guadagno",
+      value: `€${stats.centroEarnings.toFixed(2)}`,
+      icon: Euro,
+      gradient: "from-emerald-500 to-green-500",
+      bgLight: "bg-gradient-to-br from-emerald-500/15 to-green-500/10",
+      iconBg: "bg-gradient-to-br from-emerald-500 to-green-500",
+      onClick: () => navigate("/centro/commissioni"),
+    },
+    {
+      title: "Commissione Piattaforma",
+      value: `€${stats.platformCommission.toFixed(2)}`,
+      icon: Activity,
+      gradient: "from-violet-500 to-purple-500",
+      bgLight: "bg-gradient-to-br from-violet-500/15 to-purple-500/10",
+      iconBg: "bg-gradient-to-br from-violet-500 to-purple-500",
+      onClick: () => navigate("/centro/commissioni"),
+      subtitle: "20% del margine",
+    },
+  ];
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -564,7 +613,7 @@ export default function CentroDashboard() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-3 gap-3"
+              className="grid grid-cols-2 sm:grid-cols-4 gap-3"
             >
               <motion.div variants={itemVariants}>
                 <Card className="p-4 border-border/50 hover:border-border transition-colors">
@@ -580,34 +629,26 @@ export default function CentroDashboard() {
                 </Card>
               </motion.div>
 
-              <motion.div variants={itemVariants}>
-                <Card className="p-4 border-border/50 hover:border-border transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <Euro className="h-4 w-4 text-emerald-600" />
+              {financeCards.map((card) => (
+                <motion.div key={card.title} variants={itemVariants}>
+                  <Card 
+                    className="p-4 border-border/50 hover:border-border transition-colors cursor-pointer"
+                    onClick={card.onClick}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`h-8 w-8 rounded-lg ${card.iconBg} flex items-center justify-center`}>
+                        <card.icon className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-lg font-semibold text-foreground">{card.value}</p>
+                        <p className="text-xs text-muted-foreground">{card.title}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-lg font-semibold text-foreground">€{stats.totalRevenue.toFixed(0)}</p>
-                      <p className="text-xs text-muted-foreground">Fatturato</p>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-
-              <motion.div variants={itemVariants}>
-                <Card className="p-4 border-border/50 hover:border-border transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <TrendingUp className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-semibold text-foreground">{stats.pendingRepairs + stats.inProgressRepairs}</p>
-                      <p className="text-xs text-muted-foreground">Attive</p>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
+                  </Card>
+                </motion.div>
+              ))}
             </motion.div>
+
 
             {/* Weekly Chart */}
             <motion.div
