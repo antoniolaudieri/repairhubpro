@@ -16,6 +16,7 @@ import { CustomerCharts } from "@/components/customers/CustomerCharts";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { QuoteDialog } from "@/components/quotes/QuoteDialog";
 import { OrderSparePartDialog } from "@/components/customers/OrderSparePartDialog";
+import { OrderDetailDialog } from "@/components/customers/OrderDetailDialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -72,6 +73,7 @@ export default function CustomerDetail() {
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   const loadCustomerData = async () => {
     if (!id) return;
@@ -521,7 +523,7 @@ export default function CustomerDetail() {
                     <div
                       key={order.id}
                       className="flex items-center gap-2 p-2 sm:p-2.5 border rounded-lg hover:bg-muted/30 cursor-pointer transition-colors"
-                      onClick={() => navigate("/orders")}
+                      onClick={() => setSelectedOrderId(order.id)}
                     >
                       <div className="h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground flex-shrink-0">
                         <Package className="h-4 w-4" />
@@ -567,6 +569,12 @@ export default function CustomerDetail() {
         onOpenChange={setQuoteOpen}
         customerId={id!}
         onSuccess={loadCustomerData}
+      />
+
+      <OrderDetailDialog
+        open={!!selectedOrderId}
+        onOpenChange={(open) => !open && setSelectedOrderId(null)}
+        orderId={selectedOrderId}
       />
     </motion.div>
   );
