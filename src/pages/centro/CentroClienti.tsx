@@ -195,7 +195,7 @@ export default function CentroClienti() {
                   >
                     <Card
                       className="p-0 overflow-hidden hover:shadow-lg transition-all cursor-pointer border-border/50 group"
-                      onClick={() => navigate(`/customers/${customer.id}`)}
+                      onClick={() => navigate(`/centro/clienti/${customer.id}`)}
                     >
                       <div className="p-5">
                         {/* Header */}
@@ -253,7 +253,7 @@ export default function CentroClienti() {
                             className="gap-2 text-primary hover:bg-primary/10"
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/customers/${customer.id}`);
+                              navigate(`/centro/clienti/${customer.id}`);
                             }}
                           >
                             Dettagli
