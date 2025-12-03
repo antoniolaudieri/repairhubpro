@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
 interface CustomerDialogProps {
@@ -22,7 +23,9 @@ interface CustomerDialogProps {
 }
 
 export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: CustomerDialogProps) {
+  const { user, isCentroAdmin } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [centroId, setCentroId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: customer?.name || "",
     email: customer?.email || "",
@@ -30,6 +33,35 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
     address: customer?.address || "",
     notes: customer?.notes || "",
   });
+
+  // Fetch centro_id if user is centro_admin
+  useEffect(() => {
+    const fetchCentroId = async () => {
+      if (isCentroAdmin && user) {
+        const { data } = await supabase
+          .from("centri_assistenza")
+          .select("id")
+          .eq("owner_user_id", user.id)
+          .single();
+        
+        if (data) {
+          setCentroId(data.id);
+        }
+      }
+    };
+    fetchCentroId();
+  }, [isCentroAdmin, user]);
+
+  // Reset form when customer prop changes
+  useEffect(() => {
+    setFormData({
+      name: customer?.name || "",
+      email: customer?.email || "",
+      phone: customer?.phone || "",
+      address: customer?.address || "",
+      notes: customer?.notes || "",
+    });
+  }, [customer]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,10 +95,15 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
           }
         }
 
-        // Then create customer record
+        // Then create customer record with centro_id if applicable
+        const customerData: any = { ...formData };
+        if (isCentroAdmin && centroId) {
+          customerData.centro_id = centroId;
+        }
+
         const { error } = await supabase
           .from("customers")
-          .insert([formData]);
+          .insert([customerData]);
 
         if (error) throw error;
         toast.success("Cliente creato con successo");
