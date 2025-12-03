@@ -99,7 +99,7 @@ export const RepairRequestForm = ({ cornerId, onSuccess }: RepairRequestFormProp
       }
 
       // Create repair request
-      const { error } = await supabase.from("repair_requests").insert({
+      const { data: repairRequest, error } = await supabase.from("repair_requests").insert({
         corner_id: cornerId,
         customer_id: customerId,
         device_type: data.deviceType,
@@ -108,9 +108,23 @@ export const RepairRequestForm = ({ cornerId, onSuccess }: RepairRequestFormProp
         issue_description: data.issueDescription,
         service_type: data.serviceType,
         status: "pending",
-      });
+      }).select("id").single();
 
       if (error) throw error;
+
+      // Trigger automatic dispatch to find nearby providers
+      if (repairRequest) {
+        try {
+          await supabase.functions.invoke("dispatch-repair", {
+            body: {
+              action: "dispatch",
+              repair_request_id: repairRequest.id,
+            },
+          });
+        } catch (dispatchError) {
+          console.error("Dispatch error (non-blocking):", dispatchError);
+        }
+      }
 
       toast.success("Segnalazione inviata con successo!");
       form.reset();
