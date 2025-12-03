@@ -8,14 +8,13 @@ const corsHeaders = {
 
 const browserHeaders = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
   'Accept-Language': 'it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7',
-  'Accept-Encoding': 'identity',
 };
 
 interface UtopyaProduct {
   name: string;
-  price: string;
+  price: string | null;
   priceNumeric: number;
   image: string;
   url: string;
@@ -25,52 +24,224 @@ interface UtopyaProduct {
   requiresLogin: boolean;
 }
 
-async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: boolean }> {
+// Try GraphQL API
+async function searchViaGraphQL(query: string, cookies: string): Promise<{ success: boolean; products: UtopyaProduct[]; error?: string }> {
+  console.log('=== Trying GraphQL API ===');
+  
+  try {
+    const graphqlQuery = {
+      query: `
+        query productSearch($search: String!) {
+          products(search: $search, pageSize: 30) {
+            items {
+              name
+              sku
+              url_key
+              url_suffix
+              small_image {
+                url
+              }
+              price_range {
+                minimum_price {
+                  regular_price {
+                    value
+                    currency
+                  }
+                  final_price {
+                    value
+                    currency
+                  }
+                }
+              }
+            }
+            total_count
+          }
+        }
+      `,
+      variables: { search: query }
+    };
+
+    const response = await fetch('https://www.utopya.it/graphql', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': cookies,
+        ...browserHeaders
+      },
+      body: JSON.stringify(graphqlQuery)
+    });
+
+    console.log('GraphQL status:', response.status);
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.log('GraphQL error response:', text.substring(0, 500));
+      return { success: false, products: [], error: `GraphQL returned ${response.status}` };
+    }
+
+    const data = await response.json();
+    console.log('GraphQL response:', JSON.stringify(data).substring(0, 800));
+
+    if (data.errors) {
+      console.log('GraphQL errors:', JSON.stringify(data.errors));
+      return { success: false, products: [], error: data.errors[0]?.message || 'GraphQL error' };
+    }
+
+    if (!data.data?.products?.items) {
+      return { success: false, products: [], error: 'No products in GraphQL response' };
+    }
+
+    const products: UtopyaProduct[] = data.data.products.items.map((item: any) => {
+      const priceValue = item.price_range?.minimum_price?.final_price?.value;
+      return {
+        name: item.name || '',
+        price: priceValue ? `€${priceValue.toFixed(2)}` : null,
+        priceNumeric: priceValue || 0,
+        image: item.small_image?.url || '',
+        url: `https://www.utopya.it/${item.url_key}${item.url_suffix || '.html'}`,
+        sku: item.sku || '',
+        brand: '',
+        inStock: true,
+        requiresLogin: !priceValue
+      };
+    });
+
+    console.log(`GraphQL found ${products.length} products`);
+    return { success: true, products };
+  } catch (error) {
+    console.error('GraphQL error:', error);
+    return { success: false, products: [], error: String(error) };
+  }
+}
+
+// Get REST API token
+async function getRestToken(username: string, password: string): Promise<string | null> {
+  console.log('=== Getting REST API token ===');
+  
+  try {
+    const response = await fetch('https://www.utopya.it/rest/V1/integration/customer/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...browserHeaders
+      },
+      body: JSON.stringify({ username, password })
+    });
+
+    console.log('Token response status:', response.status);
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.log('Token error:', text.substring(0, 300));
+      return null;
+    }
+
+    const token = await response.json();
+    console.log('Got REST token:', !!token);
+    return token;
+  } catch (error) {
+    console.error('Token error:', error);
+    return null;
+  }
+}
+
+// Search via REST API
+async function searchViaREST(query: string, token: string): Promise<{ success: boolean; products: UtopyaProduct[]; error?: string }> {
+  console.log('=== Trying REST API ===');
+  
+  try {
+    const searchUrl = `https://www.utopya.it/rest/V1/products?searchCriteria[filterGroups][0][filters][0][field]=name&searchCriteria[filterGroups][0][filters][0][value]=%25${encodeURIComponent(query)}%25&searchCriteria[filterGroups][0][filters][0][conditionType]=like&searchCriteria[pageSize]=30`;
+    
+    console.log('REST URL:', searchUrl);
+    
+    const response = await fetch(searchUrl, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...browserHeaders
+      }
+    });
+
+    console.log('REST API status:', response.status);
+    
+    if (!response.ok) {
+      const text = await response.text();
+      console.log('REST error:', text.substring(0, 300));
+      return { success: false, products: [], error: `REST API returned ${response.status}` };
+    }
+
+    const data = await response.json();
+    console.log('REST API response:', JSON.stringify(data).substring(0, 800));
+
+    if (!data.items || !Array.isArray(data.items)) {
+      return { success: false, products: [], error: 'No items in REST response' };
+    }
+
+    const products: UtopyaProduct[] = data.items.map((item: any) => {
+      const imageAttr = item.custom_attributes?.find((a: any) => a.attribute_code === 'image');
+      
+      return {
+        name: item.name || '',
+        price: item.price ? `€${item.price.toFixed(2)}` : null,
+        priceNumeric: item.price || 0,
+        image: imageAttr?.value ? `https://www.utopya.it/media/catalog/product${imageAttr.value}` : '',
+        url: `https://www.utopya.it/${(item.sku || '').toLowerCase().replace(/\s+/g, '-')}.html`,
+        sku: item.sku || '',
+        brand: '',
+        inStock: item.status === 1,
+        requiresLogin: !item.price
+      };
+    });
+
+    console.log(`REST API found ${products.length} products`);
+    return { success: true, products };
+  } catch (error) {
+    console.error('REST API error:', error);
+    return { success: false, products: [], error: String(error) };
+  }
+}
+
+// Login to get cookies
+async function loginToUtopya(): Promise<{ cookies: string; success: boolean }> {
   const username = Deno.env.get('UTOPYA_USERNAME');
   const password = Deno.env.get('UTOPYA_PASSWORD');
   
-  if (!username || !password) {
-    return { cookies: '', isAuthenticated: false };
-  }
+  console.log('=== Login attempt ===');
+  console.log('Has credentials:', { username: !!username, password: !!password });
   
+  if (!username || !password) {
+    return { cookies: '', success: false };
+  }
+
   try {
     const loginPageResponse = await fetch('https://www.utopya.it/customer/account/login/', {
-      headers: browserHeaders,
+      headers: browserHeaders
     });
     
-    if (!loginPageResponse.ok) {
-      return { cookies: '', isAuthenticated: false };
-    }
-    
     const loginPageHtml = await loginPageResponse.text();
-    const formKeyMatch = loginPageHtml.match(/name="form_key"\s+value="([^"]+)"/i);
+    const formKeyMatch = loginPageHtml.match(/name="form_key"\s+value="([^"]+)"/);
+    const formKey = formKeyMatch ? formKeyMatch[1] : '';
     
-    if (!formKeyMatch) {
-      return { cookies: '', isAuthenticated: false };
-    }
-    
-    const formKey = formKeyMatch[1];
     const initialCookies = loginPageResponse.headers.get('set-cookie') || '';
-    
-    const loginFormData = new URLSearchParams();
-    loginFormData.append('form_key', formKey);
-    loginFormData.append('login[username]', username);
-    loginFormData.append('login[password]', password);
-    loginFormData.append('send', '');
-    
+    console.log('Form key found:', !!formKey);
+
     const loginResponse = await fetch('https://www.utopya.it/customer/account/loginPost/', {
       method: 'POST',
       headers: {
         ...browserHeaders,
         'Content-Type': 'application/x-www-form-urlencoded',
         'Cookie': initialCookies.split(',').map(c => c.split(';')[0]).join('; '),
-        'Origin': 'https://www.utopya.it',
-        'Referer': 'https://www.utopya.it/customer/account/login/',
+        'Referer': 'https://www.utopya.it/customer/account/login/'
       },
-      body: loginFormData.toString(),
-      redirect: 'manual',
+      body: new URLSearchParams({
+        'form_key': formKey,
+        'login[username]': username,
+        'login[password]': password,
+        'send': ''
+      }),
+      redirect: 'manual'
     });
-    
+
     const loginCookies = loginResponse.headers.get('set-cookie') || '';
     const allCookies = [initialCookies, loginCookies]
       .filter(Boolean)
@@ -80,13 +251,13 @@ async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: bool
       .filter(Boolean)
       .join('; ');
     
-    const isAuthenticated = loginResponse.status === 302 || loginResponse.status === 301;
-    console.log('Login authenticated:', isAuthenticated);
+    const success = loginResponse.status === 302 || loginResponse.status === 301;
+    console.log('Login result:', { status: loginResponse.status, success });
     
-    return { cookies: allCookies, isAuthenticated };
+    return { cookies: allCookies, success };
   } catch (error) {
     console.error('Login error:', error);
-    return { cookies: '', isAuthenticated: false };
+    return { cookies: '', success: false };
   }
 }
 
@@ -99,71 +270,170 @@ function decodeHtmlEntities(text: string): string {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'");
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, ' ');
 }
 
-// Clean product name - remove placeholders and invalid text
-function cleanProductName(name: string): string {
-  if (!name) return '';
+// Fallback: HTML scraping with improved parsing
+async function searchViaHTML(query: string, cookies: string): Promise<{ success: boolean; products: UtopyaProduct[]; error?: string }> {
+  console.log('=== Trying HTML scraping ===');
   
-  // First decode HTML entities
-  let cleaned = decodeHtmlEntities(name).trim();
-  
-  const invalidNames = [
-    'loading', 'caricamento', 'placeholder', '...', 
-    'undefined', 'null', 'image', 'foto', 'photo'
-  ];
-  
-  const lowerCleaned = cleaned.toLowerCase();
-  
-  // Check if name is invalid
-  if (invalidNames.some(inv => lowerCleaned.includes(inv))) {
-    return '';
-  }
-  
-  // Must be at least 5 chars and contain some letters
-  if (cleaned.length < 5 || !/[a-zA-Z]{3,}/.test(cleaned)) {
-    return '';
-  }
-  
-  return cleaned;
-}
+  try {
+    const searchUrl = `https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(query)}`;
+    console.log('HTML URL:', searchUrl);
+    
+    const response = await fetch(searchUrl, {
+      headers: {
+        ...browserHeaders,
+        'Cookie': cookies
+      }
+    });
 
-// Check if URL is a category page (not a product)
-function isCategoryUrl(url: string): boolean {
-  const slug = url.replace('https://www.utopya.it/', '').replace('.html', '');
-  
-  // Category pages are typically short slugs without hyphens
-  const categoryPatterns = [
-    'apple', 'samsung', 'xiaomi', 'motorola', 'altri', 'accessori',
-    'protection', 'informatica', 'attrezzature', 'dispositivi', 'laptops',
-    'brand', 'huawei', 'oppo', 'realme', 'oneplus', 'google', 'sony',
-    'lg', 'nokia', 'honor', 'asus', 'lenovo', 'tablet', 'watch'
-  ];
-  
-  // Check exact match with known categories
-  if (categoryPatterns.includes(slug.toLowerCase())) {
-    return true;
-  }
-  
-  // Category URLs are usually single words without hyphens
-  if (!slug.includes('-') && slug.length < 20) {
-    return true;
-  }
-  
-  return false;
-}
+    if (!response.ok) {
+      return { success: false, products: [], error: `HTML fetch returned ${response.status}` };
+    }
 
-// Convert URL slug to readable name
-function slugToName(url: string): string {
-  const slug = url
-    .replace('https://www.utopya.it/', '')
-    .replace('.html', '')
-    .replace(/-+/g, ' ')
-    .trim();
-  
-  // Capitalize first letter of each word
-  return slug.replace(/\b\w/g, l => l.toUpperCase());
+    const html = await response.text();
+    console.log('HTML length:', html.length);
+    
+    // Log sample of product list area
+    const productListMatch = html.match(/<ol[^>]*class="[^"]*products[^"]*"[^>]*>([\s\S]*?)<\/ol>/i);
+    if (productListMatch) {
+      console.log('Product list found, length:', productListMatch[1].length);
+    } else {
+      console.log('No product list found');
+      // Log a sample to understand structure
+      const bodyStart = html.indexOf('<body');
+      if (bodyStart > -1) {
+        console.log('Body sample:', html.substring(bodyStart, bodyStart + 2000));
+      }
+    }
+
+    // Try to find JSON-LD structured data
+    const jsonLdMatches = html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/gi);
+    for (const match of jsonLdMatches) {
+      try {
+        const data = JSON.parse(match[1]);
+        console.log('JSON-LD type:', data['@type']);
+        
+        if (data['@type'] === 'ItemList' && data.itemListElement) {
+          const products: UtopyaProduct[] = data.itemListElement.map((item: any) => ({
+            name: item.name || item.item?.name || '',
+            price: item.offers?.price ? `€${item.offers.price}` : null,
+            priceNumeric: item.offers?.price || 0,
+            image: item.image || item.item?.image || '',
+            url: item.url || item.item?.url || '',
+            sku: '',
+            brand: item.brand?.name || '',
+            inStock: true,
+            requiresLogin: !item.offers?.price
+          })).filter((p: UtopyaProduct) => p.name && p.url);
+          
+          if (products.length > 0) {
+            console.log(`JSON-LD found ${products.length} products`);
+            return { success: true, products };
+          }
+        }
+      } catch (e) {
+        // Continue
+      }
+    }
+
+    const products: UtopyaProduct[] = [];
+    
+    // Parse product items - look for li.product-item
+    const productItemRegex = /<li[^>]*class="[^"]*product-item[^"]*"[^>]*>([\s\S]*?)<\/li>/gi;
+    let itemMatch;
+    
+    while ((itemMatch = productItemRegex.exec(html)) !== null) {
+      const itemHtml = itemMatch[1];
+      
+      // Extract URL
+      const urlMatch = itemHtml.match(/<a[^>]*href="(https:\/\/www\.utopya\.it\/[^"]+\.html)"[^>]*>/i);
+      if (!urlMatch) continue;
+      
+      const url = urlMatch[1];
+      
+      // Skip category URLs
+      const slug = url.replace('https://www.utopya.it/', '').replace('.html', '');
+      if (!slug.includes('-') && slug.length < 15) continue;
+      
+      // Extract name
+      let name = '';
+      const namePatterns = [
+        /<a[^>]*class="[^"]*product-item-link[^"]*"[^>]*title="([^"]+)"/i,
+        /<a[^>]*title="([^"]+)"[^>]*class="[^"]*product-item-link[^"]*"/i,
+        /<a[^>]*class="[^"]*product-item-link[^"]*"[^>]*>([^<]+)<\/a>/i,
+        /title="([^"]{10,})"/i
+      ];
+      
+      for (const pattern of namePatterns) {
+        const match = itemHtml.match(pattern);
+        if (match && match[1]) {
+          const cleaned = decodeHtmlEntities(match[1].trim());
+          if (cleaned.length > 5 && !cleaned.toLowerCase().includes('loading')) {
+            name = cleaned;
+            break;
+          }
+        }
+      }
+      
+      // Fallback to slug
+      if (!name) {
+        name = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      }
+      
+      // Extract price
+      let price: string | null = null;
+      let priceNumeric = 0;
+      const priceMatch = itemHtml.match(/data-price-amount="([0-9.]+)"/) || 
+                         itemHtml.match(/€\s*([\d,]+(?:\.\d{2})?)/);
+      if (priceMatch) {
+        priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
+        if (priceNumeric > 0) {
+          price = `€${priceNumeric.toFixed(2)}`;
+        }
+      }
+      
+      // Extract image
+      let image = '';
+      const imgMatch = itemHtml.match(/<img[^>]*src="(https:\/\/www\.utopya\.it\/media\/catalog\/product[^"]+)"[^>]*>/i) ||
+                       itemHtml.match(/<img[^>]*data-src="(https:\/\/www\.utopya\.it\/media\/catalog\/product[^"]+)"[^>]*>/i);
+      if (imgMatch) {
+        image = imgMatch[1];
+      }
+      
+      // Extract SKU
+      let sku = '';
+      const skuMatch = itemHtml.match(/data-product-sku="([^"]+)"/i);
+      if (skuMatch) {
+        sku = skuMatch[1];
+      }
+      
+      products.push({
+        name,
+        price,
+        priceNumeric,
+        image,
+        url,
+        sku,
+        brand: '',
+        inStock: !itemHtml.includes('out-of-stock'),
+        requiresLogin: !price
+      });
+    }
+
+    console.log(`HTML scraping found ${products.length} products`);
+    
+    if (products.length > 0) {
+      console.log('First product:', JSON.stringify(products[0]));
+    }
+    
+    return { success: products.length > 0, products, error: products.length === 0 ? 'No products found in HTML' : undefined };
+  } catch (error) {
+    console.error('HTML scraping error:', error);
+    return { success: false, products: [], error: String(error) };
+  }
 }
 
 serve(async (req) => {
@@ -173,181 +443,74 @@ serve(async (req) => {
 
   try {
     const { searchQuery } = await req.json();
-    
-    if (!searchQuery) {
+    console.log('========== UTOPYA SEARCH START ==========');
+    console.log('Query:', searchQuery);
+
+    if (!searchQuery || searchQuery.trim().length < 2) {
       return new Response(
-        JSON.stringify({ error: 'Search query is required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        JSON.stringify({ error: 'Query di ricerca troppo corta', products: [] }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { cookies, isAuthenticated } = await loginToUtopya();
+    // Step 1: Login to get cookies
+    const { cookies, success: loginSuccess } = await loginToUtopya();
 
-    const encodedQuery = encodeURIComponent(searchQuery).replace(/%20/g, '+');
-    const utopyaUrl = `https://www.utopya.it/catalogsearch/result/?q=${encodedQuery}`;
-    
-    console.log('Fetching:', utopyaUrl);
+    let products: UtopyaProduct[] = [];
+    let method = 'none';
 
-    const searchHeaders: Record<string, string> = { ...browserHeaders };
-    if (cookies) searchHeaders['Cookie'] = cookies;
-    
-    const response = await fetch(utopyaUrl, { headers: searchHeaders });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch: ${response.status}`);
-    }
-
-    const html = await response.text();
-    console.log('HTML length:', html.length);
-    
-    const products: UtopyaProduct[] = [];
-    const seenUrls = new Set<string>();
-
-    const excludePatterns = [
-      '/customer/', '/checkout/', '/wishlist/', '/catalogsearch/',
-      '/privacy', '/terms', '/cookie', '/contact', '/about',
-      '/category/', '/cms/', '/account/', '/review/', '/compare/'
-    ];
-
-    // Find all product URLs
-    const urlRegex = /href="(https:\/\/www\.utopya\.it\/([a-z0-9\-]+)\.html)"/gi;
-    let urlMatch;
-    
-    while ((urlMatch = urlRegex.exec(html)) !== null) {
-      const url = urlMatch[1];
-      const slug = urlMatch[2];
+    // Step 2: Try GraphQL API first
+    const graphqlResult = await searchViaGraphQL(searchQuery, cookies);
+    if (graphqlResult.success && graphqlResult.products.length > 0) {
+      products = graphqlResult.products;
+      method = 'GraphQL';
+    } else {
+      console.log('GraphQL failed, trying REST...');
       
-      if (seenUrls.has(url)) continue;
-      if (excludePatterns.some(p => url.includes(p))) continue;
-      if (slug.length < 5) continue;
-      // Filter out category pages - only keep actual product URLs
-      if (isCategoryUrl(url)) continue;
+      // Step 3: Try REST API
+      const username = Deno.env.get('UTOPYA_USERNAME') || '';
+      const password = Deno.env.get('UTOPYA_PASSWORD') || '';
+      const token = await getRestToken(username, password);
       
-      seenUrls.add(url);
-    }
-
-    console.log('Found URLs:', seenUrls.size);
-
-    // Extract product details for each URL
-    for (const url of seenUrls) {
-      const urlEscaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (token) {
+        const restResult = await searchViaREST(searchQuery, token);
+        if (restResult.success && restResult.products.length > 0) {
+          products = restResult.products;
+          method = 'REST';
+        }
+      }
       
-      let name = '';
-      let image = '';
-      let price = '';
-      let priceNumeric = 0;
-
-      // Method 1: Look for title attribute on the link
-      const titleRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*title="([^"]+)"`, 'i');
-      const titleMatch = html.match(titleRegex);
-      if (titleMatch) {
-        name = cleanProductName(titleMatch[1]);
-      }
-
-      // Method 2: Look for alt attribute on img inside link
-      if (!name) {
-        const altRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*>[\\s\\S]*?<img[^>]*alt="([^"]+)"`, 'i');
-        const altMatch = html.match(altRegex);
-        if (altMatch) {
-          name = cleanProductName(altMatch[1]);
+      // Step 4: Fallback to HTML scraping
+      if (products.length === 0) {
+        console.log('REST failed, trying HTML...');
+        const htmlResult = await searchViaHTML(searchQuery, cookies);
+        if (htmlResult.success) {
+          products = htmlResult.products;
+          method = 'HTML';
         }
-      }
-
-      // Method 3: Look for product-item-link class with text content
-      if (!name) {
-        const linkTextRegex = new RegExp(`<a[^>]*class="[^"]*product-item-link[^"]*"[^>]*href="${urlEscaped}"[^>]*>([^<]+)</a>`, 'i');
-        const linkTextMatch = html.match(linkTextRegex);
-        if (linkTextMatch) {
-          name = cleanProductName(linkTextMatch[1]);
-        }
-      }
-
-      // Method 4: Reverse - look for link with href after class
-      if (!name) {
-        const reverseRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*class="[^"]*product-item-link[^"]*"[^>]*>([^<]+)</a>`, 'i');
-        const reverseMatch = html.match(reverseRegex);
-        if (reverseMatch) {
-          name = cleanProductName(reverseMatch[1]);
-        }
-      }
-
-      // Fallback: Use URL slug as name (always works)
-      if (!name) {
-        name = slugToName(url);
-      }
-
-      // Find image
-      const imgPatterns = [
-        new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*>[\\s\\S]*?<img[^>]*src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"`, 'i'),
-        new RegExp(`<img[^>]*src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"[^>]*>[\\s\\S]{0,300}?href="${urlEscaped}"`, 'i'),
-        new RegExp(`<img[^>]*data-src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"[^>]*>[\\s\\S]{0,300}?href="${urlEscaped}"`, 'i'),
-      ];
-
-      for (const pattern of imgPatterns) {
-        const imgMatch = html.match(pattern);
-        if (imgMatch) {
-          image = imgMatch[1];
-          break;
-        }
-      }
-
-      // Find price
-      const pricePatterns = [
-        new RegExp(`href="${urlEscaped}"[\\s\\S]{0,1500}?data-price-amount="([0-9.]+)"`, 'i'),
-        new RegExp(`href="${urlEscaped}"[\\s\\S]{0,1500}?€\\s*([0-9]+[.,][0-9]{2})`, 'i'),
-        new RegExp(`data-price-amount="([0-9.]+)"[\\s\\S]{0,500}?href="${urlEscaped}"`, 'i'),
-      ];
-
-      for (const pattern of pricePatterns) {
-        const priceMatch = html.match(pattern);
-        if (priceMatch) {
-          priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
-          if (priceNumeric > 0) {
-            price = `€${priceNumeric.toFixed(2)}`;
-            break;
-          }
-        }
-      }
-
-      if (name) {
-        products.push({
-          name,
-          price: price || 'Accedi per prezzo',
-          priceNumeric,
-          image,
-          url,
-          sku: '',
-          brand: '',
-          inStock: true,
-          requiresLogin: priceNumeric === 0,
-        });
       }
     }
 
-    console.log('Products extracted:', products.length);
-    
-    // Log first product for debugging
-    if (products.length > 0) {
-      console.log('First product:', JSON.stringify(products[0]));
-    }
+    console.log(`========== SEARCH END ==========`);
+    console.log(`Method: ${method}, Products: ${products.length}, Auth: ${loginSuccess}`);
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         products: products.slice(0, 30),
-        searchUrl: utopyaUrl,
+        searchUrl: `https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(searchQuery)}`,
         totalFound: products.length,
-        requiresLogin: !isAuthenticated,
-        isAuthenticated,
-        message: isAuthenticated 
-          ? 'Prezzi aggiornati in tempo reale.' 
+        isAuthenticated: loginSuccess,
+        method,
+        message: loginSuccess 
+          ? `${products.length} prodotti trovati via ${method}`
           : 'I prezzi richiedono login su Utopya.'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Main error:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: String(error), products: [] }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
     );
   }
