@@ -437,6 +437,31 @@ export const SparePartsStep = ({
 
   return (
     <div className="space-y-6">
+      {/* Markup Configuration - Prominent at top */}
+      <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl border border-primary/30">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              📊 Ricarico Predefinito
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              Applicato automaticamente ai nuovi ricambi aggiunti
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min="0"
+              max="500"
+              value={markupPercentage}
+              onChange={(e) => setMarkupPercentage(parseFloat(e.target.value) || 0)}
+              className="w-20 h-9 text-center font-semibold"
+            />
+            <span className="text-sm font-medium">%</span>
+          </div>
+        </div>
+      </div>
+
       {/* Servizi Aggiuntivi */}
       <div className="space-y-3">
         <div className="space-y-2">
@@ -757,42 +782,30 @@ export const SparePartsStep = ({
               <Package className="h-4 w-4" />
               Ricambi Selezionati ({selectedParts.length})
             </h4>
-            {/* Ricarico automatico */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground">Ricarico:</span>
-              <Input
-                type="number"
-                min="0"
-                max="500"
-                value={markupPercentage}
-                onChange={(e) => setMarkupPercentage(parseFloat(e.target.value) || 0)}
-                className="w-16 h-7 text-xs"
-              />
-              <span className="text-xs text-muted-foreground">%</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const partsWithCost = selectedParts.filter(p => p.purchase_cost && p.purchase_cost > 0);
-                  if (partsWithCost.length === 0) {
-                    toast.error("Imposta prima il costo d'acquisto dei ricambi");
-                    return;
+            {/* Applica Ricarico button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const partsWithCost = selectedParts.filter(p => p.purchase_cost && p.purchase_cost > 0);
+                if (partsWithCost.length === 0) {
+                  toast.error("Imposta prima il costo d'acquisto dei ricambi");
+                  return;
+                }
+                const updatedParts = selectedParts.map(p => {
+                  if (p.purchase_cost && p.purchase_cost > 0) {
+                    return { ...p, unit_cost: Math.round(p.purchase_cost * (1 + markupPercentage / 100) * 100) / 100 };
                   }
-                  const updatedParts = selectedParts.map(p => {
-                    if (p.purchase_cost && p.purchase_cost > 0) {
-                      return { ...p, unit_cost: Math.round(p.purchase_cost * (1 + markupPercentage / 100) * 100) / 100 };
-                    }
-                    return p;
-                  });
-                  onPartsChange(updatedParts);
-                  toast.success(`Ricarico ${markupPercentage}% applicato a ${partsWithCost.length} ricambi`);
-                }}
-                className="h-7 text-xs"
-              >
-                Applica
-              </Button>
-            </div>
+                  return p;
+                });
+                onPartsChange(updatedParts);
+                toast.success(`Ricarico ${markupPercentage}% applicato a ${partsWithCost.length} ricambi`);
+              }}
+              className="h-8 text-xs"
+            >
+              Applica Ricarico {markupPercentage}%
+            </Button>
           </div>
           <div className="space-y-2">
             {selectedParts.map((part) => {
