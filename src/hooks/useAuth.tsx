@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   userRole: string | null;
+  userRoles: string[];
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ error: any }>;
@@ -14,6 +14,12 @@ interface AuthContextType {
   isTechnician: boolean;
   isAdmin: boolean;
   isCustomer: boolean;
+  isPlatformAdmin: boolean;
+  isCorner: boolean;
+  isRiparatore: boolean;
+  isCentroAdmin: boolean;
+  isCentroTech: boolean;
+  hasRole: (role: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,18 +27,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRoles, setUserRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRoles = async (userId: string) => {
     const { data, error } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
-      .single();
+      .eq("user_id", userId);
 
     if (!error && data) {
-      setUserRole(data.role);
+      setUserRoles(data.map(r => r.role));
+    } else {
+      setUserRoles([]);
     }
   };
 
@@ -46,10 +53,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (session?.user) {
         setTimeout(() => {
-          fetchUserRole(session.user.id);
+          fetchUserRoles(session.user.id);
         }, 0);
       } else {
-        setUserRole(null);
+        setUserRoles([]);
       }
     });
 
@@ -59,7 +66,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        fetchUserRole(session.user.id);
+        fetchUserRoles(session.user.id);
       }
 
       setLoading(false);
@@ -100,12 +107,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    setUserRole(null);
+    setUserRoles([]);
   };
 
-  const isTechnician = userRole === "technician";
-  const isAdmin = userRole === "admin";
-  const isCustomer = userRole === "customer";
+  const hasRole = (role: string) => userRoles.includes(role);
+
+  // Legacy single role (first role or null)
+  const userRole = userRoles.length > 0 ? userRoles[0] : null;
+
+  // Role checks
+  const isTechnician = hasRole("technician");
+  const isAdmin = hasRole("admin");
+  const isCustomer = hasRole("customer");
+  const isPlatformAdmin = hasRole("platform_admin");
+  const isCorner = hasRole("corner");
+  const isRiparatore = hasRole("riparatore");
+  const isCentroAdmin = hasRole("centro_admin");
+  const isCentroTech = hasRole("centro_tech");
 
   return (
     <AuthContext.Provider
@@ -113,6 +131,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         user,
         session,
         userRole,
+        userRoles,
         loading,
         signIn,
         signUp,
@@ -120,6 +139,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         isTechnician,
         isAdmin,
         isCustomer,
+        isPlatformAdmin,
+        isCorner,
+        isRiparatore,
+        isCentroAdmin,
+        isCentroTech,
+        hasRole,
       }}
     >
       {children}

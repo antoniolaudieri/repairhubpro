@@ -21,6 +21,7 @@ import Appointments from "@/pages/Appointments";
 import Feedback from "@/pages/Feedback";
 import Quotes from "@/pages/Quotes";
 import PricingSettings from "@/pages/PricingSettings";
+import PlatformAdmin from "@/pages/PlatformAdmin";
 import NotFound from "@/pages/NotFound";
 
 export const AnimatedRoutes = () => {
@@ -55,6 +56,16 @@ export const AnimatedRoutes = () => {
             </ProtectedRoute>
           }
         />
+        {/* Platform Admin Route */}
+        <Route
+          path="/platform-admin"
+          element={
+            <ProtectedRoute>
+              <PageTransition><PlatformAdmin /></PageTransition>
+            </ProtectedRoute>
+          }
+        />
+        {/* Technician Routes */}
         <Route
           path="/dashboard"
           element={

@@ -4,10 +4,31 @@ import { useAuth } from "@/hooks/useAuth";
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireTechnician?: boolean;
+  requirePlatformAdmin?: boolean;
+  requireCorner?: boolean;
+  requireRiparatore?: boolean;
+  requireCentro?: boolean;
 }
 
-export const ProtectedRoute = ({ children, requireTechnician = false }: ProtectedRouteProps) => {
-  const { user, loading, isTechnician, isAdmin } = useAuth();
+export const ProtectedRoute = ({ 
+  children, 
+  requireTechnician = false,
+  requirePlatformAdmin = false,
+  requireCorner = false,
+  requireRiparatore = false,
+  requireCentro = false,
+}: ProtectedRouteProps) => {
+  const { 
+    user, 
+    loading, 
+    isTechnician, 
+    isAdmin, 
+    isPlatformAdmin,
+    isCorner,
+    isRiparatore,
+    isCentroAdmin,
+    isCentroTech,
+  } = useAuth();
 
   if (loading) {
     return (
@@ -24,7 +45,29 @@ export const ProtectedRoute = ({ children, requireTechnician = false }: Protecte
     return <Navigate to="/auth" replace />;
   }
 
-  if (requireTechnician && !isTechnician && !isAdmin) {
+  // Platform admin has access to everything
+  if (isPlatformAdmin) {
+    return <>{children}</>;
+  }
+
+  // Check specific role requirements
+  if (requirePlatformAdmin && !isPlatformAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireTechnician && !isTechnician && !isAdmin && !isCentroAdmin && !isCentroTech) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireCorner && !isCorner) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireRiparatore && !isRiparatore) {
+    return <Navigate to="/" replace />;
+  }
+
+  if (requireCentro && !isCentroAdmin && !isCentroTech) {
     return <Navigate to="/" replace />;
   }
 
