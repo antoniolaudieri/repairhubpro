@@ -22,6 +22,7 @@ import Feedback from "@/pages/Feedback";
 import Quotes from "@/pages/Quotes";
 import PricingSettings from "@/pages/PricingSettings";
 import PlatformAdmin from "@/pages/PlatformAdmin";
+import ProviderRegistration from "@/pages/ProviderRegistration";
 import NotFound from "@/pages/NotFound";
 
 export const AnimatedRoutes = () => {
@@ -62,6 +63,15 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute>
               <PageTransition><PlatformAdmin /></PageTransition>
+            </ProtectedRoute>
+          }
+        />
+        {/* Provider Registration */}
+        <Route
+          path="/diventa-partner"
+          element={
+            <ProtectedRoute>
+              <PageTransition><ProviderRegistration /></PageTransition>
             </ProtectedRoute>
           }
         />

@@ -307,6 +307,17 @@ export default function CustomerHome() {
           </motion.div>
 
           <div className="flex gap-2 sm:gap-3 items-center">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button 
+                onClick={() => navigate("/diventa-partner")} 
+                variant="outline" 
+                size="sm"
+                className="gap-2 group border-success/30 text-success hover:bg-success/10"
+              >
+                <Award className="h-4 w-4 transition-all group-hover:rotate-12" />
+                <span className="hidden md:inline">Diventa Partner</span>
+              </Button>
+            </motion.div>
             {user ? (
               <>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
