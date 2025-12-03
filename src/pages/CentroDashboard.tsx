@@ -521,7 +521,7 @@ export default function CentroDashboard() {
               <p className="text-sm text-muted-foreground">Panoramica attività</p>
             </div>
             <Button
-              onClick={() => navigate("/new-repair")}
+              onClick={() => navigate("/centro/nuovo-ritiro")}
               className="gap-2 shadow-sm"
             >
               <Plus className="h-4 w-4" />
