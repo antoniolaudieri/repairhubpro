@@ -5,6 +5,7 @@ import { RiparatoreLayout } from "@/layouts/RiparatoreLayout";
 import { RiparatoreStats } from "@/components/riparatore/RiparatoreStats";
 import { JobOfferCard } from "@/components/riparatore/JobOfferCard";
 import { ActiveJobsList } from "@/components/riparatore/ActiveJobsList";
+import { JobOffersMap } from "@/components/riparatore/JobOffersMap";
 import { PageTransition } from "@/components/PageTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +17,9 @@ interface Riparatore {
   id: string;
   full_name: string;
   status: string;
+  latitude: number | null;
+  longitude: number | null;
+  service_radius_km: number;
 }
 
 export default function RiparatoreDashboard() {
@@ -34,7 +38,7 @@ export default function RiparatoreDashboard() {
       // Fetch riparatore profile
       const { data: riparatoreData, error: riparatoreError } = await supabase
         .from("riparatori")
-        .select("id, full_name, status")
+        .select("id, full_name, status, latitude, longitude, service_radius_km")
         .eq("user_id", user.id)
         .single();
 
@@ -47,8 +51,15 @@ export default function RiparatoreDashboard() {
           .from("job_offers")
           .select(`
             *,
-            repair_requests (
-              *,
+            repair_request:repair_requests (
+              id,
+              device_type,
+              device_brand,
+              device_model,
+              issue_description,
+              estimated_cost,
+              customer_latitude,
+              customer_longitude,
               customers (name, phone)
             )
           `)
@@ -249,6 +260,17 @@ export default function RiparatoreDashboard() {
           </div>
 
           <RiparatoreStats {...stats} />
+
+          {/* Job Offers Map */}
+          <JobOffersMap
+            jobOffers={jobOffers}
+            userLocation={{
+              latitude: riparatore?.latitude || null,
+              longitude: riparatore?.longitude || null,
+            }}
+            serviceRadius={riparatore?.service_radius_km || 15}
+            onAcceptOffer={handleAcceptOffer}
+          />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Job Offers Section */}
