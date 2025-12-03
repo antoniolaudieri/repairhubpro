@@ -37,6 +37,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
 import EditSparePartDialog from "@/components/inventory/EditSparePartDialog";
+import { UtopyaPriceLookup } from "@/components/inventory/UtopyaPriceLookup";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -228,15 +229,26 @@ export default function Inventory() {
               Gestisci i ricambi e monitora le scorte
             </p>
           </div>
-          <AddSparePartDialog 
-            onPartAdded={fetchParts}
-            trigger={
-              <Button className="bg-gradient-primary hover:opacity-90 shadow-md">
-                <Plus className="h-4 w-4 mr-2" />
-                Nuovo Ricambio
-              </Button>
-            }
-          />
+          <div className="flex gap-2">
+            <UtopyaPriceLookup 
+              trigger={
+                <Button variant="outline" className="gap-2 border-orange-500/30 text-orange-600 hover:bg-orange-500/10">
+                  <ExternalLink className="h-4 w-4" />
+                  <span className="hidden sm:inline">Prezzi Utopya</span>
+                </Button>
+              }
+            />
+            <AddSparePartDialog 
+              onPartAdded={fetchParts}
+              trigger={
+                <Button className="bg-gradient-primary hover:opacity-90 shadow-md">
+                  <Plus className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Nuovo Ricambio</span>
+                  <span className="sm:hidden">Nuovo</span>
+                </Button>
+              }
+            />
+          </div>
         </div>
 
         {/* Stats Cards */}
