@@ -468,7 +468,7 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
                             <span className="text-[10px] text-muted-foreground">{product.sku}</span>
                           </div>
                           <div className="flex items-center gap-2 mt-1">
-                            {product.price != null ? (
+                            {product.price != null && !isNaN(Number(product.price)) ? (
                               <span className="text-sm font-semibold text-accent">
                                 €{Number(product.price).toFixed(2)}
                               </span>
