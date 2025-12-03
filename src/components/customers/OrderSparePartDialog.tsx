@@ -261,7 +261,7 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col p-0 overflow-hidden">
         <DialogHeader className="p-4 pb-2 border-b">
           <DialogTitle className="flex items-center gap-2 text-base">
             <ShoppingCart className="h-4 w-4" />
@@ -296,7 +296,7 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
             </div>
 
             {/* Parts List */}
-            <ScrollArea className="flex-1 p-3">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-3 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
               {loading ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -390,7 +390,7 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
                   })}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </TabsContent>
 
           <TabsContent value="utopya" className="flex-1 flex flex-col overflow-hidden m-0">
@@ -423,7 +423,7 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
             </div>
 
             {/* Utopya Results */}
-            <ScrollArea className="flex-1 p-3">
+            <div className="flex-1 overflow-y-auto overscroll-contain p-3 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
               {searchingUtopya ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -531,7 +531,7 @@ export function OrderSparePartDialog({ customerId, customerName, trigger, onOrde
                   })}
                 </div>
               )}
-            </ScrollArea>
+            </div>
           </TabsContent>
         </Tabs>
 
