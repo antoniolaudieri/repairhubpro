@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, Mail, Phone, MapPin, Edit, Smartphone, FileText, 
   Calendar, User, Laptop, Tablet, Monitor, Gamepad2, Watch, HelpCircle,
-  ChevronRight, Clock, Euro
+  ChevronRight, Clock, Euro, ShoppingCart
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { CustomerStats } from "@/components/customers/CustomerStats";
 import { CustomerCharts } from "@/components/customers/CustomerCharts";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { QuoteDialog } from "@/components/quotes/QuoteDialog";
+import { OrderSparePartDialog } from "@/components/customers/OrderSparePartDialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -220,12 +221,24 @@ export default function CustomerDetail() {
           </div>
         </div>
         
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-none">
             <Button onClick={() => setQuoteOpen(true)} size="sm" className="w-full h-8 text-xs sm:text-sm">
               <FileText className="h-3.5 w-3.5 mr-1" />
               Preventivo
             </Button>
+          </motion.div>
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-none">
+            <OrderSparePartDialog
+              customerId={id!}
+              customerName={customer.name}
+              trigger={
+                <Button variant="secondary" size="sm" className="w-full h-8 text-xs sm:text-sm">
+                  <ShoppingCart className="h-3.5 w-3.5 mr-1" />
+                  Ordina
+                </Button>
+              }
+            />
           </motion.div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex-1 sm:flex-none">
             <Button onClick={() => setEditOpen(true)} variant="outline" size="sm" className="w-full h-8 text-xs sm:text-sm">
