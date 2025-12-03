@@ -10,7 +10,8 @@ import {
   FileText,
   ScrollText,
   Settings2,
-  BookOpen
+  BookOpen,
+  Shield
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -49,9 +50,14 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, isPlatformAdmin } = useAuth();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
+
+  // Add platform admin menu item if user is platform admin
+  const allMenuItems = isPlatformAdmin 
+    ? [...menuItems, { title: "Admin Piattaforma", url: "/platform-admin", icon: Shield }]
+    : menuItems;
 
   const handleSignOut = async () => {
     await signOut();
@@ -101,7 +107,7 @@ export function AppSidebar() {
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
-                {menuItems.map((item, index) => {
+                {allMenuItems.map((item, index) => {
                   const isActive = currentPath === item.url;
                   const Icon = item.icon;
                   
