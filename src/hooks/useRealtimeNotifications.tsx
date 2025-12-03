@@ -5,7 +5,7 @@ import { toast } from "@/hooks/use-toast";
 
 export interface Notification {
   id: string;
-  type: "repair_status" | "parts_received";
+  type: "repair_status" | "parts_received" | "forfeiture_warning" | "forfeited";
   title: string;
   message: string;
   timestamp: Date;
@@ -50,14 +50,56 @@ export function useRealtimeNotifications() {
                 waiting_parts: "In attesa ricambi",
                 waiting_for_approval: "In attesa approvazione",
                 ready_for_pickup: "Pronta per il ritiro",
-                delivered: "Consegnata"
+                delivered: "Consegnata",
+                forfeited: "Alienato"
               };
 
+              // Check if device was forfeited
+              if (payload.new.status === "forfeited") {
+                const notification: Notification = {
+                  id: `forfeited-${payload.new.id}-${Date.now()}`,
+                  type: "forfeited",
+                  title: "⚠️ Dispositivo Alienato",
+                  message: `Il tuo ${device.brand} ${device.model} è stato alienato per mancato ritiro entro 30 giorni.`,
+                  timestamp: new Date(),
+                  read: false,
+                  repairId: payload.new.id,
+                };
+
+                setNotifications((prev) => [notification, ...prev]);
+
+                toast({
+                  title: notification.title,
+                  description: notification.message,
+                  variant: "destructive",
+                });
+              } else {
+                const notification: Notification = {
+                  id: `repair-${payload.new.id}-${Date.now()}`,
+                  type: "repair_status",
+                  title: "Cambio Stato Riparazione",
+                  message: `La riparazione del tuo ${device.brand} ${device.model} è ora: ${statusLabels[payload.new.status] || payload.new.status}`,
+                  timestamp: new Date(),
+                  read: false,
+                  repairId: payload.new.id,
+                };
+
+                setNotifications((prev) => [notification, ...prev]);
+
+                toast({
+                  title: notification.title,
+                  description: notification.message,
+                });
+              }
+            }
+
+            // Check for forfeiture warning
+            if (!payload.old.forfeiture_warning_sent_at && payload.new.forfeiture_warning_sent_at) {
               const notification: Notification = {
-                id: `repair-${payload.new.id}-${Date.now()}`,
-                type: "repair_status",
-                title: "Cambio Stato Riparazione",
-                message: `La riparazione del tuo ${device.brand} ${device.model} è ora: ${statusLabels[payload.new.status] || payload.new.status}`,
+                id: `warning-${payload.new.id}-${Date.now()}`,
+                type: "forfeiture_warning",
+                title: "⚠️ Avviso Importante",
+                message: `Ritira il tuo ${device.brand} ${device.model} entro 7 giorni o verrà alienato!`,
                 timestamp: new Date(),
                 read: false,
                 repairId: payload.new.id,
@@ -68,6 +110,7 @@ export function useRealtimeNotifications() {
               toast({
                 title: notification.title,
                 description: notification.message,
+                variant: "destructive",
               });
             }
           }

@@ -49,6 +49,8 @@ interface RepairDetail {
   started_at: string | null;
   completed_at: string | null;
   delivered_at: string | null;
+  forfeited_at: string | null;
+  forfeiture_warning_sent_at: string | null;
   estimated_cost: number | null;
   final_cost: number | null;
   final_cost_signature: string | null;
@@ -186,7 +188,7 @@ export default function CustomerRepairDetail() {
     return "U";
   };
 
-  const getStatusInfo = (status: string) => {
+const getStatusInfo = (status: string) => {
     const config: Record<
       string,
       { label: string; icon: JSX.Element; color: string; bgColor: string }
@@ -226,6 +228,12 @@ export default function CustomerRepairDetail() {
         icon: <AlertCircle className="h-5 w-5" />,
         color: "text-destructive",
         bgColor: "bg-destructive/10",
+      },
+      forfeited: {
+        label: "Alienato",
+        icon: <AlertCircle className="h-5 w-5" />,
+        color: "text-rose-900",
+        bgColor: "bg-rose-900/10",
       },
     };
     return config[status] || config.pending;
@@ -317,6 +325,57 @@ export default function CustomerRepairDetail() {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-8"
         >
+          {/* Forfeiture Warning Banner */}
+          {repair.status === "completed" && !repair.delivered_at && repair.completed_at && (
+            (() => {
+              const completedAt = new Date(repair.completed_at);
+              const now = new Date();
+              const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
+              const daysLeft = 30 - daysSinceCompletion;
+              
+              if (daysLeft <= 7 && daysLeft > 0) {
+                return (
+                  <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 mb-6">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-6 w-6 text-rose-600 flex-shrink-0" />
+                      <div>
+                        <p className="font-bold text-rose-700">⚠️ Attenzione: {daysLeft} giorni al ritiro!</p>
+                        <p className="text-sm text-rose-600">
+                          Il dispositivo deve essere ritirato entro {daysLeft} giorni o verrà considerato abbandonato 
+                          e diventerà proprietà del laboratorio.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              } else if (daysLeft <= 0) {
+                return null; // Will show forfeited status
+              }
+              return null;
+            })()
+          )}
+
+          {/* Forfeited Banner */}
+          {repair.status === "forfeited" && (
+            <div className="p-4 rounded-lg bg-rose-900/10 border border-rose-900/30 mb-6">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-6 w-6 text-rose-900 flex-shrink-0" />
+                <div>
+                  <p className="font-bold text-rose-900">Dispositivo Alienato</p>
+                  <p className="text-sm text-rose-700">
+                    Il dispositivo non è stato ritirato entro 30 giorni dalla comunicazione di completamento 
+                    ed è diventato proprietà del laboratorio come da clausola firmata.
+                  </p>
+                  {repair.forfeited_at && (
+                    <p className="text-xs text-rose-600 mt-1">
+                      Data alienazione: {format(new Date(repair.forfeited_at), "dd MMMM yyyy", { locale: it })}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Header Section */}
           <div className="flex items-start justify-between">
             <div>

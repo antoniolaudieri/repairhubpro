@@ -67,7 +67,7 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
             <h4 className="text-xs font-semibold text-foreground">Informativa Responsabilità</h4>
           </div>
           
-          <ScrollArea className="h-[100px] md:h-[120px]">
+          <ScrollArea className="h-[120px] md:h-[140px]">
             <div className="space-y-2 text-xs text-muted-foreground pr-2">
               <p>Il laboratorio non si assume responsabilità per:</p>
               <ul className="space-y-1 ml-2">
@@ -88,8 +88,19 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
                   <span>Incompatibilità software post-intervento</span>
                 </li>
               </ul>
-              <p className="pt-1 text-foreground font-medium">
-                Firmando, il cliente autorizza gli interventi e accetta il pagamento di €15 per la diagnosi.
+              <div className="pt-2 border-t border-rose-200 mt-2">
+                <p className="text-rose-600 font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  Clausola di Alienazione
+                </p>
+                <p className="text-rose-600/80 mt-1">
+                  Il dispositivo non ritirato entro 30 giorni dalla comunicazione di completamento 
+                  della riparazione sarà considerato abbandonato e diventerà di proprietà del laboratorio.
+                </p>
+              </div>
+              <p className="pt-2 text-foreground font-medium">
+                Firmando, il cliente autorizza gli interventi, accetta il pagamento di €15 per la diagnosi 
+                e la clausola di alienazione.
               </p>
             </div>
           </ScrollArea>
