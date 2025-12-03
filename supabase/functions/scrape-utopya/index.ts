@@ -30,7 +30,6 @@ async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: bool
   const password = Deno.env.get('UTOPYA_PASSWORD');
   
   if (!username || !password) {
-    console.log('Utopya credentials not configured');
     return { cookies: '', isAuthenticated: false };
   }
   
@@ -91,6 +90,43 @@ async function loginToUtopya(): Promise<{ cookies: string; isAuthenticated: bool
   }
 }
 
+// Clean product name - remove placeholders and invalid text
+function cleanProductName(name: string): string {
+  if (!name) return '';
+  
+  const invalidNames = [
+    'loading', 'caricamento', 'placeholder', '...', 
+    'undefined', 'null', 'image', 'foto', 'photo'
+  ];
+  
+  const cleaned = name.trim();
+  const lowerCleaned = cleaned.toLowerCase();
+  
+  // Check if name is invalid
+  if (invalidNames.some(inv => lowerCleaned.includes(inv))) {
+    return '';
+  }
+  
+  // Must be at least 5 chars and contain some letters
+  if (cleaned.length < 5 || !/[a-zA-Z]{3,}/.test(cleaned)) {
+    return '';
+  }
+  
+  return cleaned;
+}
+
+// Convert URL slug to readable name
+function slugToName(url: string): string {
+  const slug = url
+    .replace('https://www.utopya.it/', '')
+    .replace('.html', '')
+    .replace(/-+/g, ' ')
+    .trim();
+  
+  // Capitalize first letter of each word
+  return slug.replace(/\b\w/g, l => l.toUpperCase());
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -111,7 +147,7 @@ serve(async (req) => {
     const encodedQuery = encodeURIComponent(searchQuery).replace(/%20/g, '+');
     const utopyaUrl = `https://www.utopya.it/catalogsearch/result/?q=${encodedQuery}`;
     
-    console.log('Fetching:', utopyaUrl, 'Authenticated:', isAuthenticated);
+    console.log('Fetching:', utopyaUrl);
 
     const searchHeaders: Record<string, string> = { ...browserHeaders };
     if (cookies) searchHeaders['Cookie'] = cookies;
@@ -119,7 +155,7 @@ serve(async (req) => {
     const response = await fetch(utopyaUrl, { headers: searchHeaders });
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch Utopya: ${response.status}`);
+      throw new Error(`Failed to fetch: ${response.status}`);
     }
 
     const html = await response.text();
@@ -128,14 +164,13 @@ serve(async (req) => {
     const products: UtopyaProduct[] = [];
     const seenUrls = new Set<string>();
 
-    // Extract all product URLs that end with .html (excluding system pages)
     const excludePatterns = [
       '/customer/', '/checkout/', '/wishlist/', '/catalogsearch/',
       '/privacy', '/terms', '/cookie', '/contact', '/about',
-      '/category/', '/cms/', '/account/'
+      '/category/', '/cms/', '/account/', '/review/', '/compare/'
     ];
 
-    // Find all .html links that look like products
+    // Find all product URLs
     const urlRegex = /href="(https:\/\/www\.utopya\.it\/([a-z0-9\-]+)\.html)"/gi;
     let urlMatch;
     
@@ -143,103 +178,117 @@ serve(async (req) => {
       const url = urlMatch[1];
       const slug = urlMatch[2];
       
-      // Skip excluded patterns and duplicates
       if (seenUrls.has(url)) continue;
       if (excludePatterns.some(p => url.includes(p))) continue;
-      if (slug.length < 5) continue; // Skip very short slugs
+      if (slug.length < 5) continue;
       
       seenUrls.add(url);
     }
 
-    console.log('Found', seenUrls.size, 'potential product URLs');
+    console.log('Found URLs:', seenUrls.size);
 
-    // Now for each URL, try to find associated name, image, and price
+    // Extract product details for each URL
     for (const url of seenUrls) {
       const urlEscaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       
-      // Look for context around this URL (product card)
-      // Search for name in alt, title, or link text
       let name = '';
       let image = '';
       let price = '';
       let priceNumeric = 0;
-      let sku = '';
-      let brand = '';
 
-      // Try to find product name from alt attribute near the URL
-      const altRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*>[\\s\\S]*?<img[^>]*alt="([^"]+)"`, 'i');
-      const altMatch = html.match(altRegex);
-      if (altMatch) {
-        name = altMatch[1].trim();
+      // Method 1: Look for title attribute on the link
+      const titleRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*title="([^"]+)"`, 'i');
+      const titleMatch = html.match(titleRegex);
+      if (titleMatch) {
+        name = cleanProductName(titleMatch[1]);
       }
 
-      // Try to find name from title attribute
+      // Method 2: Look for alt attribute on img inside link
       if (!name) {
-        const titleRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*title="([^"]+)"`, 'i');
-        const titleMatch = html.match(titleRegex);
-        if (titleMatch) {
-          name = titleMatch[1].trim();
+        const altRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*>[\\s\\S]*?<img[^>]*alt="([^"]+)"`, 'i');
+        const altMatch = html.match(altRegex);
+        if (altMatch) {
+          name = cleanProductName(altMatch[1]);
         }
       }
 
-      // Try to find product image
-      const imgRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*>[\\s\\S]*?<img[^>]*src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"`, 'i');
-      const imgMatch = html.match(imgRegex);
-      if (imgMatch) {
-        image = imgMatch[1];
-      }
-
-      // Alternative: image before the link
-      if (!image) {
-        const imgBeforeRegex = new RegExp(`<img[^>]*src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"[^>]*>[\\s\\S]{0,500}?href="${urlEscaped}"`, 'i');
-        const imgBeforeMatch = html.match(imgBeforeRegex);
-        if (imgBeforeMatch) {
-          image = imgBeforeMatch[1];
-        }
-      }
-
-      // Try to find price near the URL
-      const priceRegex = new RegExp(`href="${urlEscaped}"[\\s\\S]{0,1000}?(?:data-price-amount="|€\\s*)([0-9]+[.,][0-9]{2})`, 'i');
-      const priceMatch = html.match(priceRegex);
-      if (priceMatch) {
-        priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
-        if (priceNumeric > 0) {
-          price = `€${priceNumeric.toFixed(2)}`;
-        }
-      }
-
-      // Try to find SKU
-      const skuRegex = new RegExp(`href="${urlEscaped}"[\\s\\S]{0,500}?data-sku="([^"]+)"`, 'i');
-      const skuMatch = html.match(skuRegex);
-      if (skuMatch) {
-        sku = skuMatch[1];
-      }
-
-      // If no name found, derive from URL slug
+      // Method 3: Look for product-item-link class with text content
       if (!name) {
-        const slug = url.replace('https://www.utopya.it/', '').replace('.html', '');
-        name = slug
-          .replace(/-/g, ' ')
-          .replace(/\b\w/g, l => l.toUpperCase());
+        const linkTextRegex = new RegExp(`<a[^>]*class="[^"]*product-item-link[^"]*"[^>]*href="${urlEscaped}"[^>]*>([^<]+)</a>`, 'i');
+        const linkTextMatch = html.match(linkTextRegex);
+        if (linkTextMatch) {
+          name = cleanProductName(linkTextMatch[1]);
+        }
       }
 
-      // Only add if we have at least a name
-      if (name && name.length > 5) {
+      // Method 4: Reverse - look for link with href after class
+      if (!name) {
+        const reverseRegex = new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*class="[^"]*product-item-link[^"]*"[^>]*>([^<]+)</a>`, 'i');
+        const reverseMatch = html.match(reverseRegex);
+        if (reverseMatch) {
+          name = cleanProductName(reverseMatch[1]);
+        }
+      }
+
+      // Fallback: Use URL slug as name (always works)
+      if (!name) {
+        name = slugToName(url);
+      }
+
+      // Find image
+      const imgPatterns = [
+        new RegExp(`<a[^>]*href="${urlEscaped}"[^>]*>[\\s\\S]*?<img[^>]*src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"`, 'i'),
+        new RegExp(`<img[^>]*src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"[^>]*>[\\s\\S]{0,300}?href="${urlEscaped}"`, 'i'),
+        new RegExp(`<img[^>]*data-src="(https://www\\.utopya\\.it/media/catalog/product[^"]+)"[^>]*>[\\s\\S]{0,300}?href="${urlEscaped}"`, 'i'),
+      ];
+
+      for (const pattern of imgPatterns) {
+        const imgMatch = html.match(pattern);
+        if (imgMatch) {
+          image = imgMatch[1];
+          break;
+        }
+      }
+
+      // Find price
+      const pricePatterns = [
+        new RegExp(`href="${urlEscaped}"[\\s\\S]{0,1500}?data-price-amount="([0-9.]+)"`, 'i'),
+        new RegExp(`href="${urlEscaped}"[\\s\\S]{0,1500}?€\\s*([0-9]+[.,][0-9]{2})`, 'i'),
+        new RegExp(`data-price-amount="([0-9.]+)"[\\s\\S]{0,500}?href="${urlEscaped}"`, 'i'),
+      ];
+
+      for (const pattern of pricePatterns) {
+        const priceMatch = html.match(pattern);
+        if (priceMatch) {
+          priceNumeric = parseFloat(priceMatch[1].replace(',', '.'));
+          if (priceNumeric > 0) {
+            price = `€${priceNumeric.toFixed(2)}`;
+            break;
+          }
+        }
+      }
+
+      if (name) {
         products.push({
           name,
           price: price || 'Accedi per prezzo',
           priceNumeric,
           image,
           url,
-          sku,
-          brand,
+          sku: '',
+          brand: '',
           inStock: true,
           requiresLogin: priceNumeric === 0,
         });
       }
     }
 
-    console.log('Extracted', products.length, 'products with details');
+    console.log('Products extracted:', products.length);
+    
+    // Log first product for debugging
+    if (products.length > 0) {
+      console.log('First product:', JSON.stringify(products[0]));
+    }
 
     return new Response(
       JSON.stringify({ 
