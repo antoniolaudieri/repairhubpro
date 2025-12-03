@@ -283,6 +283,28 @@ export default function CustomerDashboard() {
             </p>
           </div>
 
+          {/* Legal Notice Card */}
+          <Card className="p-4 border-amber-500/30 bg-amber-500/5">
+            <div className="flex items-start gap-3">
+              <FileText className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <h3 className="font-semibold text-sm text-foreground">
+                  Clausola di Alienazione (Art. 2756 c.c.)
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  In conformità all'Art. 2756 del Codice Civile italiano, i dispositivi non ritirati 
+                  entro <span className="font-semibold text-amber-700">30 giorni</span> dalla comunicazione 
+                  di completamento della riparazione saranno considerati abbandonati e diventeranno 
+                  proprietà del laboratorio.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Questa clausola è stata accettata e <span className="font-semibold">firmata digitalmente</span> al 
+                  momento della consegna del dispositivo per la riparazione.
+                </p>
+              </div>
+            </div>
+          </Card>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card className="p-6">
