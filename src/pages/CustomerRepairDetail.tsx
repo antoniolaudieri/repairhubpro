@@ -325,7 +325,7 @@ const getStatusInfo = (status: string) => {
           animate={{ opacity: 1, y: 0 }}
           className="space-y-8"
         >
-          {/* Forfeiture Warning Banner */}
+          {/* Forfeiture Countdown Banner */}
           {repair.status === "completed" && !repair.delivered_at && repair.completed_at && (
             (() => {
               const completedAt = new Date(repair.completed_at);
@@ -333,23 +333,39 @@ const getStatusInfo = (status: string) => {
               const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
               const daysLeft = 30 - daysSinceCompletion;
               
-              if (daysLeft <= 7 && daysLeft > 0) {
+              if (daysLeft > 0) {
+                const isUrgent = daysLeft <= 7;
+                const isCritical = daysLeft <= 3;
                 return (
-                  <div className="p-4 rounded-lg bg-rose-500/10 border border-rose-500/30 mb-6">
+                  <div className={`p-4 rounded-lg mb-6 ${
+                    isCritical 
+                      ? 'bg-red-500/20 border border-red-500/50' 
+                      : isUrgent 
+                        ? 'bg-rose-500/10 border border-rose-500/30'
+                        : 'bg-amber-500/10 border border-amber-500/30'
+                  }`}>
                     <div className="flex items-center gap-3">
-                      <AlertCircle className="h-6 w-6 text-rose-600 flex-shrink-0" />
+                      <Clock className={`h-6 w-6 flex-shrink-0 ${
+                        isCritical ? 'text-red-600' : isUrgent ? 'text-rose-600' : 'text-amber-600'
+                      }`} />
                       <div>
-                        <p className="font-bold text-rose-700">⚠️ Attenzione: {daysLeft} giorni al ritiro!</p>
-                        <p className="text-sm text-rose-600">
-                          Il dispositivo deve essere ritirato entro {daysLeft} giorni o verrà considerato abbandonato 
-                          e diventerà proprietà del laboratorio.
+                        <p className={`font-bold ${
+                          isCritical ? 'text-red-700' : isUrgent ? 'text-rose-700' : 'text-amber-700'
+                        }`}>
+                          {isCritical ? '⚠️ ' : ''}{daysLeft} giorni rimanenti per il ritiro
+                        </p>
+                        <p className={`text-sm ${
+                          isCritical ? 'text-red-600' : isUrgent ? 'text-rose-600' : 'text-amber-600'
+                        }`}>
+                          {isUrgent 
+                            ? `Il dispositivo deve essere ritirato entro ${daysLeft} giorni o verrà considerato abbandonato e diventerà proprietà del laboratorio.`
+                            : `Ricorda di ritirare il dispositivo. Hai ancora ${daysLeft} giorni.`
+                          }
                         </p>
                       </div>
                     </div>
                   </div>
                 );
-              } else if (daysLeft <= 0) {
-                return null; // Will show forfeited status
               }
               return null;
             })()
@@ -399,11 +415,19 @@ const getStatusInfo = (status: string) => {
                 const now = new Date();
                 const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
                 const daysLeft = 30 - daysSinceCompletion;
-                if (daysLeft <= 7 && daysLeft > 0) {
+                if (daysLeft > 0) {
+                  const isUrgent = daysLeft <= 7;
+                  const isCritical = daysLeft <= 3;
                   return (
-                    <Badge className={`${daysLeft <= 3 ? 'bg-rose-600 animate-pulse' : 'bg-rose-500'} text-white gap-1`}>
+                    <Badge className={`gap-1 ${
+                      isCritical 
+                        ? 'bg-red-500 text-white animate-pulse' 
+                        : isUrgent 
+                          ? 'bg-rose-500 text-white animate-pulse'
+                          : 'bg-amber-500 text-white'
+                    }`}>
                       <Clock className="h-3 w-3" />
-                      ⚠️ {daysLeft}g al ritiro
+                      {isCritical ? '⚠️ ' : ''}{daysLeft}g al ritiro
                     </Badge>
                   );
                 }
