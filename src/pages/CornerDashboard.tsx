@@ -73,6 +73,40 @@ export default function CornerDashboard() {
     fetchCornerData();
   }, [user]);
 
+  // Set up realtime subscription for repair_requests updates
+  useEffect(() => {
+    if (!corner) return;
+
+    const channel = supabase
+      .channel("corner-repair-requests")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "repair_requests",
+          filter: `corner_id=eq.${corner.id}`,
+        },
+        (payload) => {
+          console.log("Repair request updated:", payload);
+          fetchCornerData();
+          if (payload.eventType === "UPDATE" && payload.new) {
+            const newStatus = (payload.new as any).status;
+            if (newStatus === "assigned") {
+              toast.success("La tua segnalazione è stata assegnata a un riparatore!");
+            } else if (newStatus === "completed") {
+              toast.success("Riparazione completata! Commissione in arrivo.");
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [corner]);
+
   // Calculate stats
   const stats = {
     totalRequests: requests.length,
