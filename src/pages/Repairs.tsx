@@ -136,13 +136,13 @@ export default function Repairs() {
         delivered_at: repair.delivered_at,
         forfeited_at: repair.forfeited_at,
         device: {
-          brand: repair.device.brand,
-          model: repair.device.model,
-          device_type: repair.device.device_type,
-          reported_issue: repair.device.reported_issue,
-          photo_url: repair.device.photo_url,
+          brand: repair.device?.brand || "N/D",
+          model: repair.device?.model || "N/D",
+          device_type: repair.device?.device_type || "smartphone",
+          reported_issue: repair.device?.reported_issue || "",
+          photo_url: repair.device?.photo_url || null,
         },
-        customer: repair.device.customer,
+        customer: repair.device?.customer || null,
         has_pending_orders: repair.orders?.some((order: any) => order.status === "pending") || false,
       })) || [];
 
@@ -160,10 +160,15 @@ export default function Repairs() {
   };
 
   const filteredRepairs = repairs.filter((repair) => {
+    const customerName = repair.customer?.name?.toLowerCase() || "";
+    const deviceBrand = repair.device?.brand?.toLowerCase() || "";
+    const deviceModel = repair.device?.model?.toLowerCase() || "";
+    const searchLower = searchTerm.toLowerCase();
+    
     const matchesSearch =
-      repair.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.device.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.device.model.toLowerCase().includes(searchTerm.toLowerCase());
+      customerName.includes(searchLower) ||
+      deviceBrand.includes(searchLower) ||
+      deviceModel.includes(searchLower);
     
     const matchesStatus = !statusFilter || repair.status === statusFilter;
     
@@ -409,10 +414,10 @@ export default function Repairs() {
                         {/* Customer & Cost */}
                         <div className="flex items-end justify-between pt-3 border-t border-border/50">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-foreground truncate">{repair.customer.name}</p>
+                            <p className="font-medium text-foreground truncate">{repair.customer?.name || "N/D"}</p>
                             <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                               <Phone className="h-3 w-3" />
-                              {repair.customer.phone}
+                              {repair.customer?.phone || "N/D"}
                             </p>
                           </div>
                           <div className="text-right flex-shrink-0 ml-3">
