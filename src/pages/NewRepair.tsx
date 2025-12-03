@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Sparkles, AlertTriangle, Smartphone, ArrowLeft, Flame, Trophy, Zap, TrendingUp } from "lucide-react";
@@ -18,6 +19,7 @@ import { SparePartsStep } from "@/components/repair/SparePartsStep";
 
 const NewRepair = () => {
   const navigate = useNavigate();
+  const { isCentroAdmin, isCentroTech } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
@@ -608,7 +610,9 @@ const NewRepair = () => {
       }
 
       toast.success("Dispositivo registrato con successo!");
-      navigate("/dashboard");
+      // Redirect based on user role
+      const redirectPath = (isCentroAdmin || isCentroTech) ? "/centro/lavori" : "/dashboard";
+      navigate(redirectPath);
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(error.message || "Errore durante la registrazione");
