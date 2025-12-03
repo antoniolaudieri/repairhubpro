@@ -62,7 +62,6 @@ export const CustomerSearch = ({ onSelectCustomer, onCreateNew }: CustomerSearch
     onSelectCustomer(customer);
     setSearchTerm(customer.name);
     setShowSuggestions(false);
-    toast.success(`Cliente selezionato: ${customer.name}`);
   };
 
   const handleClearSelection = () => {
