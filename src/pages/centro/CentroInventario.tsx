@@ -2,46 +2,81 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CentroLayout } from "@/layouts/CentroLayout";
-import { PageTransition } from "@/components/PageTransition";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
-  Plus, 
+  Package, 
   Search, 
-  Package,
-  Edit,
+  Plus, 
+  AlertTriangle, 
+  CheckCircle2,
+  XCircle,
+  Filter,
+  LayoutGrid,
+  List,
+  ExternalLink,
+  Pencil,
   Trash2,
-  AlertTriangle,
-  ExternalLink
+  MoreHorizontal
 } from "lucide-react";
 import { toast } from "sonner";
-
-interface Centro {
-  id: string;
-  business_name: string;
-}
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { UtopyaPriceLookup } from "@/components/inventory/UtopyaPriceLookup";
 
 interface SparePart {
   id: string;
   name: string;
   category: string;
   brand: string | null;
-  model_compatibility: string | null;
   cost: number | null;
   selling_price: number | null;
   stock_quantity: number;
   minimum_stock: number | null;
+  image_url: string | null;
+  model_compatibility: string | null;
   supplier: string | null;
   supplier_code: string | null;
-  image_url: string | null;
+  notes: string | null;
 }
 
-const categories = [
+const CATEGORIES = [
+  "Tutti",
   "Display",
   "Batteria",
   "Scheda Madre",
@@ -51,19 +86,28 @@ const categories = [
   "Connettore",
   "Vetro",
   "Cover",
-  "Altro",
+  "Flex",
+  "Altro"
 ];
 
 export default function CentroInventario() {
   const { user } = useAuth();
-  const [centro, setCentro] = useState<Centro | null>(null);
-  const [spareParts, setSpareParts] = useState<SparePart[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [centroId, setCentroId] = useState<string | null>(null);
+  const [parts, setParts] = useState<SparePart[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("Tutti");
+  const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [partToDelete, setPartToDelete] = useState<SparePart | null>(null);
+  const [linkedRepairs, setLinkedRepairs] = useState<any[]>([]);
+  const [checkingLinks, setCheckingLinks] = useState(false);
+  
+  // Form state
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingPart, setEditingPart] = useState<SparePart | null>(null);
-  
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     category: "Display",
@@ -77,41 +121,42 @@ export default function CentroInventario() {
     supplier_code: "",
     image_url: "",
   });
-  const [isSaving, setIsSaving] = useState(false);
 
-  const fetchData = async () => {
+  const fetchParts = async () => {
     if (!user) return;
-
+    setLoading(true);
+    
     try {
-      const { data: centroData, error: centroError } = await supabase
+      const { data: centro } = await supabase
         .from("centri_assistenza")
-        .select("id, business_name")
+        .select("id")
         .eq("owner_user_id", user.id)
         .single();
 
-      if (centroError) throw centroError;
-      setCentro(centroData);
-
-      if (centroData) {
-        const { data: partsData, error: partsError } = await supabase
-          .from("spare_parts")
-          .select("*")
-          .eq("centro_id", centroData.id)
-          .order("name");
-
-        if (partsError) throw partsError;
-        setSpareParts(partsData || []);
+      if (!centro) {
+        setLoading(false);
+        return;
       }
-    } catch (error: any) {
-      console.error("Error fetching data:", error);
-      toast.error("Errore nel caricamento dei dati");
-    } finally {
-      setIsLoading(false);
+      setCentroId(centro.id);
+
+      const { data, error } = await supabase
+        .from("spare_parts")
+        .select("*")
+        .eq("centro_id", centro.id)
+        .order("name");
+      
+      if (!error && data) {
+        setParts(data);
+      }
+    } catch (error) {
+      console.error("Error fetching parts:", error);
+      toast.error("Errore nel caricamento ricambi");
     }
+    setLoading(false);
   };
 
   useEffect(() => {
-    fetchData();
+    fetchParts();
   }, [user]);
 
   const resetForm = () => {
@@ -128,10 +173,11 @@ export default function CentroInventario() {
       supplier_code: "",
       image_url: "",
     });
+    setEditingPart(null);
   };
 
   const handleSave = async () => {
-    if (!centro || !formData.name || !formData.category) {
+    if (!centroId || !formData.name || !formData.category) {
       toast.error("Compila tutti i campi obbligatori");
       return;
     }
@@ -139,7 +185,7 @@ export default function CentroInventario() {
     setIsSaving(true);
     try {
       const partData = {
-        centro_id: centro.id,
+        centro_id: centroId,
         name: formData.name,
         category: formData.category,
         brand: formData.brand || null,
@@ -167,9 +213,8 @@ export default function CentroInventario() {
       }
 
       setIsCreateDialogOpen(false);
-      setEditingPart(null);
       resetForm();
-      fetchData();
+      fetchParts();
     } catch (error: any) {
       console.error("Error saving part:", error);
       toast.error("Errore nel salvataggio");
@@ -196,39 +241,106 @@ export default function CentroInventario() {
     setIsCreateDialogOpen(true);
   };
 
-  const handleDelete = async (partId: string) => {
-    if (!confirm("Sei sicuro di voler eliminare questo ricambio?")) return;
-
-    try {
-      const { error } = await supabase.from("spare_parts").delete().eq("id", partId);
-      if (error) throw error;
-      toast.success("Ricambio eliminato");
-      fetchData();
-    } catch (error: any) {
-      console.error("Error deleting part:", error);
-      toast.error("Errore nell'eliminazione");
-    }
+  const checkLinkedRepairs = async (part: SparePart) => {
+    setCheckingLinks(true);
+    setPartToDelete(part);
+    
+    const { data } = await supabase
+      .from("repair_parts")
+      .select(`
+        id,
+        quantity,
+        repair:repairs(
+          id,
+          status,
+          created_at,
+          device:devices(
+            brand,
+            model,
+            customer:customers(name)
+          )
+        )
+      `)
+      .eq("spare_part_id", part.id);
+    
+    setLinkedRepairs(data || []);
+    setCheckingLinks(false);
+    setDeleteDialogOpen(true);
   };
 
-  const filteredParts = spareParts.filter((part) => {
-    const matchesSearch =
-      part.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      part.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      part.model_compatibility?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesCategory = categoryFilter === "all" || part.category === categoryFilter;
-
-    return matchesSearch && matchesCategory;
-  });
-
-  const lowStockParts = spareParts.filter(
-    (part) => part.stock_quantity <= (part.minimum_stock || 5)
+  const allRepairsCompleted = linkedRepairs.length > 0 && linkedRepairs.every(
+    rp => rp.repair?.status === 'completed' || rp.repair?.status === 'delivered'
   );
 
-  if (isLoading) {
+  const handleDeletePart = async () => {
+    if (!partToDelete) return;
+    
+    if (linkedRepairs.length > 0 && allRepairsCompleted) {
+      const { error: deleteLinksError } = await supabase
+        .from("repair_parts")
+        .delete()
+        .eq("spare_part_id", partToDelete.id);
+      
+      if (deleteLinksError) {
+        toast.error("Errore durante la rimozione dei collegamenti");
+        return;
+      }
+    }
+    
+    const { error } = await supabase
+      .from("spare_parts")
+      .delete()
+      .eq("id", partToDelete.id);
+    
+    if (error) {
+      if (error.code === '23503') {
+        toast.error("Impossibile eliminare: ricambio utilizzato in riparazioni attive");
+      } else {
+        toast.error("Errore durante l'eliminazione");
+      }
+    } else {
+      toast.success("Ricambio eliminato");
+      fetchParts();
+    }
+    
+    setDeleteDialogOpen(false);
+    setPartToDelete(null);
+    setLinkedRepairs([]);
+  };
+
+  const filteredParts = parts.filter(part => {
+    const matchesSearch = 
+      part.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      part.brand?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      part.model_compatibility?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = categoryFilter === "Tutti" || part.category === categoryFilter;
+    
+    const matchesStock = 
+      stockFilter === "all" ||
+      (stockFilter === "low" && part.stock_quantity > 0 && part.stock_quantity <= (part.minimum_stock || 5)) ||
+      (stockFilter === "out" && part.stock_quantity === 0);
+    
+    return matchesSearch && matchesCategory && matchesStock;
+  });
+
+  const getStockStatus = (part: SparePart) => {
+    if (part.stock_quantity === 0) return "out";
+    if (part.stock_quantity <= (part.minimum_stock || 5)) return "low";
+    return "ok";
+  };
+
+  const stats = {
+    total: parts.length,
+    lowStock: parts.filter(p => p.stock_quantity > 0 && p.stock_quantity <= (p.minimum_stock || 5)).length,
+    outOfStock: parts.filter(p => p.stock_quantity === 0).length,
+    totalValue: parts.reduce((acc, p) => acc + (p.selling_price || 0) * p.stock_quantity, 0)
+  };
+
+  if (loading) {
     return (
       <CentroLayout>
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-center h-[60vh]">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
         </div>
       </CentroLayout>
@@ -237,380 +349,508 @@ export default function CentroInventario() {
 
   return (
     <CentroLayout>
-      <PageTransition>
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="p-4 md:p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold">Inventario Ricambi</h1>
-              <p className="text-muted-foreground">
-                Gestisci i ricambi del tuo centro
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground">Magazzino</h1>
+              <p className="text-muted-foreground text-sm md:text-base">
+                Gestisci i ricambi e monitora le scorte
               </p>
             </div>
-
-            <Dialog 
-              open={isCreateDialogOpen} 
-              onOpenChange={(open) => {
-                setIsCreateDialogOpen(open);
-                if (!open) {
-                  setEditingPart(null);
-                  resetForm();
+            <div className="flex gap-2">
+              <UtopyaPriceLookup 
+                trigger={
+                  <Button variant="outline" className="gap-2 border-orange-500/30 text-orange-600 hover:bg-orange-500/10">
+                    <ExternalLink className="h-4 w-4" />
+                    <span className="hidden sm:inline">Prezzi Utopya</span>
+                  </Button>
                 }
-              }}
-            >
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi Ricambio
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>
-                    {editingPart ? "Modifica Ricambio" : "Aggiungi Ricambio"}
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 mt-4">
-                  <div>
-                    <Label>Nome *</Label>
-                    <Input
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="es. Display iPhone 14 Pro"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Categoria *</Label>
-                      <Select
-                        value={formData.category}
-                        onValueChange={(value) => setFormData({ ...formData, category: value })}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((cat) => (
-                            <SelectItem key={cat} value={cat}>
-                              {cat}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Marca</Label>
-                      <Input
-                        value={formData.brand}
-                        onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                        placeholder="es. Apple"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>Compatibilità Modelli</Label>
-                    <Input
-                      value={formData.model_compatibility}
-                      onChange={(e) => setFormData({ ...formData, model_compatibility: e.target.value })}
-                      placeholder="es. iPhone 14, iPhone 14 Pro"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Costo Acquisto (€)</Label>
-                      <Input
-                        type="number"
-                        value={formData.cost}
-                        onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                    <div>
-                      <Label>Prezzo Vendita (€)</Label>
-                      <Input
-                        type="number"
-                        value={formData.selling_price}
-                        onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Quantità in Stock</Label>
-                      <Input
-                        type="number"
-                        value={formData.stock_quantity}
-                        onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Stock Minimo</Label>
-                      <Input
-                        type="number"
-                        value={formData.minimum_stock}
-                        onChange={(e) => setFormData({ ...formData, minimum_stock: e.target.value })}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label>Fornitore</Label>
-                      <Input
-                        value={formData.supplier}
-                        onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                        placeholder="es. Utopya"
-                      />
-                    </div>
-                    <div>
-                      <Label>Codice Fornitore</Label>
-                      <Input
-                        value={formData.supplier_code}
-                        onChange={(e) => setFormData({ ...formData, supplier_code: e.target.value })}
-                        placeholder="SKU"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label>URL Immagine</Label>
-                    <Input
-                      value={formData.image_url}
-                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                      placeholder="https://..."
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                      Annulla
-                    </Button>
-                    <Button onClick={handleSave} disabled={isSaving}>
-                      {isSaving ? "Salvataggio..." : editingPart ? "Aggiorna" : "Aggiungi"}
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          {/* Low Stock Alert */}
-          {lowStockParts.length > 0 && (
-            <Card className="border-yellow-500/50 bg-yellow-500/10">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                  <div>
-                    <p className="font-medium text-yellow-600">
-                      {lowStockParts.length} ricambi con stock basso
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {lowStockParts.map((p) => p.name).join(", ")}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cerca per nome, marca o modello..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
               />
+              <Dialog 
+                open={isCreateDialogOpen} 
+                onOpenChange={(open) => {
+                  setIsCreateDialogOpen(open);
+                  if (!open) resetForm();
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-primary hover:opacity-90 shadow-md">
+                    <Plus className="h-4 w-4 mr-2" />
+                    <span className="hidden sm:inline">Nuovo Ricambio</span>
+                    <span className="sm:hidden">Nuovo</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingPart ? "Modifica Ricambio" : "Aggiungi Ricambio"}
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 mt-4">
+                    <div>
+                      <Label>Nome *</Label>
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        placeholder="es. Display iPhone 14 Pro"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Categoria *</Label>
+                        <Select
+                          value={formData.category}
+                          onValueChange={(value) => setFormData({ ...formData, category: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CATEGORIES.filter(c => c !== "Tutti").map((cat) => (
+                              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Marca</Label>
+                        <Input
+                          value={formData.brand}
+                          onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                          placeholder="es. Apple"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Compatibilità Modelli</Label>
+                      <Input
+                        value={formData.model_compatibility}
+                        onChange={(e) => setFormData({ ...formData, model_compatibility: e.target.value })}
+                        placeholder="es. iPhone 14, iPhone 14 Pro"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Costo Acquisto (€)</Label>
+                        <Input
+                          type="number"
+                          value={formData.cost}
+                          onChange={(e) => setFormData({ ...formData, cost: e.target.value })}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div>
+                        <Label>Prezzo Vendita (€)</Label>
+                        <Input
+                          type="number"
+                          value={formData.selling_price}
+                          onChange={(e) => setFormData({ ...formData, selling_price: e.target.value })}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Quantità in Stock</Label>
+                        <Input
+                          type="number"
+                          value={formData.stock_quantity}
+                          onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Stock Minimo</Label>
+                        <Input
+                          type="number"
+                          value={formData.minimum_stock}
+                          onChange={(e) => setFormData({ ...formData, minimum_stock: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Fornitore</Label>
+                        <Input
+                          value={formData.supplier}
+                          onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
+                          placeholder="es. Utopya"
+                        />
+                      </div>
+                      <div>
+                        <Label>Codice Fornitore</Label>
+                        <Input
+                          value={formData.supplier_code}
+                          onChange={(e) => setFormData({ ...formData, supplier_code: e.target.value })}
+                          placeholder="SKU"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>URL Immagine</Label>
+                      <Input
+                        value={formData.image_url}
+                        onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                        placeholder="https://..."
+                      />
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                        Annulla
+                      </Button>
+                      <Button onClick={handleSave} disabled={isSaving}>
+                        {isSaving ? "Salvataggio..." : editingPart ? "Aggiorna" : "Aggiungi"}
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tutte le categorie</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-card/50">
-              <CardContent className="p-4">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+              <Card className="p-4 bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-card-hover transition-all">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
                     <Package className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{spareParts.length}</p>
-                    <p className="text-xs text-muted-foreground">Totale Ricambi</p>
+                    <p className="text-xs text-muted-foreground">Totale</p>
+                    <p className="text-xl font-bold text-foreground">{stats.total}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card/50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-green-500/10">
-                    <Package className="h-5 w-5 text-green-500" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">
-                      {spareParts.reduce((sum, p) => sum + p.stock_quantity, 0)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Pezzi in Stock</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card/50">
-              <CardContent className="p-4">
+              </Card>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+              <Card className="p-4 bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-card-hover transition-all">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-yellow-500/10">
                     <AlertTriangle className="h-5 w-5 text-yellow-500" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{lowStockParts.length}</p>
-                    <p className="text-xs text-muted-foreground">Stock Basso</p>
+                    <p className="text-xs text-muted-foreground">Scorta Bassa</p>
+                    <p className="text-xl font-bold text-yellow-500">{stats.lowStock}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-card/50">
-              <CardContent className="p-4">
+              </Card>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+              <Card className="p-4 bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-card-hover transition-all">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-500/10">
-                    <Package className="h-5 w-5 text-blue-500" />
+                  <div className="p-2 rounded-lg bg-destructive/10">
+                    <XCircle className="h-5 w-5 text-destructive" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">
-                      {new Set(spareParts.map((p) => p.category)).size}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Categorie</p>
+                    <p className="text-xs text-muted-foreground">Esaurito</p>
+                    <p className="text-xl font-bold text-destructive">{stats.outOfStock}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </Card>
+            </motion.div>
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+              <Card className="p-4 bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-card-hover transition-all">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-500/10">
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Valore</p>
+                    <p className="text-xl font-bold text-green-500">€{stats.totalValue.toFixed(0)}</p>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
           </div>
 
-          {/* Parts List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Ricambi ({filteredParts.length})</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {filteredParts.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessun ricambio trovato</p>
-                  <p className="text-sm">Aggiungi il tuo primo ricambio</p>
+          {/* Filters */}
+          <Card className="p-4 bg-card/80 backdrop-blur-sm border-border/50">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cerca ricambi..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[140px]">
+                    <Filter className="h-4 w-4 mr-2" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {CATEGORIES.map(cat => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={stockFilter} onValueChange={(v) => setStockFilter(v as any)}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutte le scorte</SelectItem>
+                    <SelectItem value="low">Scorta bassa</SelectItem>
+                    <SelectItem value="out">Esaurito</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="flex border border-border rounded-md overflow-hidden">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn("rounded-none", viewMode === "grid" && "bg-primary/10 text-primary")}
+                    onClick={() => setViewMode("grid")}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={cn("rounded-none", viewMode === "list" && "bg-primary/10 text-primary")}
+                    onClick={() => setViewMode("list")}
+                  >
+                    <List className="h-4 w-4" />
+                  </Button>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  {filteredParts.map((part) => (
-                    <div
+              </div>
+            </div>
+          </Card>
+
+          {/* Content */}
+          {filteredParts.length === 0 ? (
+            <Card className="p-12 text-center bg-card/80 backdrop-blur-sm border-border/50">
+              <Package className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2 text-foreground">Nessun ricambio trovato</h2>
+              <p className="text-muted-foreground mb-4">
+                {parts.length === 0 
+                  ? "Inizia aggiungendo il tuo primo ricambio al magazzino"
+                  : "Prova a modificare i filtri di ricerca"}
+              </p>
+            </Card>
+          ) : viewMode === "grid" ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <AnimatePresence>
+                {filteredParts.map((part, index) => {
+                  const status = getStockStatus(part);
+                  return (
+                    <motion.div
                       key={part.id}
-                      className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card transition-colors"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: index * 0.02 }}
                     >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-start gap-4">
+                      <Card className="overflow-hidden bg-card/80 backdrop-blur-sm border-border/50 hover:shadow-card-hover transition-all group">
+                        <div className="aspect-square relative bg-muted/30 overflow-hidden">
                           {part.image_url ? (
-                            <img
-                              src={part.image_url}
+                            <img 
+                              src={part.image_url} 
                               alt={part.name}
-                              className="w-12 h-12 object-cover rounded-lg"
+                              className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
                             />
                           ) : (
-                            <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
-                              <Package className="h-6 w-6 text-muted-foreground" />
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="h-16 w-16 text-muted-foreground/30" />
                             </div>
                           )}
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <span className="font-medium">{part.name}</span>
-                              <Badge variant="outline">{part.category}</Badge>
-                              {part.stock_quantity <= (part.minimum_stock || 5) && (
-                                <Badge variant="destructive" className="text-xs">
-                                  Stock Basso
-                                </Badge>
+                          <div className="absolute top-2 right-2">
+                            <Badge 
+                              variant={status === "ok" ? "default" : status === "low" ? "secondary" : "destructive"}
+                              className={cn(
+                                status === "ok" && "bg-green-500/90 text-white",
+                                status === "low" && "bg-yellow-500/90 text-white"
                               )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {part.brand && <span>{part.brand}</span>}
-                              {part.model_compatibility && (
-                                <span> - {part.model_compatibility}</span>
-                              )}
-                            </p>
-                            <div className="flex items-center gap-4 mt-2 text-sm">
-                              <span>
-                                Stock: <strong>{part.stock_quantity}</strong>
-                              </span>
-                              {part.cost && (
-                                <span className="text-muted-foreground">
-                                  Costo: €{part.cost.toFixed(2)}
-                                </span>
-                              )}
-                              {part.selling_price && (
-                                <span className="text-green-600">
-                                  Vendita: €{part.selling_price.toFixed(2)}
-                                </span>
-                              )}
-                            </div>
+                            >
+                              {part.stock_quantity} pz
+                            </Badge>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-2">
-                          {part.supplier === "utopya" && (
+                        <div className="p-4 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-semibold text-foreground line-clamp-2 text-sm">{part.name}</h3>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEdit(part)}>
+                                  <Pencil className="h-4 w-4 mr-2" /> Modifica
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-destructive" 
+                                  onClick={() => checkLinkedRepairs(part)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" /> Elimina
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant="outline" className="text-xs">{part.category}</Badge>
+                            {part.brand && (
+                              <Badge variant="outline" className="text-xs bg-primary/5">{part.brand}</Badge>
+                            )}
+                          </div>
+                          {part.model_compatibility && (
+                            <p className="text-xs text-muted-foreground line-clamp-1">{part.model_compatibility}</p>
+                          )}
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div className="text-xs text-muted-foreground">
+                              {part.cost ? `€${part.cost.toFixed(2)}` : "-"}
+                            </div>
+                            <div className="font-semibold text-primary">
+                              {part.selling_price ? `€${part.selling_price.toFixed(2)}` : "-"}
+                            </div>
+                          </div>
+                          {part.supplier_code && (
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
-                              onClick={() =>
-                                window.open(
-                                  `https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(
-                                    part.name
-                                  )}`,
-                                  "_blank"
-                                )
-                              }
+                              className="w-full mt-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                              onClick={() => window.open(`https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(part.name)}`, '_blank')}
                             >
-                              <ExternalLink className="h-4 w-4 mr-1" />
-                              Utopya
+                              <ExternalLink className="h-3 w-3 mr-1" /> Acquista su Utopya
                             </Button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleEdit(part)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(part.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
                         </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <Card className="overflow-hidden bg-card/80 backdrop-blur-sm border-border/50">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ricambio</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead className="text-center">Stock</TableHead>
+                    <TableHead className="text-right">Costo</TableHead>
+                    <TableHead className="text-right">Vendita</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredParts.map((part) => {
+                    const status = getStockStatus(part);
+                    return (
+                      <TableRow key={part.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-lg bg-muted overflow-hidden flex-shrink-0">
+                              {part.image_url ? (
+                                <img src={part.image_url} alt="" className="w-full h-full object-contain" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Package className="h-4 w-4 text-muted-foreground/50" />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium text-sm">{part.name}</p>
+                              {part.brand && <p className="text-xs text-muted-foreground">{part.brand}</p>}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">{part.category}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge 
+                            variant={status === "ok" ? "default" : status === "low" ? "secondary" : "destructive"}
+                            className={cn(
+                              status === "ok" && "bg-green-500/90 text-white",
+                              status === "low" && "bg-yellow-500/90 text-white"
+                            )}
+                          >
+                            {part.stock_quantity}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-sm text-muted-foreground">
+                          {part.cost ? `€${part.cost.toFixed(2)}` : "-"}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold text-primary">
+                          {part.selling_price ? `€${part.selling_price.toFixed(2)}` : "-"}
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleEdit(part)}>
+                                <Pencil className="h-4 w-4 mr-2" /> Modifica
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-destructive" 
+                                onClick={() => checkLinkedRepairs(part)}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" /> Elimina
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
         </div>
-      </PageTransition>
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Elimina ricambio</AlertDialogTitle>
+            <AlertDialogDescription>
+              {linkedRepairs.length > 0 ? (
+                allRepairsCompleted ? (
+                  <>
+                    Questo ricambio è stato utilizzato in {linkedRepairs.length} riparazione/i completata/e.
+                    Procedendo verranno rimossi anche i collegamenti. Vuoi continuare?
+                  </>
+                ) : (
+                  <>
+                    <span className="text-destructive font-medium">
+                      Impossibile eliminare: questo ricambio è utilizzato in {linkedRepairs.length} riparazione/i ancora attiva/e.
+                    </span>
+                  </>
+                )
+              ) : (
+                "Sei sicuro di voler eliminare questo ricambio? L'azione non può essere annullata."
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            {(linkedRepairs.length === 0 || allRepairsCompleted) && (
+              <AlertDialogAction 
+                onClick={handleDeletePart}
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                Elimina
+              </AlertDialogAction>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </CentroLayout>
   );
 }
