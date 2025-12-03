@@ -38,6 +38,7 @@ import CentroGuide from "@/pages/centro/CentroGuide";
 import CentroPreventivi from "@/pages/centro/CentroPreventivi";
 import CentroOrdini from "@/pages/centro/CentroOrdini";
 import CentroListino from "@/pages/centro/CentroListino";
+import CentroNuovoRitiro from "@/pages/centro/CentroNuovoRitiro";
 import NotFound from "@/pages/NotFound";
 
 export const AnimatedRoutes = () => {
@@ -210,6 +211,14 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCentro>
               <CentroListino />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/nuovo-ritiro"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroNuovoRitiro />
             </ProtectedRoute>
           }
         />
