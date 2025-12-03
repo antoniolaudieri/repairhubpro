@@ -67,46 +67,60 @@ export function IntakeSignatureStep({ onSignatureComplete, currentSignature }: I
             <h4 className="text-xs font-semibold text-foreground">Informativa Responsabilità</h4>
           </div>
           
-          <ScrollArea className="h-[120px] md:h-[140px]">
-            <div className="space-y-2 text-xs text-muted-foreground pr-2">
-              <p>Il laboratorio non si assume responsabilità per:</p>
-              <ul className="space-y-1 ml-2">
-                <li className="flex items-start gap-1.5">
-                  <span className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                  <span>Perdita o corruzione dati</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                  <span>Malfunzionamenti da danni preesistenti</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                  <span>Danni a componenti non sostituiti</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <span className="w-1 h-1 rounded-full bg-amber-500 mt-1.5 flex-shrink-0" />
-                  <span>Incompatibilità software post-intervento</span>
-                </li>
-              </ul>
-              <div className="pt-2 border-t border-rose-200 mt-2">
-                <p className="text-rose-600 font-semibold flex items-center gap-1">
+          <ScrollArea className="h-[160px] md:h-[180px]">
+            <div className="space-y-3 text-xs text-muted-foreground pr-2">
+              {/* Esonero Responsabilità */}
+              <div>
+                <p className="font-semibold text-foreground flex items-center gap-1 mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Esonero di Responsabilità (Art. 1229 c.c.)
+                </p>
+                <p>
+                  Il cliente esonera il laboratorio da ogni responsabilità per perdita, corruzione 
+                  o danneggiamento dei dati presenti sul dispositivo, malfunzionamenti derivanti 
+                  da danni preesistenti non dichiarati, danni a componenti non oggetto di intervento 
+                  e incompatibilità software post-riparazione. Si consiglia di effettuare un backup 
+                  completo prima della consegna.
+                </p>
+              </div>
+
+              {/* Variazione Preventivo */}
+              <div className="pt-2 border-t border-amber-200">
+                <p className="font-semibold text-foreground flex items-center gap-1 mb-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                  Variazione del Preventivo
+                </p>
+                <p>
+                  Il preventivo iniziale è indicativo e potrà subire variazioni in base ai danni 
+                  effettivamente riscontrati durante la diagnosi e l'intervento. Eventuali costi 
+                  aggiuntivi saranno comunicati al cliente per approvazione prima di procedere.
+                </p>
+              </div>
+
+              {/* Clausola Alienazione */}
+              <div className="pt-2 border-t border-rose-200">
+                <p className="text-rose-600 font-semibold flex items-center gap-1 mb-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                   Clausola di Alienazione (Art. 2756 c.c.)
                 </p>
-                <p className="text-rose-600/80 mt-1">
+                <p className="text-rose-600/80">
                   In conformità all'Art. 2756 del Codice Civile italiano (Diritto di Ritenzione), 
-                  il dispositivo non ritirato entro 30 giorni dalla comunicazione di completamento 
-                  della riparazione sarà considerato abbandonato e diventerà di proprietà del laboratorio.
+                  il dispositivo non ritirato entro <span className="font-semibold">30 giorni</span> dalla 
+                  comunicazione di completamento della riparazione sarà considerato abbandonato e 
+                  diventerà di proprietà del laboratorio (Art. 923 c.c. - Cose abbandonate).
                 </p>
                 <p className="text-rose-600/80 mt-1 text-[10px]">
                   Il laboratorio si riserva il diritto di alienare, vendere o smaltire il dispositivo 
                   abbandonato per recuperare i costi delle prestazioni eseguite.
                 </p>
               </div>
-              <p className="pt-2 text-foreground font-medium">
-                Firmando digitalmente, il cliente autorizza gli interventi, accetta il pagamento di €15 
-                per la diagnosi e la clausola di alienazione. La firma digitale costituisce prova 
-                dell'accettazione dei termini contrattuali ai sensi della normativa vigente.
+
+              {/* Firma */}
+              <p className="pt-2 border-t text-foreground font-medium">
+                Firmando digitalmente, il cliente autorizza gli interventi, accetta il pagamento 
+                anticipato di €15 per la diagnosi, le clausole di esonero responsabilità e 
+                alienazione sopra indicate. La firma digitale costituisce prova dell'accettazione 
+                dei termini contrattuali ai sensi del Regolamento eIDAS e del CAD.
               </p>
             </div>
           </ScrollArea>
