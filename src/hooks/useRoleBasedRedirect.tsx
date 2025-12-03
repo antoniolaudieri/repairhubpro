@@ -46,10 +46,8 @@ export const useRoleBasedRedirect = () => {
       redirectPath = "/customer-dashboard";
     }
 
-    // Only navigate if we're on auth page (after login)
-    if (location.pathname === "/auth") {
-      navigate(redirectPath, { replace: true });
-    }
+    // Navigate to role-based dashboard
+    navigate(redirectPath, { replace: true });
   }, [user, loading, location.pathname, isPlatformAdmin, isTechnician, isAdmin, isCorner, isRiparatore, isCentroAdmin, isCentroTech, isCustomer, navigate]);
 
   return {
