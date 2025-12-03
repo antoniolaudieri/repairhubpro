@@ -24,6 +24,7 @@ import {
   FileText,
   PenTool,
   FileSignature,
+  Building2,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { SignatureDialog } from "@/components/quotes/SignatureDialog";
@@ -73,7 +74,7 @@ interface Quote {
 
 export default function CustomerDashboard() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isCentroAdmin, isCentroTech } = useAuth();
   const [repairs, setRepairs] = useState<Repair[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -230,6 +231,13 @@ export default function CustomerDashboard() {
 
           <div className="flex items-center gap-4">
             <InAppNotifications />
+            
+            {(isCentroAdmin || isCentroTech) && (
+              <Button variant="default" size="sm" onClick={() => navigate("/centro")}>
+                <Building2 className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Centro</span>
+              </Button>
+            )}
             
             <Button variant="ghost" size="sm" onClick={() => navigate("/signature-history")}>
               <FileSignature className="h-4 w-4 mr-2" />
