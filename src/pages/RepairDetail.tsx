@@ -44,6 +44,7 @@ import { Switch } from "@/components/ui/switch";
 import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
 import RepairGuide from "@/components/repair/RepairGuide";
 import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
+import { AcceptanceFormPDF } from "@/components/repair/AcceptanceFormPDF";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface RepairGuideData {
@@ -159,6 +160,7 @@ export default function RepairDetail() {
   const [repairGuide, setRepairGuide] = useState<RepairGuideData | null>(null);
   const [guideFromCache, setGuideFromCache] = useState(false);
   const [guideUsageCount, setGuideUsageCount] = useState<number | undefined>();
+  const [acceptanceFormOpen, setAcceptanceFormOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -597,8 +599,8 @@ export default function RepairDetail() {
               </div>
             </div>
 
-            {/* Save Button */}
-            <div className="flex items-center gap-3">
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <Button 
                 variant="outline" 
                 onClick={() => navigate("/repairs")}
@@ -606,6 +608,14 @@ export default function RepairDetail() {
               >
                 <ArrowLeft className="h-4 w-4" />
                 <span className="hidden sm:inline">Indietro</span>
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setAcceptanceFormOpen(true)}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Modulo</span>
               </Button>
               <Button 
                 onClick={saveChanges} 
@@ -1266,6 +1276,34 @@ export default function RepairDetail() {
           </div>
         </div>
       </div>
+
+      {/* Acceptance Form PDF Dialog */}
+      <AcceptanceFormPDF
+        open={acceptanceFormOpen}
+        onOpenChange={setAcceptanceFormOpen}
+        repairData={{
+          id: repair.id,
+          created_at: repair.created_at,
+          intake_signature: (repair as any).intake_signature,
+          intake_signature_date: (repair as any).intake_signature_date,
+          estimated_cost: repair.estimated_cost,
+          diagnostic_fee: repair.diagnostic_fee || 15,
+          device: {
+            brand: repair.device.brand,
+            model: repair.device.model,
+            device_type: repair.device.device_type,
+            reported_issue: repair.device.reported_issue,
+            imei: repair.device.imei,
+            serial_number: repair.device.serial_number,
+          },
+          customer: {
+            name: repair.customer.name,
+            email: repair.customer.email,
+            phone: repair.customer.phone,
+            address: repair.customer.address,
+          },
+        }}
+      />
     </div>
   );
 }
