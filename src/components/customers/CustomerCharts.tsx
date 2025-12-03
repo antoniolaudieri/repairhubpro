@@ -94,7 +94,7 @@ export function CustomerCharts({ devices, allRepairs }: CustomerChartsProps) {
   }
 
   return (
-    <div className="grid gap-2 sm:gap-4">
+    <div className="grid gap-2 sm:gap-4 w-full overflow-hidden">
       {/* Status and Spending - Single column on mobile */}
       <div className="grid gap-2 sm:gap-4 sm:grid-cols-2">
         {/* Status Distribution */}

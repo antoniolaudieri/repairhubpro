@@ -186,7 +186,7 @@ export default function CustomerDetail() {
 
   return (
     <motion.div 
-      className="p-2.5 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6 max-w-7xl mx-auto"
+      className="p-2 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6 max-w-7xl mx-auto w-full overflow-x-hidden"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
