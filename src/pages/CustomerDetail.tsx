@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, Mail, Phone, MapPin, Edit, Smartphone, FileText, 
   Calendar, User, Laptop, Tablet, Monitor, Gamepad2, Watch, HelpCircle,
-  ChevronRight, Clock, Euro, ShoppingCart
+  ChevronRight, Clock, Euro, ShoppingCart, Package
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -45,6 +45,15 @@ interface Device {
   }>;
 }
 
+interface Order {
+  id: string;
+  order_number: string;
+  status: string;
+  total_amount: number | null;
+  created_at: string;
+  supplier: string;
+}
+
 const deviceIcons: Record<string, React.ReactNode> = {
   smartphone: <Smartphone className="h-5 w-5" />,
   tablet: <Tablet className="h-5 w-5" />,
@@ -59,6 +68,7 @@ export default function CustomerDetail() {
   const navigate = useNavigate();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
@@ -98,6 +108,16 @@ export default function CustomerDetail() {
 
       if (devicesError) throw devicesError;
       setDevices(devicesData || []);
+
+      // Fetch orders for this customer
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("orders")
+        .select("id, order_number, status, total_amount, created_at, supplier")
+        .eq("customer_id", id)
+        .order("created_at", { ascending: false });
+
+      if (ordersError) throw ordersError;
+      setOrders(ordersData || []);
     } catch (error: any) {
       toast.error(error.message || "Errore nel caricamento dei dati");
       navigate("/customers");
@@ -467,6 +487,72 @@ export default function CustomerDetail() {
           )}
         </CardContent>
       </Card>
+      </motion.div>
+
+      {/* Orders History */}
+      <motion.div variants={itemVariants}>
+        <Card>
+          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs sm:text-sm font-medium">Ordini Ricambi</CardTitle>
+              <Badge variant="secondary" className="text-[10px] sm:text-xs">{orders.length}</Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            {orders.length === 0 ? (
+              <div className="text-center py-6">
+                <div className="h-10 w-10 rounded-lg bg-muted/50 flex items-center justify-center mx-auto mb-2">
+                  <Package className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-xs text-muted-foreground">Nessun ordine</p>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {orders.map((order) => {
+                  const statusConfig: Record<string, { label: string; className: string }> = {
+                    draft: { label: "Bozza", className: "bg-muted text-muted-foreground" },
+                    pending: { label: "In Attesa", className: "bg-warning/10 text-warning border-warning/20" },
+                    ordered: { label: "Ordinato", className: "bg-primary/10 text-primary border-primary/20" },
+                    received: { label: "Ricevuto", className: "bg-accent/10 text-accent border-accent/20" },
+                  };
+                  const { label, className } = statusConfig[order.status] || { label: order.status, className: "" };
+                  
+                  return (
+                    <div
+                      key={order.id}
+                      className="flex items-center gap-2 p-2 sm:p-2.5 border rounded-lg hover:bg-muted/30 cursor-pointer transition-colors"
+                      onClick={() => navigate("/orders")}
+                    >
+                      <div className="h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground flex-shrink-0">
+                        <Package className="h-4 w-4" />
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs sm:text-sm truncate">{order.order_number}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {format(new Date(order.created_at), "dd MMM yy", { locale: it })}
+                        </p>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <Badge variant="outline" className={`text-[10px] ${className}`}>
+                          {label}
+                        </Badge>
+                        {order.total_amount && (
+                          <span className="text-xs font-semibold text-accent">
+                            €{order.total_amount.toFixed(0)}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50 flex-shrink-0" />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </motion.div>
 
       <CustomerDialog
