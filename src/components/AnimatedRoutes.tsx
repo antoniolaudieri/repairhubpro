@@ -33,6 +33,10 @@ import CentroCollaboratori from "@/pages/centro/CentroCollaboratori";
 import CentroAccessi from "@/pages/centro/CentroAccessi";
 import CentroCommissioni from "@/pages/centro/CentroCommissioni";
 import CentroImpostazioni from "@/pages/centro/CentroImpostazioni";
+import CentroGuide from "@/pages/centro/CentroGuide";
+import CentroPreventivi from "@/pages/centro/CentroPreventivi";
+import CentroOrdini from "@/pages/centro/CentroOrdini";
+import CentroListino from "@/pages/centro/CentroListino";
 import NotFound from "@/pages/NotFound";
 
 export const AnimatedRoutes = () => {
@@ -165,6 +169,38 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCentro>
               <CentroImpostazioni />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/guide"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroGuide />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/preventivi"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroPreventivi />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/ordini"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroOrdini />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/listino"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroListino />
             </ProtectedRoute>
           }
         />
