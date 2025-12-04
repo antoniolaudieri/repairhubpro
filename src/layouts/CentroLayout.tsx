@@ -1,6 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { CentroSidebar } from "@/components/centro/CentroSidebar";
+import { CentroNotificationCenter } from "@/components/centro/CentroNotificationCenter";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2 } from "lucide-react";
@@ -51,6 +52,11 @@ export const CentroLayout = ({ children }: CentroLayoutProps) => {
                 </div>
                 <h1 className="text-base sm:text-lg font-bold text-foreground hidden sm:block truncate max-w-[200px]">{businessName}</h1>
               </div>
+            </div>
+            
+            {/* Notification Center */}
+            <div className="flex items-center">
+              <CentroNotificationCenter />
             </div>
           </header>
           <main className="flex-1 bg-gradient-to-br from-background via-background to-muted/20 overflow-x-hidden">
