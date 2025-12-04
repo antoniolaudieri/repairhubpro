@@ -119,9 +119,87 @@ export function useCentroNotifications() {
       )
       .subscribe();
 
-    // Listen for repair requests directly assigned to this Centro
-    const repairRequestsChannel = supabase
-      .channel("centro-repair-requests")
+    // Listen for repair requests directly assigned to this Centro (INSERT for new requests from Corner)
+    const repairRequestsInsertChannel = supabase
+      .channel("centro-repair-requests-insert")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "repair_requests",
+        },
+        async (payload) => {
+          // Check if this repair request is assigned to our Centro from a Corner
+          if (
+            payload.new.assigned_provider_type === "centro" &&
+            payload.new.assigned_provider_id === centroId &&
+            payload.new.corner_id
+          ) {
+            console.log("New repair request from Corner:", payload);
+
+            const { data: repairRequest } = await supabase
+              .from("repair_requests")
+              .select(`
+                id,
+                device_type,
+                device_brand,
+                device_model,
+                issue_description,
+                estimated_cost,
+                corner:corners(business_name)
+              `)
+              .eq("id", payload.new.id)
+              .single();
+
+            if (repairRequest) {
+              const cornerName = (repairRequest.corner as any)?.business_name || "Corner";
+              const title = "🔔 Nuovo Lavoro da Corner!";
+              const message = `${cornerName} ti ha assegnato: ${repairRequest.device_brand || ""} ${repairRequest.device_model || repairRequest.device_type} - ${repairRequest.issue_description?.substring(0, 50)}...`;
+
+              const notification: CentroNotification = {
+                id: `corner-request-${payload.new.id}-${Date.now()}`,
+                type: "new_job_offer",
+                title,
+                message,
+                timestamp: new Date(),
+                read: false,
+                linkTo: `/centro/lavori-corner`,
+                data: {
+                  repairRequestId: payload.new.id,
+                  estimatedCost: repairRequest.estimated_cost,
+                },
+              };
+
+              setNotifications((prev) => [notification, ...prev]);
+
+              // Toast prominente
+              toast.success(title, { 
+                description: message,
+                duration: 10000,
+                action: {
+                  label: "Vedi",
+                  onClick: () => window.location.href = "/centro/lavori-corner",
+                },
+              });
+
+              // Push notification browser
+              if (isGranted) {
+                sendNotification(title, {
+                  body: message,
+                  tag: `corner-request-${payload.new.id}`,
+                  data: { url: `/centro/lavori-corner` },
+                });
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Listen for repair requests UPDATE (for status changes)
+    const repairRequestsUpdateChannel = supabase
+      .channel("centro-repair-requests-update")
       .on(
         "postgres_changes",
         {
@@ -134,6 +212,7 @@ export function useCentroNotifications() {
           if (
             payload.new.assigned_provider_type === "centro" &&
             payload.new.assigned_provider_id === centroId &&
+            payload.new.corner_id &&
             (payload.old.assigned_provider_id !== centroId || !payload.old.assigned_provider_id)
           ) {
             console.log("Repair request assigned to Centro:", payload);
@@ -153,9 +232,9 @@ export function useCentroNotifications() {
               .single();
 
             if (repairRequest) {
-              const cornerName = (repairRequest.corner as any)?.business_name || "Cliente diretto";
-              const title = "✅ Lavoro Assegnato!";
-              const message = `Nuovo lavoro da ${cornerName}: ${repairRequest.device_brand || ""} ${repairRequest.device_model || repairRequest.device_type}`;
+              const cornerName = (repairRequest.corner as any)?.business_name || "Corner";
+              const title = "🔔 Nuovo Lavoro da Corner!";
+              const message = `${cornerName} ti ha assegnato: ${repairRequest.device_brand || ""} ${repairRequest.device_model || repairRequest.device_type}`;
 
               const notification: CentroNotification = {
                 id: `repair-assigned-${payload.new.id}-${Date.now()}`,
@@ -164,7 +243,7 @@ export function useCentroNotifications() {
                 message,
                 timestamp: new Date(),
                 read: false,
-                linkTo: `/centro/lavori`,
+                linkTo: `/centro/lavori-corner`,
               };
 
               setNotifications((prev) => [notification, ...prev]);
@@ -178,7 +257,7 @@ export function useCentroNotifications() {
                 sendNotification(title, {
                   body: message,
                   tag: `repair-${payload.new.id}`,
-                  data: { url: `/centro/lavori` },
+                  data: { url: `/centro/lavori-corner` },
                 });
               }
             }
@@ -230,7 +309,8 @@ export function useCentroNotifications() {
 
     return () => {
       supabase.removeChannel(jobOffersChannel);
-      supabase.removeChannel(repairRequestsChannel);
+      supabase.removeChannel(repairRequestsInsertChannel);
+      supabase.removeChannel(repairRequestsUpdateChannel);
       supabase.removeChannel(ordersChannel);
     };
   }, [user, isCentroAdmin, centroId, isGranted, sendNotification]);
