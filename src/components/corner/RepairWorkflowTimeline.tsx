@@ -34,9 +34,11 @@ const getWorkflowSteps = (currentStatus: string): WorkflowStep[] => {
     { id: 'in_diagnosis', label: 'In Diagnosi', icon: Search },
     { id: 'waiting_for_parts', label: 'Attesa Ricambi', icon: Package },
     { id: 'in_repair', label: 'In Riparazione', icon: Wrench },
+    { id: 'in_progress', label: 'In Lavorazione', icon: Wrench },
     { id: 'repair_completed', label: 'Riparato', icon: CheckCircle2 },
     { id: 'ready_for_return', label: 'Pronto Consegna', icon: Store },
     { id: 'at_corner', label: 'Al Corner', icon: Store },
+    { id: 'completed', label: 'Completato', icon: User },
     { id: 'delivered', label: 'Consegnato', icon: User },
   ];
 
@@ -174,6 +176,7 @@ export const getStatusColor = (status: string): string => {
     in_diagnosis: "bg-indigo-500/20 text-indigo-700 border-indigo-500/30",
     waiting_for_parts: "bg-amber-500/20 text-amber-700 border-amber-500/30",
     in_repair: "bg-blue-500/20 text-blue-700 border-blue-500/30",
+    in_progress: "bg-blue-500/20 text-blue-700 border-blue-500/30",
     repair_completed: "bg-teal-500/20 text-teal-700 border-teal-500/30",
     ready_for_return: "bg-lime-500/20 text-lime-700 border-lime-500/30",
     at_corner: "bg-violet-500/20 text-violet-700 border-violet-500/30",
