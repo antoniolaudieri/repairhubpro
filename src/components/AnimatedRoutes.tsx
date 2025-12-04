@@ -25,6 +25,9 @@ import PlatformAdmin from "@/pages/PlatformAdmin";
 import ProviderRegistration from "@/pages/ProviderRegistration";
 import CornerDashboard from "@/pages/CornerDashboard";
 import CornerNuovaSegnalazione from "@/pages/corner/CornerNuovaSegnalazione";
+import CornerSegnalazioni from "@/pages/corner/CornerSegnalazioni";
+import CornerCommissioni from "@/pages/corner/CornerCommissioni";
+import CornerPartnership from "@/pages/corner/CornerPartnership";
 import RiparatoreDashboard from "@/pages/RiparatoreDashboard";
 import CentroDashboard from "@/pages/CentroDashboard";
 import CentroLavori from "@/pages/centro/CentroLavori";
@@ -107,6 +110,30 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCorner>
               <CornerNuovaSegnalazione />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/corner/segnalazioni"
+          element={
+            <ProtectedRoute requireCorner>
+              <CornerSegnalazioni />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/corner/commissioni"
+          element={
+            <ProtectedRoute requireCorner>
+              <CornerCommissioni />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/corner/partnership"
+          element={
+            <ProtectedRoute requireCorner>
+              <CornerPartnership />
             </ProtectedRoute>
           }
         />
