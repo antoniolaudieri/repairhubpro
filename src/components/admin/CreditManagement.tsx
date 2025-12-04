@@ -48,6 +48,7 @@ interface EntityCredit {
   credit_balance: number;
   payment_status: string;
   last_credit_update: string | null;
+  pending_commission: number;
 }
 
 const statusColors: Record<string, string> = {
@@ -65,7 +66,7 @@ const statusLabels: Record<string, string> = {
 export function CreditManagement() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("requests");
+  const [activeTab, setActiveTab] = useState("entities");
   const [selectedEntity, setSelectedEntity] = useState<EntityCredit | null>(null);
   const [manualAmount, setManualAmount] = useState("");
   const [showManualTopup, setShowManualTopup] = useState(false);
@@ -111,10 +112,24 @@ export function CreditManagement() {
     queryFn: async () => {
       const result: EntityCredit[] = [];
 
+      // Fetch centri
       const { data: centri } = await supabase
         .from("centri_assistenza")
         .select("id, business_name, credit_balance, payment_status, last_credit_update")
         .eq("status", "approved");
+
+      // Fetch pending commissions for centri
+      const { data: centroCommissions } = await supabase
+        .from("commission_ledger")
+        .select("centro_id, platform_commission")
+        .not("centro_id", "is", null)
+        .eq("platform_paid", false);
+
+      const centroCommissionMap = new Map<string, number>();
+      centroCommissions?.forEach((c: any) => {
+        const current = centroCommissionMap.get(c.centro_id) || 0;
+        centroCommissionMap.set(c.centro_id, current + (c.platform_commission || 0));
+      });
 
       centri?.forEach((c: any) => {
         result.push({
@@ -124,9 +139,11 @@ export function CreditManagement() {
           credit_balance: c.credit_balance || 0,
           payment_status: c.payment_status || "good_standing",
           last_credit_update: c.last_credit_update,
+          pending_commission: centroCommissionMap.get(c.id) || 0,
         });
       });
 
+      // Fetch corners
       const { data: corners } = await supabase
         .from("corners")
         .select("id, business_name, credit_balance, payment_status, last_credit_update")
@@ -140,6 +157,7 @@ export function CreditManagement() {
           credit_balance: c.credit_balance || 0,
           payment_status: c.payment_status || "good_standing",
           last_credit_update: c.last_credit_update,
+          pending_commission: 0, // Corners don't pay commission, they receive it
         });
       });
 
@@ -422,6 +440,11 @@ export function CreditManagement() {
                             <p className={`font-bold text-lg ${entity.credit_balance < 0 ? "text-destructive" : ""}`}>
                               €{entity.credit_balance.toFixed(2)}
                             </p>
+                            {entity.pending_commission > 0 && (
+                              <p className="text-xs text-muted-foreground">
+                                Commissioni dovute: <span className="text-warning font-medium">€{entity.pending_commission.toFixed(2)}</span>
+                              </p>
+                            )}
                             <Badge className={statusColors[entity.payment_status]}>
                               {statusLabels[entity.payment_status]}
                             </Badge>
