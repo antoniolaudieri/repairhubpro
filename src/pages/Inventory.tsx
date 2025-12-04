@@ -76,16 +76,19 @@ interface SparePart {
 
 const CATEGORIES = [
   "Tutti",
-  "Schermo",
+  "Display",
   "Batteria",
   "Connettore",
   "Fotocamera",
-  "Speaker",
+  "Altoparlante",
   "Microfono",
   "Tasto",
   "Cover",
   "Vetro",
   "Flex",
+  "Scheda Madre",
+  "Accessori",
+  "Dispositivi",
   "Altro"
 ];
 

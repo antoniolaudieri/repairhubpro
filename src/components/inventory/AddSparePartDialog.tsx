@@ -27,6 +27,8 @@ const CATEGORIES = [
   "Scheda Madre",
   "Antenna",
   "Sensore",
+  "Accessori",
+  "Dispositivi",
   "Altro"
 ];
 

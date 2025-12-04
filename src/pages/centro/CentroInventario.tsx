@@ -79,14 +79,17 @@ const CATEGORIES = [
   "Tutti",
   "Display",
   "Batteria",
-  "Scheda Madre",
+  "Connettore",
   "Fotocamera",
   "Altoparlante",
   "Microfono",
-  "Connettore",
-  "Vetro",
+  "Tasto",
   "Cover",
+  "Vetro",
   "Flex",
+  "Scheda Madre",
+  "Accessori",
+  "Dispositivi",
   "Altro"
 ];
 
