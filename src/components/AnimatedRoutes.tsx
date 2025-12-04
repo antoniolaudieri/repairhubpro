@@ -24,6 +24,7 @@ import PricingSettings from "@/pages/PricingSettings";
 import PlatformAdmin from "@/pages/PlatformAdmin";
 import ProviderRegistration from "@/pages/ProviderRegistration";
 import CornerDashboard from "@/pages/CornerDashboard";
+import CornerNuovaSegnalazione from "@/pages/corner/CornerNuovaSegnalazione";
 import RiparatoreDashboard from "@/pages/RiparatoreDashboard";
 import CentroDashboard from "@/pages/CentroDashboard";
 import CentroLavori from "@/pages/centro/CentroLavori";
@@ -98,6 +99,14 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCorner>
               <CornerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/corner/nuova-segnalazione"
+          element={
+            <ProtectedRoute requireCorner>
+              <CornerNuovaSegnalazione />
             </ProtectedRoute>
           }
         />

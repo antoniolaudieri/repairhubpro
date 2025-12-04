@@ -1,16 +1,18 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CornerLayout } from "@/layouts/CornerLayout";
 import { CornerStats } from "@/components/corner/CornerStats";
-import { RepairRequestForm } from "@/components/corner/RepairRequestForm";
 import { RepairRequestsList } from "@/components/corner/RepairRequestsList";
 import { CommissionHistory } from "@/components/corner/CommissionHistory";
 import { PageTransition } from "@/components/PageTransition";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CreditBalanceWidget } from "@/components/credit/CreditBalanceWidget";
 import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
+import { Plus } from "lucide-react";
 
 interface Corner {
   id: string;
@@ -23,6 +25,7 @@ interface Corner {
 
 export default function CornerDashboard() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [corner, setCorner] = useState<Corner | null>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
@@ -194,24 +197,22 @@ export default function CornerDashboard() {
             </div>
           </div>
 
-          <Tabs defaultValue="new" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="new" disabled={corner?.payment_status === "suspended"}>
-                Nuova Segnalazione
-              </TabsTrigger>
+          {/* CTA Button */}
+          <Button
+            onClick={() => navigate("/corner/nuova-segnalazione")}
+            disabled={corner?.payment_status === "suspended"}
+            className="w-full md:w-auto"
+            size="lg"
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            Nuova Segnalazione
+          </Button>
+
+          <Tabs defaultValue="requests" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="requests">Segnalazioni</TabsTrigger>
               <TabsTrigger value="commissions">Commissioni</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="new" className="mt-4">
-              {corner && (
-                <RepairRequestForm
-                  cornerId={corner.id}
-                  onSuccess={fetchCornerData}
-                  isSuspended={corner.payment_status === "suspended"}
-                />
-              )}
-            </TabsContent>
 
             <TabsContent value="requests" className="mt-4">
               <RepairRequestsList requests={requests} isLoading={isLoading} />
