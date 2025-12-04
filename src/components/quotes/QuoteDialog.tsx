@@ -36,9 +36,23 @@ interface QuoteDialogProps {
   onOpenChange: (open: boolean) => void;
   customerId: string;
   onSuccess: () => void;
+  // Pre-filled values (optional)
+  initialDeviceType?: string;
+  initialDeviceBrand?: string;
+  initialDeviceModel?: string;
+  initialIssueDescription?: string;
 }
 
-export function QuoteDialog({ open, onOpenChange, customerId, onSuccess }: QuoteDialogProps) {
+export function QuoteDialog({ 
+  open, 
+  onOpenChange, 
+  customerId, 
+  onSuccess,
+  initialDeviceType = "",
+  initialDeviceBrand = "",
+  initialDeviceModel = "",
+  initialIssueDescription = ""
+}: QuoteDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<QuoteItem[]>([]);
@@ -51,10 +65,10 @@ export function QuoteDialog({ open, onOpenChange, customerId, onSuccess }: Quote
   const form = useForm({
     resolver: zodResolver(quoteSchema),
     defaultValues: {
-      deviceType: "",
-      deviceBrand: "",
-      deviceModel: "",
-      issueDescription: "",
+      deviceType: initialDeviceType,
+      deviceBrand: initialDeviceBrand,
+      deviceModel: initialDeviceModel,
+      issueDescription: initialIssueDescription,
       diagnosis: "",
       laborCost: "0",
       notes: "",
