@@ -38,10 +38,12 @@ import {
   Trash2,
   Loader2,
   PackageCheck,
-  User
+  User,
+  Plus
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { NewOrderDialog } from "@/components/orders/NewOrderDialog";
 
 interface OrderItem {
   id: string;
@@ -147,6 +149,7 @@ export default function CentroOrdini() {
   const [processingOrder, setProcessingOrder] = useState<string | null>(null);
   const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [newOrderDialogOpen, setNewOrderDialogOpen] = useState(false);
 
   useEffect(() => {
     if (user) fetchCentroAndOrders();
@@ -438,18 +441,27 @@ export default function CentroOrdini() {
                   </p>
                 </div>
               </div>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="flex items-center gap-2 bg-white/10 backdrop-blur rounded-full px-4 py-2"
-              >
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-                </span>
-                <span className="text-sm font-medium">Real-Time Attivo</span>
-              </motion.div>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => setNewOrderDialogOpen(true)}
+                  className="bg-white text-blue-700 hover:bg-blue-50 font-medium"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuovo Ordine
+                </Button>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="flex items-center gap-2 bg-white/10 backdrop-blur rounded-full px-4 py-2"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                  </span>
+                  <span className="text-sm font-medium">Real-Time Attivo</span>
+                </motion.div>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -716,6 +728,14 @@ export default function CentroOrdini() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* New Order Dialog */}
+      <NewOrderDialog 
+        open={newOrderDialogOpen} 
+        onOpenChange={setNewOrderDialogOpen}
+        onOrderCreated={fetchCentroAndOrders}
+        centroId={centroId}
+      />
     </CentroLayout>
   );
 }
