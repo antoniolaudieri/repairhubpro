@@ -34,6 +34,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { toast } from "sonner";
 import { CreditBalanceWidget } from "@/components/credit/CreditBalanceWidget";
 import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
+import { PendingJobOffersBanner } from "@/components/centro/PendingJobOffersBanner";
 
 interface Centro {
   id: string;
@@ -540,6 +541,9 @@ export default function CentroDashboard() {
                 creditBalance={centro.credit_balance || 0}
               />
             )}
+
+            {/* Pending Job Offers from Corners */}
+            {centro && <PendingJobOffersBanner centroId={centro.id} />}
 
             {/* Forfeiture Warning Alert */}
             {forfeitureWarnings.length > 0 && (
