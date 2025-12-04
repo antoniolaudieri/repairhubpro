@@ -12,7 +12,7 @@ import { Wrench, Star } from "lucide-react";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, signIn, signUp, userRole, loading: authLoading } = useAuth();
+  const { user, signIn, signUp, userRoles, loading: authLoading } = useAuth();
   const { getRedirectPath } = useRoleBasedRedirect();
   const [loading, setLoading] = useState(false);
   
@@ -27,12 +27,12 @@ const Auth = () => {
   const [techPassword, setTechPassword] = useState("");
 
   useEffect(() => {
-    // Wait for auth to finish loading and for role to be fetched
-    if (user && !authLoading && userRole) {
+    // Wait for auth to finish loading and for roles to be fetched
+    if (user && !authLoading && userRoles.length > 0) {
       const redirectPath = getRedirectPath();
       navigate(redirectPath, { replace: true });
     }
-  }, [user, userRole, authLoading, navigate, getRedirectPath]);
+  }, [user, userRoles, authLoading, navigate, getRedirectPath]);
 
   const handleCustomerSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
