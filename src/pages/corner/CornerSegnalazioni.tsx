@@ -8,9 +8,26 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Phone, Mail, Calendar, Building2 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+
+interface QuoteItem {
+  description: string;
+  quantity: number;
+  total: number;
+  type: 'part' | 'labor' | 'service';
+}
+
+interface Quote {
+  id: string;
+  total_cost: number;
+  status: string;
+  signed_at: string | null;
+  items: string;
+  created_at: string;
+}
 
 interface RepairRequest {
   id: string;
@@ -31,12 +48,14 @@ interface RepairRequest {
   centro?: {
     business_name: string;
   } | null;
+  quote?: Quote | null;
 }
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30",
   assigned: "bg-blue-500/20 text-blue-700 border-blue-500/30",
-  in_progress: "bg-purple-500/20 text-purple-700 border-purple-500/30",
+  quote_sent: "bg-purple-500/20 text-purple-700 border-purple-500/30",
+  in_progress: "bg-indigo-500/20 text-indigo-700 border-indigo-500/30",
   completed: "bg-green-500/20 text-green-700 border-green-500/30",
   cancelled: "bg-red-500/20 text-red-700 border-red-500/30",
 };
@@ -44,9 +63,16 @@ const statusColors: Record<string, string> = {
 const statusLabels: Record<string, string> = {
   pending: "In Attesa",
   assigned: "Assegnata",
+  quote_sent: "Preventivo Inviato",
   in_progress: "In Corso",
   completed: "Completata",
   cancelled: "Annullata",
+};
+
+const quoteStatusLabels: Record<string, string> = {
+  pending: "In Attesa Firma",
+  accepted: "Accettato",
+  rejected: "Rifiutato",
 };
 
 export default function CornerSegnalazioni() {
@@ -57,6 +83,7 @@ export default function CornerSegnalazioni() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [cornerId, setCornerId] = useState<string | null>(null);
+  const [expandedQuotes, setExpandedQuotes] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user) {
@@ -99,22 +126,56 @@ export default function CornerSegnalazioni() {
       return;
     }
 
-    // Load centro names for assigned requests
-    const requestsWithCentro = await Promise.all(
+    // Load centro names and quotes for requests
+    const requestsWithData = await Promise.all(
       (data || []).map(async (req) => {
+        let centro = null;
+        let quote = null;
+
+        // Load centro info
         if (req.assigned_provider_type === "centro" && req.assigned_provider_id) {
-          const { data: centro } = await supabase
+          const { data: centroData } = await supabase
             .from("centri_assistenza")
             .select("business_name")
             .eq("id", req.assigned_provider_id)
             .single();
-          return { ...req, centro };
+          centro = centroData;
         }
-        return req;
+
+        // Load quote linked to this repair_request
+        const { data: quoteData } = await supabase
+          .from("quotes")
+          .select("id, total_cost, status, signed_at, items, created_at")
+          .eq("repair_request_id", req.id)
+          .maybeSingle();
+        
+        quote = quoteData;
+
+        return { ...req, centro, quote };
       })
     );
 
-    setRequests(requestsWithCentro);
+    setRequests(requestsWithData);
+  };
+
+  const toggleQuoteExpanded = (requestId: string) => {
+    setExpandedQuotes(prev => {
+      const next = new Set(prev);
+      if (next.has(requestId)) {
+        next.delete(requestId);
+      } else {
+        next.add(requestId);
+      }
+      return next;
+    });
+  };
+
+  const parseQuoteItems = (itemsJson: string): QuoteItem[] => {
+    try {
+      return JSON.parse(itemsJson);
+    } catch {
+      return [];
+    }
   };
 
   const filteredRequests = requests.filter((req) => {
@@ -173,6 +234,7 @@ export default function CornerSegnalazioni() {
               <SelectItem value="all">Tutti gli stati</SelectItem>
               <SelectItem value="pending">In Attesa</SelectItem>
               <SelectItem value="assigned">Assegnata</SelectItem>
+              <SelectItem value="quote_sent">Preventivo Inviato</SelectItem>
               <SelectItem value="in_progress">In Corso</SelectItem>
               <SelectItem value="completed">Completata</SelectItem>
               <SelectItem value="cancelled">Annullata</SelectItem>
@@ -181,7 +243,7 @@ export default function CornerSegnalazioni() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">{requests.length}</div>
@@ -194,6 +256,14 @@ export default function CornerSegnalazioni() {
                 {requests.filter((r) => r.status === "pending").length}
               </div>
               <div className="text-sm text-muted-foreground">In Attesa</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-purple-600">
+                {requests.filter((r) => r.status === "quote_sent").length}
+              </div>
+              <div className="text-sm text-muted-foreground">Preventivi</div>
             </CardContent>
           </Card>
           <Card>
@@ -246,6 +316,12 @@ export default function CornerSegnalazioni() {
                         <Badge className={statusColors[request.status] || ""}>
                           {statusLabels[request.status] || request.status}
                         </Badge>
+                        {request.quote && (
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                            <FileText className="h-3 w-3 mr-1" />
+                            Preventivo
+                          </Badge>
+                        )}
                       </div>
 
                       <p className="text-sm text-muted-foreground line-clamp-2">
@@ -281,11 +357,80 @@ export default function CornerSegnalazioni() {
                         <Calendar className="h-3 w-3" />
                         {format(new Date(request.created_at), "dd MMM yyyy", { locale: it })}
                       </div>
-                      {request.estimated_cost && (
+                      {request.quote ? (
+                        <div className="text-lg font-semibold text-primary">€{request.quote.total_cost.toFixed(2)}</div>
+                      ) : request.estimated_cost ? (
                         <div className="text-lg font-semibold">€{request.estimated_cost.toFixed(2)}</div>
-                      )}
+                      ) : null}
                     </div>
                   </div>
+
+                  {/* Quote Details Section - Only visible for Corner without unit prices */}
+                  {request.quote && (
+                    <Collapsible 
+                      open={expandedQuotes.has(request.id)}
+                      onOpenChange={() => toggleQuoteExpanded(request.id)}
+                      className="mt-4"
+                    >
+                      <CollapsibleTrigger asChild>
+                        <Button variant="outline" size="sm" className="w-full justify-between">
+                          <span className="flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Dettagli Preventivo
+                            <Badge variant="secondary" className="ml-2">
+                              {request.quote.signed_at 
+                                ? "Firmato" 
+                                : quoteStatusLabels[request.quote.status] || request.quote.status}
+                            </Badge>
+                          </span>
+                          {expandedQuotes.has(request.id) ? (
+                            <ChevronUp className="h-4 w-4" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-3">
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                          <div className="text-sm text-muted-foreground mb-2">
+                            Creato: {format(new Date(request.quote.created_at), "dd MMM yyyy HH:mm", { locale: it })}
+                          </div>
+                          
+                          {/* Items list - showing only description and total, NOT unit price */}
+                          <div className="space-y-2">
+                            {parseQuoteItems(request.quote.items).map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                  <div className="h-6 w-6 rounded flex items-center justify-center bg-background">
+                                    {item.type === 'part' && <Package className="h-3.5 w-3.5 text-blue-600" />}
+                                    {item.type === 'labor' && <Wrench className="h-3.5 w-3.5 text-amber-600" />}
+                                    {item.type === 'service' && <Headphones className="h-3.5 w-3.5 text-purple-600" />}
+                                  </div>
+                                  <span className="text-sm truncate">{item.description}</span>
+                                  {item.quantity > 1 && (
+                                    <Badge variant="secondary" className="text-xs">x{item.quantity}</Badge>
+                                  )}
+                                </div>
+                                <span className="font-medium text-sm">€{item.total.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Total */}
+                          <div className="flex justify-between items-center pt-3 border-t border-border font-semibold">
+                            <span>Totale Preventivo</span>
+                            <span className="text-lg text-primary">€{request.quote.total_cost.toFixed(2)}</span>
+                          </div>
+
+                          {request.quote.signed_at && (
+                            <div className="text-xs text-emerald-600 flex items-center gap-1 mt-2">
+                              ✓ Firmato il {format(new Date(request.quote.signed_at), "dd MMM yyyy HH:mm", { locale: it })}
+                            </div>
+                          )}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
                 </CardContent>
               </Card>
             ))

@@ -956,6 +956,7 @@ export type Database = {
           labor_cost: number | null
           notes: string | null
           parts_cost: number | null
+          repair_request_id: string | null
           signature_data: string | null
           signed_at: string | null
           status: string
@@ -977,6 +978,7 @@ export type Database = {
           labor_cost?: number | null
           notes?: string | null
           parts_cost?: number | null
+          repair_request_id?: string | null
           signature_data?: string | null
           signed_at?: string | null
           status?: string
@@ -998,6 +1000,7 @@ export type Database = {
           labor_cost?: number | null
           notes?: string | null
           parts_cost?: number | null
+          repair_request_id?: string | null
           signature_data?: string | null
           signed_at?: string | null
           status?: string
@@ -1011,6 +1014,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_repair_request_id_fkey"
+            columns: ["repair_request_id"]
+            isOneToOne: false
+            referencedRelation: "repair_requests"
             referencedColumns: ["id"]
           },
         ]
