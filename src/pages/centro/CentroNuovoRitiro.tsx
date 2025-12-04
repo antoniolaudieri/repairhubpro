@@ -49,6 +49,7 @@ export default function CentroNuovoRitiro() {
   const [selectedLabors, setSelectedLabors] = useState<{ id: string; name: string; price: number }[]>([]);
   const [laborCost, setLaborCost] = useState<number>(0);
   const [diagnosticFee, setDiagnosticFee] = useState<number>(15);
+  const [isFeeDisabledBySettings, setIsFeeDisabledBySettings] = useState(false);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -85,6 +86,7 @@ export default function CentroNuovoRitiro() {
         const settings = data.settings as { disable_diagnostic_fee?: boolean } | null;
         if (settings?.disable_diagnostic_fee) {
           setDiagnosticFee(0);
+          setIsFeeDisabledBySettings(true);
         }
       }
     };
@@ -760,7 +762,8 @@ export default function CentroNuovoRitiro() {
             servicesTotal={selectedServices.reduce((sum, s) => sum + s.price, 0)}
             laborTotal={laborCost}
             diagnosticFee={diagnosticFee}
-            onDiagnosticFeeChange={setDiagnosticFee}
+            onDiagnosticFeeChange={isFeeDisabledBySettings ? undefined : setDiagnosticFee}
+            isFeeDisabledBySettings={isFeeDisabledBySettings}
           />
         );
 
