@@ -17,9 +17,16 @@ import {
   Save,
   Upload,
   Image as ImageIcon,
-  Trash2
+  Trash2,
+  Receipt
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+
+interface CentroSettings {
+  disable_diagnostic_fee?: boolean;
+  [key: string]: boolean | string | number | undefined;
+}
 
 interface Centro {
   id: string;
@@ -33,6 +40,7 @@ interface Centro {
   commission_rate: number;
   notes: string | null;
   logo_url: string | null;
+  settings: CentroSettings | null;
 }
 
 export default function CentroImpostazioni() {
@@ -41,6 +49,7 @@ export default function CentroImpostazioni() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [disableDiagnosticFee, setDisableDiagnosticFee] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -63,7 +72,24 @@ export default function CentroImpostazioni() {
         .single();
 
       if (centroError) throw centroError;
-      setCentro(centroData);
+      
+      const settings = centroData.settings as CentroSettings | null;
+      setDisableDiagnosticFee(settings?.disable_diagnostic_fee || false);
+      
+      setCentro({
+        id: centroData.id,
+        business_name: centroData.business_name,
+        address: centroData.address,
+        phone: centroData.phone,
+        email: centroData.email,
+        vat_number: centroData.vat_number,
+        latitude: centroData.latitude,
+        longitude: centroData.longitude,
+        commission_rate: centroData.commission_rate,
+        notes: centroData.notes,
+        logo_url: centroData.logo_url,
+        settings: settings,
+      });
       
       setFormData({
         business_name: centroData.business_name || "",
@@ -90,6 +116,11 @@ export default function CentroImpostazioni() {
 
     setIsSaving(true);
     try {
+      const newSettings: CentroSettings = {
+        ...(centro.settings as CentroSettings || {}),
+        disable_diagnostic_fee: disableDiagnosticFee,
+      };
+      
       const { error } = await supabase
         .from("centri_assistenza")
         .update({
@@ -99,6 +130,7 @@ export default function CentroImpostazioni() {
           email: formData.email,
           vat_number: formData.vat_number || null,
           notes: formData.notes || null,
+          settings: newSettings,
         })
         .eq("id", centro.id);
 
@@ -373,6 +405,33 @@ export default function CentroImpostazioni() {
                     />
                   </div>
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Diagnostic Fee Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                Fee Diagnostico
+              </CardTitle>
+              <CardDescription>
+                Gestisci il fee diagnostico di €15 applicato ai nuovi ritiri
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
+                <div>
+                  <p className="font-medium">Disabilita Fee Diagnostico</p>
+                  <p className="text-sm text-muted-foreground">
+                    Se attivo, i nuovi ritiri non avranno il fee di €15
+                  </p>
+                </div>
+                <Switch
+                  checked={disableDiagnosticFee}
+                  onCheckedChange={setDisableDiagnosticFee}
+                />
               </div>
             </CardContent>
           </Card>

@@ -75,12 +75,17 @@ export default function CentroNuovoRitiro() {
       if (!user) return;
       const { data } = await supabase
         .from("centri_assistenza")
-        .select("id, payment_status")
+        .select("id, payment_status, settings")
         .eq("owner_user_id", user.id)
         .maybeSingle();
       if (data) {
         setCentroId(data.id);
         setPaymentStatus(data.payment_status);
+        // Check if diagnostic fee is disabled in settings
+        const settings = data.settings as { disable_diagnostic_fee?: boolean } | null;
+        if (settings?.disable_diagnostic_fee) {
+          setDiagnosticFee(0);
+        }
       }
     };
     fetchCentro();
@@ -458,8 +463,8 @@ export default function CentroNuovoRitiro() {
           priority: "normal",
           intake_signature: intakeSignature,
           intake_signature_date: new Date().toISOString(),
-          diagnostic_fee: 15.00,
-          diagnostic_fee_paid: false,
+          diagnostic_fee: diagnosticFee,
+          diagnostic_fee_paid: diagnosticFee === 0 ? true : false,
           estimated_cost: estimatedTotal > 0 ? estimatedTotal : null,
           repair_notes: servicesNotes || null,
         })
