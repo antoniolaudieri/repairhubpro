@@ -21,7 +21,6 @@ import Appointments from "@/pages/Appointments";
 import Feedback from "@/pages/Feedback";
 import Quotes from "@/pages/Quotes";
 import PricingSettings from "@/pages/PricingSettings";
-import PlatformAdmin from "@/pages/PlatformAdmin";
 import ProviderRegistration from "@/pages/ProviderRegistration";
 import CornerDashboard from "@/pages/CornerDashboard";
 import CornerNuovaSegnalazione from "@/pages/corner/CornerNuovaSegnalazione";
@@ -45,6 +44,15 @@ import CentroOrdini from "@/pages/centro/CentroOrdini";
 import CentroListino from "@/pages/centro/CentroListino";
 import CentroNuovoRitiro from "@/pages/centro/CentroNuovoRitiro";
 import CentroClienteDetail from "@/pages/centro/CentroClienteDetail";
+// Admin pages
+import AdminDashboard from "@/pages/admin/AdminDashboard";
+import AdminCorners from "@/pages/admin/AdminCorners";
+import AdminRiparatori from "@/pages/admin/AdminRiparatori";
+import AdminCentri from "@/pages/admin/AdminCentri";
+import AdminCrediti from "@/pages/admin/AdminCrediti";
+import AdminCommissioni from "@/pages/admin/AdminCommissioni";
+import AdminFatturazione from "@/pages/admin/AdminFatturazione";
+import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import NotFound from "@/pages/NotFound";
 
 export const AnimatedRoutes = () => {
@@ -79,15 +87,82 @@ export const AnimatedRoutes = () => {
             </ProtectedRoute>
           }
         />
-        {/* Platform Admin Route */}
+        
+        {/* Platform Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/corners"
+          element={
+            <ProtectedRoute>
+              <AdminCorners />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/riparatori"
+          element={
+            <ProtectedRoute>
+              <AdminRiparatori />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/centri"
+          element={
+            <ProtectedRoute>
+              <AdminCentri />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/crediti"
+          element={
+            <ProtectedRoute>
+              <AdminCrediti />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/commissioni"
+          element={
+            <ProtectedRoute>
+              <AdminCommissioni />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/fatturazione"
+          element={
+            <ProtectedRoute>
+              <AdminFatturazione />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/analytics"
+          element={
+            <ProtectedRoute>
+              <AdminAnalytics />
+            </ProtectedRoute>
+          }
+        />
+        {/* Legacy route redirect */}
         <Route
           path="/platform-admin"
           element={
             <ProtectedRoute>
-              <PageTransition><PlatformAdmin /></PageTransition>
+              <AdminDashboard />
             </ProtectedRoute>
           }
         />
+        
         {/* Provider Registration */}
         <Route
           path="/diventa-partner"
