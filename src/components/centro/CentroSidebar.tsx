@@ -14,7 +14,9 @@ import {
   FileText,
   ShoppingCart,
   Settings2,
-  PlusCircle
+  PlusCircle,
+  Store,
+  Bell
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -34,11 +36,13 @@ import {
 } from "@/components/ui/sidebar";
 import { toast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 
 const menuItems = [
   { title: "Dashboard", url: "/centro", icon: LayoutDashboard },
   { title: "Nuovo Ritiro", url: "/centro/nuovo-ritiro", icon: PlusCircle },
+  { title: "Lavori Corner", url: "/centro/lavori-corner", icon: Store, hasBadge: true },
   { title: "Lavori", url: "/centro/lavori", icon: Wrench },
   { title: "Guide IA", url: "/centro/guide", icon: BookOpen },
   { title: "Clienti", url: "/centro/clienti", icon: UserRound },
@@ -61,6 +65,7 @@ export function CentroSidebar() {
   const isCollapsed = state === "collapsed";
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string>("Centro");
+  const [pendingCornerJobs, setPendingCornerJobs] = useState(0);
 
   useEffect(() => {
     const fetchCentroInfo = async () => {
@@ -68,13 +73,52 @@ export function CentroSidebar() {
       
       const { data } = await supabase
         .from("centri_assistenza")
-        .select("logo_url, business_name")
+        .select("id, logo_url, business_name")
         .eq("owner_user_id", user.id)
         .single();
       
       if (data) {
         setLogoUrl(data.logo_url);
         setBusinessName(data.business_name || "Centro");
+        
+        // Fetch pending job offers count
+        const { count } = await supabase
+          .from("job_offers")
+          .select("*", { count: "exact", head: true })
+          .eq("provider_type", "centro")
+          .eq("provider_id", data.id)
+          .eq("status", "pending")
+          .gt("expires_at", new Date().toISOString());
+        
+        setPendingCornerJobs(count || 0);
+        
+        // Subscribe to job offers changes
+        const channel = supabase
+          .channel("sidebar-job-offers")
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "job_offers",
+            },
+            async () => {
+              const { count: newCount } = await supabase
+                .from("job_offers")
+                .select("*", { count: "exact", head: true })
+                .eq("provider_type", "centro")
+                .eq("provider_id", data.id)
+                .eq("status", "pending")
+                .gt("expires_at", new Date().toISOString());
+              
+              setPendingCornerJobs(newCount || 0);
+            }
+          )
+          .subscribe();
+        
+        return () => {
+          supabase.removeChannel(channel);
+        };
       }
     };
 
@@ -173,21 +217,31 @@ export function CentroSidebar() {
                               transition={{ type: "spring", stiffness: 400, damping: 17 }}
                               className="relative z-10"
                             >
-                              <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'drop-shadow-glow' : ''}`} />
+                              <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'drop-shadow-glow' : ''} ${(item as any).hasBadge && pendingCornerJobs > 0 ? 'text-amber-500' : ''}`} />
                             </motion.div>
                             <AnimatePresence mode="wait">
                               {!isCollapsed && (
-                                <motion.span 
-                                  className="text-sm relative z-10"
+                                <motion.div 
+                                  className="flex items-center gap-2 flex-1 relative z-10"
                                   initial={{ opacity: 0, x: -10 }}
                                   animate={{ opacity: 1, x: 0 }}
                                   exit={{ opacity: 0, x: -10 }}
                                   transition={{ duration: 0.2 }}
                                 >
-                                  {item.title}
-                                </motion.span>
+                                  <span className="text-sm">{item.title}</span>
+                                  {(item as any).hasBadge && pendingCornerJobs > 0 && (
+                                    <Badge className="h-5 min-w-[20px] px-1.5 bg-amber-500 text-white text-xs animate-pulse">
+                                      {pendingCornerJobs}
+                                    </Badge>
+                                  )}
+                                </motion.div>
                               )}
                             </AnimatePresence>
+                            {isCollapsed && (item as any).hasBadge && pendingCornerJobs > 0 && (
+                              <Badge className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-amber-500 text-white text-[10px] animate-pulse">
+                                {pendingCornerJobs}
+                              </Badge>
+                            )}
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
