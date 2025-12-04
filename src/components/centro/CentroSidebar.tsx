@@ -81,35 +81,35 @@ export function CentroSidebar() {
         setLogoUrl(data.logo_url);
         setBusinessName(data.business_name || "Centro");
         
-        // Fetch pending job offers count
+        // Fetch pending corner requests count (repair_requests assigned to this Centro from Corners)
         const { count } = await supabase
-          .from("job_offers")
+          .from("repair_requests")
           .select("*", { count: "exact", head: true })
-          .eq("provider_type", "centro")
-          .eq("provider_id", data.id)
-          .eq("status", "pending")
-          .gt("expires_at", new Date().toISOString());
+          .eq("assigned_provider_type", "centro")
+          .eq("assigned_provider_id", data.id)
+          .not("corner_id", "is", null)
+          .in("status", ["assigned", "pending"]);
         
         setPendingCornerJobs(count || 0);
         
-        // Subscribe to job offers changes
+        // Subscribe to repair_requests changes
         const channel = supabase
-          .channel("sidebar-job-offers")
+          .channel("sidebar-corner-requests")
           .on(
             "postgres_changes",
             {
               event: "*",
               schema: "public",
-              table: "job_offers",
+              table: "repair_requests",
             },
             async () => {
               const { count: newCount } = await supabase
-                .from("job_offers")
+                .from("repair_requests")
                 .select("*", { count: "exact", head: true })
-                .eq("provider_type", "centro")
-                .eq("provider_id", data.id)
-                .eq("status", "pending")
-                .gt("expires_at", new Date().toISOString());
+                .eq("assigned_provider_type", "centro")
+                .eq("assigned_provider_id", data.id)
+                .not("corner_id", "is", null)
+                .in("status", ["assigned", "pending"]);
               
               setPendingCornerJobs(newCount || 0);
             }
