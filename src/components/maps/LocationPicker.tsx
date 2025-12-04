@@ -32,38 +32,27 @@ interface LocationPickerProps {
   geoLoading?: boolean;
 }
 
-// Inner component that handles all map interactions
-function MapInner({ 
-  latitude, 
-  longitude, 
-  onLocationChange 
-}: { 
-  latitude: number | null; 
-  longitude: number | null; 
-  onLocationChange: (lat: number, lng: number) => void;
-}) {
-  const map = useMap();
-
-  // Handle click events
+// Component to handle click events - rendered directly without conditional
+function MapClickHandler({ onLocationChange }: { onLocationChange: (lat: number, lng: number) => void }) {
   useMapEvents({
     click(e) {
       onLocationChange(e.latlng.lat, e.latlng.lng);
     },
   });
+  return null;
+}
 
-  // Pan to location when coordinates change
+// Component to recenter map - rendered directly without conditional
+function MapController({ latitude, longitude }: { latitude: number | null; longitude: number | null }) {
+  const map = useMap();
+  
   useEffect(() => {
     if (latitude !== null && longitude !== null) {
       map.setView([latitude, longitude], 15, { animate: true });
     }
   }, [latitude, longitude, map]);
-
-  // Render marker if coordinates exist
-  if (latitude === null || longitude === null) {
-    return null;
-  }
-
-  return <Marker position={[latitude, longitude]} icon={customIcon} />;
+  
+  return null;
 }
 
 export function LocationPicker({
@@ -73,7 +62,7 @@ export function LocationPicker({
   onGeolocate,
   geoLoading = false,
 }: LocationPickerProps) {
-  const [mapReady, setMapReady] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   
   // Default center (Italy)
   const defaultCenter: [number, number] = [41.9028, 12.4964];
@@ -81,6 +70,27 @@ export function LocationPicker({
     ? [latitude, longitude] 
     : defaultCenter;
   const zoom = latitude !== null && longitude !== null ? 15 : 5;
+
+  // Delay rendering the map to avoid SSR issues
+  useEffect(() => {
+    setIsReady(true);
+  }, []);
+
+  if (!isReady) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Button type="button" variant="outline" size="sm" disabled>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Caricamento...
+          </Button>
+        </div>
+        <div className="h-64 rounded-xl overflow-hidden border border-border/50 shadow-inner bg-muted/30 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
@@ -122,18 +132,15 @@ export function LocationPicker({
           zoom={zoom}
           style={{ height: "100%", width: "100%" }}
           scrollWheelZoom={true}
-          whenReady={() => setMapReady(true)}
         >
           <TileLayer
             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           />
-          {mapReady && (
-            <MapInner 
-              latitude={latitude} 
-              longitude={longitude} 
-              onLocationChange={onLocationChange} 
-            />
+          <MapClickHandler onLocationChange={onLocationChange} />
+          <MapController latitude={latitude} longitude={longitude} />
+          {latitude !== null && longitude !== null && (
+            <Marker position={[latitude, longitude]} icon={customIcon} />
           )}
         </MapContainer>
       </div>
