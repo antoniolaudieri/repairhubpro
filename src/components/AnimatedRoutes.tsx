@@ -31,6 +31,7 @@ import CornerPartnership from "@/pages/corner/CornerPartnership";
 import RiparatoreDashboard from "@/pages/RiparatoreDashboard";
 import CentroDashboard from "@/pages/CentroDashboard";
 import CentroLavori from "@/pages/centro/CentroLavori";
+import CentroLavoriCorner from "@/pages/centro/CentroLavoriCorner";
 import CentroRepairDetail from "@/pages/centro/CentroRepairDetail";
 import CentroClienti from "@/pages/centro/CentroClienti";
 import CentroInventario from "@/pages/centro/CentroInventario";
@@ -152,6 +153,14 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCentro>
               <CentroDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/lavori-corner"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroLavoriCorner />
             </ProtectedRoute>
           }
         />
