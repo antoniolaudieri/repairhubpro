@@ -24,7 +24,8 @@ import {
   Mail,
   Trash2,
   Wrench,
-  ChevronRight
+  ChevronRight,
+  Plus
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -49,6 +50,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { NewOrderDialog } from "@/components/orders/NewOrderDialog";
 
 interface OrderItem {
   id: string;
@@ -478,18 +480,29 @@ export default function Orders() {
                 </p>
               </div>
             </div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-              className="flex items-center gap-2 bg-white/10 backdrop-blur rounded-full px-4 py-2"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
-              </span>
-              <span className="text-sm font-medium">Real-Time Attivo</span>
-            </motion.div>
+            <div className="flex items-center gap-3">
+              <NewOrderDialog 
+                onOrderCreated={fetchOrders}
+                trigger={
+                  <Button className="bg-white/20 hover:bg-white/30 text-white border-0 gap-2">
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Nuovo Ordine</span>
+                  </Button>
+                }
+              />
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="flex items-center gap-2 bg-white/10 backdrop-blur rounded-full px-4 py-2"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+                </span>
+                <span className="text-sm font-medium">Real-Time Attivo</span>
+              </motion.div>
+            </div>
           </div>
         </div>
       </motion.div>
