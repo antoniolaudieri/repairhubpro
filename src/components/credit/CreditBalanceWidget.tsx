@@ -86,6 +86,16 @@ export function CreditBalanceWidget({
             )}
           </div>
 
+          {creditBalance < 0 && (
+            <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
+              <TrendingDown className="h-4 w-4 text-destructive" />
+              <div className="flex-1">
+                <p className="text-xs font-medium text-destructive">Debito verso piattaforma</p>
+                <p className="text-sm font-bold text-destructive">€{Math.abs(creditBalance).toFixed(2)}</p>
+              </div>
+            </div>
+          )}
+
           <Progress 
             value={progressValue} 
             className={`h-2 ${paymentStatus === "suspended" ? "[&>div]:bg-destructive" : paymentStatus === "warning" ? "[&>div]:bg-warning" : "[&>div]:bg-success"}`}
