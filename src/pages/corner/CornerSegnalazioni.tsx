@@ -9,7 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones } from "lucide-react";
+import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones, Truck, Store, User, CheckCircle2 } from "lucide-react";
+import { RepairWorkflowTimeline, getStatusLabel, getStatusColor } from "@/components/corner/RepairWorkflowTimeline";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -51,23 +52,7 @@ interface RepairRequest {
   quote?: Quote | null;
 }
 
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-500/20 text-yellow-700 border-yellow-500/30",
-  assigned: "bg-blue-500/20 text-blue-700 border-blue-500/30",
-  quote_sent: "bg-purple-500/20 text-purple-700 border-purple-500/30",
-  in_progress: "bg-indigo-500/20 text-indigo-700 border-indigo-500/30",
-  completed: "bg-green-500/20 text-green-700 border-green-500/30",
-  cancelled: "bg-red-500/20 text-red-700 border-red-500/30",
-};
-
-const statusLabels: Record<string, string> = {
-  pending: "In Attesa",
-  assigned: "Assegnata",
-  quote_sent: "Preventivo Inviato",
-  in_progress: "In Corso",
-  completed: "Completata",
-  cancelled: "Annullata",
-};
+// Use imported getStatusColor and getStatusLabel from RepairWorkflowTimeline
 
 const quoteStatusLabels: Record<string, string> = {
   pending: "In Attesa Firma",
@@ -233,56 +218,86 @@ export default function CornerSegnalazioni() {
             <SelectContent>
               <SelectItem value="all">Tutti gli stati</SelectItem>
               <SelectItem value="pending">In Attesa</SelectItem>
-              <SelectItem value="assigned">Assegnata</SelectItem>
               <SelectItem value="quote_sent">Preventivo Inviato</SelectItem>
-              <SelectItem value="in_progress">In Corso</SelectItem>
-              <SelectItem value="completed">Completata</SelectItem>
-              <SelectItem value="cancelled">Annullata</SelectItem>
+              <SelectItem value="quote_accepted">Preventivo Accettato</SelectItem>
+              <SelectItem value="awaiting_pickup">In Attesa Ritiro</SelectItem>
+              <SelectItem value="picked_up">Ritirato</SelectItem>
+              <SelectItem value="in_diagnosis">In Diagnosi</SelectItem>
+              <SelectItem value="waiting_for_parts">Attesa Ricambi</SelectItem>
+              <SelectItem value="in_repair">In Riparazione</SelectItem>
+              <SelectItem value="repair_completed">Riparato</SelectItem>
+              <SelectItem value="at_corner">Al Corner</SelectItem>
+              <SelectItem value="delivered">Consegnato</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold">{requests.length}</div>
-              <div className="text-sm text-muted-foreground">Totale</div>
+            <CardContent className="p-3">
+              <div className="text-xl font-bold">{requests.length}</div>
+              <div className="text-xs text-muted-foreground">Totale</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-600">
-                {requests.filter((r) => r.status === "pending").length}
+            <CardContent className="p-3">
+              <div className="text-xl font-bold text-yellow-600">
+                {requests.filter((r) => r.status === "pending" || r.status === "assigned").length}
               </div>
-              <div className="text-sm text-muted-foreground">In Attesa</div>
+              <div className="text-xs text-muted-foreground">In Attesa</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-600">
-                {requests.filter((r) => r.status === "quote_sent").length}
+            <CardContent className="p-3">
+              <div className="text-xl font-bold text-purple-600">
+                {requests.filter((r) => r.status === "quote_sent" || r.status === "quote_accepted").length}
               </div>
-              <div className="text-sm text-muted-foreground">Preventivi</div>
+              <div className="text-xs text-muted-foreground">Preventivi</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">
-                {requests.filter((r) => r.status === "in_progress" || r.status === "assigned").length}
+            <CardContent className="p-3">
+              <div className="text-xl font-bold text-blue-600">
+                {requests.filter((r) => ['awaiting_pickup', 'picked_up', 'in_diagnosis', 'waiting_for_parts', 'in_repair'].includes(r.status)).length}
               </div>
-              <div className="text-sm text-muted-foreground">In Corso</div>
+              <div className="text-xs text-muted-foreground">In Lavoro</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">
-                {requests.filter((r) => r.status === "completed").length}
+            <CardContent className="p-3">
+              <div className="text-xl font-bold text-violet-600">
+                {requests.filter((r) => r.status === "at_corner").length}
               </div>
-              <div className="text-sm text-muted-foreground">Completate</div>
+              <div className="text-xs text-muted-foreground">Al Corner</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-3">
+              <div className="text-xl font-bold text-green-600">
+                {requests.filter((r) => r.status === "delivered").length}
+              </div>
+              <div className="text-xs text-muted-foreground">Consegnate</div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Alert for devices at Corner */}
+        {requests.filter((r) => r.status === "at_corner").length > 0 && (
+          <Card className="p-4 border-2 border-violet-500 bg-violet-50/50">
+            <div className="flex items-center gap-3">
+              <Store className="h-6 w-6 text-violet-600 animate-pulse" />
+              <div>
+                <p className="font-semibold text-violet-800">
+                  {requests.filter((r) => r.status === "at_corner").length} dispositivi pronti per il ritiro cliente
+                </p>
+                <p className="text-sm text-violet-600">
+                  Contatta i clienti per la consegna
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* List */}
         <div className="space-y-4">
@@ -313,8 +328,8 @@ export default function CornerSegnalazioni() {
                         <Badge variant="outline" className="text-xs">
                           {request.device_type}
                         </Badge>
-                        <Badge className={statusColors[request.status] || ""}>
-                          {statusLabels[request.status] || request.status}
+                        <Badge className={getStatusColor(request.status)}>
+                          {getStatusLabel(request.status)}
                         </Badge>
                         {request.quote && (
                           <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
@@ -348,6 +363,13 @@ export default function CornerSegnalazioni() {
                         <div className="flex items-center gap-1 text-sm text-primary">
                           <Building2 className="h-3 w-3" />
                           <span>Assegnata a: {request.centro.business_name}</span>
+                        </div>
+                      )}
+
+                      {/* Workflow Timeline */}
+                      {!['pending', 'assigned'].includes(request.status) && (
+                        <div className="mt-2 pt-2 border-t">
+                          <RepairWorkflowTimeline currentStatus={request.status} compact />
                         </div>
                       )}
                     </div>
