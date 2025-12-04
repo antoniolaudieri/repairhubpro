@@ -11,7 +11,6 @@ import {
   Store,
   Clock,
   CheckCircle2,
-  X,
   AlertCircle,
   Smartphone,
   Euro,
@@ -19,8 +18,10 @@ import {
   Phone,
   User,
   FileText,
-  Wrench
+  Wrench,
+  Send
 } from "lucide-react";
+import { QuoteDialog } from "@/components/quotes/QuoteDialog";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -59,6 +60,8 @@ export default function CentroLavoriCorner() {
   const [completedRequests, setCompletedRequests] = useState<CornerRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<CornerRequest | null>(null);
 
   useEffect(() => {
     const fetchCentroAndRequests = async () => {
@@ -124,7 +127,7 @@ export default function CentroLavoriCorner() {
 
     // Categorize by status
     setPendingRequests(requests.filter(r => r.status === "assigned" || r.status === "pending"));
-    setInProgressRequests(requests.filter(r => r.status === "in_progress" || r.status === "waiting_for_parts"));
+    setInProgressRequests(requests.filter(r => r.status === "in_progress" || r.status === "waiting_for_parts" || r.status === "quote_sent" || r.status === "quote_accepted"));
     setCompletedRequests(requests.filter(r => r.status === "completed" || r.status === "delivered"));
   };
 
@@ -152,29 +155,28 @@ export default function CentroLavoriCorner() {
     };
   }, [centroId]);
 
-  const handleStartWork = async (request: CornerRequest) => {
-    setProcessingId(request.id);
-    try {
-      const { error } = await supabase
+  const handleAssignQuote = (request: CornerRequest) => {
+    setSelectedRequest(request);
+    setQuoteDialogOpen(true);
+  };
+
+  const handleQuoteCreated = async () => {
+    setQuoteDialogOpen(false);
+    setSelectedRequest(null);
+    
+    // Update repair_request status to quote_sent
+    if (selectedRequest) {
+      await supabase
         .from("repair_requests")
-        .update({
-          status: "in_progress",
-        })
-        .eq("id", request.id);
-
-      if (error) throw error;
-
-      toast.success("Lavoro iniziato!", {
-        description: "Il cliente è stato notificato dell'inizio della riparazione.",
-      });
-
-      if (centroId) fetchRequests(centroId);
-    } catch (error: any) {
-      console.error("Error starting work:", error);
-      toast.error("Errore nell'avviare il lavoro");
-    } finally {
-      setProcessingId(null);
+        .update({ status: "quote_sent" })
+        .eq("id", selectedRequest.id);
     }
+    
+    toast.success("Preventivo inviato!", {
+      description: "Il cliente riceverà il preventivo per l'accettazione.",
+    });
+    
+    if (centroId) fetchRequests(centroId);
   };
 
   const handleComplete = async (request: CornerRequest) => {
@@ -292,18 +294,11 @@ export default function CentroLavoriCorner() {
               <div className="flex items-center gap-2 pt-2 border-t">
                 <Button
                   size="sm"
-                  onClick={() => handleStartWork(request)}
-                  disabled={processingId === request.id}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => handleAssignQuote(request)}
+                  className="flex-1 bg-primary hover:bg-primary/90"
                 >
-                  {processingId === request.id ? (
-                    "Elaborazione..."
-                  ) : (
-                    <>
-                      <Wrench className="h-4 w-4 mr-1" />
-                      Inizia Lavoro
-                    </>
-                  )}
+                  <Send className="h-4 w-4 mr-1" />
+                  Assegna Preventivo
                 </Button>
               </div>
             )}
@@ -423,10 +418,10 @@ export default function CentroLavoriCorner() {
                   <AlertCircle className="h-6 w-6 text-amber-600 animate-pulse" />
                   <div>
                     <p className="font-semibold text-amber-800">
-                      {pendingRequests.length} {pendingRequests.length === 1 ? "nuovo lavoro" : "nuovi lavori"} da Corner
+                      {pendingRequests.length} {pendingRequests.length === 1 ? "nuova richiesta" : "nuove richieste"} da Corner
                     </p>
                     <p className="text-sm text-amber-600">
-                      Inizia i lavori per confermare la presa in carico
+                      Crea un preventivo per ogni richiesta da inviare al cliente
                     </p>
                   </div>
                 </div>
@@ -498,6 +493,20 @@ export default function CentroLavoriCorner() {
               </AnimatePresence>
             </TabsContent>
           </Tabs>
+
+          {/* Quote Dialog */}
+          {selectedRequest && (
+            <QuoteDialog
+              open={quoteDialogOpen}
+              onOpenChange={setQuoteDialogOpen}
+              customerId={selectedRequest.customer.id}
+              initialDeviceType={selectedRequest.device_type}
+              initialDeviceBrand={selectedRequest.device_brand || ""}
+              initialDeviceModel={selectedRequest.device_model || ""}
+              initialIssueDescription={selectedRequest.issue_description}
+              onSuccess={handleQuoteCreated}
+            />
+          )}
         </div>
       </PageTransition>
     </CentroLayout>
