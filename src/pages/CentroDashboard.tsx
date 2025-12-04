@@ -518,12 +518,12 @@ export default function CentroDashboard() {
   return (
     <CentroLayout>
       <PageTransition>
-        <div className="p-4 sm:p-6 space-y-6">
+        <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl sm:text-2xl font-semibold text-foreground">{centro?.business_name}</h1>
-              <p className="text-sm text-muted-foreground">Panoramica attività</p>
+              <h1 className="text-xl md:text-2xl font-semibold text-foreground">{centro?.business_name}</h1>
+              <p className="text-xs md:text-sm text-muted-foreground">Panoramica attività</p>
             </div>
             <Button
               onClick={() => navigate("/centro/nuovo-ritiro")}
@@ -599,21 +599,21 @@ export default function CentroDashboard() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3"
+              className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4"
             >
               {statsCards.map((card) => (
                 <motion.div key={card.title} variants={itemVariants}>
                   <Card 
-                    className={`p-4 cursor-pointer transition-all duration-200 hover:shadow-md group border ${card.highlight ? 'border-rose-300 bg-rose-50/50' : 'border-border/50 hover:border-border'}`}
+                    className={`p-3 md:p-4 cursor-pointer transition-all duration-200 hover:shadow-md group border ${card.highlight ? 'border-rose-300 bg-rose-50/50' : 'border-border/50 hover:border-border'}`}
                     onClick={card.onClick}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`h-9 w-9 rounded-lg ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
-                        <card.icon className="h-4 w-4 text-white" />
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className={`h-8 w-8 md:h-10 md:w-10 rounded-lg ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
+                        <card.icon className="h-4 w-4 md:h-5 md:w-5 text-white" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-2xl font-bold text-foreground leading-none">{card.value}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5 truncate">{card.title}</p>
+                        <p className="text-xl md:text-2xl font-bold text-foreground leading-none">{card.value}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">{card.title}</p>
                       </div>
                     </div>
                   </Card>
@@ -626,11 +626,11 @@ export default function CentroDashboard() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+              className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4"
             >
               {/* Credit Balance Widget */}
               {centro && (
-                <motion.div variants={itemVariants} className="col-span-2 sm:col-span-1">
+                <motion.div variants={itemVariants} className="col-span-2 md:col-span-1">
                   <CreditBalanceWidget
                     entityType="centro"
                     entityId={centro.id}
@@ -644,16 +644,16 @@ export default function CentroDashboard() {
 
               <motion.div variants={itemVariants}>
                 <Card 
-                  className="p-4 border-border/50 hover:border-border transition-colors cursor-pointer"
+                  className="p-3 md:p-4 border-border/50 hover:border-border transition-colors cursor-pointer h-full"
                   onClick={() => navigate("/centro/clienti")}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-violet-100 flex items-center justify-center">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className="h-8 w-8 md:h-9 md:w-9 rounded-lg bg-violet-100 flex items-center justify-center">
                       <Users className="h-4 w-4 text-violet-600" />
                     </div>
                     <div>
-                      <p className="text-lg font-semibold text-foreground">{stats.totalCustomers}</p>
-                      <p className="text-xs text-muted-foreground">Clienti</p>
+                      <p className="text-base md:text-lg font-semibold text-foreground">{stats.totalCustomers}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground">Clienti</p>
                     </div>
                   </div>
                 </Card>
@@ -662,16 +662,16 @@ export default function CentroDashboard() {
               {financeCards.map((card) => (
                 <motion.div key={card.title} variants={itemVariants}>
                   <Card 
-                    className="p-4 border-border/50 hover:border-border transition-colors cursor-pointer"
+                    className="p-3 md:p-4 border-border/50 hover:border-border transition-colors cursor-pointer h-full"
                     onClick={card.onClick}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`h-8 w-8 rounded-lg ${card.iconBg} flex items-center justify-center`}>
+                    <div className="flex items-center gap-2 md:gap-3">
+                      <div className={`h-8 w-8 md:h-9 md:w-9 rounded-lg ${card.iconBg} flex items-center justify-center`}>
                         <card.icon className="h-4 w-4 text-white" />
                       </div>
-                      <div>
-                        <p className="text-lg font-semibold text-foreground">{card.value}</p>
-                        <p className="text-xs text-muted-foreground">{card.title}</p>
+                      <div className="min-w-0">
+                        <p className="text-base md:text-lg font-semibold text-foreground truncate">{card.value}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground truncate">{card.title}</p>
                       </div>
                     </div>
                   </Card>
@@ -703,8 +703,8 @@ export default function CentroDashboard() {
                     </div>
                   </div>
                 </div>
-                <div className="p-4">
-                  <div className="h-[200px]">
+                <div className="p-3 md:p-4">
+                  <div className="h-[180px] md:h-[220px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={weeklyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                         <defs>
@@ -766,7 +766,7 @@ export default function CentroDashboard() {
             </motion.div>
 
             {/* Main Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Recent Repairs */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
