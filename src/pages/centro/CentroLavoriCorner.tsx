@@ -19,14 +19,22 @@ import {
   User,
   FileText,
   Wrench,
-  Send
+  Send,
+  Truck,
+  Search,
+  Package,
+  ArrowRight,
+  Edit,
+  ShoppingCart
 } from "lucide-react";
 import { EnhancedQuoteDialog } from "@/components/quotes/EnhancedQuoteDialog";
+import { EditQuoteDialog } from "@/components/quotes/EditQuoteDialog";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { RepairWorkflowTimeline, getStatusLabel, getStatusColor } from "@/components/corner/RepairWorkflowTimeline";
 
 interface CornerRequest {
   id: string;
@@ -48,6 +56,13 @@ interface CornerRequest {
     id: string;
     business_name: string;
     phone: string;
+    address: string;
+  } | null;
+  quote?: {
+    id: string;
+    total_cost: number;
+    status: string;
+    items: any;
   } | null;
 }
 
@@ -55,19 +70,18 @@ export default function CentroLavoriCorner() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [centroId, setCentroId] = useState<string | null>(null);
-  const [pendingRequests, setPendingRequests] = useState<CornerRequest[]>([]);
-  const [inProgressRequests, setInProgressRequests] = useState<CornerRequest[]>([]);
-  const [completedRequests, setCompletedRequests] = useState<CornerRequest[]>([]);
+  const [allRequests, setAllRequests] = useState<CornerRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
+  const [editQuoteDialogOpen, setEditQuoteDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CornerRequest | null>(null);
+  const [activeTab, setActiveTab] = useState("new");
 
   useEffect(() => {
     const fetchCentroAndRequests = async () => {
       if (!user) return;
 
-      // Get centro ID
       const { data: centro } = await supabase
         .from("centri_assistenza")
         .select("id")
@@ -88,7 +102,6 @@ export default function CentroLavoriCorner() {
   }, [user]);
 
   const fetchRequests = async (centroId: string) => {
-    // Fetch repair_requests assigned to this Centro from Corners
     const { data, error } = await supabase
       .from("repair_requests")
       .select(`
@@ -110,7 +123,8 @@ export default function CentroLavoriCorner() {
         corner:corners (
           id,
           business_name,
-          phone
+          phone,
+          address
         )
       `)
       .eq("assigned_provider_type", "centro")
@@ -123,12 +137,20 @@ export default function CentroLavoriCorner() {
       return;
     }
 
-    const requests = (data || []) as unknown as CornerRequest[];
+    // Load quotes for each request
+    const requestsWithQuotes = await Promise.all(
+      (data || []).map(async (req) => {
+        const { data: quoteData } = await supabase
+          .from("quotes")
+          .select("id, total_cost, status, items")
+          .eq("repair_request_id", req.id)
+          .maybeSingle();
+        
+        return { ...req, quote: quoteData } as unknown as CornerRequest;
+      })
+    );
 
-    // Categorize by status
-    setPendingRequests(requests.filter(r => r.status === "assigned" || r.status === "pending"));
-    setInProgressRequests(requests.filter(r => r.status === "in_progress" || r.status === "waiting_for_parts" || r.status === "quote_sent" || r.status === "quote_accepted"));
-    setCompletedRequests(requests.filter(r => r.status === "completed" || r.status === "delivered"));
+    setAllRequests(requestsWithQuotes);
   };
 
   // Real-time subscription
@@ -155,16 +177,28 @@ export default function CentroLavoriCorner() {
     };
   }, [centroId]);
 
+  // Filter requests by tab
+  const newRequests = allRequests.filter(r => ['pending', 'assigned'].includes(r.status));
+  const quoteRequests = allRequests.filter(r => ['quote_sent', 'quote_accepted'].includes(r.status));
+  const pickupRequests = allRequests.filter(r => ['awaiting_pickup', 'picked_up'].includes(r.status));
+  const inLabRequests = allRequests.filter(r => ['in_diagnosis', 'waiting_for_parts', 'in_repair'].includes(r.status));
+  const returnRequests = allRequests.filter(r => ['repair_completed', 'ready_for_return', 'at_corner'].includes(r.status));
+  const completedRequests = allRequests.filter(r => r.status === 'delivered');
+
   const handleAssignQuote = (request: CornerRequest) => {
     setSelectedRequest(request);
     setQuoteDialogOpen(true);
+  };
+
+  const handleEditQuote = (request: CornerRequest) => {
+    setSelectedRequest(request);
+    setEditQuoteDialogOpen(true);
   };
 
   const handleQuoteCreated = async () => {
     setQuoteDialogOpen(false);
     setSelectedRequest(null);
     
-    // Update repair_request status to quote_sent
     if (selectedRequest) {
       await supabase
         .from("repair_requests")
@@ -172,39 +206,207 @@ export default function CentroLavoriCorner() {
         .eq("id", selectedRequest.id);
     }
     
-    toast.success("Preventivo inviato!", {
-      description: "Il cliente riceverà il preventivo per l'accettazione.",
-    });
-    
+    toast.success("Preventivo inviato!");
     if (centroId) fetchRequests(centroId);
   };
 
-  const handleComplete = async (request: CornerRequest) => {
+  const handleQuoteUpdated = async () => {
+    setEditQuoteDialogOpen(false);
+    setSelectedRequest(null);
+    toast.success("Preventivo aggiornato!");
+    if (centroId) fetchRequests(centroId);
+  };
+
+  const updateStatus = async (request: CornerRequest, newStatus: string, message: string) => {
     setProcessingId(request.id);
     try {
       const { error } = await supabase
         .from("repair_requests")
-        .update({
-          status: "completed",
-        })
+        .update({ status: newStatus })
         .eq("id", request.id);
 
       if (error) throw error;
-
-      toast.success("Lavoro completato!", {
-        description: "Il Corner è stato notificato.",
-      });
-
+      toast.success(message);
       if (centroId) fetchRequests(centroId);
     } catch (error: any) {
-      console.error("Error completing work:", error);
-      toast.error("Errore nel completare il lavoro");
+      console.error("Error updating status:", error);
+      toast.error("Errore nell'aggiornamento");
     } finally {
       setProcessingId(null);
     }
   };
 
-  const renderRequestCard = (request: CornerRequest, type: "pending" | "in_progress" | "completed") => {
+  const getNextAction = (request: CornerRequest) => {
+    const status = request.status;
+    
+    switch (status) {
+      case 'pending':
+      case 'assigned':
+        return (
+          <Button size="sm" onClick={() => handleAssignQuote(request)} className="flex-1">
+            <Send className="h-4 w-4 mr-1" />
+            Crea Preventivo
+          </Button>
+        );
+      
+      case 'quote_sent':
+        return (
+          <div className="flex gap-2 flex-1">
+            <Button size="sm" variant="outline" onClick={() => handleEditQuote(request)} className="flex-1">
+              <Edit className="h-4 w-4 mr-1" />
+              Modifica
+            </Button>
+            <Badge variant="secondary" className="flex items-center">
+              <Clock className="h-3 w-3 mr-1" />
+              Attesa Firma
+            </Badge>
+          </div>
+        );
+      
+      case 'quote_accepted':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => updateStatus(request, 'awaiting_pickup', 'Ritiro programmato!')}
+            disabled={processingId === request.id}
+            className="flex-1 bg-orange-600 hover:bg-orange-700"
+          >
+            <Truck className="h-4 w-4 mr-1" />
+            Programma Ritiro
+          </Button>
+        );
+      
+      case 'awaiting_pickup':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => updateStatus(request, 'picked_up', 'Dispositivo ritirato!')}
+            disabled={processingId === request.id}
+            className="flex-1 bg-cyan-600 hover:bg-cyan-700"
+          >
+            <Truck className="h-4 w-4 mr-1" />
+            Conferma Ritiro
+          </Button>
+        );
+      
+      case 'picked_up':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => updateStatus(request, 'in_diagnosis', 'Dispositivo in diagnosi!')}
+            disabled={processingId === request.id}
+            className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+          >
+            <Search className="h-4 w-4 mr-1" />
+            Inizia Diagnosi
+          </Button>
+        );
+      
+      case 'in_diagnosis':
+        return (
+          <div className="flex gap-2 flex-1 flex-wrap">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => handleEditQuote(request)}
+              className="flex-1"
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Modifica Preventivo
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => updateStatus(request, 'waiting_for_parts', 'Ordine ricambi!')}
+              disabled={processingId === request.id}
+              className="flex-1"
+            >
+              <Package className="h-4 w-4 mr-1" />
+              Ordina Ricambi
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={() => updateStatus(request, 'in_repair', 'Riparazione iniziata!')}
+              disabled={processingId === request.id}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              <Wrench className="h-4 w-4 mr-1" />
+              Inizia Riparazione
+            </Button>
+          </div>
+        );
+      
+      case 'waiting_for_parts':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => updateStatus(request, 'in_repair', 'Riparazione iniziata!')}
+            disabled={processingId === request.id}
+            className="flex-1 bg-blue-600 hover:bg-blue-700"
+          >
+            <Wrench className="h-4 w-4 mr-1" />
+            Ricambi Arrivati - Inizia
+          </Button>
+        );
+      
+      case 'in_repair':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => updateStatus(request, 'repair_completed', 'Riparazione completata!')}
+            disabled={processingId === request.id}
+            className="flex-1 bg-teal-600 hover:bg-teal-700"
+          >
+            <CheckCircle2 className="h-4 w-4 mr-1" />
+            Completa Riparazione
+          </Button>
+        );
+      
+      case 'repair_completed':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => updateStatus(request, 'ready_for_return', 'Pronto per consegna!')}
+            disabled={processingId === request.id}
+            className="flex-1 bg-lime-600 hover:bg-lime-700"
+          >
+            <Store className="h-4 w-4 mr-1" />
+            Prepara Consegna
+          </Button>
+        );
+      
+      case 'ready_for_return':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => updateStatus(request, 'at_corner', 'Consegnato al Corner!')}
+            disabled={processingId === request.id}
+            className="flex-1 bg-violet-600 hover:bg-violet-700"
+          >
+            <Truck className="h-4 w-4 mr-1" />
+            Consegna al Corner
+          </Button>
+        );
+      
+      case 'at_corner':
+        return (
+          <Button 
+            size="sm" 
+            onClick={() => updateStatus(request, 'delivered', 'Cliente notificato!')}
+            disabled={processingId === request.id}
+            className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+          >
+            <User className="h-4 w-4 mr-1" />
+            Cliente Ritirato
+          </Button>
+        );
+      
+      default:
+        return null;
+    }
+  };
+
+  const renderRequestCard = (request: CornerRequest) => {
     return (
       <motion.div
         key={request.id}
@@ -212,15 +414,7 @@ export default function CentroLavoriCorner() {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -10 }}
       >
-        <Card
-          className={`p-4 ${
-            type === "pending"
-              ? "border-2 border-amber-500 bg-amber-50/30"
-              : type === "in_progress"
-              ? "border-2 border-blue-500 bg-blue-50/30"
-              : ""
-          }`}
-        >
+        <Card className="p-4">
           <div className="space-y-3">
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
@@ -229,24 +423,9 @@ export default function CentroLavoriCorner() {
                   <Store className="h-3 w-3 mr-1" />
                   {request.corner?.business_name || "Corner"}
                 </Badge>
-                {type === "pending" && (
-                  <Badge variant="outline" className="border-amber-500 text-amber-600">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Nuovo
-                  </Badge>
-                )}
-                {type === "in_progress" && (
-                  <Badge className="bg-blue-500 text-white">
-                    <Wrench className="h-3 w-3 mr-1" />
-                    In Lavorazione
-                  </Badge>
-                )}
-                {type === "completed" && (
-                  <Badge className="bg-emerald-500 text-white">
-                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                    Completato
-                  </Badge>
-                )}
+                <Badge className={getStatusColor(request.status)}>
+                  {getStatusLabel(request.status)}
+                </Badge>
               </div>
               <span className="text-xs text-muted-foreground">
                 {format(new Date(request.created_at), "dd/MM HH:mm", { locale: it })}
@@ -266,77 +445,40 @@ export default function CentroLavoriCorner() {
                   {request.issue_description}
                 </p>
               </div>
-              {request.estimated_cost && (
+              {(request.quote?.total_cost || request.estimated_cost) && (
                 <div className="text-right">
-                  <p className="text-xs text-muted-foreground">Stima</p>
+                  <p className="text-xs text-muted-foreground">Preventivo</p>
                   <p className="font-semibold text-emerald-600 flex items-center">
                     <Euro className="h-3 w-3 mr-0.5" />
-                    {request.estimated_cost}
+                    {request.quote?.total_cost?.toFixed(2) || request.estimated_cost}
                   </p>
                 </div>
               )}
             </div>
 
-            {/* Customer Info */}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground bg-muted/50 rounded-lg p-2">
-              <div className="flex items-center gap-1">
+            {/* Customer & Corner Info */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm bg-muted/50 rounded-lg p-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <User className="h-3.5 w-3.5" />
                 <span>{request.customer.name}</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Phone className="h-3.5 w-3.5" />
+                <Phone className="h-3.5 w-3.5 ml-2" />
                 <span>{request.customer.phone}</span>
               </div>
+              {request.corner?.address && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Store className="h-3.5 w-3.5" />
+                  <span className="truncate">{request.corner.address}</span>
+                </div>
+              )}
             </div>
 
+            {/* Workflow Timeline */}
+            <RepairWorkflowTimeline currentStatus={request.status} compact />
+
             {/* Actions */}
-            {type === "pending" && (
-              <div className="flex items-center gap-2 pt-2 border-t">
-                <Button
-                  size="sm"
-                  onClick={() => handleAssignQuote(request)}
-                  className="flex-1 bg-primary hover:bg-primary/90"
-                >
-                  <Send className="h-4 w-4 mr-1" />
-                  Assegna Preventivo
-                </Button>
-              </div>
-            )}
-
-            {type === "in_progress" && (
-              <div className="flex items-center gap-2 pt-2 border-t">
-                <Button
-                  size="sm"
-                  onClick={() => handleComplete(request)}
-                  disabled={processingId === request.id}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
-                >
-                  {processingId === request.id ? (
-                    "Elaborazione..."
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                      Completa
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-
-            {type === "completed" && (
-              <div className="flex items-center gap-2 pt-2 border-t">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate(`/centro/lavori`)}
-                  className="flex-1"
-                >
-                  <FileText className="h-4 w-4 mr-1" />
-                  Vedi Dettagli
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                </Button>
-              </div>
-            )}
+            <div className="flex items-center gap-2 pt-2 border-t">
+              {getNextAction(request)}
+            </div>
           </div>
         </Card>
       </motion.div>
@@ -365,63 +507,63 @@ export default function CentroLavoriCorner() {
                 Lavori Corner
               </h1>
               <p className="text-sm text-muted-foreground">
-                Gestisci le richieste di riparazione dai Corner partner
+                Gestisci le riparazioni dai Corner partner
               </p>
             </div>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
-            <Card className="p-4 bg-amber-50/50 border-amber-200">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-amber-500 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-amber-700">{pendingRequests.length}</p>
-                  <p className="text-xs text-amber-600">Nuovi</p>
-                </div>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            <Card className="p-3 bg-amber-50/50 border-amber-200 cursor-pointer hover:bg-amber-50" onClick={() => setActiveTab("new")}>
+              <div className="text-center">
+                <p className="text-xl font-bold text-amber-700">{newRequests.length}</p>
+                <p className="text-xs text-amber-600">Nuovi</p>
               </div>
             </Card>
-            <Card className="p-4 bg-blue-50/50 border-blue-200">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-blue-500 flex items-center justify-center">
-                  <Wrench className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-blue-700">{inProgressRequests.length}</p>
-                  <p className="text-xs text-blue-600">In Corso</p>
-                </div>
+            <Card className="p-3 bg-purple-50/50 border-purple-200 cursor-pointer hover:bg-purple-50" onClick={() => setActiveTab("quote")}>
+              <div className="text-center">
+                <p className="text-xl font-bold text-purple-700">{quoteRequests.length}</p>
+                <p className="text-xs text-purple-600">Preventivi</p>
               </div>
             </Card>
-            <Card className="p-4 bg-emerald-50/50 border-emerald-200">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-emerald-500 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-emerald-700">{completedRequests.length}</p>
-                  <p className="text-xs text-emerald-600">Completati</p>
-                </div>
+            <Card className="p-3 bg-orange-50/50 border-orange-200 cursor-pointer hover:bg-orange-50" onClick={() => setActiveTab("pickup")}>
+              <div className="text-center">
+                <p className="text-xl font-bold text-orange-700">{pickupRequests.length}</p>
+                <p className="text-xs text-orange-600">Ritiro</p>
+              </div>
+            </Card>
+            <Card className="p-3 bg-blue-50/50 border-blue-200 cursor-pointer hover:bg-blue-50" onClick={() => setActiveTab("lab")}>
+              <div className="text-center">
+                <p className="text-xl font-bold text-blue-700">{inLabRequests.length}</p>
+                <p className="text-xs text-blue-600">In Lab</p>
+              </div>
+            </Card>
+            <Card className="p-3 bg-lime-50/50 border-lime-200 cursor-pointer hover:bg-lime-50" onClick={() => setActiveTab("return")}>
+              <div className="text-center">
+                <p className="text-xl font-bold text-lime-700">{returnRequests.length}</p>
+                <p className="text-xs text-lime-600">Consegna</p>
+              </div>
+            </Card>
+            <Card className="p-3 bg-emerald-50/50 border-emerald-200 cursor-pointer hover:bg-emerald-50" onClick={() => setActiveTab("completed")}>
+              <div className="text-center">
+                <p className="text-xl font-bold text-emerald-700">{completedRequests.length}</p>
+                <p className="text-xs text-emerald-600">Finiti</p>
               </div>
             </Card>
           </div>
 
           {/* Pending Alert */}
-          {pendingRequests.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
+          {newRequests.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
               <Card className="p-4 border-2 border-amber-500 bg-amber-50/50">
                 <div className="flex items-center gap-3">
                   <AlertCircle className="h-6 w-6 text-amber-600 animate-pulse" />
                   <div>
                     <p className="font-semibold text-amber-800">
-                      {pendingRequests.length} {pendingRequests.length === 1 ? "nuova richiesta" : "nuove richieste"} da Corner
+                      {newRequests.length} {newRequests.length === 1 ? "nuova richiesta" : "nuove richieste"} da Corner
                     </p>
                     <p className="text-sm text-amber-600">
-                      Crea un preventivo per ogni richiesta da inviare al cliente
+                      Crea un preventivo per ogni richiesta
                     </p>
                   </div>
                 </div>
@@ -430,52 +572,80 @@ export default function CentroLavoriCorner() {
           )}
 
           {/* Tabs */}
-          <Tabs defaultValue="pending" className="space-y-4">
-            <TabsList className="grid grid-cols-3 w-full max-w-md">
-              <TabsTrigger value="pending" className="relative">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+            <TabsList className="grid grid-cols-6 w-full">
+              <TabsTrigger value="new" className="text-xs sm:text-sm">
                 Nuovi
-                {pendingRequests.length > 0 && (
-                  <Badge className="ml-1.5 h-5 px-1.5 bg-amber-500 text-white">
-                    {pendingRequests.length}
-                  </Badge>
-                )}
+                {newRequests.length > 0 && <Badge className="ml-1 h-5 px-1.5 bg-amber-500">{newRequests.length}</Badge>}
               </TabsTrigger>
-              <TabsTrigger value="in_progress">
-                In Corso
-                {inProgressRequests.length > 0 && (
-                  <Badge className="ml-1.5 h-5 px-1.5 bg-blue-500 text-white">
-                    {inProgressRequests.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="completed">Completati</TabsTrigger>
+              <TabsTrigger value="quote" className="text-xs sm:text-sm">Prev.</TabsTrigger>
+              <TabsTrigger value="pickup" className="text-xs sm:text-sm">Ritiro</TabsTrigger>
+              <TabsTrigger value="lab" className="text-xs sm:text-sm">Lab</TabsTrigger>
+              <TabsTrigger value="return" className="text-xs sm:text-sm">Cons.</TabsTrigger>
+              <TabsTrigger value="completed" className="text-xs sm:text-sm">Finiti</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="pending" className="space-y-3">
+            <TabsContent value="new" className="space-y-3">
               <AnimatePresence mode="popLayout">
-                {pendingRequests.length === 0 ? (
+                {newRequests.length === 0 ? (
                   <Card className="p-8 text-center">
                     <Clock className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nessun nuovo lavoro dai Corner</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Le nuove richieste dai Corner appariranno qui
-                    </p>
+                    <p className="text-muted-foreground">Nessuna nuova richiesta</p>
                   </Card>
                 ) : (
-                  pendingRequests.map((request) => renderRequestCard(request, "pending"))
+                  newRequests.map(renderRequestCard)
                 )}
               </AnimatePresence>
             </TabsContent>
 
-            <TabsContent value="in_progress" className="space-y-3">
+            <TabsContent value="quote" className="space-y-3">
               <AnimatePresence mode="popLayout">
-                {inProgressRequests.length === 0 ? (
+                {quoteRequests.length === 0 ? (
                   <Card className="p-8 text-center">
-                    <Wrench className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nessun lavoro in corso</p>
+                    <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nessun preventivo in attesa</p>
                   </Card>
                 ) : (
-                  inProgressRequests.map((request) => renderRequestCard(request, "in_progress"))
+                  quoteRequests.map(renderRequestCard)
+                )}
+              </AnimatePresence>
+            </TabsContent>
+
+            <TabsContent value="pickup" className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {pickupRequests.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <Truck className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nessun ritiro programmato</p>
+                  </Card>
+                ) : (
+                  pickupRequests.map(renderRequestCard)
+                )}
+              </AnimatePresence>
+            </TabsContent>
+
+            <TabsContent value="lab" className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {inLabRequests.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <Wrench className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nessun dispositivo in laboratorio</p>
+                  </Card>
+                ) : (
+                  inLabRequests.map(renderRequestCard)
+                )}
+              </AnimatePresence>
+            </TabsContent>
+
+            <TabsContent value="return" className="space-y-3">
+              <AnimatePresence mode="popLayout">
+                {returnRequests.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <Store className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nessuna consegna in corso</p>
+                  </Card>
+                ) : (
+                  returnRequests.map(renderRequestCard)
                 )}
               </AnimatePresence>
             </TabsContent>
@@ -488,29 +658,54 @@ export default function CentroLavoriCorner() {
                     <p className="text-muted-foreground">Nessun lavoro completato</p>
                   </Card>
                 ) : (
-                  completedRequests.map((request) => renderRequestCard(request, "completed"))
+                  completedRequests.map(renderRequestCard)
                 )}
               </AnimatePresence>
             </TabsContent>
           </Tabs>
-
-          {/* Enhanced Quote Dialog with AI */}
-          {selectedRequest && (
-            <EnhancedQuoteDialog
-              open={quoteDialogOpen}
-              onOpenChange={setQuoteDialogOpen}
-              customerId={selectedRequest.customer.id}
-              initialDeviceType={selectedRequest.device_type}
-              initialDeviceBrand={selectedRequest.device_brand || ""}
-              initialDeviceModel={selectedRequest.device_model || ""}
-              initialIssueDescription={selectedRequest.issue_description}
-              onSuccess={handleQuoteCreated}
-              centroId={centroId}
-              repairRequestId={selectedRequest.id}
-            />
-          )}
         </div>
       </PageTransition>
+
+      {/* Quote Dialogs */}
+      {selectedRequest && quoteDialogOpen && (
+        <EnhancedQuoteDialog
+          open={quoteDialogOpen}
+          onOpenChange={setQuoteDialogOpen}
+          customerId={selectedRequest.customer.id}
+          initialDeviceType={selectedRequest.device_type}
+          initialDeviceBrand={selectedRequest.device_brand || ""}
+          initialDeviceModel={selectedRequest.device_model || ""}
+          initialIssueDescription={selectedRequest.issue_description}
+          centroId={centroId}
+          repairRequestId={selectedRequest.id}
+          onSuccess={handleQuoteCreated}
+        />
+      )}
+
+      {selectedRequest && selectedRequest.quote && editQuoteDialogOpen && (
+        <EditQuoteDialog
+          open={editQuoteDialogOpen}
+          onOpenChange={setEditQuoteDialogOpen}
+          quote={{
+            id: selectedRequest.quote.id,
+            customer_id: selectedRequest.customer.id,
+            device_type: selectedRequest.device_type,
+            device_brand: selectedRequest.device_brand,
+            device_model: selectedRequest.device_model,
+            issue_description: selectedRequest.issue_description,
+            items: selectedRequest.quote.items,
+            total_cost: selectedRequest.quote.total_cost,
+            labor_cost: 0,
+            parts_cost: 0,
+            status: selectedRequest.quote.status,
+            diagnosis: null,
+            notes: null,
+            valid_until: null,
+            repair_request_id: selectedRequest.id,
+          }}
+          onSuccess={handleQuoteUpdated}
+        />
+      )}
     </CentroLayout>
   );
 }
