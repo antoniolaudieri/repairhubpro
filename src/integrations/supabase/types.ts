@@ -1111,64 +1111,97 @@ export type Database = {
           assigned_at: string | null
           assigned_provider_id: string | null
           assigned_provider_type: string | null
+          at_corner_at: string | null
+          awaiting_pickup_at: string | null
           corner_id: string | null
           created_at: string
           customer_id: string
           customer_latitude: number | null
           customer_longitude: number | null
+          delivered_at: string | null
           device_brand: string | null
           device_model: string | null
           device_type: string
           estimated_cost: number | null
           expires_at: string | null
           id: string
+          in_diagnosis_at: string | null
+          in_repair_at: string | null
           issue_description: string
           photos: Json | null
+          picked_up_at: string | null
+          quote_accepted_at: string | null
+          quote_sent_at: string | null
+          ready_for_return_at: string | null
+          repair_completed_at: string | null
           service_type: string
           status: string
           updated_at: string
+          waiting_for_parts_at: string | null
         }
         Insert: {
           assigned_at?: string | null
           assigned_provider_id?: string | null
           assigned_provider_type?: string | null
+          at_corner_at?: string | null
+          awaiting_pickup_at?: string | null
           corner_id?: string | null
           created_at?: string
           customer_id: string
           customer_latitude?: number | null
           customer_longitude?: number | null
+          delivered_at?: string | null
           device_brand?: string | null
           device_model?: string | null
           device_type: string
           estimated_cost?: number | null
           expires_at?: string | null
           id?: string
+          in_diagnosis_at?: string | null
+          in_repair_at?: string | null
           issue_description: string
           photos?: Json | null
+          picked_up_at?: string | null
+          quote_accepted_at?: string | null
+          quote_sent_at?: string | null
+          ready_for_return_at?: string | null
+          repair_completed_at?: string | null
           service_type?: string
           status?: string
           updated_at?: string
+          waiting_for_parts_at?: string | null
         }
         Update: {
           assigned_at?: string | null
           assigned_provider_id?: string | null
           assigned_provider_type?: string | null
+          at_corner_at?: string | null
+          awaiting_pickup_at?: string | null
           corner_id?: string | null
           created_at?: string
           customer_id?: string
           customer_latitude?: number | null
           customer_longitude?: number | null
+          delivered_at?: string | null
           device_brand?: string | null
           device_model?: string | null
           device_type?: string
           estimated_cost?: number | null
           expires_at?: string | null
           id?: string
+          in_diagnosis_at?: string | null
+          in_repair_at?: string | null
           issue_description?: string
           photos?: Json | null
+          picked_up_at?: string | null
+          quote_accepted_at?: string | null
+          quote_sent_at?: string | null
+          ready_for_return_at?: string | null
+          repair_completed_at?: string | null
           service_type?: string
           status?: string
           updated_at?: string
+          waiting_for_parts_at?: string | null
         }
         Relationships: [
           {
