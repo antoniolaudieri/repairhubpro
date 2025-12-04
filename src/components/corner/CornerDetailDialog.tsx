@@ -1,8 +1,8 @@
+import { useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MapPin, Phone, Store, Euro, Percent, Building2, User } from "lucide-react";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapPin, Phone, Store, Euro, Percent, Building2 } from "lucide-react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -29,6 +29,40 @@ interface CornerDetailDialogProps {
   estimatedCost?: number | null;
   platformRate?: number;
   centroRate?: number;
+}
+
+function CornerMap({ latitude, longitude, businessName, address }: { 
+  latitude: number; 
+  longitude: number;
+  businessName: string;
+  address: string;
+}) {
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapContainerRef.current || mapRef.current) return;
+
+    const map = L.map(mapContainerRef.current, {
+      scrollWheelZoom: false,
+    }).setView([latitude, longitude], 15);
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+    }).addTo(map);
+
+    const marker = L.marker([latitude, longitude]).addTo(map);
+    marker.bindPopup(`<div class="text-center"><strong>${businessName}</strong><br/>${address}</div>`);
+
+    mapRef.current = map;
+
+    return () => {
+      map.remove();
+      mapRef.current = null;
+    };
+  }, [latitude, longitude, businessName, address]);
+
+  return <div ref={mapContainerRef} className="h-48 w-full" />;
 }
 
 export function CornerDetailDialog({
@@ -88,28 +122,12 @@ export function CornerDetailDialog({
           {/* Map */}
           {hasLocation ? (
             <Card className="overflow-hidden border-border/50">
-              <div className="h-48 w-full">
-                <MapContainer
-                  center={[corner.latitude!, corner.longitude!]}
-                  zoom={15}
-                  style={{ height: "100%", width: "100%" }}
-                  scrollWheelZoom={false}
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://carto.com/">CARTO</a>'
-                    url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  />
-                  <Marker position={[corner.latitude!, corner.longitude!]}>
-                    <Popup>
-                      <div className="text-center">
-                        <strong>{corner.business_name}</strong>
-                        <br />
-                        {corner.address}
-                      </div>
-                    </Popup>
-                  </Marker>
-                </MapContainer>
-              </div>
+              <CornerMap 
+                latitude={corner.latitude!} 
+                longitude={corner.longitude!}
+                businessName={corner.business_name}
+                address={corner.address}
+              />
             </Card>
           ) : (
             <Card className="p-4 bg-muted/30 border-border/50 text-center">
