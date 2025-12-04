@@ -204,17 +204,12 @@ export default function CornerDashboard() {
             </TabsList>
 
             <TabsContent value="new" className="mt-4">
-              {corner && corner.payment_status !== "suspended" && (
+              {corner && (
                 <RepairRequestForm
                   cornerId={corner.id}
                   onSuccess={fetchCornerData}
+                  isSuspended={corner.payment_status === "suspended"}
                 />
-              )}
-              {corner?.payment_status === "suspended" && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p>Non puoi creare nuove segnalazioni con account sospeso.</p>
-                  <p className="text-sm">Ricarica il credito per riattivare l'account.</p>
-                </div>
               )}
             </TabsContent>
 

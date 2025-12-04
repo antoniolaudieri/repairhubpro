@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CentroLayout } from "@/layouts/CentroLayout";
 import { PageTransition } from "@/components/PageTransition";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Sparkles, AlertTriangle, Smartphone, ArrowLeft, Flame, Trophy, Zap, TrendingUp } from "lucide-react";
 import { PhotoUpload } from "@/components/repair/PhotoUpload";
@@ -24,6 +24,7 @@ export default function CentroNuovoRitiro() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [centroId, setCentroId] = useState<string | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
@@ -68,19 +69,52 @@ export default function CentroNuovoRitiro() {
     initial_condition: "",
   });
 
-  // Fetch centro_id on mount
+  // Fetch centro_id and payment_status on mount
   useEffect(() => {
     const fetchCentro = async () => {
       if (!user) return;
       const { data } = await supabase
         .from("centri_assistenza")
-        .select("id")
+        .select("id, payment_status")
         .eq("owner_user_id", user.id)
         .maybeSingle();
-      if (data) setCentroId(data.id);
+      if (data) {
+        setCentroId(data.id);
+        setPaymentStatus(data.payment_status);
+      }
     };
     fetchCentro();
   }, [user]);
+
+  // Block if suspended
+  if (paymentStatus === "suspended") {
+    return (
+      <CentroLayout>
+        <PageTransition>
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Card className="max-w-md w-full border-destructive/50 bg-destructive/5">
+              <CardContent className="pt-6 text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="h-8 w-8 text-destructive" />
+                </div>
+                <h2 className="text-xl font-bold text-destructive">Account Sospeso</h2>
+                <p className="text-muted-foreground">
+                  Non puoi creare nuove riparazioni perché il tuo account è sospeso per credito esaurito.
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Ricarica il credito dalla dashboard per riattivare l'account.
+                </p>
+                <Button onClick={() => navigate("/centro")} variant="outline" className="mt-4">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Torna alla Dashboard
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </PageTransition>
+      </CentroLayout>
+    );
+  }
 
   const wizardSteps = [
     { title: "Cliente", description: "Cerca un cliente esistente o creane uno nuovo" },
