@@ -46,10 +46,31 @@ interface OrderItemInput {
 interface NewOrderDialogProps {
   onOrderCreated: () => void;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  centroId?: string | null;
 }
 
-export function NewOrderDialog({ onOrderCreated, trigger }: NewOrderDialogProps) {
-  const [open, setOpen] = useState(false);
+export function NewOrderDialog({ 
+  onOrderCreated, 
+  trigger, 
+  open: controlledOpen, 
+  onOpenChange: controlledOnOpenChange,
+  centroId 
+}: NewOrderDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  
+  // Support both controlled and uncontrolled modes
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (value: boolean) => {
+    if (isControlled && controlledOnOpenChange) {
+      controlledOnOpenChange(value);
+    } else {
+      setInternalOpen(value);
+    }
+  };
+  
   const [loading, setLoading] = useState(false);
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -67,13 +88,20 @@ export function NewOrderDialog({ onOrderCreated, trigger }: NewOrderDialogProps)
     if (open) {
       loadSpareParts();
     }
-  }, [open]);
+  }, [open, centroId]);
 
   const loadSpareParts = async () => {
-    const { data, error } = await supabase
+    let query = supabase
       .from("spare_parts")
       .select("id, name, category, brand, cost, selling_price, stock_quantity, supplier_code")
       .order("name");
+    
+    // Filter by centroId if provided
+    if (centroId) {
+      query = query.eq("centro_id", centroId);
+    }
+    
+    const { data, error } = await query;
     
     if (!error && data) {
       setSpareParts(data);
@@ -228,14 +256,16 @@ export function NewOrderDialog({ onOrderCreated, trigger }: NewOrderDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button className="gap-2">
-            <Plus className="h-4 w-4" />
-            Nuovo Ordine
-          </Button>
-        )}
-      </DialogTrigger>
+      {!isControlled && (
+        <DialogTrigger asChild>
+          {trigger || (
+            <Button className="gap-2">
+              <Plus className="h-4 w-4" />
+              Nuovo Ordine
+            </Button>
+          )}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
