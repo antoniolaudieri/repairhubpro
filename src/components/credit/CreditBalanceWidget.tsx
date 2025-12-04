@@ -28,29 +28,29 @@ export function CreditBalanceWidget({
   const [showTransactionsDialog, setShowTransactionsDialog] = useState(false);
 
   const getStatusConfig = () => {
-    switch (paymentStatus) {
-      case "suspended":
-        return {
-          color: "bg-destructive/20 text-destructive border-destructive/30",
-          icon: Ban,
-          label: "Sospeso",
-          gradient: "from-destructive/20 to-destructive/5",
-        };
-      case "warning":
-        return {
-          color: "bg-warning/20 text-warning border-warning/30",
-          icon: AlertTriangle,
-          label: "Saldo Basso",
-          gradient: "from-warning/20 to-warning/5",
-        };
-      default:
-        return {
-          color: "bg-success/20 text-success border-success/30",
-          icon: TrendingUp,
-          label: "Regolare",
-          gradient: "from-success/20 to-success/5",
-        };
+    // Check actual balance status, not just the payment_status field
+    if (paymentStatus === "suspended" || creditBalance < 0) {
+      return {
+        color: "bg-destructive/20 text-destructive border-destructive/30",
+        icon: Ban,
+        label: creditBalance < 0 ? "Debito" : "Sospeso",
+        gradient: "from-destructive/20 to-destructive/5",
+      };
     }
+    if (paymentStatus === "warning" || creditBalance < warningThreshold) {
+      return {
+        color: "bg-warning/20 text-warning border-warning/30",
+        icon: AlertTriangle,
+        label: "Saldo Basso",
+        gradient: "from-warning/20 to-warning/5",
+      };
+    }
+    return {
+      color: "bg-success/20 text-success border-success/30",
+      icon: TrendingUp,
+      label: "Regolare",
+      gradient: "from-success/20 to-success/5",
+    };
   };
 
   const statusConfig = getStatusConfig();
