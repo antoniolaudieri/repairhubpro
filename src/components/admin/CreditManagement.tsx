@@ -25,7 +25,9 @@ import {
   TrendingUp,
   Plus,
   Loader2,
-  Euro
+  Euro,
+  Percent,
+  Settings
 } from "lucide-react";
 
 interface TopupRequest {
@@ -48,6 +50,7 @@ interface EntityCredit {
   credit_balance: number;
   payment_status: string;
   last_credit_update: string | null;
+  commission_rate: number;
 }
 
 const statusColors: Record<string, string> = {
@@ -69,6 +72,8 @@ export function CreditManagement() {
   const [selectedEntity, setSelectedEntity] = useState<EntityCredit | null>(null);
   const [manualAmount, setManualAmount] = useState("");
   const [showManualTopup, setShowManualTopup] = useState(false);
+  const [showEditCommission, setShowEditCommission] = useState(false);
+  const [newCommissionRate, setNewCommissionRate] = useState("");
 
   // Fetch pending topup requests
   const { data: pendingRequests = [], isLoading: loadingRequests } = useQuery({
@@ -114,7 +119,7 @@ export function CreditManagement() {
       // Fetch centri
       const { data: centri } = await supabase
         .from("centri_assistenza")
-        .select("id, business_name, credit_balance, payment_status, last_credit_update")
+        .select("id, business_name, credit_balance, payment_status, last_credit_update, commission_rate")
         .eq("status", "approved");
 
       centri?.forEach((c: any) => {
@@ -125,13 +130,14 @@ export function CreditManagement() {
           credit_balance: c.credit_balance || 0,
           payment_status: c.payment_status || "good_standing",
           last_credit_update: c.last_credit_update,
+          commission_rate: c.commission_rate || 70,
         });
       });
 
       // Fetch corners
       const { data: corners } = await supabase
         .from("corners")
-        .select("id, business_name, credit_balance, payment_status, last_credit_update")
+        .select("id, business_name, credit_balance, payment_status, last_credit_update, commission_rate")
         .eq("status", "approved");
 
       corners?.forEach((c: any) => {
@@ -142,6 +148,7 @@ export function CreditManagement() {
           credit_balance: c.credit_balance || 0,
           payment_status: c.payment_status || "good_standing",
           last_credit_update: c.last_credit_update,
+          commission_rate: c.commission_rate || 10,
         });
       });
 
@@ -224,6 +231,28 @@ export function CreditManagement() {
     },
   });
 
+  // Update commission rate mutation
+  const updateCommissionMutation = useMutation({
+    mutationFn: async ({ entity, rate }: { entity: EntityCredit; rate: number }) => {
+      const table = entity.type === "centro" ? "centri_assistenza" : "corners";
+      const { error } = await supabase
+        .from(table)
+        .update({ commission_rate: rate })
+        .eq("id", entity.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-credit-entities"] });
+      toast.success("Commissione aggiornata");
+      setShowEditCommission(false);
+      setSelectedEntity(null);
+      setNewCommissionRate("");
+    },
+    onError: () => {
+      toast.error("Errore nell'aggiornamento della commissione");
+    },
+  });
+
   const handleManualTopup = () => {
     if (!selectedEntity || !manualAmount) return;
     const amount = parseFloat(manualAmount);
@@ -232,6 +261,16 @@ export function CreditManagement() {
       return;
     }
     manualTopupMutation.mutate({ entity: selectedEntity, amount });
+  };
+
+  const handleUpdateCommission = () => {
+    if (!selectedEntity || !newCommissionRate) return;
+    const rate = parseFloat(newCommissionRate);
+    if (isNaN(rate) || rate < 0 || rate > 100) {
+      toast.error("Inserisci una percentuale valida (0-100)");
+      return;
+    }
+    updateCommissionMutation.mutate({ entity: selectedEntity, rate });
   };
 
   // Stats
@@ -415,11 +454,18 @@ export function CreditManagement() {
                           </div>
                           <div>
                             <p className="font-medium">{entity.name}</p>
-                            <p className="text-xs text-muted-foreground capitalize">{entity.type}</p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span className="capitalize">{entity.type}</span>
+                              <span>•</span>
+                              <span className="flex items-center gap-1">
+                                <Percent className="h-3 w-3" />
+                                {entity.commission_rate}%
+                              </span>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
                           <div className="text-right">
                             <p className={`font-bold text-lg ${entity.credit_balance < 0 ? "text-destructive" : ""}`}>
                               {entity.credit_balance < 0 ? "Debito: " : ""}€{Math.abs(entity.credit_balance).toFixed(2)}
@@ -428,6 +474,18 @@ export function CreditManagement() {
                               {statusLabels[entity.payment_status]}
                             </Badge>
                           </div>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setSelectedEntity(entity);
+                              setNewCommissionRate(entity.commission_rate.toString());
+                              setShowEditCommission(true);
+                            }}
+                            title="Modifica commissione"
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"
@@ -496,6 +554,70 @@ export function CreditManagement() {
             <Button onClick={handleManualTopup} disabled={manualTopupMutation.isPending}>
               {manualTopupMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Aggiungi Credito
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Commission Dialog */}
+      <Dialog open={showEditCommission} onOpenChange={setShowEditCommission}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifica Commissione</DialogTitle>
+          </DialogHeader>
+          {selectedEntity && (
+            <div className="space-y-4 py-4">
+              <Card className="bg-muted/50">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-3">
+                    {selectedEntity.type === "centro" ? (
+                      <Building2 className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Store className="h-5 w-5 text-info" />
+                    )}
+                    <div>
+                      <p className="font-medium">{selectedEntity.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Commissione attuale: {selectedEntity.commission_rate}%
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-2">
+                <Label>
+                  {selectedEntity.type === "centro" 
+                    ? "Commissione Centro (% del margine)" 
+                    : "Commissione Corner (% del margine)"}
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder={selectedEntity.type === "centro" ? "70" : "10"}
+                    value={newCommissionRate}
+                    onChange={(e) => setNewCommissionRate(e.target.value)}
+                    min={0}
+                    max={100}
+                    step={1}
+                  />
+                  <span className="text-muted-foreground">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {selectedEntity.type === "centro" 
+                    ? "Percentuale del margine lordo che il Centro guadagna (default: 70%)"
+                    : "Percentuale del margine lordo che il Corner guadagna come referral (default: 10%)"}
+                </p>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowEditCommission(false)}>
+              Annulla
+            </Button>
+            <Button onClick={handleUpdateCommission} disabled={updateCommissionMutation.isPending}>
+              {updateCommissionMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salva Commissione
             </Button>
           </DialogFooter>
         </DialogContent>
