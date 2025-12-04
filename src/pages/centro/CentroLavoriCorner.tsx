@@ -181,9 +181,9 @@ export default function CentroLavoriCorner() {
   const newRequests = allRequests.filter(r => ['pending', 'assigned'].includes(r.status));
   const quoteRequests = allRequests.filter(r => ['quote_sent', 'quote_accepted'].includes(r.status));
   const pickupRequests = allRequests.filter(r => ['awaiting_pickup', 'picked_up'].includes(r.status));
-  const inLabRequests = allRequests.filter(r => ['in_diagnosis', 'waiting_for_parts', 'in_repair'].includes(r.status));
+  const inLabRequests = allRequests.filter(r => ['in_diagnosis', 'waiting_for_parts', 'in_repair', 'in_progress'].includes(r.status));
   const returnRequests = allRequests.filter(r => ['repair_completed', 'ready_for_return', 'at_corner'].includes(r.status));
-  const completedRequests = allRequests.filter(r => r.status === 'delivered');
+  const completedRequests = allRequests.filter(r => ['delivered', 'completed'].includes(r.status));
 
   const handleAssignQuote = (request: CornerRequest) => {
     setSelectedRequest(request);
@@ -401,8 +401,39 @@ export default function CentroLavoriCorner() {
           </Button>
         );
       
+      case 'completed':
+      case 'delivered':
+        return (
+          <div className="flex gap-2 flex-1 flex-wrap">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => updateStatus(request, 'in_repair', 'Riaperto in riparazione')}
+              disabled={processingId === request.id}
+            >
+              <Wrench className="h-4 w-4 mr-1" />
+              Riapri
+            </Button>
+            <Badge variant="secondary" className="flex items-center">
+              <CheckCircle2 className="h-3 w-3 mr-1" />
+              Completato
+            </Badge>
+          </div>
+        );
+      
       default:
-        return null;
+        return (
+          <div className="flex gap-2 flex-1 flex-wrap">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => updateStatus(request, 'pending', 'Stato resettato')}
+              disabled={processingId === request.id}
+            >
+              Resetta Stato
+            </Button>
+          </div>
+        );
     }
   };
 
