@@ -17,6 +17,7 @@ interface IntakeSignatureStepProps {
   laborTotal?: number;
   diagnosticFee?: number;
   onDiagnosticFeeChange?: (fee: number) => void;
+  isFeeDisabledBySettings?: boolean;
 }
 
 export function IntakeSignatureStep({ 
@@ -28,6 +29,7 @@ export function IntakeSignatureStep({
   laborTotal = 0,
   diagnosticFee = 15,
   onDiagnosticFeeChange,
+  isFeeDisabledBySettings = false,
 }: IntakeSignatureStepProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
   
@@ -145,9 +147,9 @@ export function IntakeSignatureStep({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <Card className="p-3 md:p-4 border border-primary/30 bg-primary/5">
+        <Card className={`p-3 md:p-4 border ${isFeeDisabledBySettings ? "border-green-500/30 bg-green-500/5" : "border-primary/30 bg-primary/5"}`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary flex items-center justify-center flex-shrink-0">
+            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${isFeeDisabledBySettings ? "bg-green-500" : "bg-primary"} flex items-center justify-center flex-shrink-0`}>
               <Euro className="h-5 w-5 md:h-6 md:w-6 text-primary-foreground" />
             </div>
             <div className="flex-1 min-w-0">
@@ -155,12 +157,21 @@ export function IntakeSignatureStep({
                 Gestione Diagnosi
               </h3>
               <p className="text-xs text-muted-foreground">
-                Costo fisso per analisi del dispositivo
+                {isFeeDisabledBySettings ? "Fee disattivato per questo Centro" : "Costo fisso per analisi del dispositivo"}
               </p>
             </div>
             <div className="text-right">
-              <span className="text-xl md:text-2xl font-bold text-primary">€15</span>
-              <p className="text-[10px] text-amber-600 font-medium">Anticipo</p>
+              {isFeeDisabledBySettings ? (
+                <>
+                  <span className="text-xl md:text-2xl font-bold text-green-600">€0</span>
+                  <p className="text-[10px] text-green-600 font-medium">Disattivato</p>
+                </>
+              ) : (
+                <>
+                  <span className="text-xl md:text-2xl font-bold text-primary">€15</span>
+                  <p className="text-[10px] text-amber-600 font-medium">Anticipo</p>
+                </>
+              )}
             </div>
           </div>
         </Card>
@@ -275,7 +286,9 @@ export function IntakeSignatureStep({
         </Card>
         
         <p className="text-[10px] text-center text-muted-foreground">
-          Firma per accettare i termini e il pagamento di €15
+          {isFeeDisabledBySettings 
+            ? "Firma per accettare i termini del servizio"
+            : "Firma per accettare i termini e il pagamento di €15"}
         </p>
 
         {currentSignature && (
