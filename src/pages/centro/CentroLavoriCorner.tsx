@@ -21,7 +21,7 @@ import {
   Wrench,
   Send
 } from "lucide-react";
-import { QuoteDialog } from "@/components/quotes/QuoteDialog";
+import { EnhancedQuoteDialog } from "@/components/quotes/EnhancedQuoteDialog";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
@@ -494,9 +494,9 @@ export default function CentroLavoriCorner() {
             </TabsContent>
           </Tabs>
 
-          {/* Quote Dialog */}
+          {/* Enhanced Quote Dialog with AI */}
           {selectedRequest && (
-            <QuoteDialog
+            <EnhancedQuoteDialog
               open={quoteDialogOpen}
               onOpenChange={setQuoteDialogOpen}
               customerId={selectedRequest.customer.id}
@@ -505,6 +505,7 @@ export default function CentroLavoriCorner() {
               initialDeviceModel={selectedRequest.device_model || ""}
               initialIssueDescription={selectedRequest.issue_description}
               onSuccess={handleQuoteCreated}
+              centroId={centroId}
             />
           )}
         </div>
