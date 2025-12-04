@@ -44,16 +44,19 @@ interface EditSparePartDialogProps {
 }
 
 const CATEGORIES = [
-  "Schermo",
+  "Display",
   "Batteria",
   "Connettore",
   "Fotocamera",
-  "Speaker",
+  "Altoparlante",
   "Microfono",
   "Tasto",
   "Cover",
   "Vetro",
   "Flex",
+  "Scheda Madre",
+  "Accessori",
+  "Dispositivi",
   "Altro"
 ];
 
