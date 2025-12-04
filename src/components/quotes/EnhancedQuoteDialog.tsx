@@ -478,7 +478,7 @@ export function EnhancedQuoteDialog({
         device_model: data.deviceModel || null,
         issue_description: data.issueDescription,
         diagnosis: data.diagnosis || null,
-        items: JSON.stringify(quoteItems),
+        items: quoteItems,
         labor_cost: laborCost,
         parts_cost: partsCost,
         total_cost: totalCost,
