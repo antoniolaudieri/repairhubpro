@@ -9,23 +9,64 @@ import {
   Wrench, 
   CheckCircle2, 
   Store,
-  User
+  User,
+  Clock
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
 interface WorkflowStep {
   id: string;
   label: string;
   icon: React.ElementType;
   status: 'completed' | 'current' | 'upcoming';
+  timestamp?: string | null;
+}
+
+interface StatusTimestamps {
+  created_at?: string;
+  quote_sent_at?: string | null;
+  quote_accepted_at?: string | null;
+  awaiting_pickup_at?: string | null;
+  picked_up_at?: string | null;
+  in_diagnosis_at?: string | null;
+  waiting_for_parts_at?: string | null;
+  in_repair_at?: string | null;
+  repair_completed_at?: string | null;
+  ready_for_return_at?: string | null;
+  at_corner_at?: string | null;
+  delivered_at?: string | null;
 }
 
 interface RepairWorkflowTimelineProps {
   currentStatus: string;
   compact?: boolean;
+  timestamps?: StatusTimestamps;
 }
 
-const getWorkflowSteps = (currentStatus: string): WorkflowStep[] => {
+const getTimestampForStatus = (statusId: string, timestamps?: StatusTimestamps): string | null => {
+  if (!timestamps) return null;
+  
+  const timestampMap: Record<string, keyof StatusTimestamps> = {
+    'quote_sent': 'quote_sent_at',
+    'quote_accepted': 'quote_accepted_at',
+    'awaiting_pickup': 'awaiting_pickup_at',
+    'picked_up': 'picked_up_at',
+    'in_diagnosis': 'in_diagnosis_at',
+    'waiting_for_parts': 'waiting_for_parts_at',
+    'in_repair': 'in_repair_at',
+    'repair_completed': 'repair_completed_at',
+    'ready_for_return': 'ready_for_return_at',
+    'at_corner': 'at_corner_at',
+    'delivered': 'delivered_at',
+  };
+  
+  const field = timestampMap[statusId];
+  return field ? (timestamps[field] as string | null) : null;
+};
+
+const getWorkflowSteps = (currentStatus: string, timestamps?: StatusTimestamps): WorkflowStep[] => {
   const statusOrder = [
     { id: 'quote_sent', label: 'Preventivo Inviato', icon: FileText },
     { id: 'quote_accepted', label: 'Preventivo Accettato', icon: Check },
@@ -46,17 +87,27 @@ const getWorkflowSteps = (currentStatus: string): WorkflowStep[] => {
   
   return statusOrder.map((step, index) => ({
     ...step,
-    status: index < currentIndex ? 'completed' : index === currentIndex ? 'current' : 'upcoming'
+    status: index < currentIndex ? 'completed' : index === currentIndex ? 'current' : 'upcoming',
+    timestamp: getTimestampForStatus(step.id, timestamps)
   }));
 };
 
-export function RepairWorkflowTimeline({ currentStatus, compact = false }: RepairWorkflowTimelineProps) {
+const formatTimestamp = (timestamp: string | null | undefined): string => {
+  if (!timestamp) return '';
+  try {
+    return format(new Date(timestamp), "d MMM HH:mm", { locale: it });
+  } catch {
+    return '';
+  }
+};
+
+export function RepairWorkflowTimeline({ currentStatus, compact = false, timestamps }: RepairWorkflowTimelineProps) {
   // Don't show timeline for early statuses
   if (['pending', 'assigned'].includes(currentStatus)) {
     return null;
   }
 
-  const steps = getWorkflowSteps(currentStatus);
+  const steps = getWorkflowSteps(currentStatus, timestamps);
   
   // Filter to show only relevant steps based on current status
   const visibleSteps = steps.filter(step => {
@@ -82,6 +133,7 @@ export function RepairWorkflowTimeline({ currentStatus, compact = false }: Repai
                   step.status === 'current' && "bg-primary text-primary-foreground",
                   step.status === 'upcoming' && "bg-muted text-muted-foreground"
                 )}
+                title={step.timestamp ? formatTimestamp(step.timestamp) : undefined}
               >
                 <Icon className="h-3 w-3" />
                 <span className="hidden sm:inline">{step.label}</span>
@@ -109,11 +161,12 @@ export function RepairWorkflowTimeline({ currentStatus, compact = false }: Repai
         <div className="space-y-3">
           {visibleSteps.map((step) => {
             const Icon = step.icon;
+            const formattedTime = formatTimestamp(step.timestamp);
             return (
-              <div key={step.id} className="flex items-center gap-3 relative">
+              <div key={step.id} className="flex items-start gap-3 relative">
                 <div
                   className={cn(
-                    "h-6 w-6 rounded-full flex items-center justify-center z-10 shrink-0",
+                    "h-6 w-6 rounded-full flex items-center justify-center z-10 shrink-0 mt-0.5",
                     step.status === 'completed' && "bg-emerald-500 text-white",
                     step.status === 'current' && "bg-primary text-primary-foreground ring-4 ring-primary/20",
                     step.status === 'upcoming' && "bg-muted text-muted-foreground"
@@ -125,16 +178,24 @@ export function RepairWorkflowTimeline({ currentStatus, compact = false }: Repai
                     <Icon className="h-3 w-3" />
                   )}
                 </div>
-                <span
-                  className={cn(
-                    "text-sm",
-                    step.status === 'completed' && "text-emerald-700",
-                    step.status === 'current' && "font-semibold text-foreground",
-                    step.status === 'upcoming' && "text-muted-foreground"
+                <div className="flex-1 min-w-0">
+                  <span
+                    className={cn(
+                      "text-sm block",
+                      step.status === 'completed' && "text-emerald-700",
+                      step.status === 'current' && "font-semibold text-foreground",
+                      step.status === 'upcoming' && "text-muted-foreground"
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                  {formattedTime && (
+                    <span className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                      <Clock className="h-3 w-3" />
+                      {formattedTime}
+                    </span>
                   )}
-                >
-                  {step.label}
-                </span>
+                </div>
               </div>
             );
           })}

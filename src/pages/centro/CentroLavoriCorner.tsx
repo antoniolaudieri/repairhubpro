@@ -46,6 +46,18 @@ interface CornerRequest {
   issue_description: string;
   estimated_cost: number | null;
   assigned_at: string | null;
+  // Timestamp fields for workflow tracking
+  quote_sent_at: string | null;
+  quote_accepted_at: string | null;
+  awaiting_pickup_at: string | null;
+  picked_up_at: string | null;
+  in_diagnosis_at: string | null;
+  waiting_for_parts_at: string | null;
+  in_repair_at: string | null;
+  repair_completed_at: string | null;
+  ready_for_return_at: string | null;
+  at_corner_at: string | null;
+  delivered_at: string | null;
   customer: {
     id: string;
     name: string;
@@ -114,6 +126,17 @@ export default function CentroLavoriCorner() {
         issue_description,
         estimated_cost,
         assigned_at,
+        quote_sent_at,
+        quote_accepted_at,
+        awaiting_pickup_at,
+        picked_up_at,
+        in_diagnosis_at,
+        waiting_for_parts_at,
+        in_repair_at,
+        repair_completed_at,
+        ready_for_return_at,
+        at_corner_at,
+        delivered_at,
         customer:customers (
           id,
           name,
@@ -202,7 +225,10 @@ export default function CentroLavoriCorner() {
     if (selectedRequest) {
       await supabase
         .from("repair_requests")
-        .update({ status: "quote_sent" })
+        .update({ 
+          status: "quote_sent",
+          quote_sent_at: new Date().toISOString()
+        })
         .eq("id", selectedRequest.id);
     }
     
@@ -217,12 +243,37 @@ export default function CentroLavoriCorner() {
     if (centroId) fetchRequests(centroId);
   };
 
+  const getTimestampField = (status: string): string | null => {
+    const timestampMap: Record<string, string> = {
+      'quote_sent': 'quote_sent_at',
+      'quote_accepted': 'quote_accepted_at',
+      'awaiting_pickup': 'awaiting_pickup_at',
+      'picked_up': 'picked_up_at',
+      'in_diagnosis': 'in_diagnosis_at',
+      'waiting_for_parts': 'waiting_for_parts_at',
+      'in_repair': 'in_repair_at',
+      'repair_completed': 'repair_completed_at',
+      'ready_for_return': 'ready_for_return_at',
+      'at_corner': 'at_corner_at',
+      'delivered': 'delivered_at',
+    };
+    return timestampMap[status] || null;
+  };
+
   const updateStatus = async (request: CornerRequest, newStatus: string, message: string) => {
     setProcessingId(request.id);
     try {
+      const updateData: Record<string, any> = { status: newStatus };
+      
+      // Add timestamp for this status change
+      const timestampField = getTimestampField(newStatus);
+      if (timestampField) {
+        updateData[timestampField] = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from("repair_requests")
-        .update({ status: newStatus })
+        .update(updateData)
         .eq("id", request.id);
 
       if (error) throw error;
@@ -504,7 +555,24 @@ export default function CentroLavoriCorner() {
             </div>
 
             {/* Workflow Timeline */}
-            <RepairWorkflowTimeline currentStatus={request.status} compact />
+            <RepairWorkflowTimeline 
+              currentStatus={request.status} 
+              compact 
+              timestamps={{
+                created_at: request.created_at,
+                quote_sent_at: request.quote_sent_at,
+                quote_accepted_at: request.quote_accepted_at,
+                awaiting_pickup_at: request.awaiting_pickup_at,
+                picked_up_at: request.picked_up_at,
+                in_diagnosis_at: request.in_diagnosis_at,
+                waiting_for_parts_at: request.waiting_for_parts_at,
+                in_repair_at: request.in_repair_at,
+                repair_completed_at: request.repair_completed_at,
+                ready_for_return_at: request.ready_for_return_at,
+                at_corner_at: request.at_corner_at,
+                delivered_at: request.delivered_at,
+              }}
+            />
 
             {/* Actions */}
             <div className="flex items-center gap-2 pt-2 border-t">

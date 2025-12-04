@@ -41,6 +41,18 @@ interface RepairRequest {
   created_at: string;
   assigned_provider_type: string | null;
   assigned_provider_id: string | null;
+  // Timestamp fields for workflow tracking
+  quote_sent_at: string | null;
+  quote_accepted_at: string | null;
+  awaiting_pickup_at: string | null;
+  picked_up_at: string | null;
+  in_diagnosis_at: string | null;
+  waiting_for_parts_at: string | null;
+  in_repair_at: string | null;
+  repair_completed_at: string | null;
+  ready_for_return_at: string | null;
+  at_corner_at: string | null;
+  delivered_at: string | null;
   customer: {
     name: string;
     phone: string;
@@ -369,7 +381,24 @@ export default function CornerSegnalazioni() {
                       {/* Workflow Timeline */}
                       {!['pending', 'assigned'].includes(request.status) && (
                         <div className="mt-2 pt-2 border-t">
-                          <RepairWorkflowTimeline currentStatus={request.status} compact />
+                          <RepairWorkflowTimeline 
+                            currentStatus={request.status} 
+                            compact 
+                            timestamps={{
+                              created_at: request.created_at,
+                              quote_sent_at: request.quote_sent_at,
+                              quote_accepted_at: request.quote_accepted_at,
+                              awaiting_pickup_at: request.awaiting_pickup_at,
+                              picked_up_at: request.picked_up_at,
+                              in_diagnosis_at: request.in_diagnosis_at,
+                              waiting_for_parts_at: request.waiting_for_parts_at,
+                              in_repair_at: request.in_repair_at,
+                              repair_completed_at: request.repair_completed_at,
+                              ready_for_return_at: request.ready_for_return_at,
+                              at_corner_at: request.at_corner_at,
+                              delivered_at: request.delivered_at,
+                            }}
+                          />
                         </div>
                       )}
                     </div>
