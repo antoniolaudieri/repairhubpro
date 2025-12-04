@@ -1,0 +1,734 @@
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Plus, Trash2, Sparkles, Loader2, Search, Package, Wrench, Headphones, Smartphone, Send, Save } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+
+const quoteSchema = z.object({
+  deviceType: z.string().min(1, "Tipo dispositivo richiesto"),
+  deviceBrand: z.string().optional(),
+  deviceModel: z.string().optional(),
+  issueDescription: z.string().min(10, "Descrizione minimo 10 caratteri"),
+  diagnosis: z.string().optional(),
+  notes: z.string().optional(),
+  validUntil: z.string().optional(),
+});
+
+interface QuoteItem {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  type: 'part' | 'labor' | 'service';
+  purchaseCost?: number;
+}
+
+interface Quote {
+  id: string;
+  customer_id: string;
+  device_type: string;
+  device_brand: string | null;
+  device_model: string | null;
+  issue_description: string;
+  diagnosis: string | null;
+  notes: string | null;
+  items: any;
+  labor_cost: number;
+  parts_cost: number;
+  total_cost: number;
+  status: string;
+  valid_until: string | null;
+  repair_request_id: string | null;
+}
+
+interface LaborPrice {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  category: string;
+  device_type: string | null;
+}
+
+interface AdditionalService {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  is_active: boolean;
+}
+
+interface SparePart {
+  id: string;
+  name: string;
+  brand: string | null;
+  category: string;
+  stock_quantity: number;
+  cost: number | null;
+  selling_price: number | null;
+  supplier_code: string | null;
+  image_url: string | null;
+}
+
+interface EditQuoteDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  quote: Quote;
+  onSuccess: () => void;
+  centroId?: string | null;
+}
+
+export function EditQuoteDialog({
+  open,
+  onOpenChange,
+  quote,
+  onSuccess,
+  centroId
+}: EditQuoteDialogProps) {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [items, setItems] = useState<QuoteItem[]>([]);
+  const [markupPercentage, setMarkupPercentage] = useState(40);
+  
+  // Data
+  const [spareParts, setSpareParts] = useState<SparePart[]>([]);
+  const [laborPrices, setLaborPrices] = useState<LaborPrice[]>([]);
+  const [availableServices, setAvailableServices] = useState<AdditionalService[]>([]);
+  
+  // Utopya search
+  const [utopyaSearchQuery, setUtopyaSearchQuery] = useState("");
+  const [utopyaSearchResults, setUtopyaSearchResults] = useState<any[]>([]);
+  const [utopyaSearchLoading, setUtopyaSearchLoading] = useState(false);
+  
+  // Inventory search
+  const [inventorySearch, setInventorySearch] = useState("");
+
+  const form = useForm({
+    resolver: zodResolver(quoteSchema),
+    defaultValues: {
+      deviceType: quote.device_type,
+      deviceBrand: quote.device_brand || "",
+      deviceModel: quote.device_model || "",
+      issueDescription: quote.issue_description,
+      diagnosis: quote.diagnosis || "",
+      notes: quote.notes || "",
+      validUntil: quote.valid_until || "",
+    },
+  });
+
+  // Load quote items and data when dialog opens
+  useEffect(() => {
+    if (open && quote) {
+      form.reset({
+        deviceType: quote.device_type,
+        deviceBrand: quote.device_brand || "",
+        deviceModel: quote.device_model || "",
+        issueDescription: quote.issue_description,
+        diagnosis: quote.diagnosis || "",
+        notes: quote.notes || "",
+        validUntil: quote.valid_until || "",
+      });
+      
+      // Parse items from quote
+      try {
+        const parsedItems = typeof quote.items === 'string' 
+          ? JSON.parse(quote.items) 
+          : quote.items;
+        
+        const loadedItems: QuoteItem[] = parsedItems.map((item: any, index: number) => ({
+          id: `existing-${index}`,
+          description: item.description,
+          quantity: item.quantity || 1,
+          unitPrice: item.unitPrice,
+          total: item.total || item.unitPrice * (item.quantity || 1),
+          type: item.type || 'part',
+          purchaseCost: item.purchaseCost,
+        }));
+        setItems(loadedItems);
+      } catch (e) {
+        console.error("Error parsing items:", e);
+        setItems([]);
+      }
+      
+      loadData();
+    }
+  }, [open, quote]);
+
+  const loadData = async () => {
+    await Promise.all([loadSpareParts(), loadLaborPrices(), loadServices()]);
+  };
+
+  const loadSpareParts = async () => {
+    let query = supabase
+      .from("spare_parts")
+      .select("id, name, brand, category, stock_quantity, cost, selling_price, supplier_code, image_url")
+      .order("name");
+    
+    if (centroId) {
+      query = query.eq("centro_id", centroId);
+    }
+    
+    const { data } = await query;
+    setSpareParts(data || []);
+  };
+
+  const loadLaborPrices = async () => {
+    const { data } = await supabase
+      .from("labor_prices")
+      .select("*")
+      .order("category")
+      .order("name");
+    setLaborPrices(data || []);
+  };
+
+  const loadServices = async () => {
+    const { data } = await supabase
+      .from("additional_services")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order");
+    setAvailableServices(data || []);
+  };
+
+  // Utopya search
+  const searchUtopya = async () => {
+    if (!utopyaSearchQuery.trim()) {
+      toast.error("Inserisci un termine di ricerca");
+      return;
+    }
+    
+    setUtopyaSearchLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-utopya', {
+        body: { searchQuery: utopyaSearchQuery.trim() }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.products && data.products.length > 0) {
+        setUtopyaSearchResults(data.products);
+        toast.success(`Trovati ${data.products.length} prodotti su Utopya`);
+      } else {
+        setUtopyaSearchResults([]);
+        toast.info("Nessun prodotto trovato su Utopya");
+      }
+    } catch (err: any) {
+      console.error("Utopya search error:", err);
+      toast.error("Errore nella ricerca su Utopya");
+      setUtopyaSearchResults([]);
+    } finally {
+      setUtopyaSearchLoading(false);
+    }
+  };
+
+  const addUtopyaProduct = (product: any) => {
+    const price = product.priceNumeric || 0;
+    const sellingPrice = price * (1 + markupPercentage / 100);
+    
+    setItems([...items, {
+      id: `utopya-${Date.now()}`,
+      description: product.name,
+      quantity: 1,
+      unitPrice: Math.round(sellingPrice * 100) / 100,
+      total: Math.round(sellingPrice * 100) / 100,
+      type: 'part',
+      purchaseCost: price,
+    }]);
+    toast.success(`${product.name} aggiunto`);
+  };
+
+  const addInventoryPart = (part: SparePart) => {
+    if (items.some(i => i.id === part.id)) {
+      toast.info("Ricambio già aggiunto");
+      return;
+    }
+    
+    const price = part.selling_price || part.cost || 0;
+    setItems([...items, {
+      id: part.id,
+      description: part.name,
+      quantity: 1,
+      unitPrice: price,
+      total: price,
+      type: 'part',
+      purchaseCost: part.cost || 0,
+    }]);
+    toast.success(`${part.name} aggiunto`);
+  };
+
+  const addLabor = (labor: LaborPrice) => {
+    if (items.some(i => i.id === labor.id)) {
+      toast.info("Lavorazione già aggiunta");
+      return;
+    }
+    
+    setItems([...items, {
+      id: labor.id,
+      description: labor.name,
+      quantity: 1,
+      unitPrice: labor.price,
+      total: labor.price,
+      type: 'labor',
+    }]);
+    toast.success(`${labor.name} aggiunta`);
+  };
+
+  const addService = (service: AdditionalService) => {
+    if (items.some(i => i.id === service.id)) {
+      toast.info("Servizio già aggiunto");
+      return;
+    }
+    
+    setItems([...items, {
+      id: service.id,
+      description: service.name,
+      quantity: 1,
+      unitPrice: service.price,
+      total: service.price,
+      type: 'service',
+    }]);
+    toast.success(`${service.name} aggiunto`);
+  };
+
+  const removeItem = (id: string) => {
+    setItems(items.filter(i => i.id !== id));
+  };
+
+  const updateItemQuantity = (id: string, quantity: number) => {
+    if (quantity < 1) return;
+    setItems(items.map(i => 
+      i.id === id ? { ...i, quantity, total: i.unitPrice * quantity } : i
+    ));
+  };
+
+  const updateItemPrice = (id: string, price: number) => {
+    setItems(items.map(i => 
+      i.id === id ? { ...i, unitPrice: price, total: price * i.quantity } : i
+    ));
+  };
+
+  const getPartsCost = () => items.filter(i => i.type === 'part').reduce((sum, i) => sum + i.total, 0);
+  const getLaborCost = () => items.filter(i => i.type === 'labor').reduce((sum, i) => sum + i.total, 0);
+  const getServicesCost = () => items.filter(i => i.type === 'service').reduce((sum, i) => sum + i.total, 0);
+  const getTotalCost = () => items.reduce((sum, i) => sum + i.total, 0);
+
+  const filteredInventory = spareParts.filter(part => {
+    if (!inventorySearch) return false;
+    const term = inventorySearch.toLowerCase();
+    return (
+      part.name.toLowerCase().includes(term) ||
+      part.category.toLowerCase().includes(term) ||
+      (part.brand && part.brand.toLowerCase().includes(term))
+    );
+  });
+
+  const filteredLaborPrices = laborPrices.filter(lp => {
+    const deviceType = form.watch("deviceType");
+    return !lp.device_type || !deviceType || lp.device_type.toLowerCase() === deviceType.toLowerCase();
+  });
+
+  const handleSave = async (data: z.infer<typeof quoteSchema>, sendToCustomer: boolean) => {
+    if (items.length === 0) {
+      toast.error("Aggiungi almeno un articolo");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const partsCost = getPartsCost();
+      const laborCost = getLaborCost() + getServicesCost();
+      const totalCost = getTotalCost();
+
+      const validUntil = data.validUntil 
+        ? data.validUntil
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const quoteItems = items.map(i => ({
+        description: i.description,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        total: i.total,
+        type: i.type,
+      }));
+
+      const updateData: any = {
+        device_type: data.deviceType,
+        device_brand: data.deviceBrand || null,
+        device_model: data.deviceModel || null,
+        issue_description: data.issueDescription,
+        diagnosis: data.diagnosis || null,
+        items: JSON.stringify(quoteItems),
+        labor_cost: laborCost,
+        parts_cost: partsCost,
+        total_cost: totalCost,
+        notes: data.notes || null,
+        valid_until: validUntil,
+      };
+
+      // If sending to customer, update status
+      if (sendToCustomer) {
+        updateData.status = 'pending';
+      }
+
+      const { error } = await supabase
+        .from("quotes")
+        .update(updateData)
+        .eq("id", quote.id);
+
+      if (error) throw error;
+
+      // If there's a linked repair_request and we're sending to customer, update its status
+      if (sendToCustomer && quote.repair_request_id) {
+        await supabase
+          .from("repair_requests")
+          .update({ status: "quote_sent" })
+          .eq("id", quote.repair_request_id);
+      }
+
+      toast.success(sendToCustomer ? "Preventivo inviato al cliente" : "Preventivo salvato");
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      toast.error(error.message || "Errore nel salvataggio");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-2xl flex items-center gap-2">
+            <Package className="h-6 w-6" />
+            Modifica Preventivo
+          </DialogTitle>
+        </DialogHeader>
+
+        <form onSubmit={form.handleSubmit((data) => handleSave(data, false))} className="space-y-6">
+          {/* Device Info */}
+          <div className="space-y-4 p-4 bg-muted/30 rounded-xl">
+            <h3 className="font-semibold text-lg">Informazioni Dispositivo</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label>Tipo Dispositivo *</Label>
+                <Select
+                  value={form.watch("deviceType")}
+                  onValueChange={(value) => form.setValue("deviceType", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="smartphone">Smartphone</SelectItem>
+                    <SelectItem value="tablet">Tablet</SelectItem>
+                    <SelectItem value="laptop">Laptop</SelectItem>
+                    <SelectItem value="desktop">Desktop</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Marca</Label>
+                <Input placeholder="es. Apple, Samsung" {...form.register("deviceBrand")} />
+              </div>
+              <div>
+                <Label>Modello</Label>
+                <Input placeholder="es. iPhone 14" {...form.register("deviceModel")} />
+              </div>
+            </div>
+            <div>
+              <Label>Descrizione Problema *</Label>
+              <Textarea
+                placeholder="Descrivi il problema del dispositivo..."
+                rows={3}
+                {...form.register("issueDescription")}
+              />
+            </div>
+          </div>
+
+          {/* Markup */}
+          <div className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl border border-primary/20">
+            <div className="flex items-center gap-4">
+              <Label className="font-semibold">Markup sui ricambi</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  value={markupPercentage}
+                  onChange={(e) => setMarkupPercentage(Number(e.target.value))}
+                  className="w-20"
+                  min={0}
+                  max={200}
+                />
+                <span className="text-sm text-muted-foreground">%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Add Items Tabs */}
+          <Tabs defaultValue="utopya" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="utopya">Utopya</TabsTrigger>
+              <TabsTrigger value="inventory">Inventario</TabsTrigger>
+              <TabsTrigger value="labor">Lavorazioni</TabsTrigger>
+              <TabsTrigger value="services">Servizi</TabsTrigger>
+            </TabsList>
+
+            {/* Utopya Tab */}
+            <TabsContent value="utopya" className="space-y-4">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca su Utopya..."
+                    value={utopyaSearchQuery}
+                    onChange={(e) => setUtopyaSearchQuery(e.target.value)}
+                    className="pl-10"
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), searchUtopya())}
+                  />
+                </div>
+                <Button type="button" onClick={searchUtopya} disabled={utopyaSearchLoading}>
+                  {utopyaSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+              </div>
+              
+              {utopyaSearchResults.length > 0 && (
+                <div className="grid gap-2 max-h-48 overflow-y-auto">
+                  {utopyaSearchResults.slice(0, 10).map((product, idx) => (
+                    <Card key={idx} className="p-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {product.imageUrl && (
+                          <img src={product.imageUrl} alt="" className="w-10 h-10 object-contain rounded" />
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{product.name}</p>
+                          <p className="text-xs text-muted-foreground">SKU: {product.sku || 'N/A'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold text-primary">€{product.priceNumeric?.toFixed(2) || 'N/A'}</span>
+                        <Button type="button" size="sm" onClick={() => addUtopyaProduct(product)}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Inventory Tab */}
+            <TabsContent value="inventory" className="space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cerca nell'inventario..."
+                  value={inventorySearch}
+                  onChange={(e) => setInventorySearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              
+              {filteredInventory.length > 0 && (
+                <div className="grid gap-2 max-h-48 overflow-y-auto">
+                  {filteredInventory.map((part) => (
+                    <Card key={part.id} className="p-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
+                          <Package className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{part.name}</p>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className="text-xs">{part.category}</Badge>
+                            <span>Stock: {part.stock_quantity}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold text-primary">€{(part.selling_price || part.cost || 0).toFixed(2)}</span>
+                        <Button type="button" size="sm" onClick={() => addInventoryPart(part)} disabled={part.stock_quantity === 0}>
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Labor Tab */}
+            <TabsContent value="labor" className="space-y-4">
+              <div className="grid gap-2 max-h-48 overflow-y-auto">
+                {filteredLaborPrices.map((labor) => (
+                  <Card key={labor.id} className="p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="h-10 w-10 rounded bg-amber-100 flex items-center justify-center">
+                        <Wrench className="h-5 w-5 text-amber-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{labor.name}</p>
+                        <Badge variant="outline" className="text-xs">{labor.category}</Badge>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-primary">€{labor.price.toFixed(2)}</span>
+                      <Button type="button" size="sm" onClick={() => addLabor(labor)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            {/* Services Tab */}
+            <TabsContent value="services" className="space-y-4">
+              <div className="grid gap-2 max-h-48 overflow-y-auto">
+                {availableServices.map((service) => (
+                  <Card key={service.id} className="p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="h-10 w-10 rounded bg-purple-100 flex items-center justify-center">
+                        <Headphones className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium">{service.name}</p>
+                        {service.description && (
+                          <p className="text-xs text-muted-foreground truncate">{service.description}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-primary">€{service.price.toFixed(2)}</span>
+                      <Button type="button" size="sm" onClick={() => addService(service)}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          {/* Selected Items */}
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              Articoli Selezionati
+              <Badge variant="secondary">{items.length}</Badge>
+            </h3>
+            
+            {items.length === 0 ? (
+              <Card className="p-6 text-center text-muted-foreground">
+                Nessun articolo selezionato. Aggiungi ricambi, lavorazioni o servizi.
+              </Card>
+            ) : (
+              <div className="space-y-2">
+                {items.map((item) => (
+                  <Card key={item.id} className="p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded flex items-center justify-center bg-muted">
+                        {item.type === 'part' && <Package className="h-4 w-4 text-blue-600" />}
+                        {item.type === 'labor' && <Wrench className="h-4 w-4 text-amber-600" />}
+                        {item.type === 'service' && <Headphones className="h-4 w-4 text-purple-600" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{item.description}</p>
+                        <Badge variant="outline" className="text-xs">
+                          {item.type === 'part' ? 'Ricambio' : item.type === 'labor' ? 'Lavorazione' : 'Servizio'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))}
+                          className="w-16 h-8 text-center"
+                          min={1}
+                        />
+                        <span className="text-xs text-muted-foreground">×</span>
+                        <Input
+                          type="number"
+                          value={item.unitPrice}
+                          onChange={(e) => updateItemPrice(item.id, Number(e.target.value))}
+                          className="w-20 h-8"
+                          step={0.01}
+                        />
+                        <span className="font-semibold text-primary w-20 text-right">€{item.total.toFixed(2)}</span>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(item.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Summary */}
+          <Card className="p-4 bg-gradient-to-r from-primary/5 to-primary/10">
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span>Ricambi</span>
+                <span>€{getPartsCost().toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Lavorazioni</span>
+                <span>€{getLaborCost().toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span>Servizi</span>
+                <span>€{getServicesCost().toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t pt-2">
+                <span>Totale</span>
+                <span className="text-primary">€{getTotalCost().toFixed(2)}</span>
+              </div>
+            </div>
+          </Card>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label>Diagnosi / Note tecniche</Label>
+            <Textarea
+              placeholder="Note tecniche, diagnosi dettagliata..."
+              rows={2}
+              {...form.register("diagnosis")}
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3 justify-end">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Annulla
+            </Button>
+            <Button type="submit" variant="secondary" disabled={loading}>
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+              Salva
+            </Button>
+            <Button 
+              type="button" 
+              onClick={form.handleSubmit((data) => handleSave(data, true))} 
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+              Salva e Invia al Cliente
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}

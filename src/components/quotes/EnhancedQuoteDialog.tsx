@@ -90,6 +90,7 @@ interface EnhancedQuoteDialogProps {
   initialDeviceModel?: string;
   initialIssueDescription?: string;
   centroId?: string | null;
+  repairRequestId?: string | null;
 }
 
 export function EnhancedQuoteDialog({
@@ -101,7 +102,8 @@ export function EnhancedQuoteDialog({
   initialDeviceBrand = "",
   initialDeviceModel = "",
   initialIssueDescription = "",
-  centroId
+  centroId,
+  repairRequestId
 }: EnhancedQuoteDialogProps) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -483,6 +485,7 @@ export function EnhancedQuoteDialog({
         notes: data.notes || null,
         valid_until: validUntil,
         created_by: user?.id,
+        repair_request_id: repairRequestId || null,
       });
 
       if (error) throw error;

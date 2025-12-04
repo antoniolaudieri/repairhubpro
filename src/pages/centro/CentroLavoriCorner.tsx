@@ -506,6 +506,7 @@ export default function CentroLavoriCorner() {
               initialIssueDescription={selectedRequest.issue_description}
               onSuccess={handleQuoteCreated}
               centroId={centroId}
+              repairRequestId={selectedRequest.id}
             />
           )}
         </div>
