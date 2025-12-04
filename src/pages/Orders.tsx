@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +22,9 @@ import {
   User,
   Phone,
   Mail,
-  Trash2
+  Trash2,
+  Wrench,
+  ChevronRight
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -73,11 +76,13 @@ interface Order {
   received_at: string | null;
   order_items: OrderItem[];
   repairs?: {
+    id: string;
     devices: {
       brand: string;
       model: string;
       photo_url: string | null;
       customers: {
+        id: string;
         name: string;
         phone: string;
         email: string | null;
@@ -167,6 +172,7 @@ const PartImage = ({ imageUrl, name }: { imageUrl: string | null | undefined; na
 };
 
 export default function Orders() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingOrder, setProcessingOrder] = useState<string | null>(null);
@@ -215,11 +221,13 @@ export default function Orders() {
             )
           ),
           repairs (
+            id,
             devices (
               brand,
               model,
               photo_url,
               customers (
+                id,
                 name,
                 phone,
                 email
@@ -716,7 +724,7 @@ export default function Orders() {
                     </div>
 
                     <div className="p-4 md:p-5 space-y-4">
-                      {/* Customer Info */}
+                      {/* Customer Info & Repair Link */}
                       {order.repairs?.devices?.customers && (
                         <motion.div 
                           initial={{ opacity: 0 }}
@@ -724,28 +732,50 @@ export default function Orders() {
                           className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-xl border border-blue-100 dark:border-blue-900"
                         >
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                            <div 
+                              onClick={() => navigate(`/customers/${order.repairs?.devices?.customers?.id}`)}
+                              className="w-10 h-10 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-300 dark:hover:bg-blue-700 transition-colors"
+                            >
                               <User className="h-5 w-5 text-blue-600 dark:text-blue-300" />
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold text-foreground">
+                              <p 
+                                onClick={() => navigate(`/customers/${order.repairs?.devices?.customers?.id}`)}
+                                className="font-semibold text-foreground hover:text-primary cursor-pointer transition-colors inline-flex items-center gap-1"
+                              >
                                 {order.repairs.devices.customers.name}
+                                <ChevronRight className="h-4 w-4 opacity-50" />
                               </p>
                               <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                                 <a href={`tel:${order.repairs.devices.customers.phone}`} 
-                                   className="flex items-center gap-1 hover:text-primary transition-colors">
+                                   className="flex items-center gap-1 hover:text-primary transition-colors"
+                                   onClick={(e) => e.stopPropagation()}>
                                   <Phone className="h-3 w-3" />
                                   {order.repairs.devices.customers.phone}
                                 </a>
                                 {order.repairs.devices.customers.email && (
                                   <a href={`mailto:${order.repairs.devices.customers.email}`}
-                                     className="flex items-center gap-1 hover:text-primary transition-colors">
+                                     className="flex items-center gap-1 hover:text-primary transition-colors"
+                                     onClick={(e) => e.stopPropagation()}>
                                     <Mail className="h-3 w-3" />
                                     {order.repairs.devices.customers.email}
                                   </a>
                                 )}
                               </div>
                             </div>
+                            {/* Link to Repair */}
+                            {order.repair_id && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/repairs/${order.repair_id}`)}
+                                className="gap-2 text-xs"
+                              >
+                                <Wrench className="h-3 w-3" />
+                                <span className="hidden sm:inline">Riparazione</span>
+                                <ChevronRight className="h-3 w-3" />
+                              </Button>
+                            )}
                           </div>
                         </motion.div>
                       )}
