@@ -888,8 +888,15 @@ export function EnhancedQuoteDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
               Annulla
             </Button>
-            <Button type="submit" disabled={loading || items.length === 0}>
-              {loading ? "Creazione..." : "Crea Preventivo"}
+            <Button type="submit" disabled={loading || items.length === 0} className="min-w-[150px]">
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Salvataggio...
+                </>
+              ) : (
+                "Crea Preventivo"
+              )}
             </Button>
           </div>
         </form>
