@@ -26,6 +26,7 @@ import {
   Locate,
   Loader2
 } from "lucide-react";
+import { LocationPicker } from "@/components/maps/LocationPicker";
 
 type ProviderType = "corner" | "riparatore" | "centro" | null;
 
@@ -375,32 +376,16 @@ export default function ProviderRegistration() {
                     </div>
                   </div>
                   
-                  {/* Geolocation Button */}
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={requestLocation}
-                      disabled={geoLoading}
-                    >
-                      {geoLoading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Locate className="h-4 w-4 mr-2" />
-                      )}
-                      Rileva Posizione
-                    </Button>
-                    {cornerForm.latitude && cornerForm.longitude ? (
-                      <span className="text-sm text-success flex items-center gap-1">
-                        <CheckCircle className="h-4 w-4" />
-                        Posizione rilevata
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        La posizione aiuta i clienti a trovarti
-                      </span>
-                    )}
+                  {/* Location Picker Map */}
+                  <div className="space-y-2">
+                    <Label>Posizione sulla Mappa</Label>
+                    <LocationPicker
+                      latitude={cornerForm.latitude}
+                      longitude={cornerForm.longitude}
+                      onLocationChange={(lat, lng) => setCornerForm({ ...cornerForm, latitude: lat, longitude: lng })}
+                      onGeolocate={requestLocation}
+                      geoLoading={geoLoading}
+                    />
                   </div>
 
                   <Button
@@ -534,32 +519,16 @@ export default function ProviderRegistration() {
                     </div>
                   </div>
 
-                  {/* Geolocation Button */}
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={requestLocation}
-                      disabled={geoLoading}
-                    >
-                      {geoLoading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Locate className="h-4 w-4 mr-2" />
-                      )}
-                      Rileva Posizione
-                    </Button>
-                    {riparatoreForm.latitude && riparatoreForm.longitude ? (
-                      <span className="text-sm text-success flex items-center gap-1">
-                        <CheckCircle className="h-4 w-4" />
-                        Posizione rilevata
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Necessaria per ricevere offerte di lavoro
-                      </span>
-                    )}
+                  {/* Location Picker Map */}
+                  <div className="space-y-2">
+                    <Label>Posizione sulla Mappa</Label>
+                    <LocationPicker
+                      latitude={riparatoreForm.latitude}
+                      longitude={riparatoreForm.longitude}
+                      onLocationChange={(lat, lng) => setRiparatoreForm({ ...riparatoreForm, latitude: lat, longitude: lng })}
+                      onGeolocate={requestLocation}
+                      geoLoading={geoLoading}
+                    />
                   </div>
 
                   <Button
@@ -659,32 +628,16 @@ export default function ProviderRegistration() {
                     </div>
                   </div>
 
-                  {/* Geolocation Button */}
-                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={requestLocation}
-                      disabled={geoLoading}
-                    >
-                      {geoLoading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Locate className="h-4 w-4 mr-2" />
-                      )}
-                      Rileva Posizione
-                    </Button>
-                    {centroForm.latitude && centroForm.longitude ? (
-                      <span className="text-sm text-success flex items-center gap-1">
-                        <CheckCircle className="h-4 w-4" />
-                        Posizione rilevata
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">
-                        Necessaria per ricevere offerte di lavoro
-                      </span>
-                    )}
+                  {/* Location Picker Map */}
+                  <div className="space-y-2">
+                    <Label>Posizione sulla Mappa</Label>
+                    <LocationPicker
+                      latitude={centroForm.latitude}
+                      longitude={centroForm.longitude}
+                      onLocationChange={(lat, lng) => setCentroForm({ ...centroForm, latitude: lat, longitude: lng })}
+                      onGeolocate={requestLocation}
+                      geoLoading={geoLoading}
+                    />
                   </div>
 
                   <Button
