@@ -8,7 +8,14 @@ import {
   Receipt,
   BarChart3,
   LogOut,
-  Shield
+  Shield,
+  Users,
+  Smartphone,
+  Package,
+  ShoppingCart,
+  FileText,
+  BookOpen,
+  Calendar
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -20,6 +27,7 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -32,7 +40,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 
-const menuItems = [
+const adminMenuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Corner", url: "/admin/corners", icon: Store, countKey: "corners" as const },
   { title: "Riparatori", url: "/admin/riparatori", icon: Wrench, countKey: "riparatori" as const },
@@ -41,6 +49,17 @@ const menuItems = [
   { title: "Commissioni", url: "/admin/commissioni", icon: Settings2 },
   { title: "Fatturazione", url: "/admin/fatturazione", icon: Receipt },
   { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
+];
+
+const platformMenuItems = [
+  { title: "Clienti", url: "/customers", icon: Users },
+  { title: "Riparazioni", url: "/repairs", icon: Smartphone },
+  { title: "Nuova Riparazione", url: "/new-repair", icon: Wrench },
+  { title: "Inventario", url: "/inventory", icon: Package },
+  { title: "Ordini", url: "/orders", icon: ShoppingCart },
+  { title: "Preventivi", url: "/quotes", icon: FileText },
+  { title: "Guide", url: "/repair-guides", icon: BookOpen },
+  { title: "Appuntamenti", url: "/appointments", icon: Calendar },
 ];
 
 export function PlatformAdminSidebar() {
@@ -109,11 +128,14 @@ export function PlatformAdminSidebar() {
           </motion.div>
         </SidebarHeader>
         
-        <SidebarContent className="flex-1 py-4 px-2">
+        <SidebarContent className="flex-1 py-4 px-2 overflow-y-auto">
           <SidebarGroup>
+            <SidebarGroupLabel className={`text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider ${isCollapsed ? 'sr-only' : 'px-3 mb-2'}`}>
+              Gestione
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
-                {menuItems.map((item, index) => {
+                {adminMenuItems.map((item, index) => {
                   const isActive = item.url === "/admin" 
                     ? currentPath === "/admin"
                     : currentPath.startsWith(item.url);
@@ -179,6 +201,76 @@ export function PlatformAdminSidebar() {
                                 {pendingCount}
                               </Badge>
                             )}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </motion.div>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          <Separator className="my-4 bg-sidebar-border" />
+
+          <SidebarGroup>
+            <SidebarGroupLabel className={`text-xs font-semibold text-sidebar-foreground/50 uppercase tracking-wider ${isCollapsed ? 'sr-only' : 'px-3 mb-2'}`}>
+              Piattaforma
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="space-y-1">
+                {platformMenuItems.map((item, index) => {
+                  const isActive = currentPath === item.url || currentPath.startsWith(item.url + "/");
+                  const Icon = item.icon;
+                  
+                  return (
+                    <motion.div
+                      key={item.title}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: (adminMenuItems.length + index) * 0.05, duration: 0.3 }}
+                    >
+                      <SidebarMenuItem>
+                        <SidebarMenuButton 
+                          asChild 
+                          isActive={isActive} 
+                          tooltip={item.title}
+                          className="group relative overflow-hidden"
+                        >
+                          <NavLink
+                            to={item.url}
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 hover:bg-sidebar-accent/20 relative"
+                            activeClassName="bg-gradient-to-r from-sidebar-accent to-sidebar-accent/80 text-sidebar-accent-foreground font-semibold shadow-lg"
+                          >
+                            {isActive && (
+                              <motion.div
+                                layoutId="platformActiveTab"
+                                className="absolute inset-0 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl"
+                                initial={false}
+                                transition={{ type: "spring" as const, stiffness: 500, damping: 30 }}
+                              />
+                            )}
+                            <motion.div
+                              whileHover={{ scale: 1.15, rotate: isActive ? 0 : 5 }}
+                              whileTap={{ scale: 0.9 }}
+                              transition={{ type: "spring" as const, stiffness: 400, damping: 17 }}
+                              className="relative z-10"
+                            >
+                              <Icon className="h-5 w-5 flex-shrink-0" />
+                            </motion.div>
+                            <AnimatePresence mode="wait">
+                              {!isCollapsed && (
+                                <motion.span 
+                                  className="text-sm relative z-10"
+                                  initial={{ opacity: 0, x: -10 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0, x: -10 }}
+                                  transition={{ duration: 0.2 }}
+                                >
+                                  {item.title}
+                                </motion.span>
+                              )}
+                            </AnimatePresence>
                           </NavLink>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
