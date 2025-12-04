@@ -25,7 +25,9 @@ import {
   Package,
   ArrowRight,
   Edit,
-  ShoppingCart
+  ShoppingCart,
+  MapPin,
+  Info
 } from "lucide-react";
 import { EnhancedQuoteDialog } from "@/components/quotes/EnhancedQuoteDialog";
 import { EditQuoteDialog } from "@/components/quotes/EditQuoteDialog";
@@ -35,6 +37,8 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { RepairWorkflowTimeline, getStatusLabel, getStatusColor } from "@/components/corner/RepairWorkflowTimeline";
+import { CornerDetailDialog } from "@/components/corner/CornerDetailDialog";
+import { StatusSelector } from "@/components/corner/StatusSelector";
 
 interface CornerRequest {
   id: string;
@@ -69,6 +73,9 @@ interface CornerRequest {
     business_name: string;
     phone: string;
     address: string;
+    latitude: number | null;
+    longitude: number | null;
+    commission_rate: number;
   } | null;
   quote?: {
     id: string;
@@ -89,6 +96,8 @@ export default function CentroLavoriCorner() {
   const [editQuoteDialogOpen, setEditQuoteDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CornerRequest | null>(null);
   const [activeTab, setActiveTab] = useState("new");
+  const [cornerDetailOpen, setCornerDetailOpen] = useState(false);
+  const [selectedCornerRequest, setSelectedCornerRequest] = useState<CornerRequest | null>(null);
 
   useEffect(() => {
     const fetchCentroAndRequests = async () => {
@@ -147,7 +156,10 @@ export default function CentroLavoriCorner() {
           id,
           business_name,
           phone,
-          address
+          address,
+          latitude,
+          longitude,
+          commission_rate
         )
       `)
       .eq("assigned_provider_type", "centro")
@@ -546,12 +558,31 @@ export default function CentroLavoriCorner() {
                 <Phone className="h-3.5 w-3.5 ml-2" />
                 <span>{request.customer.phone}</span>
               </div>
-              {request.corner?.address && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Store className="h-3.5 w-3.5" />
+              {request.corner && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-auto py-1 px-2 text-muted-foreground hover:text-primary"
+                  onClick={() => {
+                    setSelectedCornerRequest(request);
+                    setCornerDetailOpen(true);
+                  }}
+                >
+                  <MapPin className="h-3.5 w-3.5 mr-1" />
                   <span className="truncate">{request.corner.address}</span>
-                </div>
+                  <Info className="h-3 w-3 ml-1" />
+                </Button>
               )}
+            </div>
+
+            {/* Status Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">Cambia stato:</span>
+              <StatusSelector
+                currentStatus={request.status}
+                onStatusChange={(newStatus) => updateStatus(request, newStatus, `Stato cambiato in ${getStatusLabel(newStatus)}`)}
+                disabled={processingId === request.id}
+              />
             </div>
 
             {/* Workflow Timeline */}
@@ -805,6 +836,14 @@ export default function CentroLavoriCorner() {
           onSuccess={handleQuoteUpdated}
         />
       )}
+
+      {/* Corner Detail Dialog */}
+      <CornerDetailDialog
+        open={cornerDetailOpen}
+        onOpenChange={setCornerDetailOpen}
+        corner={selectedCornerRequest?.corner || null}
+        estimatedCost={selectedCornerRequest?.quote?.total_cost || selectedCornerRequest?.estimated_cost}
+      />
     </CentroLayout>
   );
 }
