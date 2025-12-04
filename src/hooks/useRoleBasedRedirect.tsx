@@ -33,7 +33,7 @@ export const useRoleBasedRedirect = () => {
     let redirectPath = "/customer-dashboard"; // Default for customers
 
     if (isPlatformAdmin) {
-      redirectPath = "/platform-admin";
+      redirectPath = "/admin";
     } else if (isTechnician || isAdmin) {
       redirectPath = "/dashboard";
     } else if (isCentroAdmin || isCentroTech) {
@@ -52,7 +52,7 @@ export const useRoleBasedRedirect = () => {
 
   return {
     getRedirectPath: () => {
-      if (isPlatformAdmin) return "/platform-admin";
+      if (isPlatformAdmin) return "/admin";
       if (isTechnician || isAdmin) return "/dashboard";
       if (isCentroAdmin || isCentroTech) return "/centro";
       if (isRiparatore) return "/riparatore";
