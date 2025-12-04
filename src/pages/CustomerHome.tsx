@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { useRoleBasedRedirect } from "@/hooks/useRoleBasedRedirect";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -114,7 +115,8 @@ const AuroraBackground = () => (
 
 export default function CustomerHome() {
   const navigate = useNavigate();
-  const { user, isTechnician, isAdmin, signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const { getRedirectPath } = useRoleBasedRedirect();
   const [bookingOpen, setBookingOpen] = useState(false);
   const [trackingOpen, setTrackingOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -322,7 +324,7 @@ export default function CustomerHome() {
               <>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                   <Button 
-                    onClick={() => navigate(isTechnician || isAdmin ? "/dashboard" : "/customer-dashboard")} 
+                    onClick={() => navigate(getRedirectPath())}
                     variant="ghost" 
                     size="sm"
                     className="gap-2 group"
