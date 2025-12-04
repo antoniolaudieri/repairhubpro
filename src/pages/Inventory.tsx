@@ -32,7 +32,9 @@ import {
   ExternalLink,
   Pencil,
   Trash2,
-  MoreHorizontal
+  MoreHorizontal,
+  Headphones,
+  Smartphone
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
@@ -470,7 +472,13 @@ export default function Inventory() {
                         </div>
                         
                         <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge variant="outline" className={cn(
+                            "text-xs flex items-center gap-1",
+                            part.category === "Accessori" && "border-purple-500/50 text-purple-600 bg-purple-500/10",
+                            part.category === "Dispositivi" && "border-cyan-500/50 text-cyan-600 bg-cyan-500/10"
+                          )}>
+                            {part.category === "Accessori" && <Headphones className="h-3 w-3" />}
+                            {part.category === "Dispositivi" && <Smartphone className="h-3 w-3" />}
                             {part.category}
                           </Badge>
                           {part.brand && (
@@ -588,7 +596,15 @@ export default function Inventory() {
                         )}
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        <Badge variant="outline">{part.category}</Badge>
+                        <Badge variant="outline" className={cn(
+                          "flex items-center gap-1 w-fit",
+                          part.category === "Accessori" && "border-purple-500/50 text-purple-600 bg-purple-500/10",
+                          part.category === "Dispositivi" && "border-cyan-500/50 text-cyan-600 bg-cyan-500/10"
+                        )}>
+                          {part.category === "Accessori" && <Headphones className="h-3 w-3" />}
+                          {part.category === "Dispositivi" && <Smartphone className="h-3 w-3" />}
+                          {part.category}
+                        </Badge>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
                         {part.brand || "-"}
