@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -32,25 +32,38 @@ interface LocationPickerProps {
   geoLoading?: boolean;
 }
 
-function MapClickHandler({ onLocationChange }: { onLocationChange: (lat: number, lng: number) => void }) {
+// Inner component that handles all map interactions
+function MapInner({ 
+  latitude, 
+  longitude, 
+  onLocationChange 
+}: { 
+  latitude: number | null; 
+  longitude: number | null; 
+  onLocationChange: (lat: number, lng: number) => void;
+}) {
+  const map = useMap();
+
+  // Handle click events
   useMapEvents({
     click(e) {
       onLocationChange(e.latlng.lat, e.latlng.lng);
     },
   });
-  return null;
-}
 
-function MapController({ latitude, longitude }: { latitude: number | null; longitude: number | null }) {
-  const map = useMap();
-  
+  // Pan to location when coordinates change
   useEffect(() => {
-    if (latitude && longitude) {
+    if (latitude !== null && longitude !== null) {
       map.setView([latitude, longitude], 15, { animate: true });
     }
   }, [latitude, longitude, map]);
-  
-  return null;
+
+  // Render marker if coordinates exist
+  if (latitude === null || longitude === null) {
+    return null;
+  }
+
+  return <Marker position={[latitude, longitude]} icon={customIcon} />;
 }
 
 export function LocationPicker({
@@ -60,10 +73,14 @@ export function LocationPicker({
   onGeolocate,
   geoLoading = false,
 }: LocationPickerProps) {
+  const [mapReady, setMapReady] = useState(false);
+  
   // Default center (Italy)
   const defaultCenter: [number, number] = [41.9028, 12.4964];
-  const center: [number, number] = latitude && longitude ? [latitude, longitude] : defaultCenter;
-  const zoom = latitude && longitude ? 15 : 5;
+  const center: [number, number] = latitude !== null && longitude !== null 
+    ? [latitude, longitude] 
+    : defaultCenter;
+  const zoom = latitude !== null && longitude !== null ? 15 : 5;
 
   return (
     <div className="space-y-3">
@@ -85,7 +102,7 @@ export function LocationPicker({
             Rileva Posizione
           </Button>
         )}
-        {latitude && longitude ? (
+        {latitude !== null && longitude !== null ? (
           <span className="text-sm text-emerald-600 flex items-center gap-1">
             <CheckCircle className="h-4 w-4" />
             Posizione selezionata
@@ -105,21 +122,24 @@ export function LocationPicker({
           zoom={zoom}
           style={{ height: "100%", width: "100%" }}
           scrollWheelZoom={true}
+          whenReady={() => setMapReady(true)}
         >
           <TileLayer
             attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           />
-          <MapClickHandler onLocationChange={onLocationChange} />
-          <MapController latitude={latitude} longitude={longitude} />
-          {latitude && longitude && (
-            <Marker position={[latitude, longitude]} icon={customIcon} />
+          {mapReady && (
+            <MapInner 
+              latitude={latitude} 
+              longitude={longitude} 
+              onLocationChange={onLocationChange} 
+            />
           )}
         </MapContainer>
       </div>
 
       {/* Coordinates display */}
-      {latitude && longitude && (
+      {latitude !== null && longitude !== null && (
         <div className="flex items-center gap-4 text-xs text-muted-foreground bg-muted/30 rounded-lg px-3 py-2">
           <span>Lat: {latitude.toFixed(6)}</span>
           <span>Lng: {longitude.toFixed(6)}</span>
