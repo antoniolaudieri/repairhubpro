@@ -599,7 +599,7 @@ export default function CentroDashboard() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4"
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4"
             >
               {statsCards.map((card) => (
                 <motion.div key={card.title} variants={itemVariants}>
@@ -626,11 +626,11 @@ export default function CentroDashboard() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-4"
+              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4"
             >
               {/* Credit Balance Widget */}
               {centro && (
-                <motion.div variants={itemVariants} className="col-span-2 md:col-span-1">
+                <motion.div variants={itemVariants} className="col-span-2 sm:col-span-1">
                   <CreditBalanceWidget
                     entityType="centro"
                     entityId={centro.id}
