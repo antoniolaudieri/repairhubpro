@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Plus, Trash2, Package, Wrench, Check, Sparkles, Loader2, Hammer, ExternalLink, Pencil } from "lucide-react";
+import { Search, Plus, Trash2, Package, Wrench, Check, Sparkles, Loader2, Hammer, ExternalLink, Pencil, Headphones, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import AddSparePartDialog from "@/components/inventory/AddSparePartDialog";
 
@@ -620,7 +620,13 @@ export const SparePartsStep = ({
                             <div>
                               <p className="font-semibold text-sm">{suggestion.partName}</p>
                               <div className="flex flex-wrap gap-1 mt-1">
-                                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
+                                <span className={`text-xs px-2 py-0.5 rounded flex items-center gap-1 ${
+                                  suggestion.category === "Accessori" ? "bg-purple-500/10 text-purple-600" :
+                                  suggestion.category === "Dispositivi" ? "bg-cyan-500/10 text-cyan-600" :
+                                  "bg-primary/10 text-primary"
+                                }`}>
+                                  {suggestion.category === "Accessori" && <Headphones className="h-3 w-3" />}
+                                  {suggestion.category === "Dispositivi" && <Smartphone className="h-3 w-3" />}
                                   {suggestion.category}
                                 </span>
                                 {suggestion.hasUtopyaMatch && (
@@ -1140,7 +1146,14 @@ export const SparePartsStep = ({
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
-                        <span>{part.category}</span>
+                        <span className={`flex items-center gap-1 ${
+                          part.category === "Accessori" ? "text-purple-600" : 
+                          part.category === "Dispositivi" ? "text-cyan-600" : ""
+                        }`}>
+                          {part.category === "Accessori" && <Headphones className="h-3 w-3" />}
+                          {part.category === "Dispositivi" && <Smartphone className="h-3 w-3" />}
+                          {part.category}
+                        </span>
                         {part.supplier_code && (
                           <span className="text-xs">
                             Cod: {part.supplier_code}
