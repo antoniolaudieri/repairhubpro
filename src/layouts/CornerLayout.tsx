@@ -10,7 +10,8 @@ import {
   LogOut, 
   Menu, 
   X,
-  Handshake
+  Handshake,
+  Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ const navItems = [
   { to: "/corner/segnalazioni", icon: List, label: "Le Mie Segnalazioni" },
   { to: "/corner/commissioni", icon: DollarSign, label: "Commissioni" },
   { to: "/corner/partnership", icon: Handshake, label: "Partnership" },
+  { to: "/corner/impostazioni", icon: Settings, label: "Impostazioni" },
 ];
 
 export const CornerLayout = ({ children }: CornerLayoutProps) => {
