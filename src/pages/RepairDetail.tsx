@@ -643,6 +643,7 @@ export default function RepairDetail() {
                   <Button 
                     variant="outline"
                     onClick={() => {
+                      console.log('Pre checklist clicked, repair:', repair?.id);
                       setChecklistType('pre_repair');
                       setChecklistOpen(true);
                     }}
@@ -655,6 +656,7 @@ export default function RepairDetail() {
                   <Button 
                     variant="outline"
                     onClick={() => {
+                      console.log('Post checklist clicked, repair:', repair?.id);
                       setChecklistType('post_repair');
                       setChecklistOpen(true);
                     }}
