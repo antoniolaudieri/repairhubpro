@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { LocationPicker } from "@/components/maps/LocationPicker";
 import { 
   Settings,
   Building2,
@@ -50,6 +51,9 @@ export default function CentroImpostazioni() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [disableDiagnosticFee, setDisableDiagnosticFee] = useState(false);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
@@ -91,6 +95,9 @@ export default function CentroImpostazioni() {
         settings: settings,
       });
       
+      setLatitude(centroData.latitude);
+      setLongitude(centroData.longitude);
+      
       setFormData({
         business_name: centroData.business_name || "",
         address: centroData.address || "",
@@ -130,6 +137,8 @@ export default function CentroImpostazioni() {
           email: formData.email,
           vat_number: formData.vat_number || null,
           notes: formData.notes || null,
+          latitude,
+          longitude,
           settings: newSettings,
         })
         .eq("id", centro.id);
@@ -467,29 +476,50 @@ export default function CentroImpostazioni() {
             </CardContent>
           </Card>
 
-          {/* Location Info */}
-          {centro?.latitude && centro?.longitude && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Posizione
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="p-4 rounded-lg bg-muted/50">
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Latitudine:</span>{" "}
-                    {centro.latitude.toFixed(6)}
-                  </p>
-                  <p className="text-sm">
-                    <span className="text-muted-foreground">Longitudine:</span>{" "}
-                    {centro.longitude.toFixed(6)}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Location Picker */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Posizione sulla Mappa
+              </CardTitle>
+              <CardDescription>
+                Clicca sulla mappa per posizionare il tuo centro o usa il pulsante per rilevare la posizione
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LocationPicker
+                latitude={latitude}
+                longitude={longitude}
+                onLocationChange={(lat, lng) => {
+                  setLatitude(lat);
+                  setLongitude(lng);
+                }}
+                onGeolocate={() => {
+                  setGeoLoading(true);
+                  if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                      (position) => {
+                        setLatitude(position.coords.latitude);
+                        setLongitude(position.coords.longitude);
+                        setGeoLoading(false);
+                        toast.success("Posizione rilevata");
+                      },
+                      (error) => {
+                        console.error("Geolocation error:", error);
+                        toast.error("Impossibile rilevare la posizione");
+                        setGeoLoading(false);
+                      }
+                    );
+                  } else {
+                    toast.error("Geolocalizzazione non supportata");
+                    setGeoLoading(false);
+                  }
+                }}
+                geoLoading={geoLoading}
+              />
+            </CardContent>
+          </Card>
 
           {/* Save Button */}
           <div className="flex justify-end">
