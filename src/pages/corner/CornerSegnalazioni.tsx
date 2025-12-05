@@ -42,6 +42,7 @@ interface Quote {
   signature_data: string | null;
   items: string;
   created_at: string;
+  payment_collection_method: string | null;
 }
 
 interface RepairRequest {
@@ -151,7 +152,7 @@ export default function CornerSegnalazioni() {
 
         const { data: quoteData } = await supabase
           .from("quotes")
-          .select("id, total_cost, parts_cost, status, signed_at, signature_data, items, created_at")
+          .select("id, total_cost, parts_cost, status, signed_at, signature_data, items, created_at, payment_collection_method")
           .eq("repair_request_id", req.id)
           .order("signed_at", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false })
@@ -552,6 +553,12 @@ export default function CornerSegnalazioni() {
                               Preventivo
                             </Badge>
                           )}
+                          {/* Via Corner collection badge */}
+                          {request.quote?.payment_collection_method === 'via_corner' && (
+                            <Badge className="bg-amber-500/10 text-amber-600 border-amber-300">
+                              💰 Incasso Tuo
+                            </Badge>
+                          )}
                           {/* Forfeiture countdown badge */}
                           {request.status === "at_corner" && (() => {
                             const daysLeft = getDaysUntilForfeiture(request.at_corner_at);
@@ -732,17 +739,54 @@ export default function CornerSegnalazioni() {
                             {(() => {
                               const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
                               const cornerCommission = grossMargin * 0.10;
+                              const isViaCorner = request.quote.payment_collection_method === 'via_corner';
+                              const amountToRemitToCentro = request.quote.total_cost - cornerCommission;
+                              
                               return (
-                                <div className="flex justify-between items-center bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-xl p-4 border border-emerald-500/20">
-                                  <div>
-                                    <span className="text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-2">
-                                      <TrendingUp className="h-4 w-4" />
-                                      Tuo Compenso (10% margine)
-                                    </span>
-                                    <p className="text-xs text-emerald-600/70">Margine: €{grossMargin.toFixed(2)}</p>
+                                <>
+                                  <div className="flex justify-between items-center bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-xl p-4 border border-emerald-500/20">
+                                    <div>
+                                      <span className="text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-2">
+                                        <TrendingUp className="h-4 w-4" />
+                                        Tuo Compenso (10% margine)
+                                      </span>
+                                      <p className="text-xs text-emerald-600/70">Margine: €{grossMargin.toFixed(2)}</p>
+                                    </div>
+                                    <span className="text-xl font-bold text-emerald-600">€{cornerCommission.toFixed(2)}</span>
                                   </div>
-                                  <span className="text-xl font-bold text-emerald-600">€{cornerCommission.toFixed(2)}</span>
-                                </div>
+                                  
+                                  {/* Collection Info for Via Corner */}
+                                  {isViaCorner && (
+                                    <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-500/10 rounded-xl p-4 border-2 border-amber-500/30 space-y-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="p-2 rounded-lg bg-amber-500/20">
+                                          <Store className="h-5 w-5 text-amber-600" />
+                                        </div>
+                                        <div>
+                                          <h4 className="font-semibold text-amber-700 dark:text-amber-400">
+                                            💰 Incasso Tramite Te
+                                          </h4>
+                                          <p className="text-xs text-amber-600/70">Il Centro ha selezionato l'incasso tramite Corner</p>
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="space-y-2 pt-2 border-t border-amber-500/20">
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm text-amber-700 dark:text-amber-400">Da incassare dal cliente:</span>
+                                          <span className="font-bold text-lg text-amber-600">€{request.quote.total_cost.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-sm text-emerald-700 dark:text-emerald-400">Trattieni (tua commissione):</span>
+                                          <span className="font-semibold text-emerald-600">- €{cornerCommission.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pt-2 border-t border-amber-500/20">
+                                          <span className="text-sm font-medium text-amber-800 dark:text-amber-300">Da versare al Centro:</span>
+                                          <span className="font-bold text-xl text-amber-700 dark:text-amber-400">€{amountToRemitToCentro.toFixed(2)}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )}
+                                </>
                               );
                             })()}
 
