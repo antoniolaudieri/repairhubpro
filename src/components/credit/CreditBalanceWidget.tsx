@@ -101,21 +101,23 @@ export function CreditBalanceWidget({
             className={`h-2 ${paymentStatus === "suspended" ? "[&>div]:bg-destructive" : paymentStatus === "warning" ? "[&>div]:bg-warning" : "[&>div]:bg-success"}`}
           />
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button 
               size="sm" 
               onClick={() => setShowTopupDialog(true)}
-              className="flex-1"
+              className="flex-1 min-w-0"
             >
-              <Plus className="h-4 w-4 mr-1" />
-              Ricarica
+              <Plus className="h-4 w-4 mr-1 flex-shrink-0" />
+              <span className="truncate">Ricarica</span>
             </Button>
             <Button 
               size="sm" 
               variant="outline"
               onClick={() => setShowTransactionsDialog(true)}
+              className="flex-shrink-0"
             >
-              Movimenti
+              <span className="hidden sm:inline">Movimenti</span>
+              <span className="sm:hidden">Storico</span>
             </Button>
           </div>
 

@@ -173,7 +173,7 @@ export function CentroSidebar() {
           </motion.div>
         </SidebarHeader>
         
-        <SidebarContent className="flex-1 py-4 px-2">
+        <SidebarContent className="flex-1 py-4 px-2 overflow-y-auto overflow-x-hidden">
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
