@@ -123,6 +123,7 @@ interface RepairDetail {
   started_at: string | null;
   completed_at: string | null;
   delivered_at: string | null;
+  forfeited_at: string | null;
   device: {
     brand: string;
     model: string;
@@ -255,6 +256,7 @@ export default function RepairDetail() {
         started_at: data.started_at,
         completed_at: data.completed_at,
         delivered_at: data.delivered_at,
+        forfeited_at: data.forfeited_at,
         device: data.device,
         customer: data.device.customer,
         orders: data.orders || [],
@@ -773,6 +775,7 @@ export default function RepairDetail() {
                     startedAt={repair.started_at}
                     completedAt={repair.completed_at}
                     deliveredAt={repair.delivered_at}
+                    forfeitedAt={repair.forfeited_at}
                   />
                 </div>
               </Card>
