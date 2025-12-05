@@ -14,6 +14,7 @@ import {
   Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CornerNotificationCenter } from "@/components/corner/CornerNotificationCenter";
 
 interface CornerLayoutProps {
   children: ReactNode;
@@ -43,8 +44,13 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 bg-card border-r border-border flex-col">
         <div className="p-6 border-b border-border">
-          <h1 className="text-xl font-bold text-primary">Corner Portal</h1>
-          <p className="text-sm text-muted-foreground">Gestione Segnalazioni</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-primary">Corner Portal</h1>
+              <p className="text-sm text-muted-foreground">Gestione Segnalazioni</p>
+            </div>
+            <CornerNotificationCenter />
+          </div>
         </div>
         
         <nav className="flex-1 p-4 space-y-2">
@@ -84,13 +90,16 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between p-4">
           <h1 className="text-lg font-bold text-primary">Corner Portal</h1>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-          </Button>
+          <div className="flex items-center gap-2">
+            <CornerNotificationCenter />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </Button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
