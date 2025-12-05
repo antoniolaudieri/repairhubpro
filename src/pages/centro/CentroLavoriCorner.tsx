@@ -311,6 +311,7 @@ export default function CentroLavoriCorner() {
       'in_diagnosis': 'in_diagnosis_at',
       'waiting_for_parts': 'waiting_for_parts_at',
       'in_repair': 'in_repair_at',
+      'in_progress': 'in_repair_at', // Alias per in_progress
       'repair_completed': 'repair_completed_at',
       'ready_for_return': 'ready_for_return_at',
       'at_corner': 'at_corner_at',

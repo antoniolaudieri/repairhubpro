@@ -56,10 +56,12 @@ const getTimestampForStatus = (statusId: string, timestamps?: StatusTimestamps):
     'in_diagnosis': 'in_diagnosis_at',
     'waiting_for_parts': 'waiting_for_parts_at',
     'in_repair': 'in_repair_at',
+    'in_progress': 'in_repair_at', // Alias
     'repair_completed': 'repair_completed_at',
     'ready_for_return': 'ready_for_return_at',
     'at_corner': 'at_corner_at',
     'delivered': 'delivered_at',
+    'completed': 'delivered_at', // Alias
   };
   
   const field = timestampMap[statusId];
@@ -67,6 +69,11 @@ const getTimestampForStatus = (statusId: string, timestamps?: StatusTimestamps):
 };
 
 const getWorkflowSteps = (currentStatus: string, timestamps?: StatusTimestamps): WorkflowStep[] => {
+  // Normalize status aliases
+  const normalizedStatus = currentStatus === 'completed' ? 'delivered' : 
+                          currentStatus === 'in_progress' ? 'in_repair' : 
+                          currentStatus;
+  
   const statusOrder = [
     { id: 'quote_sent', label: 'Preventivo Inviato', icon: FileText },
     { id: 'quote_accepted', label: 'Preventivo Accettato', icon: Check },
@@ -75,15 +82,13 @@ const getWorkflowSteps = (currentStatus: string, timestamps?: StatusTimestamps):
     { id: 'in_diagnosis', label: 'In Diagnosi', icon: Search },
     { id: 'waiting_for_parts', label: 'Attesa Ricambi', icon: Package },
     { id: 'in_repair', label: 'In Riparazione', icon: Wrench },
-    { id: 'in_progress', label: 'In Lavorazione', icon: Wrench },
     { id: 'repair_completed', label: 'Riparato', icon: CheckCircle2 },
     { id: 'ready_for_return', label: 'Pronto Consegna', icon: Store },
     { id: 'at_corner', label: 'Al Corner', icon: Store },
-    { id: 'completed', label: 'Completato', icon: User },
     { id: 'delivered', label: 'Consegnato', icon: User },
   ];
 
-  const currentIndex = statusOrder.findIndex(s => s.id === currentStatus);
+  const currentIndex = statusOrder.findIndex(s => s.id === normalizedStatus);
   
   return statusOrder.map((step, index) => ({
     ...step,
