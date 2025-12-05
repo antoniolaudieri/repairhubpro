@@ -207,25 +207,55 @@ export function RepairChecklistDialog({
     fileInputRef.current?.click();
   };
 
+  const compressImage = (file: File, maxWidth = 800, quality = 0.7): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          if (width > maxWidth) {
+            height = (height * maxWidth) / width;
+            width = maxWidth;
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = reject;
+        img.src = e.target?.result as string;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || currentPhotoItemIndex === null) return;
 
     const indexToUpdate = currentPhotoItemIndex;
 
-    // Convert to base64 for reliable storage and PDF embedding
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
+    try {
+      // Compress image to reduce size
+      const compressedBase64 = await compressImage(file);
       setItems(prev => prev.map((item, i) => 
-        i === indexToUpdate ? { ...item, photo_url: base64 } : item
+        i === indexToUpdate ? { ...item, photo_url: compressedBase64 } : item
       ));
       toast.success('Foto aggiunta');
-    };
-    reader.onerror = () => {
+    } catch (error) {
+      console.error('Error processing image:', error);
       toast.error('Errore nel caricamento della foto');
-    };
-    reader.readAsDataURL(file);
+    }
 
     setCurrentPhotoItemIndex(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -250,6 +280,11 @@ export function RepairChecklistDialog({
     try {
       const { data: { user } } = await supabase.auth.getUser();
 
+      if (!user) {
+        toast.error('Devi essere autenticato per salvare la checklist');
+        return;
+      }
+
       let checklistId = existingChecklistId;
 
       if (!checklistId) {
@@ -259,7 +294,7 @@ export function RepairChecklistDialog({
           .insert({
             repair_id: repairId,
             checklist_type: checklistType,
-            created_by: user?.id,
+            created_by: user.id,
             notes: generalNotes,
             customer_signature: signature,
             signed_at: signature ? new Date().toISOString() : null
@@ -267,11 +302,14 @@ export function RepairChecklistDialog({
           .select()
           .single();
 
-        if (createError) throw createError;
+        if (createError) {
+          console.error('Error creating checklist:', createError);
+          throw new Error(`Errore creazione checklist: ${createError.message}`);
+        }
         checklistId = newChecklist.id;
       } else {
         // Update existing checklist
-        await supabase
+        const { error: updateError } = await supabase
           .from('repair_checklists')
           .update({
             notes: generalNotes,
@@ -280,14 +318,24 @@ export function RepairChecklistDialog({
           })
           .eq('id', checklistId);
 
+        if (updateError) {
+          console.error('Error updating checklist:', updateError);
+          throw new Error(`Errore aggiornamento checklist: ${updateError.message}`);
+        }
+
         // Delete existing items to replace
-        await supabase
+        const { error: deleteError } = await supabase
           .from('checklist_items')
           .delete()
           .eq('checklist_id', checklistId);
+
+        if (deleteError) {
+          console.error('Error deleting items:', deleteError);
+          throw new Error(`Errore eliminazione items: ${deleteError.message}`);
+        }
       }
 
-      // Insert all items
+      // Insert all items (without photos first if they're too large)
       const itemsToInsert = items.map((item, index) => ({
         checklist_id: checklistId,
         category: item.category,
@@ -302,14 +350,17 @@ export function RepairChecklistDialog({
         .from('checklist_items')
         .insert(itemsToInsert);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('Error inserting items:', itemsError);
+        throw new Error(`Errore salvataggio items: ${itemsError.message}`);
+      }
 
       toast.success('Checklist salvata con successo');
       onSuccess?.();
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving checklist:', error);
-      toast.error('Errore nel salvataggio della checklist');
+      toast.error(error.message || 'Errore nel salvataggio della checklist');
     } finally {
       setSaving(false);
     }
