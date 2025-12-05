@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CreditBalanceWidget } from "@/components/credit/CreditBalanceWidget";
 import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
+import { PendingQuotesBanner } from "@/components/corner/PendingQuotesBanner";
 import { Plus } from "lucide-react";
 
 interface Corner {
@@ -179,6 +180,9 @@ export default function CornerDashboard() {
               creditBalance={corner.credit_balance || 0}
             />
           )}
+
+          {/* Pending Quotes Banner */}
+          <PendingQuotesBanner />
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Credit Balance Widget */}
