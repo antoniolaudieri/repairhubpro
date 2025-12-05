@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CentroLayout } from "@/layouts/CentroLayout";
@@ -19,7 +19,9 @@ import {
   Upload,
   Image as ImageIcon,
   Trash2,
-  Receipt
+  Receipt,
+  Search,
+  Loader2
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
@@ -54,7 +56,67 @@ export default function CentroImpostazioni() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const geocodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Geocode address to coordinates
+  const geocodeAddress = useCallback(async (address: string) => {
+    if (!address || address.length < 5) return;
+    
+    setIsGeocoding(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=it`
+      );
+      const data = await response.json();
+      
+      if (data && data.length > 0) {
+        const { lat, lon } = data[0];
+        setLatitude(parseFloat(lat));
+        setLongitude(parseFloat(lon));
+        toast.success("Posizione trovata sulla mappa");
+      }
+    } catch (error) {
+      console.error("Geocoding error:", error);
+    } finally {
+      setIsGeocoding(false);
+    }
+  }, []);
+
+  // Reverse geocode coordinates to address
+  const reverseGeocode = useCallback(async (lat: number, lng: number) => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
+      );
+      const data = await response.json();
+      
+      if (data && data.display_name) {
+        // Extract a cleaner address format
+        const parts = [];
+        if (data.address) {
+          if (data.address.road) parts.push(data.address.road);
+          if (data.address.house_number) parts[0] = `${parts[0]} ${data.address.house_number}`;
+          if (data.address.city || data.address.town || data.address.village) {
+            parts.push(data.address.city || data.address.town || data.address.village);
+          }
+          if (data.address.postcode) parts.push(data.address.postcode);
+        }
+        const newAddress = parts.length > 0 ? parts.join(", ") : data.display_name;
+        setFormData(prev => ({ ...prev, address: newAddress }));
+      }
+    } catch (error) {
+      console.error("Reverse geocoding error:", error);
+    }
+  }, []);
+
+  // Handle address search button click
+  const handleSearchAddress = () => {
+    if (formData.address) {
+      geocodeAddress(formData.address);
+    }
+  };
   
   const [formData, setFormData] = useState({
     business_name: "",
@@ -385,8 +447,30 @@ export default function CentroImpostazioni() {
                     onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                     placeholder="Via, numero civico, città"
                     className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSearchAddress();
+                      }
+                    }}
                   />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon"
+                    onClick={handleSearchAddress}
+                    disabled={isGeocoding || !formData.address}
+                  >
+                    {isGeocoding ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Premi Invio o clicca la lente per trovare sulla mappa
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -494,14 +578,18 @@ export default function CentroImpostazioni() {
                 onLocationChange={(lat, lng) => {
                   setLatitude(lat);
                   setLongitude(lng);
+                  reverseGeocode(lat, lng);
                 }}
                 onGeolocate={() => {
                   setGeoLoading(true);
                   if ("geolocation" in navigator) {
                     navigator.geolocation.getCurrentPosition(
                       (position) => {
-                        setLatitude(position.coords.latitude);
-                        setLongitude(position.coords.longitude);
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        setLatitude(lat);
+                        setLongitude(lng);
+                        reverseGeocode(lat, lng);
                         setGeoLoading(false);
                         toast.success("Posizione rilevata");
                       },
