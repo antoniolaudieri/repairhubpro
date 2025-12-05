@@ -185,20 +185,22 @@ export default function CornerSegnalazioni() {
   };
 
   const handleSignatureSuccess = async () => {
-    // Update the repair_request status to quote_accepted
+    // Update the repair_request status to awaiting_pickup (Centro must come pick up device)
     if (selectedQuoteForSignature) {
       const { error } = await supabase
         .from("repair_requests")
         .update({
-          status: "quote_accepted",
+          status: "awaiting_pickup",
           quote_accepted_at: new Date().toISOString(),
+          awaiting_pickup_at: new Date().toISOString(),
         })
         .eq("id", selectedQuoteForSignature.requestId);
 
       if (error) {
         console.error("Error updating repair request:", error);
+        toast.error("Errore nell'aggiornamento dello stato");
       } else {
-        toast.success("Preventivo firmato e accettato!");
+        toast.success("Preventivo firmato! Il Centro riceverà una notifica per il ritiro del dispositivo.");
       }
     }
 
