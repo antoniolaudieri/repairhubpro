@@ -98,6 +98,8 @@ export default function CentroLavoriCorner() {
   const [activeTab, setActiveTab] = useState("new");
   const [cornerDetailOpen, setCornerDetailOpen] = useState(false);
   const [selectedCornerRequest, setSelectedCornerRequest] = useState<CornerRequest | null>(null);
+  const [platformRate, setPlatformRate] = useState<number>(20);
+  const [centroRate, setCentroRate] = useState<number>(70);
 
   useEffect(() => {
     const fetchCentroAndRequests = async () => {
@@ -105,7 +107,7 @@ export default function CentroLavoriCorner() {
 
       const { data: centro } = await supabase
         .from("centri_assistenza")
-        .select("id")
+        .select("id, commission_rate")
         .eq("owner_user_id", user.id)
         .single();
 
@@ -115,6 +117,19 @@ export default function CentroLavoriCorner() {
       }
 
       setCentroId(centro.id);
+      setCentroRate(centro.commission_rate || 70);
+
+      // Load platform commission rate from settings
+      const { data: platformSetting } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "platform_commission_rate")
+        .single();
+
+      if (platformSetting) {
+        setPlatformRate(platformSetting.value);
+      }
+
       await fetchRequests(centro.id);
       setIsLoading(false);
     };
@@ -843,6 +858,8 @@ export default function CentroLavoriCorner() {
         onOpenChange={setCornerDetailOpen}
         corner={selectedCornerRequest?.corner || null}
         estimatedCost={selectedCornerRequest?.quote?.total_cost || selectedCornerRequest?.estimated_cost}
+        platformRate={platformRate}
+        centroRate={centroRate}
       />
     </CentroLayout>
   );
