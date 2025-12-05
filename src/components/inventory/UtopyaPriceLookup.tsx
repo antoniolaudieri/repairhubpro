@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, ExternalLink, ShoppingCart, Loader2, Package, AlertCircle, LogIn, Info } from 'lucide-react';
+import { Search, ExternalLink, ShoppingCart, Loader2, Package, AlertCircle, LogIn, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface UtopyaProduct {
   name: string;
@@ -25,9 +26,19 @@ interface UtopyaPriceLookupProps {
   initialSearch?: string;
   trigger?: React.ReactNode;
   onSelectProduct?: (product: UtopyaProduct) => void;
+  onSaveToInventory?: (product: UtopyaProduct) => void;
+  showSaveButton?: boolean;
+  centroId?: string;
 }
 
-export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct }: UtopyaPriceLookupProps) => {
+export const UtopyaPriceLookup = ({ 
+  initialSearch = '', 
+  trigger, 
+  onSelectProduct,
+  onSaveToInventory,
+  showSaveButton = false,
+  centroId
+}: UtopyaPriceLookupProps) => {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [products, setProducts] = useState<UtopyaProduct[]>([]);
@@ -35,6 +46,52 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
   const [searchUrl, setSearchUrl] = useState('');
   const [hasSearched, setHasSearched] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [savingProduct, setSavingProduct] = useState<string | null>(null);
+  const { userRoles } = useAuth();
+  
+  const isCentroUser = userRoles.includes('centro_admin') || userRoles.includes('centro_tech');
+
+  const handleSaveToInventory = async (product: UtopyaProduct) => {
+    if (onSaveToInventory) {
+      onSaveToInventory(product);
+      return;
+    }
+    
+    setSavingProduct(product.sku || product.name);
+    
+    try {
+      const partData: any = {
+        name: product.name,
+        category: 'Ricambi',
+        cost: product.priceNumeric || 0,
+        selling_price: product.priceNumeric ? Math.round(product.priceNumeric * 1.4) : 0,
+        stock_quantity: 0,
+        minimum_stock: 1,
+        supplier: 'Utopya',
+        supplier_code: product.sku || null,
+        brand: product.brand || null,
+        image_url: product.image || null,
+        notes: `Importato da Utopya - ${product.url}`
+      };
+      
+      if (centroId) {
+        partData.centro_id = centroId;
+      }
+      
+      const { error } = await supabase
+        .from('spare_parts')
+        .insert(partData);
+      
+      if (error) throw error;
+      
+      toast.success('Prodotto salvato in inventario');
+    } catch (error) {
+      console.error('Error saving to inventory:', error);
+      toast.error('Errore nel salvataggio');
+    } finally {
+      setSavingProduct(null);
+    }
+  };
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
@@ -205,18 +262,39 @@ export const UtopyaPriceLookup = ({ initialSearch = '', trigger, onSelectProduct
                               </span>
                             )}
                           </div>
-                          <Button 
-                            size="sm" 
-                            variant="default"
-                            className="gap-1 bg-orange-500 hover:bg-orange-600"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(product.url, '_blank');
-                            }}
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                            {product.requiresLogin ? 'Vedi prezzo' : 'Acquista'}
-                          </Button>
+                          <div className="flex gap-1">
+                            {(showSaveButton || isCentroUser) && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="gap-1"
+                                disabled={savingProduct === (product.sku || product.name)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSaveToInventory(product);
+                                }}
+                              >
+                                {savingProduct === (product.sku || product.name) ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  <Plus className="h-3 w-3" />
+                                )}
+                                Salva
+                              </Button>
+                            )}
+                            <Button 
+                              size="sm" 
+                              variant="default"
+                              className="gap-1 bg-orange-500 hover:bg-orange-600"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(product.url, '_blank');
+                              }}
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              {product.requiresLogin ? 'Vedi' : 'Acquista'}
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </div>
