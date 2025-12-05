@@ -324,6 +324,7 @@ export function EditQuoteDialog({
   const getLaborCost = () => items.filter(i => i.type === 'labor').reduce((sum, i) => sum + i.total, 0);
   const getServicesCost = () => items.filter(i => i.type === 'service').reduce((sum, i) => sum + i.total, 0);
   const getTotalCost = () => items.reduce((sum, i) => sum + i.total, 0);
+  const getPartsPurchaseCost = () => items.filter(i => i.type === 'part').reduce((sum, i) => sum + ((i.purchaseCost || 0) * i.quantity), 0);
 
   const filteredInventory = spareParts.filter(part => {
     if (!inventorySearch) return false;
@@ -348,7 +349,7 @@ export function EditQuoteDialog({
 
     setLoading(true);
     try {
-      const partsCost = getPartsCost();
+      const partsPurchaseCost = getPartsPurchaseCost();
       const laborCost = getLaborCost() + getServicesCost();
       const totalCost = getTotalCost();
 
@@ -362,6 +363,7 @@ export function EditQuoteDialog({
         unitPrice: i.unitPrice,
         total: i.total,
         type: i.type,
+        purchaseCost: i.purchaseCost || 0,
       }));
 
       const updateData: any = {
@@ -372,7 +374,7 @@ export function EditQuoteDialog({
         diagnosis: data.diagnosis || null,
         items: JSON.stringify(quoteItems),
         labor_cost: laborCost,
-        parts_cost: partsCost,
+        parts_cost: partsPurchaseCost, // Store purchase cost for commission calculation
         total_cost: totalCost,
         notes: data.notes || null,
         valid_until: validUntil,
