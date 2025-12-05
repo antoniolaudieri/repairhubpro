@@ -17,6 +17,7 @@ const Auth = () => {
   const { getRedirectPath } = useRoleBasedRedirect();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
+  const [waitingForRoles, setWaitingForRoles] = useState(false);
   
   // Form states
   const [email, setEmail] = useState("");
@@ -24,12 +25,24 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
 
+  // Handle redirect after login with roles loaded
   useEffect(() => {
-    if (user && !authLoading && userRoles.length > 0) {
-      const redirectPath = getRedirectPath();
-      navigate(redirectPath, { replace: true });
+    if (user && !authLoading) {
+      if (userRoles.length > 0) {
+        const redirectPath = getRedirectPath();
+        navigate(redirectPath, { replace: true });
+      } else if (waitingForRoles) {
+        // Retry after a short delay if waiting for roles
+        const timeout = setTimeout(() => {
+          if (userRoles.length > 0) {
+            const redirectPath = getRedirectPath();
+            navigate(redirectPath, { replace: true });
+          }
+        }, 500);
+        return () => clearTimeout(timeout);
+      }
     }
-  }, [user, userRoles, authLoading, navigate, getRedirectPath]);
+  }, [user, userRoles, authLoading, navigate, getRedirectPath, waitingForRoles]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,6 +52,9 @@ const Auth = () => {
       const { error } = await signIn(email, password);
       if (error) throw error;
       toast.success("Accesso effettuato con successo");
+      setWaitingForRoles(true);
+      // Force a small delay to allow roles to load
+      await new Promise(resolve => setTimeout(resolve, 300));
     } catch (error: any) {
       toast.error(error.message || "Errore durante l'accesso");
     } finally {
@@ -95,6 +111,26 @@ const Auth = () => {
     visible: { opacity: 1, x: 0, transition: { duration: 0.3 } },
     exit: { opacity: 0, x: 20, transition: { duration: 0.2 } }
   };
+
+  // Show loading while waiting for redirect after login
+  if (user && waitingForRoles) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
+        <motion.div
+          className="flex flex-col items-center gap-4"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
+          <motion.div
+            className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          />
+          <p className="text-muted-foreground">Caricamento dashboard...</p>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center p-4 relative overflow-hidden">
