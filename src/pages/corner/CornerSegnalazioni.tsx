@@ -29,6 +29,7 @@ interface Quote {
   parts_cost: number | null;
   status: string;
   signed_at: string | null;
+  signature_data: string | null;
   items: string;
   created_at: string;
 }
@@ -144,11 +145,14 @@ export default function CornerSegnalazioni() {
           centro = centroData;
         }
 
-        // Load quote linked to this repair_request
+        // Load quote linked to this repair_request - prefer accepted/signed quotes
         const { data: quoteData } = await supabase
           .from("quotes")
-          .select("id, total_cost, parts_cost, status, signed_at, items, created_at")
+          .select("id, total_cost, parts_cost, status, signed_at, signature_data, items, created_at")
           .eq("repair_request_id", req.id)
+          .order("signed_at", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false })
+          .limit(1)
           .maybeSingle();
         
         quote = quoteData;
@@ -583,24 +587,40 @@ export default function CornerSegnalazioni() {
                             );
                           })()}
 
-                          {request.quote.signed_at ? (
-                            <div className="text-xs text-emerald-600 flex items-center gap-1 mt-2">
-                              ✓ Firmato il {format(new Date(request.quote.signed_at), "dd MMM yyyy HH:mm", { locale: it })}
-                            </div>
-                          ) : request.quote.status === "pending" && (
-                            <Button
-                              onClick={() => handleOpenSignature(
-                                request.quote!.id, 
-                                request.id, 
-                                request.quote!.total_cost,
-                                `${request.device_brand || ''} ${request.device_model || ''} - ${request.device_type}`.trim()
+                          {/* Signature Section */}
+                          {request.quote.signature_data && (
+                            <div className="mt-3 p-3 bg-background rounded-lg border">
+                              <p className="text-xs text-muted-foreground mb-2">Firma Cliente:</p>
+                              <img 
+                                src={request.quote.signature_data} 
+                                alt="Firma cliente" 
+                                className="max-h-16 border rounded bg-white"
+                              />
+                              {request.quote.signed_at && (
+                                <p className="text-xs text-emerald-600 mt-1">
+                                  ✓ Firmato il {format(new Date(request.quote.signed_at), "dd MMM yyyy HH:mm", { locale: it })}
+                                </p>
                               )}
-                              className="w-full mt-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
-                            >
-                              <PenTool className="h-4 w-4 mr-2" />
-                              Fai Firmare al Cliente
-                            </Button>
+                            </div>
                           )}
+
+                          {/* Sign/Re-sign Button */}
+                          <Button
+                            onClick={() => handleOpenSignature(
+                              request.quote!.id, 
+                              request.id, 
+                              request.quote!.total_cost,
+                              `${request.device_brand || ''} ${request.device_model || ''} - ${request.device_type}`.trim()
+                            )}
+                            variant={request.quote.signed_at ? "outline" : "default"}
+                            className={request.quote.signed_at 
+                              ? "w-full mt-3" 
+                              : "w-full mt-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
+                            }
+                          >
+                            <PenTool className="h-4 w-4 mr-2" />
+                            {request.quote.signed_at ? "Raccogli Nuova Firma" : "Fai Firmare al Cliente"}
+                          </Button>
                         </div>
                       </CollapsibleContent>
                     </Collapsible>
