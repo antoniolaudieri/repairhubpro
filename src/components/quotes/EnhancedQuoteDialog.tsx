@@ -122,6 +122,11 @@ export function EnhancedQuoteDialog({
   const [laborPrices, setLaborPrices] = useState<LaborPrice[]>([]);
   const [availableServices, setAvailableServices] = useState<AdditionalService[]>([]);
   
+  // Commission rates
+  const [centroCommissionRate, setCentroCommissionRate] = useState<number>(70);
+  const [cornerCommissionRate, setCornerCommissionRate] = useState<number>(10);
+  const [platformCommissionRate, setPlatformCommissionRate] = useState<number>(20);
+  
   // Utopya search
   const [utopyaSearchQuery, setUtopyaSearchQuery] = useState("");
   const [utopyaSearchResults, setUtopyaSearchResults] = useState<any[]>([]);
@@ -165,7 +170,44 @@ export function EnhancedQuoteDialog({
   }, [open, initialDeviceType, initialDeviceBrand, initialDeviceModel, initialIssueDescription]);
 
   const loadData = async () => {
-    await Promise.all([loadSpareParts(), loadLaborPrices(), loadServices()]);
+    await Promise.all([loadSpareParts(), loadLaborPrices(), loadServices(), loadCommissionRates()]);
+  };
+  
+  const loadCommissionRates = async () => {
+    // Load platform commission rate
+    const { data: platformSettings } = await supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "platform_commission_rate")
+      .single();
+    
+    if (platformSettings) {
+      setPlatformCommissionRate(platformSettings.value);
+    }
+    
+    // Load centro commission rate if centroId provided
+    if (centroId) {
+      const { data: centro } = await supabase
+        .from("centri_assistenza")
+        .select("commission_rate")
+        .eq("id", centroId)
+        .single();
+      
+      if (centro) {
+        setCentroCommissionRate(centro.commission_rate);
+      }
+    }
+    
+    // Load default corner commission rate
+    const { data: cornerSettings } = await supabase
+      .from("platform_settings")
+      .select("value")
+      .eq("key", "default_corner_commission_rate")
+      .single();
+    
+    if (cornerSettings) {
+      setCornerCommissionRate(cornerSettings.value);
+    }
   };
 
   const loadSpareParts = async () => {
@@ -420,11 +462,11 @@ export function EnhancedQuoteDialog({
   const getServicesCost = () => items.filter(i => i.type === 'service').reduce((sum, i) => sum + i.total, 0);
   const getTotalCost = () => items.reduce((sum, i) => sum + i.total, 0);
   
-  // Commission calculations for Corner jobs
+  // Commission calculations for Corner jobs (using dynamic rates from database)
   const getPartsPurchaseCost = () => items.filter(i => i.type === 'part').reduce((sum, i) => sum + ((i.purchaseCost || 0) * i.quantity), 0);
   const getGrossMargin = () => getTotalCost() - getPartsPurchaseCost();
-  const getCentroCommission = () => getGrossMargin() * 0.70; // 70% for Centro when Corner involved
-  const getCornerCommission = () => getGrossMargin() * 0.10; // 10% for Corner
+  const getCentroCommission = () => getGrossMargin() * (centroCommissionRate / 100);
+  const getCornerCommission = () => getGrossMargin() * (cornerCommissionRate / 100);
 
   const filteredInventory = spareParts.filter(part => {
     if (!inventorySearch) return false;
@@ -903,15 +945,15 @@ export function EnhancedQuoteDialog({
                   <span>€{getGrossMargin().toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
-                  <span>🏪 Tuo Guadagno (Centro 70%):</span>
+                  <span>🏪 Tuo Guadagno (Centro {centroCommissionRate}%):</span>
                   <span className="font-semibold">€{getCentroCommission().toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
-                  <span>📍 Guadagno Corner (10%):</span>
+                  <span>📍 Guadagno Corner ({cornerCommissionRate}%):</span>
                   <span className="font-semibold">€{getCornerCommission().toFixed(2)}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  * Piattaforma: 20% del margine
+                  * Piattaforma: {platformCommissionRate}% del margine
                 </p>
               </div>
             )}
