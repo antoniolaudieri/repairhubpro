@@ -185,8 +185,12 @@ export default function CornerSegnalazioni() {
   };
 
   const handleSignatureSuccess = async () => {
+    console.log("handleSignatureSuccess called with:", selectedQuoteForSignature);
+    
     // Update the repair_request status to awaiting_pickup (Centro must come pick up device)
     if (selectedQuoteForSignature) {
+      console.log("Updating repair_request:", selectedQuoteForSignature.requestId);
+      
       const { error } = await supabase
         .from("repair_requests")
         .update({
@@ -200,13 +204,16 @@ export default function CornerSegnalazioni() {
         console.error("Error updating repair request:", error);
         toast.error("Errore nell'aggiornamento dello stato");
       } else {
+        console.log("Repair request updated successfully");
         toast.success("Preventivo firmato! Il Centro riceverà una notifica per il ritiro del dispositivo.");
       }
     }
 
     // Reload requests
     if (cornerId) {
+      console.log("Reloading requests for corner:", cornerId);
       await loadRequests(cornerId);
+      console.log("Requests reloaded");
     }
     setSelectedQuoteForSignature(null);
   };
