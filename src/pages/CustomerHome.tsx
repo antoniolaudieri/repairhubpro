@@ -39,7 +39,10 @@ import {
   Instagram,
   Twitter,
   Sparkles,
+  Store,
+  Building2,
 } from "lucide-react";
+import { PartnersMap } from "@/components/maps/PartnersMap";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -744,6 +747,44 @@ export default function CustomerHome() {
               </motion.div>
             </motion.div>
           </div>
+        </div>
+      </section>
+
+      {/* Partners Map Section */}
+      <section className="py-16 sm:py-20 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-10"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              whileInView={{ scale: 1 }}
+              viewport={{ once: true }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6"
+            >
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">La Nostra Rete</span>
+            </motion.div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+              Trova un <span className="text-gradient">Partner</span> Vicino a Te
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Corner e Centri Assistenza certificati in tutta Italia
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <PartnersMap />
+          </motion.div>
         </div>
       </section>
 
