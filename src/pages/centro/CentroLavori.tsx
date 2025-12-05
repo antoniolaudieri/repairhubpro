@@ -27,12 +27,12 @@ import {
   Phone,
   Eye,
   Mail,
-  MessageCircle
+  MessageCircle,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
-import { AlertTriangle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
 
@@ -84,6 +84,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   completed: { label: "Completato", color: "bg-green-500/20 text-green-600" },
   delivered: { label: "Consegnato", color: "bg-emerald-500/20 text-emerald-600" },
   cancelled: { label: "Annullato", color: "bg-red-500/20 text-red-600" },
+  forfeited: { label: "Alienato", color: "bg-rose-900/20 text-rose-900" },
 };
 
 export default function CentroLavori() {
@@ -234,6 +235,7 @@ export default function CentroLavori() {
   const inProgressCount = repairs.filter((r) => r.status === "in_progress" || r.status === "waiting_for_parts").length;
   const completedCount = repairs.filter((r) => r.status === "completed").length;
   const deliveredCount = repairs.filter((r) => r.status === "delivered").length;
+  const forfeitedCount = repairs.filter((r) => r.status === "forfeited").length;
 
   if (isLoading) {
     return (
@@ -336,6 +338,21 @@ export default function CentroLavori() {
                 </div>
               </CardContent>
             </Card>
+            {forfeitedCount > 0 && (
+              <Card className="bg-card/50 border-rose-500/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-rose-500/10">
+                      <AlertTriangle className="h-5 w-5 text-rose-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-rose-600">{forfeitedCount}</p>
+                      <p className="text-xs text-muted-foreground">Alienati</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Filters */}
@@ -360,6 +377,7 @@ export default function CentroLavori() {
                 <SelectItem value="waiting_for_parts">Attesa Ricambi</SelectItem>
                 <SelectItem value="completed">Completato</SelectItem>
                 <SelectItem value="delivered">Consegnato</SelectItem>
+                <SelectItem value="forfeited">Alienato</SelectItem>
               </SelectContent>
             </Select>
           </div>
