@@ -30,7 +30,8 @@ import {
   Sparkles,
   ChevronRight,
   Shield,
-  FileText
+  FileText,
+  MessageCircle
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -46,6 +47,8 @@ import RepairGuide from "@/components/repair/RepairGuide";
 import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
 import { AcceptanceFormPDF } from "@/components/repair/AcceptanceFormPDF";
 import { motion, AnimatePresence } from "framer-motion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
 
 interface RepairGuideData {
   diagnosis: {
@@ -1111,6 +1114,65 @@ export default function RepairDetail() {
                         <span className="text-sm">{repair.customer.address}</span>
                       </div>
                     )}
+                  </div>
+
+                  {/* Quick Communication Buttons */}
+                  <div className="pt-3 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-2">Contatta con messaggio preimpostato</p>
+                    <div className="flex gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 h-9 gap-1.5"
+                              onClick={() => callPhone(repair.customer.phone)}
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                              Chiama
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Chiama il cliente</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 h-9 gap-1.5 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                              onClick={() => {
+                                const message = getStatusMessage(repair);
+                                openWhatsApp(repair.customer.phone, message.body);
+                              }}
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" />
+                              WhatsApp
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Invia messaggio WhatsApp</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 h-9 gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                              onClick={() => {
+                                const message = getStatusMessage(repair);
+                                openEmail(repair.customer.email, message.subject, message.body);
+                              }}
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                              Email
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Invia email</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </div>
                 </div>
               </Card>
