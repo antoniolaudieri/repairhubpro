@@ -50,13 +50,15 @@ export function PendingQuotesBanner() {
           total_cost,
           status,
           signature_data,
+          signed_at,
           customer:customers(name),
           repair_request:repair_requests!inner(
             id,
             device_type,
             device_brand,
             device_model,
-            corner_id
+            corner_id,
+            status
           )
         `)
         .eq("status", "pending")
@@ -64,9 +66,11 @@ export function PendingQuotesBanner() {
 
       console.log("PendingQuotesBanner - Raw quotes:", quotes, "Error:", error);
 
-      // Filter for this corner's quotes client-side (more reliable)
+      // Filter for this corner's quotes AND exclude already delivered/at_corner repairs
       const filteredQuotes = (quotes || []).filter(
-        (q: any) => q.repair_request?.corner_id === corner.id
+        (q: any) => 
+          q.repair_request?.corner_id === corner.id && 
+          !['delivered', 'at_corner', 'repair_completed'].includes(q.repair_request?.status)
       );
       
       console.log("PendingQuotesBanner - Filtered for corner:", corner.id, filteredQuotes);

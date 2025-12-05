@@ -1,8 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { List, Smartphone, Clock, User, MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { List, Smartphone, Clock, User, MapPin, CheckCircle2, Package } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface RepairRequest {
   id: string;
@@ -23,18 +26,51 @@ interface RepairRequest {
 interface RepairRequestsListProps {
   requests: RepairRequest[];
   isLoading: boolean;
+  onRefresh?: () => void;
 }
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   pending: { label: "In Attesa", variant: "secondary" },
   dispatched: { label: "In Assegnazione", variant: "outline" },
   assigned: { label: "Assegnato", variant: "default" },
+  quote_sent: { label: "Preventivo Inviato", variant: "outline" },
+  quote_accepted: { label: "Preventivo Accettato", variant: "default" },
+  awaiting_pickup: { label: "In Attesa Ritiro", variant: "outline" },
+  picked_up: { label: "Ritirato", variant: "default" },
+  in_diagnosis: { label: "In Diagnosi", variant: "default" },
+  waiting_for_parts: { label: "Attesa Ricambi", variant: "outline" },
+  in_repair: { label: "In Riparazione", variant: "default" },
+  repair_completed: { label: "Riparato", variant: "default" },
+  ready_for_return: { label: "Pronto Reso", variant: "default" },
+  at_corner: { label: "Al Corner", variant: "default" },
+  delivered: { label: "Consegnato", variant: "default" },
   in_progress: { label: "In Lavorazione", variant: "default" },
   completed: { label: "Completato", variant: "default" },
   cancelled: { label: "Annullato", variant: "destructive" },
 };
 
-export const RepairRequestsList = ({ requests, isLoading }: RepairRequestsListProps) => {
+export const RepairRequestsList = ({ requests, isLoading, onRefresh }: RepairRequestsListProps) => {
+  
+  const handleDelivery = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from("repair_requests")
+        .update({
+          status: "delivered",
+          delivered_at: new Date().toISOString(),
+        })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      toast.success("Dispositivo consegnato al cliente!");
+      onRefresh?.();
+    } catch (error) {
+      console.error("Error delivering:", error);
+      toast.error("Errore nella consegna");
+    }
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -85,12 +121,35 @@ export const RepairRequestsList = ({ requests, isLoading }: RepairRequestsListPr
         <div className="space-y-4">
           {requests.map((request) => {
             const status = statusConfig[request.status] || statusConfig.pending;
+            const isAtCorner = request.status === "at_corner";
             
             return (
               <div
                 key={request.id}
-                className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card transition-colors"
+                className={`p-4 rounded-lg border bg-card/50 hover:bg-card transition-colors ${
+                  isAtCorner ? 'border-emerald-500 border-2' : 'border-border'
+                }`}
               >
+                {/* Delivery Banner for at_corner status */}
+                {isAtCorner && (
+                  <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white p-3 rounded-lg mb-3 -mt-1 -mx-1">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-5 w-5" />
+                        <span className="font-medium">Pronto per la consegna!</span>
+                      </div>
+                      <Button
+                        onClick={() => handleDelivery(request.id)}
+                        size="sm"
+                        className="bg-white text-emerald-600 hover:bg-white/90 hover:text-emerald-700"
+                      >
+                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                        Consegna al Cliente
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">

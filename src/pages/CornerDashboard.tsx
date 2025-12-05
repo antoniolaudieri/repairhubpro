@@ -193,7 +193,7 @@ export default function CornerDashboard() {
             </TabsList>
 
             <TabsContent value="requests" className="mt-4">
-              <RepairRequestsList requests={requests} isLoading={isLoading} />
+              <RepairRequestsList requests={requests} isLoading={isLoading} onRefresh={fetchCornerData} />
             </TabsContent>
 
             <TabsContent value="commissions" className="mt-4">
