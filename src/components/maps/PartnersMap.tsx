@@ -249,7 +249,8 @@ export function PartnersMap() {
       {/* Map Container */}
       <div 
         ref={mapContainerRef}
-        className="h-[400px] rounded-2xl overflow-hidden border border-border/50 shadow-lg relative z-0"
+        className="h-[400px] rounded-2xl overflow-hidden border border-border/50 shadow-lg"
+        style={{ position: 'relative', zIndex: 0 }}
       />
 
       {/* Legend */}
