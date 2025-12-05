@@ -43,11 +43,13 @@ export function PendingQuotesBanner() {
       setCornerId(corner.id);
 
       // Fetch pending quotes for this corner's repair requests
-      const { data: quotes } = await supabase
+      const { data: quotes, error } = await supabase
         .from("quotes")
         .select(`
           id,
           total_cost,
+          status,
+          signature_data,
           customer:customers(name),
           repair_request:repair_requests!inner(
             id,
@@ -58,12 +60,18 @@ export function PendingQuotesBanner() {
           )
         `)
         .eq("status", "pending")
-        .is("signature_data", null)
-        .eq("repair_requests.corner_id", corner.id);
+        .is("signature_data", null);
 
-      if (quotes) {
-        setPendingQuotes(quotes as unknown as PendingQuote[]);
-      }
+      console.log("PendingQuotesBanner - Raw quotes:", quotes, "Error:", error);
+
+      // Filter for this corner's quotes client-side (more reliable)
+      const filteredQuotes = (quotes || []).filter(
+        (q: any) => q.repair_request?.corner_id === corner.id
+      );
+      
+      console.log("PendingQuotesBanner - Filtered for corner:", corner.id, filteredQuotes);
+
+      setPendingQuotes(filteredQuotes as unknown as PendingQuote[]);
     };
 
     fetchCornerAndQuotes();
