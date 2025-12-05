@@ -42,7 +42,21 @@ export function PendingQuotesBanner() {
       if (!corner) return;
       setCornerId(corner.id);
 
-      // Fetch pending quotes for this corner's repair requests
+      // Get repair_requests for this corner that are NOT in final states
+      const { data: activeRequests } = await supabase
+        .from("repair_requests")
+        .select("id")
+        .eq("corner_id", corner.id)
+        .not("status", "in", '("delivered","at_corner","repair_completed","cancelled")');
+
+      if (!activeRequests || activeRequests.length === 0) {
+        setPendingQuotes([]);
+        return;
+      }
+
+      const activeRequestIds = activeRequests.map(r => r.id);
+
+      // Fetch pending quotes without signature for active repair requests
       const { data: quotes, error } = await supabase
         .from("quotes")
         .select(`
@@ -51,6 +65,7 @@ export function PendingQuotesBanner() {
           status,
           signature_data,
           signed_at,
+          repair_request_id,
           customer:customers(name),
           repair_request:repair_requests!inner(
             id,
@@ -61,21 +76,34 @@ export function PendingQuotesBanner() {
             status
           )
         `)
+        .in("repair_request_id", activeRequestIds)
         .eq("status", "pending")
-        .is("signature_data", null);
+        .is("signature_data", null)
+        .is("signed_at", null);
 
-      console.log("PendingQuotesBanner - Raw quotes:", quotes, "Error:", error);
+      console.log("PendingQuotesBanner - Quotes found:", quotes, "Error:", error);
 
-      // Filter for this corner's quotes AND exclude already delivered/at_corner repairs
-      const filteredQuotes = (quotes || []).filter(
-        (q: any) => 
-          q.repair_request?.corner_id === corner.id && 
-          !['delivered', 'at_corner', 'repair_completed'].includes(q.repair_request?.status)
-      );
+      // For each repair_request, check if there's already an accepted quote
+      const filteredQuotes: PendingQuote[] = [];
       
-      console.log("PendingQuotesBanner - Filtered for corner:", corner.id, filteredQuotes);
+      for (const quote of (quotes || [])) {
+        // Check if there's an accepted quote for this repair_request
+        const { data: acceptedQuote } = await supabase
+          .from("quotes")
+          .select("id")
+          .eq("repair_request_id", quote.repair_request_id)
+          .eq("status", "accepted")
+          .limit(1)
+          .maybeSingle();
+        
+        // Only add if no accepted quote exists
+        if (!acceptedQuote) {
+          filteredQuotes.push(quote as unknown as PendingQuote);
+        }
+      }
 
-      setPendingQuotes(filteredQuotes as unknown as PendingQuote[]);
+      console.log("PendingQuotesBanner - After filtering:", filteredQuotes);
+      setPendingQuotes(filteredQuotes);
     };
 
     fetchCornerAndQuotes();
