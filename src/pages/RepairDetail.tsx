@@ -638,32 +638,34 @@ export default function RepairDetail() {
                 <span className="hidden sm:inline">Modulo</span>
               </Button>
               {/* Checklist Buttons */}
-              <div className="flex gap-1">
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setChecklistType('pre_repair');
-                    setChecklistOpen(true);
-                  }}
-                  className="gap-2"
-                  title="Checklist Pre-Riparazione"
-                >
-                  <ClipboardCheck className="h-4 w-4 text-amber-500" />
-                  <span className="hidden lg:inline">Pre</span>
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setChecklistType('post_repair');
-                    setChecklistOpen(true);
-                  }}
-                  className="gap-2"
-                  title="Checklist Post-Riparazione"
-                >
-                  <ClipboardCheck className="h-4 w-4 text-emerald-500" />
-                  <span className="hidden lg:inline">Post</span>
-                </Button>
-              </div>
+              {repair && (
+                <div className="flex gap-1">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setChecklistType('pre_repair');
+                      setChecklistOpen(true);
+                    }}
+                    className="gap-2"
+                    title="Checklist Pre-Riparazione"
+                  >
+                    <ClipboardCheck className="h-4 w-4 text-amber-500" />
+                    <span className="hidden lg:inline">Pre</span>
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setChecklistType('post_repair');
+                      setChecklistOpen(true);
+                    }}
+                    className="gap-2"
+                    title="Checklist Post-Riparazione"
+                  >
+                    <ClipboardCheck className="h-4 w-4 text-emerald-500" />
+                    <span className="hidden lg:inline">Post</span>
+                  </Button>
+                </div>
+              )}
               <Button
                 onClick={saveChanges} 
                 disabled={saving} 
