@@ -219,6 +219,28 @@ export default function CornerSegnalazioni() {
     setSelectedQuoteForSignature(null);
   };
 
+  const handleDelivery = async (requestId: string) => {
+    try {
+      const { error } = await supabase
+        .from("repair_requests")
+        .update({
+          status: "delivered",
+          delivered_at: new Date().toISOString(),
+        })
+        .eq("id", requestId);
+
+      if (error) throw error;
+
+      toast.success("Dispositivo consegnato al cliente!");
+      if (cornerId) {
+        await loadRequests(cornerId);
+      }
+    } catch (error) {
+      console.error("Error delivering:", error);
+      toast.error("Errore nella consegna");
+    }
+  };
+
   const filteredRequests = requests.filter((req) => {
     const matchesSearch =
       req.customer?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -452,6 +474,19 @@ export default function CornerSegnalazioni() {
                         <Calendar className="h-3 w-3" />
                         {format(new Date(request.created_at), "dd MMM yyyy", { locale: it })}
                       </div>
+                      
+                      {/* Delivery button for devices at Corner */}
+                      {request.status === "at_corner" && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleDelivery(request.id)}
+                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-1" />
+                          Consegna
+                        </Button>
+                      )}
+                      
                       {request.quote ? (
                         (() => {
                           const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
