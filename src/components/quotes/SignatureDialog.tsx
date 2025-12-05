@@ -51,7 +51,8 @@ export function SignatureDialog({ open, onOpenChange, quoteId, onSuccess }: Sign
         description: "Il preventivo è stato accettato con successo",
       });
 
-      onSuccess();
+      // Await onSuccess to ensure data is refreshed before closing
+      await onSuccess();
       onOpenChange(false);
     } catch (error: any) {
       toast({
