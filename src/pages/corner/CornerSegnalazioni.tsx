@@ -84,7 +84,7 @@ export default function CornerSegnalazioni() {
   const [cornerId, setCornerId] = useState<string | null>(null);
   const [expandedQuotes, setExpandedQuotes] = useState<Set<string>>(new Set());
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
-  const [selectedQuoteForSignature, setSelectedQuoteForSignature] = useState<{quoteId: string; requestId: string} | null>(null);
+  const [selectedQuoteForSignature, setSelectedQuoteForSignature] = useState<{quoteId: string; requestId: string; totalCost: number; deviceInfo: string} | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -179,8 +179,8 @@ export default function CornerSegnalazioni() {
     }
   };
 
-  const handleOpenSignature = (quoteId: string, requestId: string) => {
-    setSelectedQuoteForSignature({ quoteId, requestId });
+  const handleOpenSignature = (quoteId: string, requestId: string, totalCost: number, deviceInfo: string) => {
+    setSelectedQuoteForSignature({ quoteId, requestId, totalCost, deviceInfo });
     setSignatureDialogOpen(true);
   };
 
@@ -522,7 +522,12 @@ export default function CornerSegnalazioni() {
                             </div>
                           ) : request.quote.status === "pending" && (
                             <Button
-                              onClick={() => handleOpenSignature(request.quote!.id, request.id)}
+                              onClick={() => handleOpenSignature(
+                                request.quote!.id, 
+                                request.id, 
+                                request.quote!.total_cost,
+                                `${request.device_brand || ''} ${request.device_model || ''} - ${request.device_type}`.trim()
+                              )}
                               className="w-full mt-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
                             >
                               <PenTool className="h-4 w-4 mr-2" />
@@ -547,6 +552,8 @@ export default function CornerSegnalazioni() {
           onOpenChange={setSignatureDialogOpen}
           quoteId={selectedQuoteForSignature.quoteId}
           onSuccess={handleSignatureSuccess}
+          totalCost={selectedQuoteForSignature.totalCost}
+          deviceInfo={selectedQuoteForSignature.deviceInfo}
         />
       )}
     </CornerLayout>

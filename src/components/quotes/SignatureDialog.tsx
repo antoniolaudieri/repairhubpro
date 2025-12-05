@@ -11,9 +11,11 @@ interface SignatureDialogProps {
   onOpenChange: (open: boolean) => void;
   quoteId: string;
   onSuccess: () => void;
+  totalCost?: number;
+  deviceInfo?: string;
 }
 
-export function SignatureDialog({ open, onOpenChange, quoteId, onSuccess }: SignatureDialogProps) {
+export function SignatureDialog({ open, onOpenChange, quoteId, onSuccess, totalCost, deviceInfo }: SignatureDialogProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [loading, setLoading] = useState(false);
 
@@ -104,6 +106,20 @@ export function SignatureDialog({ open, onOpenChange, quoteId, onSuccess }: Sign
         </DialogHeader>
 
         <div className="space-y-4">
+          {/* Quote Summary */}
+          {(totalCost !== undefined || deviceInfo) && (
+            <div className="bg-muted/50 rounded-lg p-4 border border-border">
+              {deviceInfo && (
+                <p className="text-sm text-muted-foreground mb-2">{deviceInfo}</p>
+              )}
+              {totalCost !== undefined && (
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Totale Preventivo:</span>
+                  <span className="text-2xl font-bold text-primary">€{totalCost.toFixed(2)}</span>
+                </div>
+              )}
+            </div>
+          )}
           <div className="border-2 border-dashed rounded-xl overflow-hidden bg-white">
             <SignatureCanvas
               ref={sigCanvas}
