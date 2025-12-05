@@ -603,7 +603,7 @@ export default function CentroDashboard() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4"
+              className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4"
             >
               {statsCards.map((card) => (
                 <motion.div key={card.title} variants={itemVariants}>
@@ -615,9 +615,9 @@ export default function CentroDashboard() {
                       <div className={`h-8 w-8 md:h-10 md:w-10 rounded-lg ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
                         <card.icon className="h-4 w-4 md:h-5 md:w-5 text-white" />
                       </div>
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="text-xl md:text-2xl font-bold text-foreground leading-none">{card.value}</p>
-                        <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 truncate">{card.title}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 leading-tight">{card.title}</p>
                       </div>
                     </div>
                   </Card>
@@ -630,11 +630,11 @@ export default function CentroDashboard() {
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4"
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4"
             >
               {/* Credit Balance Widget */}
               {centro && (
-                <motion.div variants={itemVariants} className="col-span-2 sm:col-span-1">
+                <motion.div variants={itemVariants} className="md:col-span-1">
                   <CreditBalanceWidget
                     entityType="centro"
                     entityId={centro.id}
@@ -652,10 +652,10 @@ export default function CentroDashboard() {
                   onClick={() => navigate("/centro/clienti")}
                 >
                   <div className="flex items-center gap-2 md:gap-3">
-                    <div className="h-8 w-8 md:h-9 md:w-9 rounded-lg bg-violet-100 flex items-center justify-center">
+                    <div className="h-8 w-8 md:h-9 md:w-9 rounded-lg bg-violet-100 flex items-center justify-center flex-shrink-0">
                       <Users className="h-4 w-4 text-violet-600" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <p className="text-base md:text-lg font-semibold text-foreground">{stats.totalCustomers}</p>
                       <p className="text-[10px] md:text-xs text-muted-foreground">Clienti</p>
                     </div>
@@ -670,12 +670,12 @@ export default function CentroDashboard() {
                     onClick={card.onClick}
                   >
                     <div className="flex items-center gap-2 md:gap-3">
-                      <div className={`h-8 w-8 md:h-9 md:w-9 rounded-lg ${card.iconBg} flex items-center justify-center`}>
+                      <div className={`h-8 w-8 md:h-9 md:w-9 rounded-lg ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
                         <card.icon className="h-4 w-4 text-white" />
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-base md:text-lg font-semibold text-foreground truncate">{card.value}</p>
-                        <p className="text-[10px] md:text-xs text-muted-foreground truncate">{card.title}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base md:text-lg font-semibold text-foreground">{card.value}</p>
+                        <p className="text-[10px] md:text-xs text-muted-foreground leading-tight">{card.title}</p>
                       </div>
                     </div>
                   </Card>
