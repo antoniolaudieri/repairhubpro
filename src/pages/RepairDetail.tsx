@@ -642,8 +642,10 @@ export default function RepairDetail() {
                 <div className="flex gap-1">
                   <Button 
                     variant="outline"
-                    onClick={() => {
-                      console.log('Pre checklist clicked, repair:', repair?.id);
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toast({ title: "Opening Pre-Repair Checklist" });
                       setChecklistType('pre_repair');
                       setChecklistOpen(true);
                     }}
@@ -655,8 +657,10 @@ export default function RepairDetail() {
                   </Button>
                   <Button 
                     variant="outline"
-                    onClick={() => {
-                      console.log('Post checklist clicked, repair:', repair?.id);
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toast({ title: "Opening Post-Repair Checklist" });
                       setChecklistType('post_repair');
                       setChecklistOpen(true);
                     }}
