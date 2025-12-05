@@ -28,11 +28,15 @@ import {
   Phone,
   Building2,
   Store,
-  Eye
+  Eye,
+  Mail,
+  MessageCircle
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
 
 interface Centro {
   id: string;
@@ -308,6 +312,7 @@ export default function CentroLavori() {
         issue: r.issue_description,
         customerName: r.customers?.name || "N/D",
         customerPhone: r.customers?.phone || "N/D",
+        customerEmail: r.customers?.email || null,
         cost: r.estimated_cost,
         photoUrl: null,
       };
@@ -320,6 +325,7 @@ export default function CentroLavori() {
         issue: r.device.reported_issue,
         customerName: r.device.customer.name,
         customerPhone: r.device.customer.phone,
+        customerEmail: r.device.customer.email || null,
         cost: r.final_cost || r.estimated_cost,
         photoUrl: r.device.photo_url,
       };
@@ -570,7 +576,7 @@ export default function CentroLavori() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             {!isDispatched && (
                               <Button 
                                 variant="ghost" 
@@ -580,6 +586,73 @@ export default function CentroLavori() {
                                 <Eye className="h-4 w-4" />
                               </Button>
                             )}
+                            
+                            {/* Communication Buttons */}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      callPhone(info.customerPhone);
+                                    }}
+                                  >
+                                    <Phone className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Chiama</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const repairForMessage = {
+                                        status: repair.status,
+                                        device: { brand: info.brand, model: info.model },
+                                        customer: { name: info.customerName }
+                                      };
+                                      const message = getStatusMessage(repairForMessage);
+                                      openWhatsApp(info.customerPhone, message.body);
+                                    }}
+                                  >
+                                    <MessageCircle className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>WhatsApp</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const repairForMessage = {
+                                        status: repair.status,
+                                        device: { brand: info.brand, model: info.model },
+                                        customer: { name: info.customerName }
+                                      };
+                                      const message = getStatusMessage(repairForMessage);
+                                      openEmail(info.customerEmail || null, message.subject, message.body);
+                                    }}
+                                  >
+                                    <Mail className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Email</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            
                             <Select
                               value={repair.status}
                               onValueChange={(value) =>
