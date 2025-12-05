@@ -318,9 +318,11 @@ export default function CustomerHome() {
                 variant="outline" 
                 size="sm"
                 className="gap-2 group border-success/30 text-success hover:bg-success/10"
+                title="Diventa un partner della nostra rete"
               >
                 <Award className="h-4 w-4 transition-all group-hover:rotate-12" />
                 <span className="hidden md:inline">Diventa Partner</span>
+                <span className="md:hidden sr-only">Diventa Partner</span>
               </Button>
             </motion.div>
             {user ? (
@@ -331,9 +333,11 @@ export default function CustomerHome() {
                     variant="ghost" 
                     size="sm"
                     className="gap-2 group"
+                    title="Vai alla tua Dashboard"
                   >
                     <Zap className="h-4 w-4 transition-all group-hover:text-primary group-hover:rotate-12" />
                     <span className="hidden sm:inline">Dashboard</span>
+                    <span className="sm:hidden sr-only">Dashboard</span>
                   </Button>
                 </motion.div>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -345,9 +349,11 @@ export default function CustomerHome() {
                     variant="ghost" 
                     size="sm"
                     className="gap-2 group text-muted-foreground hover:text-destructive"
+                    title="Esci dall'account"
                   >
                     <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 rotate-180" />
                     <span className="hidden sm:inline">Esci</span>
+                    <span className="sm:hidden sr-only">Esci</span>
                   </Button>
                 </motion.div>
               </>
@@ -358,18 +364,21 @@ export default function CustomerHome() {
                   variant="ghost" 
                   size="sm"
                   className="gap-2 group"
+                  title="Accedi al tuo account"
                 >
                   <Shield className="h-4 w-4 transition-all group-hover:text-primary" />
                   <span className="hidden sm:inline">Accedi</span>
+                  <span className="sm:hidden sr-only">Accedi</span>
                 </Button>
               </motion.div>
             )}
             <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
               <DialogTrigger asChild>
                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                  <Button size="sm" variant="glow" className="gap-2 group relative overflow-hidden">
+                  <Button size="sm" variant="glow" className="gap-2 group relative overflow-hidden" title="Prenota una riparazione">
                     <Wrench className="h-4 w-4 transition-transform group-hover:rotate-12" />
                     <span className="hidden sm:inline">Prenota</span>
+                    <span className="sm:hidden sr-only">Prenota</span>
                     <div className="absolute inset-0 bg-gradient-shine animate-shimmer opacity-0 group-hover:opacity-100" />
                   </Button>
                 </motion.div>
