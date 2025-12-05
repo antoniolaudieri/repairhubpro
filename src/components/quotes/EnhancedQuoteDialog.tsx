@@ -982,7 +982,7 @@ export function EnhancedQuoteDialog({
                       Incasso Diretto dal Cliente
                     </Label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Il cliente paga direttamente a te. Incassi €{getTotalCost().toFixed(2)} e gestisci tu la fatturazione.
+                      Il cliente paga direttamente a te (€{getTotalCost().toFixed(2)}). Dovrai poi versare al Corner la sua commissione di €{getCornerCommission().toFixed(2)}.
                     </p>
                   </div>
                 </div>
@@ -994,7 +994,7 @@ export function EnhancedQuoteDialog({
                       Incasso tramite Corner
                     </Label>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Il Corner incassa dal cliente, trattiene la sua commissione ({cornerCommissionRate}% = €{getCornerCommission().toFixed(2)}) e ti versa €{(getTotalCost() - getCornerCommission()).toFixed(2)}.
+                      Il Corner incassa dal cliente (€{getTotalCost().toFixed(2)}), trattiene la sua commissione (€{getCornerCommission().toFixed(2)}) e ti versa €{(getTotalCost() - getCornerCommission()).toFixed(2)}.
                     </p>
                   </div>
                 </div>
