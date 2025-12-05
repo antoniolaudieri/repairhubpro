@@ -511,7 +511,8 @@ export default function CentroLavori() {
                     return (
                       <div
                         key={repair.id}
-                        className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card transition-colors"
+                        className="p-4 rounded-lg border border-border bg-card/50 hover:bg-card transition-colors cursor-pointer"
+                        onClick={() => navigate(`/centro/lavori/${repair.id}`)}
                       >
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                           <div className="flex items-start gap-4">
@@ -576,16 +577,17 @@ export default function CentroLavori() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 flex-wrap">
-                            {!isDispatched && (
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => navigate(`/centro/lavori/${repair.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            )}
+                          <div className="flex items-center gap-2 flex-wrap" onClick={(e) => e.stopPropagation()}>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/centro/lavori/${repair.id}`);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
                             
                             {/* Communication Buttons */}
                             <TooltipProvider>
