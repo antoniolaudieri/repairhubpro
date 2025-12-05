@@ -106,15 +106,17 @@ export function RepairChecklistDialog({
       
       if (!checklistIdToLoad) {
         // Check if there's an existing checklist for this repair_id and type
-        const { data: existingChecklist } = await supabase
+        // Use order + limit to handle duplicates (get the most recent)
+        const { data: existingChecklists } = await supabase
           .from('repair_checklists')
           .select('id')
           .eq('repair_id', repairId)
           .eq('checklist_type', checklistType)
-          .maybeSingle();
+          .order('created_at', { ascending: false })
+          .limit(1);
         
-        if (existingChecklist) {
-          checklistIdToLoad = existingChecklist.id;
+        if (existingChecklists && existingChecklists.length > 0) {
+          checklistIdToLoad = existingChecklists[0].id;
         }
       }
 
