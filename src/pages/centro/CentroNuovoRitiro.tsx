@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -6,7 +6,7 @@ import { CentroLayout } from "@/layouts/CentroLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Sparkles, AlertTriangle, Smartphone, ArrowLeft, Flame, Trophy, Zap, TrendingUp } from "lucide-react";
+import { Sparkles, AlertTriangle, Smartphone, ArrowLeft, Flame, Trophy, Zap, TrendingUp, ClipboardCheck } from "lucide-react";
 import { PhotoUpload } from "@/components/repair/PhotoUpload";
 import { DeviceInfoCard } from "@/components/repair/DeviceInfoCard";
 import { CustomerSearch } from "@/components/repair/CustomerSearch";
@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { IntakeSignatureStep } from "@/components/repair/IntakeSignatureStep";
 import { getBrandSuggestions, getModelSuggestions } from "@/data/commonDevices";
 import { SparePartsStep } from "@/components/repair/SparePartsStep";
-import { useEffect } from "react";
+import { RepairChecklistDialog } from "@/components/checklist";
 
 export default function CentroNuovoRitiro() {
   const navigate = useNavigate();
@@ -50,6 +50,9 @@ export default function CentroNuovoRitiro() {
   const [laborCost, setLaborCost] = useState<number>(0);
   const [diagnosticFee, setDiagnosticFee] = useState<number>(15);
   const [isFeeDisabledBySettings, setIsFeeDisabledBySettings] = useState(false);
+  const [aiConditionAssessment, setAiConditionAssessment] = useState<any>(null);
+  const [showChecklistDialog, setShowChecklistDialog] = useState(false);
+  const [createdRepairId, setCreatedRepairId] = useState<string | null>(null);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -184,7 +187,13 @@ export default function CentroNuovoRitiro() {
             serial_number: deviceInfo.serial || prev.serial_number,
           }));
 
-          toast.success("Dispositivo riconosciuto!");
+          // Save condition assessment for checklist pre-fill
+          if (deviceInfo.condition_assessment) {
+            setAiConditionAssessment(deviceInfo.condition_assessment);
+            toast.success("Dispositivo riconosciuto e condizioni valutate!");
+          } else {
+            toast.success("Dispositivo riconosciuto!");
+          }
 
           if (deviceInfo.brand && deviceInfo.model && deviceInfo.brand !== "unknown" && deviceInfo.model !== "unknown") {
             setLookingUpDetails(true);
@@ -549,8 +558,22 @@ export default function CentroNuovoRitiro() {
         }
       }
 
-      toast.success("Dispositivo registrato con successo!");
-      navigate("/centro/lavori");
+      // Save repair ID and offer checklist
+      setCreatedRepairId(repairData.id);
+      
+      // If AI analyzed conditions, offer to open checklist
+      if (aiConditionAssessment) {
+        toast.success("Dispositivo registrato! Vuoi compilare la checklist pre-riparazione?", {
+          action: {
+            label: "Apri Checklist",
+            onClick: () => setShowChecklistDialog(true)
+          },
+          duration: 8000
+        });
+      } else {
+        toast.success("Dispositivo registrato con successo!");
+        navigate("/centro/lavori");
+      }
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(error.message || "Errore durante la registrazione");
@@ -871,6 +894,29 @@ export default function CentroNuovoRitiro() {
           
         </div>
       </PageTransition>
+      
+      {/* Checklist Dialog with AI pre-fill */}
+      {createdRepairId && (
+        <RepairChecklistDialog
+          open={showChecklistDialog}
+          onOpenChange={(open) => {
+            setShowChecklistDialog(open);
+            if (!open) {
+              navigate("/centro/lavori");
+            }
+          }}
+          repairId={createdRepairId}
+          deviceType={deviceData.device_type}
+          checklistType="pre_repair"
+          customerName={customerData.name}
+          deviceInfo={`${deviceData.brand} ${deviceData.model}`}
+          aiConditionAssessment={aiConditionAssessment}
+          onSuccess={() => {
+            setShowChecklistDialog(false);
+            navigate("/centro/lavori");
+          }}
+        />
+      )}
     </CentroLayout>
   );
 }

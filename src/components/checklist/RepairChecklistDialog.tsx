@@ -34,6 +34,18 @@ interface ChecklistItem {
   sort_order: number;
 }
 
+interface ConditionAssessment {
+  screen?: ItemStatus;
+  back_cover?: ItemStatus;
+  frame?: ItemStatus;
+  buttons?: ItemStatus;
+  camera_lens?: ItemStatus;
+  charging_port?: ItemStatus;
+  speakers?: ItemStatus;
+  overall_condition?: ItemStatus;
+  visible_damage_notes?: string;
+}
+
 interface RepairChecklistDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -44,6 +56,7 @@ interface RepairChecklistDialogProps {
   deviceInfo: string;
   existingChecklistId?: string;
   onSuccess?: () => void;
+  aiConditionAssessment?: ConditionAssessment;
 }
 
 export function RepairChecklistDialog({
@@ -55,7 +68,8 @@ export function RepairChecklistDialog({
   customerName,
   deviceInfo,
   existingChecklistId,
-  onSuccess
+  onSuccess,
+  aiConditionAssessment
 }: RepairChecklistDialogProps) {
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -123,15 +137,49 @@ export function RepairChecklistDialog({
           .order('sort_order');
 
         if (templates && templates.length > 0) {
+          // Map AI condition assessment to checklist items
+          const getAIStatus = (itemName: string): ItemStatus => {
+            if (!aiConditionAssessment) return 'ok';
+            
+            const nameLower = itemName.toLowerCase();
+            if (nameLower.includes('schermo') || nameLower.includes('display') || nameLower.includes('lcd')) {
+              return aiConditionAssessment.screen || 'ok';
+            }
+            if (nameLower.includes('scocca') || nameLower.includes('back') || nameLower.includes('posteriore')) {
+              return aiConditionAssessment.back_cover || 'ok';
+            }
+            if (nameLower.includes('cornice') || nameLower.includes('frame') || nameLower.includes('bordi')) {
+              return aiConditionAssessment.frame || 'ok';
+            }
+            if (nameLower.includes('tast') || nameLower.includes('button') || nameLower.includes('pulsant')) {
+              return aiConditionAssessment.buttons || 'ok';
+            }
+            if (nameLower.includes('fotocamera') || nameLower.includes('camera') || nameLower.includes('lente')) {
+              return aiConditionAssessment.camera_lens || 'ok';
+            }
+            if (nameLower.includes('ricarica') || nameLower.includes('charging') || nameLower.includes('usb') || nameLower.includes('lightning')) {
+              return aiConditionAssessment.charging_port || 'ok';
+            }
+            if (nameLower.includes('altoparlan') || nameLower.includes('speaker') || nameLower.includes('audio')) {
+              return aiConditionAssessment.speakers || 'ok';
+            }
+            return 'ok';
+          };
+
           setItems(templates.map(t => ({
             item_name: t.item_name,
             category: t.category,
-            status: 'ok' as ItemStatus,
+            status: getAIStatus(t.item_name),
             notes: '',
             photo_url: '',
             sort_order: t.sort_order
           })));
           setActiveCategory(templates[0].category);
+          
+          // Set general notes from AI if available
+          if (aiConditionAssessment?.visible_damage_notes) {
+            setGeneralNotes(`[AI] ${aiConditionAssessment.visible_damage_notes}`);
+          }
         }
       }
     } catch (error) {
