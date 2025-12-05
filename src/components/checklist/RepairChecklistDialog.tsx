@@ -99,12 +99,29 @@ export function RepairChecklistDialog({
   const loadChecklistData = async () => {
     setLoading(true);
     try {
-      if (existingChecklistId) {
+      // First check if a checklist already exists for this repair and type
+      let checklistIdToLoad = existingChecklistId;
+      
+      if (!checklistIdToLoad) {
+        // Check if there's an existing checklist for this repair_id and type
+        const { data: existingChecklist } = await supabase
+          .from('repair_checklists')
+          .select('id')
+          .eq('repair_id', repairId)
+          .eq('checklist_type', checklistType)
+          .maybeSingle();
+        
+        if (existingChecklist) {
+          checklistIdToLoad = existingChecklist.id;
+        }
+      }
+
+      if (checklistIdToLoad) {
         // Load existing checklist
         const { data: checklist } = await supabase
           .from('repair_checklists')
           .select('*')
-          .eq('id', existingChecklistId)
+          .eq('id', checklistIdToLoad)
           .single();
 
         if (checklist) {
@@ -114,7 +131,7 @@ export function RepairChecklistDialog({
           const { data: existingItems } = await supabase
             .from('checklist_items')
             .select('*')
-            .eq('checklist_id', existingChecklistId)
+            .eq('checklist_id', checklistIdToLoad)
             .order('sort_order');
 
           if (existingItems && existingItems.length > 0) {
@@ -125,61 +142,63 @@ export function RepairChecklistDialog({
               photo_url: item.photo_url || ''
             })));
             setActiveCategory(existingItems[0].category);
+            setLoading(false);
+            return;
           }
         }
-      } else {
-        // Load templates for new checklist
-        const { data: templates } = await supabase
-          .from('checklist_templates')
-          .select('*')
-          .eq('device_type', normalizedDeviceType)
-          .eq('is_active', true)
-          .order('sort_order');
+      }
+      
+      // No existing checklist found, load templates
+      const { data: templates } = await supabase
+        .from('checklist_templates')
+        .select('*')
+        .eq('device_type', normalizedDeviceType)
+        .eq('is_active', true)
+        .order('sort_order');
 
-        if (templates && templates.length > 0) {
-          // Map AI condition assessment to checklist items
-          const getAIStatus = (itemName: string): ItemStatus => {
-            if (!aiConditionAssessment) return 'ok';
-            
-            const nameLower = itemName.toLowerCase();
-            if (nameLower.includes('schermo') || nameLower.includes('display') || nameLower.includes('lcd')) {
-              return aiConditionAssessment.screen || 'ok';
-            }
-            if (nameLower.includes('scocca') || nameLower.includes('back') || nameLower.includes('posteriore')) {
-              return aiConditionAssessment.back_cover || 'ok';
-            }
-            if (nameLower.includes('cornice') || nameLower.includes('frame') || nameLower.includes('bordi')) {
-              return aiConditionAssessment.frame || 'ok';
-            }
-            if (nameLower.includes('tast') || nameLower.includes('button') || nameLower.includes('pulsant')) {
-              return aiConditionAssessment.buttons || 'ok';
-            }
-            if (nameLower.includes('fotocamera') || nameLower.includes('camera') || nameLower.includes('lente')) {
-              return aiConditionAssessment.camera_lens || 'ok';
-            }
-            if (nameLower.includes('ricarica') || nameLower.includes('charging') || nameLower.includes('usb') || nameLower.includes('lightning')) {
-              return aiConditionAssessment.charging_port || 'ok';
-            }
-            if (nameLower.includes('altoparlan') || nameLower.includes('speaker') || nameLower.includes('audio')) {
-              return aiConditionAssessment.speakers || 'ok';
-            }
-            return 'ok';
-          };
-
-          setItems(templates.map(t => ({
-            item_name: t.item_name,
-            category: t.category,
-            status: getAIStatus(t.item_name),
-            notes: '',
-            photo_url: '',
-            sort_order: t.sort_order
-          })));
-          setActiveCategory(templates[0].category);
+      if (templates && templates.length > 0) {
+        // Map AI condition assessment to checklist items
+        const getAIStatus = (itemName: string): ItemStatus => {
+          if (!aiConditionAssessment) return 'ok';
           
-          // Set general notes from AI if available
-          if (aiConditionAssessment?.visible_damage_notes) {
-            setGeneralNotes(`[AI] ${aiConditionAssessment.visible_damage_notes}`);
+          const nameLower = itemName.toLowerCase();
+          if (nameLower.includes('schermo') || nameLower.includes('display') || nameLower.includes('lcd')) {
+            return aiConditionAssessment.screen || 'ok';
           }
+          if (nameLower.includes('scocca') || nameLower.includes('back') || nameLower.includes('posteriore')) {
+            return aiConditionAssessment.back_cover || 'ok';
+          }
+          if (nameLower.includes('cornice') || nameLower.includes('frame') || nameLower.includes('bordi')) {
+            return aiConditionAssessment.frame || 'ok';
+          }
+          if (nameLower.includes('tast') || nameLower.includes('button') || nameLower.includes('pulsant')) {
+            return aiConditionAssessment.buttons || 'ok';
+          }
+          if (nameLower.includes('fotocamera') || nameLower.includes('camera') || nameLower.includes('lente')) {
+            return aiConditionAssessment.camera_lens || 'ok';
+          }
+          if (nameLower.includes('ricarica') || nameLower.includes('charging') || nameLower.includes('usb') || nameLower.includes('lightning')) {
+            return aiConditionAssessment.charging_port || 'ok';
+          }
+          if (nameLower.includes('altoparlan') || nameLower.includes('speaker') || nameLower.includes('audio')) {
+            return aiConditionAssessment.speakers || 'ok';
+          }
+          return 'ok';
+        };
+
+        setItems(templates.map(t => ({
+          item_name: t.item_name,
+          category: t.category,
+          status: getAIStatus(t.item_name),
+          notes: '',
+          photo_url: '',
+          sort_order: t.sort_order
+        })));
+        setActiveCategory(templates[0].category);
+        
+        // Set general notes from AI if available
+        if (aiConditionAssessment?.visible_damage_notes) {
+          setGeneralNotes(`[AI] ${aiConditionAssessment.visible_damage_notes}`);
         }
       }
     } catch (error) {
