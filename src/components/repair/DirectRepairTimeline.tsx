@@ -4,11 +4,13 @@ import {
   Package, 
   CheckCircle2, 
   User,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface DirectRepairTimelineProps {
   status: string;
@@ -16,6 +18,7 @@ interface DirectRepairTimelineProps {
   startedAt?: string | null;
   completedAt?: string | null;
   deliveredAt?: string | null;
+  forfeitedAt?: string | null;
   className?: string;
 }
 
@@ -111,12 +114,56 @@ export function DirectRepairTimeline({
   startedAt,
   completedAt,
   deliveredAt,
+  forfeitedAt,
   className
 }: DirectRepairTimelineProps) {
   const steps = getTimelineSteps(status, createdAt, startedAt, completedAt, deliveredAt);
+  
+  // Calculate days remaining for forfeiture (only if completed but not delivered/forfeited)
+  const showForfeitureCountdown = status === 'completed' && completedAt && !deliveredAt && !forfeitedAt;
+  const daysRemaining = showForfeitureCountdown 
+    ? 30 - differenceInDays(new Date(), new Date(completedAt))
+    : null;
 
   return (
     <div className={cn("relative", className)}>
+      {/* Forfeiture countdown banner */}
+      {showForfeitureCountdown && daysRemaining !== null && (
+        <div className={cn(
+          "mb-4 p-3 rounded-lg flex items-center gap-3",
+          daysRemaining <= 3 ? "bg-destructive/10 border border-destructive/30" :
+          daysRemaining <= 7 ? "bg-amber-500/10 border border-amber-500/30" :
+          "bg-muted border border-border"
+        )}>
+          <AlertTriangle className={cn(
+            "h-5 w-5",
+            daysRemaining <= 3 ? "text-destructive" :
+            daysRemaining <= 7 ? "text-amber-500" :
+            "text-muted-foreground"
+          )} />
+          <div className="flex-1">
+            <p className="text-sm font-medium">
+              {daysRemaining <= 0 
+                ? "Dispositivo in alienazione"
+                : `${daysRemaining} giorni rimanenti per il ritiro`
+              }
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Il dispositivo non ritirato entro 30 giorni diventa proprietà del Centro (Art. 2756 c.c.)
+            </p>
+          </div>
+          <Badge variant={
+            daysRemaining <= 3 ? "destructive" :
+            daysRemaining <= 7 ? "outline" :
+            "secondary"
+          } className={cn(
+            daysRemaining <= 7 && daysRemaining > 3 && "border-amber-500 text-amber-600"
+          )}>
+            {daysRemaining <= 0 ? "SCADUTO" : `${daysRemaining}g`}
+          </Badge>
+        </div>
+      )}
+      
       <div className="flex items-start justify-between">
         {steps.map((step, index) => {
           const Icon = step.icon;

@@ -30,12 +30,18 @@ serve(async (req) => {
         forfeited_at,
         device_id,
         devices!inner (
+          id,
           brand,
           model,
+          device_type,
+          imei,
+          serial_number,
+          initial_condition,
           customer_id,
           customers!inner (
             email,
-            name
+            name,
+            centro_id
           )
         )
       `)
@@ -55,6 +61,7 @@ serve(async (req) => {
     const results = {
       warnings_sent: 0,
       forfeited: 0,
+      devices_added_to_inventory: 0,
       errors: [] as string[],
     };
 
@@ -84,6 +91,34 @@ serve(async (req) => {
         } else {
           results.forfeited++;
           console.log(`Successfully forfeited repair ${repair.id}`);
+          
+          // Add device to inventory as a sellable item
+          const device = repair.devices as any;
+          const centroId = device?.customers?.centro_id;
+          
+          const inventoryItem = {
+            name: `${device.brand} ${device.model} (Alienato)`,
+            category: "Dispositivi",
+            brand: device.brand,
+            model_compatibility: device.model,
+            stock_quantity: 1,
+            cost: 0, // No cost since it was forfeited
+            selling_price: null, // To be set by Centro
+            notes: `Dispositivo alienato - IMEI: ${device.imei || 'N/A'} - S/N: ${device.serial_number || 'N/A'} - Condizione: ${device.initial_condition || 'Non specificata'} - Da riparazione #${repair.id.slice(0, 8)}`,
+            centro_id: centroId || null,
+          };
+          
+          const { error: inventoryError } = await supabase
+            .from("spare_parts")
+            .insert(inventoryItem);
+          
+          if (inventoryError) {
+            console.error(`Error adding device to inventory:`, inventoryError);
+            results.errors.push(`Failed to add device ${repair.id} to inventory`);
+          } else {
+            results.devices_added_to_inventory++;
+            console.log(`Successfully added device from repair ${repair.id} to inventory`);
+          }
         }
       }
       // Check if warning should be sent (23+ days and warning not sent yet)
