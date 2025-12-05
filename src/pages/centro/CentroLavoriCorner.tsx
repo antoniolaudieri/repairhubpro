@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { EnhancedQuoteDialog } from "@/components/quotes/EnhancedQuoteDialog";
 import { EditQuoteDialog } from "@/components/quotes/EditQuoteDialog";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -100,6 +100,38 @@ export default function CentroLavoriCorner() {
   const [selectedCornerRequest, setSelectedCornerRequest] = useState<CornerRequest | null>(null);
   const [platformRate, setPlatformRate] = useState<number>(20);
   const [centroRate, setCentroRate] = useState<number>(70);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+
+  // Handle highlight query param for direct navigation from notifications
+  useEffect(() => {
+    const highlight = searchParams.get("highlight");
+    if (highlight && allRequests.length > 0) {
+      setHighlightedId(highlight);
+      // Switch to appropriate tab based on request status
+      const request = allRequests.find(r => r.id === highlight);
+      if (request) {
+        const tab = request.status === "pending" || request.status === "assigned" 
+          ? "new" 
+          : request.status === "delivered" 
+            ? "completed" 
+            : "in_progress";
+        setActiveTab(tab);
+      }
+      // Scroll to highlighted card after a short delay
+      setTimeout(() => {
+        const element = document.getElementById(`request-card-${highlight}`);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, 300);
+      // Clear highlight after 5 seconds
+      setTimeout(() => {
+        setHighlightedId(null);
+        setSearchParams({});
+      }, 5000);
+    }
+  }, [searchParams, allRequests]);
 
   useEffect(() => {
     const fetchCentroAndRequests = async () => {
@@ -516,14 +548,21 @@ export default function CentroLavoriCorner() {
   };
 
   const renderRequestCard = (request: CornerRequest) => {
+    const isHighlighted = highlightedId === request.id;
     return (
       <motion.div
         key={request.id}
+        id={`request-card-${request.id}`}
         initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{ 
+          opacity: 1, 
+          y: 0,
+          scale: isHighlighted ? [1, 1.02, 1] : 1,
+        }}
         exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: isHighlighted ? 0.5 : 0.2 }}
       >
-        <Card className="p-4">
+        <Card className={`p-4 transition-all duration-300 ${isHighlighted ? 'ring-2 ring-primary ring-offset-2 bg-primary/5' : ''}`}>
           <div className="space-y-3">
             {/* Header */}
             <div className="flex items-start justify-between gap-3">

@@ -236,6 +236,8 @@ export function useCentroNotifications() {
               const title = "✅ Preventivo Firmato - Ritira il Dispositivo!";
               const message = `Il cliente ha firmato il preventivo. Ritira il dispositivo presso ${cornerName}${cornerAddress ? ` (${cornerAddress})` : ""}`;
 
+              const detailUrl = `/centro/lavori-corner?highlight=${payload.new.id}`;
+              
               const notification: CentroNotification = {
                 id: `awaiting-pickup-${payload.new.id}-${Date.now()}`,
                 type: "awaiting_pickup",
@@ -243,7 +245,7 @@ export function useCentroNotifications() {
                 message,
                 timestamp: new Date(),
                 read: false,
-                linkTo: `/centro/lavori-corner`,
+                linkTo: detailUrl,
                 data: {
                   repairRequestId: payload.new.id,
                   cornerName,
@@ -257,8 +259,8 @@ export function useCentroNotifications() {
                 description: message,
                 duration: 15000,
                 action: {
-                  label: "Vedi",
-                  onClick: () => window.location.href = "/centro/lavori-corner",
+                  label: "Gestisci Ritiro",
+                  onClick: () => window.location.href = detailUrl,
                 },
               });
 
@@ -266,7 +268,7 @@ export function useCentroNotifications() {
                 sendNotification(title, {
                   body: message,
                   tag: `awaiting-pickup-${payload.new.id}`,
-                  data: { url: `/centro/lavori-corner` },
+                  data: { url: detailUrl },
                 });
               }
             }
