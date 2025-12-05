@@ -22,8 +22,11 @@ import {
   Tablet,
   Watch,
   Tv,
-  Gamepad2
+  Gamepad2,
+  Mail,
+  MessageCircle
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,6 +50,7 @@ interface Repair {
   customer: {
     name: string;
     phone: string;
+    email: string | null;
   };
   has_pending_orders?: boolean;
 }
@@ -87,6 +91,44 @@ const getDeviceIcon = (deviceType: string) => {
   return Smartphone;
 };
 
+const getStatusMessage = (repair: Repair): { subject: string; body: string } => {
+  const device = `${repair.device.brand} ${repair.device.model}`;
+  const customer = repair.customer?.name || "Cliente";
+  
+  const messages: Record<string, { subject: string; body: string }> = {
+    pending: {
+      subject: `Riparazione in attesa - ${device}`,
+      body: `Gentile ${customer},\n\nLa informiamo che abbiamo ricevuto il suo dispositivo ${device} e la riparazione è in attesa di essere presa in carico.\n\nLa terremo aggiornata sui progressi.\n\nCordiali saluti`
+    },
+    waiting_parts: {
+      subject: `Riparazione in attesa ricambi - ${device}`,
+      body: `Gentile ${customer},\n\nLa informiamo che la riparazione del suo ${device} è in attesa di ricevere i ricambi necessari.\n\nLa contatteremo non appena i pezzi saranno disponibili.\n\nCordiali saluti`
+    },
+    in_progress: {
+      subject: `Riparazione in corso - ${device}`,
+      body: `Gentile ${customer},\n\nLa informiamo che stiamo lavorando attivamente alla riparazione del suo ${device}.\n\nLa terremo aggiornata sui progressi.\n\nCordiali saluti`
+    },
+    completed: {
+      subject: `Riparazione completata - ${device}`,
+      body: `Gentile ${customer},\n\nSiamo lieti di informarla che la riparazione del suo ${device} è stata completata con successo!\n\nPuò passare a ritirare il dispositivo presso il nostro laboratorio.\n\nRicordiamo che il dispositivo deve essere ritirato entro 30 giorni.\n\nCordiali saluti`
+    },
+    delivered: {
+      subject: `Conferma consegna - ${device}`,
+      body: `Gentile ${customer},\n\nConfermiamo che il suo ${device} è stato consegnato.\n\nGrazie per aver scelto i nostri servizi!\n\nCordiali saluti`
+    },
+    cancelled: {
+      subject: `Riparazione annullata - ${device}`,
+      body: `Gentile ${customer},\n\nLa informiamo che la riparazione del suo ${device} è stata annullata.\n\nPer ulteriori informazioni, non esiti a contattarci.\n\nCordiali saluti`
+    },
+    forfeited: {
+      subject: `Dispositivo non ritirato - ${device}`,
+      body: `Gentile ${customer},\n\nLa informiamo che, non avendo ritirato il suo ${device} entro i termini previsti (30 giorni), il dispositivo è stato alienato secondo quanto previsto dal regolamento.\n\nCordiali saluti`
+    }
+  };
+  
+  return messages[repair.status] || messages.pending;
+};
+
 export default function Repairs() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -114,7 +156,8 @@ export default function Repairs() {
             photo_url,
             customer:customers (
               name,
-              phone
+              phone,
+              email
             )
           ),
           orders (
@@ -438,6 +481,73 @@ export default function Repairs() {
                             </p>
                           </div>
                         </div>
+
+                        {/* Communication Buttons */}
+                        {repair.customer && (
+                          <div className="flex gap-2 pt-3 mt-3 border-t border-border/50">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 h-8 gap-1.5"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const message = getStatusMessage(repair);
+                                      window.location.href = `tel:${repair.customer?.phone}`;
+                                    }}
+                                  >
+                                    <Phone className="h-3.5 w-3.5" />
+                                    <span className="text-xs">Chiama</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Chiama il cliente</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 h-8 gap-1.5 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const message = getStatusMessage(repair);
+                                      const phone = repair.customer?.phone?.replace(/\D/g, "") || "";
+                                      const whatsappUrl = `https://wa.me/39${phone}?text=${encodeURIComponent(message.body)}`;
+                                      window.open(whatsappUrl, "_blank");
+                                    }}
+                                  >
+                                    <MessageCircle className="h-3.5 w-3.5" />
+                                    <span className="text-xs">WhatsApp</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Invia messaggio WhatsApp</TooltipContent>
+                              </Tooltip>
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 h-8 gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const message = getStatusMessage(repair);
+                                      const emailTo = repair.customer?.email || "";
+                                      window.location.href = `mailto:${emailTo}?subject=${encodeURIComponent(message.subject)}&body=${encodeURIComponent(message.body)}`;
+                                    }}
+                                  >
+                                    <Mail className="h-3.5 w-3.5" />
+                                    <span className="text-xs">Email</span>
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Invia email</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </div>
+                        )}
                       </div>
 
                       {/* Hover Indicator */}
