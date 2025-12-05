@@ -10,8 +10,6 @@ import { PageTransition } from "@/components/PageTransition";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { CreditBalanceWidget } from "@/components/credit/CreditBalanceWidget";
-import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
 import { PendingQuotesBanner } from "@/components/corner/PendingQuotesBanner";
 import { Plus } from "lucide-react";
 
@@ -173,38 +171,14 @@ export default function CornerDashboard() {
             </p>
           </div>
 
-          {/* Credit Status Banner */}
-          {corner && (corner.payment_status === "warning" || corner.payment_status === "suspended") && (
-            <CreditStatusBanner
-              paymentStatus={corner.payment_status || "good_standing"}
-              creditBalance={corner.credit_balance || 0}
-            />
-          )}
-
           {/* Pending Quotes Banner */}
           <PendingQuotesBanner />
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* Credit Balance Widget */}
-            {corner && (
-              <CreditBalanceWidget
-                entityType="corner"
-                entityId={corner.id}
-                creditBalance={corner.credit_balance || 0}
-                warningThreshold={corner.credit_warning_threshold || 50}
-                paymentStatus={corner.payment_status || "good_standing"}
-                onTopupSuccess={fetchCornerData}
-              />
-            )}
-            <div className="md:col-span-3">
-              <CornerStats {...stats} />
-            </div>
-          </div>
+          <CornerStats {...stats} />
 
           {/* CTA Button */}
           <Button
             onClick={() => navigate("/corner/nuova-segnalazione")}
-            disabled={corner?.payment_status === "suspended"}
             className="w-full md:w-auto"
             size="lg"
           >

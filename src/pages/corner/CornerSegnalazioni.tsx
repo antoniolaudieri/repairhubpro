@@ -452,9 +452,19 @@ export default function CornerSegnalazioni() {
                         {format(new Date(request.created_at), "dd MMM yyyy", { locale: it })}
                       </div>
                       {request.quote ? (
-                        <div className="text-lg font-semibold text-primary">€{request.quote.total_cost.toFixed(2)}</div>
+                        <>
+                          <div className="text-lg font-semibold text-primary">€{request.quote.total_cost.toFixed(2)}</div>
+                          <div className="text-sm text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
+                            Tuo compenso: €{(request.quote.total_cost * 0.10).toFixed(2)}
+                          </div>
+                        </>
                       ) : request.estimated_cost ? (
-                        <div className="text-lg font-semibold">€{request.estimated_cost.toFixed(2)}</div>
+                        <>
+                          <div className="text-lg font-semibold">€{request.estimated_cost.toFixed(2)}</div>
+                          <div className="text-sm text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
+                            Compenso stimato: €{(request.estimated_cost * 0.10).toFixed(2)}
+                          </div>
+                        </>
                       ) : null}
                     </div>
                   </div>
@@ -514,6 +524,12 @@ export default function CornerSegnalazioni() {
                           <div className="flex justify-between items-center pt-3 border-t border-border font-semibold">
                             <span>Totale Preventivo</span>
                             <span className="text-lg text-primary">€{request.quote.total_cost.toFixed(2)}</span>
+                          </div>
+                          
+                          {/* Corner Commission */}
+                          <div className="flex justify-between items-center bg-emerald-50 rounded-lg p-3 mt-2">
+                            <span className="text-emerald-700 font-medium">💰 Tuo Compenso (10%)</span>
+                            <span className="text-lg font-bold text-emerald-600">€{(request.quote.total_cost * 0.10).toFixed(2)}</span>
                           </div>
 
                           {request.quote.signed_at ? (
