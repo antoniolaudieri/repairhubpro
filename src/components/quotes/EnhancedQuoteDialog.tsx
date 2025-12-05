@@ -523,7 +523,7 @@ export function EnhancedQuoteDialog({
                   value={form.watch("deviceType")}
                   onValueChange={(value) => form.setValue("deviceType", value)}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className={form.formState.errors.deviceType ? "border-destructive" : ""}>
                     <SelectValue placeholder="Seleziona" />
                   </SelectTrigger>
                   <SelectContent>
@@ -533,6 +533,9 @@ export function EnhancedQuoteDialog({
                     <SelectItem value="desktop">Desktop</SelectItem>
                   </SelectContent>
                 </Select>
+                {form.formState.errors.deviceType && (
+                  <p className="text-xs text-destructive mt-1">{form.formState.errors.deviceType.message}</p>
+                )}
               </div>
               <div>
                 <Label>Marca</Label>
@@ -548,8 +551,12 @@ export function EnhancedQuoteDialog({
               <Textarea
                 placeholder="Descrivi il problema del dispositivo..."
                 rows={3}
+                className={form.formState.errors.issueDescription ? "border-destructive" : ""}
                 {...form.register("issueDescription")}
               />
+              {form.formState.errors.issueDescription && (
+                <p className="text-xs text-destructive mt-1">{form.formState.errors.issueDescription.message}</p>
+              )}
             </div>
           </div>
 
@@ -884,20 +891,27 @@ export function EnhancedQuoteDialog({
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-              Annulla
-            </Button>
-            <Button type="submit" disabled={loading || items.length === 0} className="min-w-[150px]">
-              {loading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Salvataggio...
-                </>
-              ) : (
-                "Crea Preventivo"
-              )}
-            </Button>
+          <div className="flex flex-col gap-3 pt-4">
+            {items.length === 0 && (
+              <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
+                ⚠️ Aggiungi almeno un articolo (ricambio, lavorazione o servizio) prima di creare il preventivo
+              </p>
+            )}
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+                Annulla
+              </Button>
+              <Button type="submit" disabled={loading || items.length === 0} className="min-w-[150px]">
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Salvataggio...
+                  </>
+                ) : (
+                  "Crea Preventivo"
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
