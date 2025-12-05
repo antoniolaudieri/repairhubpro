@@ -956,6 +956,7 @@ export type Database = {
           labor_cost: number | null
           notes: string | null
           parts_cost: number | null
+          payment_collection_method: string | null
           repair_request_id: string | null
           signature_data: string | null
           signed_at: string | null
@@ -978,6 +979,7 @@ export type Database = {
           labor_cost?: number | null
           notes?: string | null
           parts_cost?: number | null
+          payment_collection_method?: string | null
           repair_request_id?: string | null
           signature_data?: string | null
           signed_at?: string | null
@@ -1000,6 +1002,7 @@ export type Database = {
           labor_cost?: number | null
           notes?: string | null
           parts_cost?: number | null
+          payment_collection_method?: string | null
           repair_request_id?: string | null
           signature_data?: string | null
           signed_at?: string | null

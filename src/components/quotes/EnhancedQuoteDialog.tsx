@@ -540,6 +540,7 @@ export function EnhancedQuoteDialog({
         valid_until: validUntil,
         created_by: user?.id,
         repair_request_id: repairRequestId || null,
+        payment_collection_method: repairRequestId ? paymentCollectionMethod : null,
       });
 
       if (error) throw error;
