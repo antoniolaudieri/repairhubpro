@@ -641,7 +641,7 @@ export default function RepairDetail() {
               {repair && (
                 <div className="flex gap-1">
                   <Button 
-                    variant="outline"
+                    variant="default"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -649,14 +649,14 @@ export default function RepairDetail() {
                       setChecklistType('pre_repair');
                       setChecklistOpen(true);
                     }}
-                    className="gap-2"
+                    className="gap-2 bg-amber-500 hover:bg-amber-600"
                     title="Checklist Pre-Riparazione"
                   >
-                    <ClipboardCheck className="h-4 w-4 text-amber-500" />
-                    <span className="hidden lg:inline">Pre</span>
+                    <ClipboardCheck className="h-4 w-4" />
+                    <span>Pre</span>
                   </Button>
                   <Button 
-                    variant="outline"
+                    variant="default"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -664,11 +664,11 @@ export default function RepairDetail() {
                       setChecklistType('post_repair');
                       setChecklistOpen(true);
                     }}
-                    className="gap-2"
+                    className="gap-2 bg-emerald-500 hover:bg-emerald-600"
                     title="Checklist Post-Riparazione"
                   >
-                    <ClipboardCheck className="h-4 w-4 text-emerald-500" />
-                    <span className="hidden lg:inline">Post</span>
+                    <ClipboardCheck className="h-4 w-4" />
+                    <span>Post</span>
                   </Button>
                 </div>
               )}
