@@ -419,6 +419,12 @@ export function EnhancedQuoteDialog({
   const getLaborCost = () => items.filter(i => i.type === 'labor').reduce((sum, i) => sum + i.total, 0);
   const getServicesCost = () => items.filter(i => i.type === 'service').reduce((sum, i) => sum + i.total, 0);
   const getTotalCost = () => items.reduce((sum, i) => sum + i.total, 0);
+  
+  // Commission calculations for Corner jobs
+  const getPartsPurchaseCost = () => items.filter(i => i.type === 'part').reduce((sum, i) => sum + ((i.purchaseCost || 0) * i.quantity), 0);
+  const getGrossMargin = () => getTotalCost() - getPartsPurchaseCost();
+  const getCentroCommission = () => getGrossMargin() * 0.70; // 70% for Centro when Corner involved
+  const getCornerCommission = () => getGrossMargin() * 0.10; // 10% for Corner
 
   const filteredInventory = spareParts.filter(part => {
     if (!inventorySearch) return false;
@@ -881,6 +887,34 @@ export function EnhancedQuoteDialog({
               <span>Totale Preventivo:</span>
               <span className="text-primary">€{getTotalCost().toFixed(2)}</span>
             </div>
+            
+            {/* Commission breakdown for Corner jobs */}
+            {repairRequestId && items.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-dashed space-y-2">
+                <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                  📊 Ripartizione Guadagni
+                </h4>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Costo Acquisto Ricambi:</span>
+                  <span>- €{getPartsPurchaseCost().toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-medium">
+                  <span>Margine Lordo:</span>
+                  <span>€{getGrossMargin().toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
+                  <span>🏪 Tuo Guadagno (Centro 70%):</span>
+                  <span className="font-semibold">€{getCentroCommission().toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
+                  <span>📍 Guadagno Corner (10%):</span>
+                  <span className="font-semibold">€{getCornerCommission().toFixed(2)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  * Piattaforma: 20% del margine
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Notes */}
