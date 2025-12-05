@@ -224,6 +224,80 @@ export type Database = {
           },
         ]
       }
+      checklist_items: {
+        Row: {
+          category: string
+          checklist_id: string
+          created_at: string
+          id: string
+          item_name: string
+          notes: string | null
+          photo_url: string | null
+          sort_order: number | null
+          status: string
+        }
+        Insert: {
+          category: string
+          checklist_id: string
+          created_at?: string
+          id?: string
+          item_name: string
+          notes?: string | null
+          photo_url?: string | null
+          sort_order?: number | null
+          status: string
+        }
+        Update: {
+          category?: string
+          checklist_id?: string
+          created_at?: string
+          id?: string
+          item_name?: string
+          notes?: string | null
+          photo_url?: string | null
+          sort_order?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "checklist_items_checklist_id_fkey"
+            columns: ["checklist_id"]
+            isOneToOne: false
+            referencedRelation: "repair_checklists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      checklist_templates: {
+        Row: {
+          category: string
+          created_at: string
+          device_type: string
+          id: string
+          is_active: boolean | null
+          item_name: string
+          sort_order: number | null
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          device_type: string
+          id?: string
+          is_active?: boolean | null
+          item_name: string
+          sort_order?: number | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          device_type?: string
+          id?: string
+          is_active?: boolean | null
+          item_name?: string
+          sort_order?: number | null
+        }
+        Relationships: []
+      }
       commission_ledger: {
         Row: {
           centro_commission: number | null
@@ -1024,6 +1098,47 @@ export type Database = {
             columns: ["repair_request_id"]
             isOneToOne: false
             referencedRelation: "repair_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      repair_checklists: {
+        Row: {
+          checklist_type: string
+          created_at: string
+          created_by: string | null
+          customer_signature: string | null
+          id: string
+          notes: string | null
+          repair_id: string | null
+          signed_at: string | null
+        }
+        Insert: {
+          checklist_type: string
+          created_at?: string
+          created_by?: string | null
+          customer_signature?: string | null
+          id?: string
+          notes?: string | null
+          repair_id?: string | null
+          signed_at?: string | null
+        }
+        Update: {
+          checklist_type?: string
+          created_at?: string
+          created_by?: string | null
+          customer_signature?: string | null
+          id?: string
+          notes?: string | null
+          repair_id?: string | null
+          signed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_checklists_repair_id_fkey"
+            columns: ["repair_id"]
+            isOneToOne: false
+            referencedRelation: "repairs"
             referencedColumns: ["id"]
           },
         ]
