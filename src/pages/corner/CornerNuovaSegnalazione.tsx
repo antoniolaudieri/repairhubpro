@@ -374,6 +374,22 @@ export default function CornerNuovaSegnalazione() {
       if (existingCustomer) {
         customerId = existingCustomer.id;
       } else {
+        // Create customer account if email is provided
+        if (customerData.email) {
+          const { error: accountError } = await supabase.functions.invoke("create-customer-account", {
+            body: {
+              email: customerData.email,
+              fullName: customerData.name,
+              phone: customerData.phone,
+            },
+          });
+
+          if (accountError) {
+            console.error("Account creation error:", accountError);
+            // Continue anyway - customer record will still be created
+          }
+        }
+
         const { data: newCustomer, error: customerError } = await supabase
           .from("customers")
           .insert({
