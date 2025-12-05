@@ -37,14 +37,39 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "Sei un esperto nell'identificazione di dispositivi elettronici. Analizza l'immagine e identifica: 1) tipo di dispositivo (smartphone, tablet, pc, laptop, smartwatch, altro), 2) marca, 3) modello. Se l'IMEI o numero seriale è visibile nell'etichetta o schermo del dispositivo, estrailo. Valuta anche la confidenza del riconoscimento (alta, media, bassa). Rispondi SOLO in formato JSON con i campi: type, brand, model, imei (se visibile), serial (se visibile), confidence. Se non riesci a identificare qualcosa, usa 'unknown'."
+            content: `Sei un esperto nell'identificazione e valutazione di dispositivi elettronici. Analizza l'immagine e fornisci:
+
+1. IDENTIFICAZIONE DISPOSITIVO:
+- type: tipo dispositivo (smartphone, tablet, pc, laptop, smartwatch, altro)
+- brand: marca
+- model: modello
+- imei: se visibile
+- serial: se visibile
+- confidence: alta/media/bassa
+
+2. VALUTAZIONE CONDIZIONI (per pre-compilare checklist riparazione):
+Valuta ogni elemento con uno di questi stati: "ok", "damaged", "not_working", "not_applicable"
+
+condition_assessment deve contenere:
+- screen: stato schermo (crepe, graffi, dead pixels visibili)
+- back_cover: stato cover posteriore
+- frame: stato cornice/bordi
+- buttons: stato tasti fisici visibili
+- camera_lens: stato lente fotocamera
+- charging_port: stato porta ricarica (se visibile)
+- speakers: stato griglie altoparlanti
+- overall_condition: condizione generale (ok, damaged, not_working)
+- visible_damage_notes: descrizione breve dei danni visibili
+
+Rispondi SOLO in formato JSON valido con campi: type, brand, model, imei, serial, confidence, condition_assessment.
+Se non riesci a identificare qualcosa, usa "unknown". Per condizioni non valutabili dalla foto usa "not_applicable".`
           },
           {
             role: "user",
             content: [
               {
                 type: "text",
-                text: "Identifica questo dispositivo dall'immagine. Estrai anche IMEI o numero seriale se visibile."
+                text: "Identifica questo dispositivo e valuta le sue condizioni fisiche visibili nella foto."
               },
               {
                 type: "image_url",
