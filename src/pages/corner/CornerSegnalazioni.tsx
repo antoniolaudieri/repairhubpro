@@ -26,6 +26,7 @@ interface QuoteItem {
 interface Quote {
   id: string;
   total_cost: number;
+  parts_cost: number | null;
   status: string;
   signed_at: string | null;
   items: string;
@@ -146,7 +147,7 @@ export default function CornerSegnalazioni() {
         // Load quote linked to this repair_request
         const { data: quoteData } = await supabase
           .from("quotes")
-          .select("id, total_cost, status, signed_at, items, created_at")
+          .select("id, total_cost, parts_cost, status, signed_at, items, created_at")
           .eq("repair_request_id", req.id)
           .maybeSingle();
         
@@ -452,17 +453,23 @@ export default function CornerSegnalazioni() {
                         {format(new Date(request.created_at), "dd MMM yyyy", { locale: it })}
                       </div>
                       {request.quote ? (
-                        <>
-                          <div className="text-lg font-semibold text-primary">€{request.quote.total_cost.toFixed(2)}</div>
-                          <div className="text-sm text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
-                            Tuo compenso: €{(request.quote.total_cost * 0.10).toFixed(2)}
-                          </div>
-                        </>
+                        (() => {
+                          const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
+                          const cornerCommission = grossMargin * 0.10;
+                          return (
+                            <>
+                              <div className="text-lg font-semibold text-primary">€{request.quote.total_cost.toFixed(2)}</div>
+                              <div className="text-sm text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
+                                Tuo compenso: €{cornerCommission.toFixed(2)}
+                              </div>
+                            </>
+                          );
+                        })()
                       ) : request.estimated_cost ? (
                         <>
                           <div className="text-lg font-semibold">€{request.estimated_cost.toFixed(2)}</div>
-                          <div className="text-sm text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
-                            Compenso stimato: €{(request.estimated_cost * 0.10).toFixed(2)}
+                          <div className="text-sm text-muted-foreground text-xs">
+                            (compenso da definire)
                           </div>
                         </>
                       ) : null}
@@ -526,11 +533,20 @@ export default function CornerSegnalazioni() {
                             <span className="text-lg text-primary">€{request.quote.total_cost.toFixed(2)}</span>
                           </div>
                           
-                          {/* Corner Commission */}
-                          <div className="flex justify-between items-center bg-emerald-50 rounded-lg p-3 mt-2">
-                            <span className="text-emerald-700 font-medium">💰 Tuo Compenso (10%)</span>
-                            <span className="text-lg font-bold text-emerald-600">€{(request.quote.total_cost * 0.10).toFixed(2)}</span>
-                          </div>
+                          {/* Corner Commission - based on gross margin */}
+                          {(() => {
+                            const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
+                            const cornerCommission = grossMargin * 0.10;
+                            return (
+                              <div className="flex justify-between items-center bg-emerald-50 rounded-lg p-3 mt-2">
+                                <div>
+                                  <span className="text-emerald-700 font-medium">💰 Tuo Compenso (10% margine)</span>
+                                  <p className="text-xs text-emerald-600/70">Margine: €{grossMargin.toFixed(2)}</p>
+                                </div>
+                                <span className="text-lg font-bold text-emerald-600">€{cornerCommission.toFixed(2)}</span>
+                              </div>
+                            );
+                          })()}
 
                           {request.quote.signed_at ? (
                             <div className="text-xs text-emerald-600 flex items-center gap-1 mt-2">
