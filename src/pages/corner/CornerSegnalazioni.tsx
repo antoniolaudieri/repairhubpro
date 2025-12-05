@@ -399,8 +399,31 @@ export default function CornerSegnalazioni() {
             </Card>
           ) : (
             filteredRequests.map((request) => (
-              <Card key={request.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
+              <Card key={request.id} className={`hover:shadow-md transition-shadow ${request.status === 'at_corner' ? 'border-emerald-500 border-2' : ''}`}>
+                {/* Prominent Delivery Banner */}
+                {request.status === "at_corner" && (
+                  <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white p-4 rounded-t-lg">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/20 rounded-full">
+                          <Package className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-lg">Dispositivo Pronto per la Consegna!</p>
+                          <p className="text-sm text-white/80">Il cliente può ritirare il dispositivo</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleDelivery(request.id)}
+                        className="bg-white text-emerald-600 hover:bg-white/90 hover:text-emerald-700 font-semibold"
+                      >
+                        <CheckCircle2 className="h-5 w-5 mr-2" />
+                        Consegna al Cliente
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                <CardContent className={`p-4 ${request.status === 'at_corner' ? 'rounded-t-none' : ''}`}>
                   <div className="flex flex-col sm:flex-row justify-between gap-4">
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -478,18 +501,6 @@ export default function CornerSegnalazioni() {
                         <Calendar className="h-3 w-3" />
                         {format(new Date(request.created_at), "dd MMM yyyy", { locale: it })}
                       </div>
-                      
-                      {/* Delivery button for devices at Corner */}
-                      {request.status === "at_corner" && (
-                        <Button
-                          size="sm"
-                          onClick={() => handleDelivery(request.id)}
-                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-1" />
-                          Consegna
-                        </Button>
-                      )}
                       
                       {request.quote ? (
                         (() => {
