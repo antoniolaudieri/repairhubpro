@@ -128,7 +128,7 @@ export function generateChecklistPDF(data: ChecklistPDFData): void {
     const categoryItems = data.items.filter(item => item.category === category);
     
     categoryItems.forEach(item => {
-      if (y > 270) {
+      if (y > 250) {
         pdf.addPage();
         y = 20;
       }
@@ -160,6 +160,26 @@ export function generateChecklistPDF(data: ChecklistPDFData): void {
         const noteLines = pdf.splitTextToSize(`Note: ${item.notes}`, pageWidth - margin * 2 - 10);
         pdf.text(noteLines, margin + 5, y);
         y += noteLines.length * 4;
+      }
+
+      // Photo if present
+      if (item.photo_url) {
+        y += 2;
+        if (y > 230) {
+          pdf.addPage();
+          y = 20;
+        }
+        try {
+          // Add photo thumbnail
+          pdf.addImage(item.photo_url, 'JPEG', margin + 5, y, 40, 30);
+          y += 33;
+        } catch (e) {
+          // If image fails to load, show placeholder text
+          pdf.setTextColor(156, 163, 175);
+          pdf.setFontSize(7);
+          pdf.text('[Foto allegata]', margin + 5, y + 3);
+          y += 6;
+        }
       }
 
       y += 3;

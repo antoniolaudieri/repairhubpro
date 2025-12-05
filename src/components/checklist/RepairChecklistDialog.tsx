@@ -211,41 +211,21 @@ export function RepairChecklistDialog({
     const file = e.target.files?.[0];
     if (!file || currentPhotoItemIndex === null) return;
 
-    try {
-      // Upload to Supabase Storage
-      const fileName = `checklist-${repairId}-${Date.now()}.${file.name.split('.').pop()}`;
-      const { data, error } = await supabase.storage
-        .from('repair-photos')
-        .upload(fileName, file);
+    const indexToUpdate = currentPhotoItemIndex;
 
-      if (error) {
-        // If bucket doesn't exist, use base64
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setItems(prev => prev.map((item, i) => 
-            i === currentPhotoItemIndex ? { ...item, photo_url: reader.result as string } : item
-          ));
-        };
-        reader.readAsDataURL(file);
-      } else {
-        const { data: urlData } = supabase.storage
-          .from('repair-photos')
-          .getPublicUrl(fileName);
-        
-        setItems(prev => prev.map((item, i) => 
-          i === currentPhotoItemIndex ? { ...item, photo_url: urlData.publicUrl } : item
-        ));
-      }
-    } catch (error) {
-      // Fallback to base64
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setItems(prev => prev.map((item, i) => 
-          i === currentPhotoItemIndex ? { ...item, photo_url: reader.result as string } : item
-        ));
-      };
-      reader.readAsDataURL(file);
-    }
+    // Convert to base64 for reliable storage and PDF embedding
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setItems(prev => prev.map((item, i) => 
+        i === indexToUpdate ? { ...item, photo_url: base64 } : item
+      ));
+      toast.success('Foto aggiunta');
+    };
+    reader.onerror = () => {
+      toast.error('Errore nel caricamento della foto');
+    };
+    reader.readAsDataURL(file);
 
     setCurrentPhotoItemIndex(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
