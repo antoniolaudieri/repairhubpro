@@ -31,7 +31,8 @@ import {
   ChevronRight,
   Shield,
   FileText,
-  MessageCircle
+  MessageCircle,
+  ClipboardCheck
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -46,6 +47,7 @@ import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
 import RepairGuide from "@/components/repair/RepairGuide";
 import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
 import { AcceptanceFormPDF } from "@/components/repair/AcceptanceFormPDF";
+import { RepairChecklistDialog } from "@/components/checklist/RepairChecklistDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
@@ -168,6 +170,8 @@ export default function RepairDetail() {
   const [guideFromCache, setGuideFromCache] = useState(false);
   const [guideUsageCount, setGuideUsageCount] = useState<number | undefined>();
   const [acceptanceFormOpen, setAcceptanceFormOpen] = useState(false);
+  const [checklistOpen, setChecklistOpen] = useState(false);
+  const [checklistType, setChecklistType] = useState<'pre_repair' | 'post_repair'>('pre_repair');
 
   // Determine back route based on current path
   const isCentroContext = location.pathname.startsWith("/centro");
@@ -633,7 +637,34 @@ export default function RepairDetail() {
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Modulo</span>
               </Button>
-              <Button 
+              {/* Checklist Buttons */}
+              <div className="flex gap-1">
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setChecklistType('pre_repair');
+                    setChecklistOpen(true);
+                  }}
+                  className="gap-2"
+                  title="Checklist Pre-Riparazione"
+                >
+                  <ClipboardCheck className="h-4 w-4 text-amber-500" />
+                  <span className="hidden lg:inline">Pre</span>
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={() => {
+                    setChecklistType('post_repair');
+                    setChecklistOpen(true);
+                  }}
+                  className="gap-2"
+                  title="Checklist Post-Riparazione"
+                >
+                  <ClipboardCheck className="h-4 w-4 text-emerald-500" />
+                  <span className="hidden lg:inline">Post</span>
+                </Button>
+              </div>
+              <Button
                 onClick={saveChanges} 
                 disabled={saving} 
                 size="lg"
@@ -1395,6 +1426,20 @@ export default function RepairDetail() {
           },
         }}
       />
+
+      {/* Repair Checklist Dialog */}
+      {repair && (
+        <RepairChecklistDialog
+          open={checklistOpen}
+          onOpenChange={setChecklistOpen}
+          repairId={repair.id}
+          deviceType={repair.device.device_type}
+          checklistType={checklistType}
+          customerName={repair.customer.name}
+          deviceInfo={`${repair.device.brand} ${repair.device.model}`}
+          onSuccess={loadRepairDetail}
+        />
+      )}
     </div>
   );
 }
