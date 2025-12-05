@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones, Store, CheckCircle2, PenTool, Clock, TrendingUp, Smartphone, AlertCircle, Sparkles, AlertTriangle } from "lucide-react";
+import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones, Store, CheckCircle2, PenTool, Clock, TrendingUp, Smartphone, AlertCircle, Sparkles, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { RepairWorkflowTimeline, getStatusLabel, getStatusColor } from "@/components/corner/RepairWorkflowTimeline";
 import { SignatureDialog } from "@/components/quotes/SignatureDialog";
 import { format, differenceInDays } from "date-fns";
@@ -95,6 +95,7 @@ export default function CornerSegnalazioni() {
   const [expandedQuotes, setExpandedQuotes] = useState<Set<string>>(new Set());
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [selectedQuoteForSignature, setSelectedQuoteForSignature] = useState<{quoteId: string; requestId: string; totalCost: number; deviceInfo: string} | null>(null);
+  const [hideEarnings, setHideEarnings] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -328,13 +329,24 @@ export default function CornerSegnalazioni() {
               </div>
               <p className="text-white/80">Gestisci e monitora tutte le tue segnalazioni di riparazione</p>
             </div>
-            <Button 
-              onClick={() => navigate("/corner/nuova-segnalazione")}
-              className="bg-white text-violet-700 hover:bg-white/90 shadow-lg font-semibold"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nuova Segnalazione
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setHideEarnings(!hideEarnings)}
+                className="bg-white/20 hover:bg-white/30 text-white"
+                title={hideEarnings ? "Mostra guadagni" : "Nascondi guadagni (per firma cliente)"}
+              >
+                {hideEarnings ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+              </Button>
+              <Button 
+                onClick={() => navigate("/corner/nuova-segnalazione")}
+                className="bg-white text-violet-700 hover:bg-white/90 shadow-lg font-semibold"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Nuova Segnalazione
+              </Button>
+            </div>
           </div>
         </motion.div>
 
@@ -657,10 +669,12 @@ export default function CornerSegnalazioni() {
                                 <div className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
                                   €{request.quote.total_cost.toFixed(2)}
                                 </div>
-                                <div className="inline-flex items-center gap-1.5 text-sm font-medium bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-emerald-600 px-3 py-1 rounded-full border border-emerald-500/20">
-                                  <TrendingUp className="h-3.5 w-3.5" />
-                                  €{cornerCommission.toFixed(2)}
-                                </div>
+                                {!hideEarnings && (
+                                  <div className="inline-flex items-center gap-1.5 text-sm font-medium bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-emerald-600 px-3 py-1 rounded-full border border-emerald-500/20">
+                                    <TrendingUp className="h-3.5 w-3.5" />
+                                    €{cornerCommission.toFixed(2)}
+                                  </div>
+                                )}
                               </div>
                             );
                           })()
@@ -744,16 +758,18 @@ export default function CornerSegnalazioni() {
                               
                               return (
                                 <>
-                                  <div className="flex justify-between items-center bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-xl p-4 border border-emerald-500/20">
-                                    <div>
-                                      <span className="text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-2">
-                                        <TrendingUp className="h-4 w-4" />
-                                        Tuo Compenso (10% margine)
-                                      </span>
-                                      <p className="text-xs text-emerald-600/70">Margine: €{grossMargin.toFixed(2)}</p>
+                                  {!hideEarnings && (
+                                    <div className="flex justify-between items-center bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-xl p-4 border border-emerald-500/20">
+                                      <div>
+                                        <span className="text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-2">
+                                          <TrendingUp className="h-4 w-4" />
+                                          Tuo Compenso (10% margine)
+                                        </span>
+                                        <p className="text-xs text-emerald-600/70">Margine: €{grossMargin.toFixed(2)}</p>
+                                      </div>
+                                      <span className="text-xl font-bold text-emerald-600">€{cornerCommission.toFixed(2)}</span>
                                     </div>
-                                    <span className="text-xl font-bold text-emerald-600">€{cornerCommission.toFixed(2)}</span>
-                                  </div>
+                                  )}
                                   
                                   {/* Collection Info for Via Corner */}
                                   {isViaCorner && (
@@ -775,10 +791,12 @@ export default function CornerSegnalazioni() {
                                           <span className="text-sm text-amber-700 dark:text-amber-400">Da incassare dal cliente:</span>
                                           <span className="font-bold text-lg text-amber-600">€{request.quote.total_cost.toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between items-center">
-                                          <span className="text-sm text-emerald-700 dark:text-emerald-400">Trattieni (tua commissione):</span>
-                                          <span className="font-semibold text-emerald-600">- €{cornerCommission.toFixed(2)}</span>
-                                        </div>
+                                        {!hideEarnings && (
+                                          <div className="flex justify-between items-center">
+                                            <span className="text-sm text-emerald-700 dark:text-emerald-400">Trattieni (tua commissione):</span>
+                                            <span className="font-semibold text-emerald-600">- €{cornerCommission.toFixed(2)}</span>
+                                          </div>
+                                        )}
                                         <div className="flex justify-between items-center pt-2 border-t border-amber-500/20">
                                           <span className="text-sm font-medium text-amber-800 dark:text-amber-300">Da versare al Centro:</span>
                                           <span className="font-bold text-xl text-amber-700 dark:text-amber-400">€{amountToRemitToCentro.toFixed(2)}</span>
