@@ -77,6 +77,7 @@ export function RepairChecklistDialog({
   const [generalNotes, setGeneralNotes] = useState('');
   const [signature, setSignature] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>('');
+  const [actualChecklistId, setActualChecklistId] = useState<string | null>(null);
   const signatureRef = useRef<SignatureCanvas>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [currentPhotoItemIndex, setCurrentPhotoItemIndex] = useState<number | null>(null);
@@ -98,6 +99,7 @@ export function RepairChecklistDialog({
 
   const loadChecklistData = async () => {
     setLoading(true);
+    setActualChecklistId(null); // Reset at start
     try {
       // First check if a checklist already exists for this repair and type
       let checklistIdToLoad = existingChecklistId;
@@ -117,6 +119,9 @@ export function RepairChecklistDialog({
       }
 
       if (checklistIdToLoad) {
+        // Store the actual checklist ID for saving
+        setActualChecklistId(checklistIdToLoad);
+        
         // Load existing checklist
         const { data: checklist } = await supabase
           .from('repair_checklists')
@@ -304,7 +309,8 @@ export function RepairChecklistDialog({
         return;
       }
 
-      let checklistId = existingChecklistId;
+      // Use actualChecklistId (found during load) or existingChecklistId (from props)
+      let checklistId = actualChecklistId || existingChecklistId;
 
       if (!checklistId) {
         // Create new checklist
@@ -326,6 +332,7 @@ export function RepairChecklistDialog({
           throw new Error(`Errore creazione checklist: ${createError.message}`);
         }
         checklistId = newChecklist.id;
+        setActualChecklistId(checklistId); // Store for future saves
       } else {
         // Update existing checklist
         const { error: updateError } = await supabase
