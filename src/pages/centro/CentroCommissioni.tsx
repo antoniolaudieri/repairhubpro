@@ -5,6 +5,7 @@ import { CentroLayout } from "@/layouts/CentroLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   DollarSign, 
@@ -15,7 +16,9 @@ import {
   AlertTriangle,
   Building2,
   Store,
-  FileText
+  FileText,
+  Wallet,
+  CreditCard
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -48,6 +51,7 @@ interface Commission {
   corner_paid: boolean;
   corner_paid_at: string | null;
   created_at: string;
+  payment_collection_method?: string | null;
 }
 
 export default function CentroCommissioni() {
@@ -100,13 +104,54 @@ export default function CentroCommissioni() {
           .order("created_at", { ascending: false });
 
         if (commissionsError) throw commissionsError;
-        setCommissions(commissionsData || []);
+        
+        // Fetch payment_collection_method from quotes for each commission
+        const commissionsWithPaymentMethod = await Promise.all(
+          (commissionsData || []).map(async (commission) => {
+            if (commission.repair_request_id && commission.corner_id) {
+              const { data: quoteData } = await supabase
+                .from("quotes")
+                .select("payment_collection_method")
+                .eq("repair_request_id", commission.repair_request_id)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              
+              return {
+                ...commission,
+                payment_collection_method: quoteData?.payment_collection_method || 'direct'
+              };
+            }
+            return { ...commission, payment_collection_method: null };
+          })
+        );
+        
+        setCommissions(commissionsWithPaymentMethod);
       }
     } catch (error: any) {
       console.error("Error fetching data:", error);
       toast.error("Errore nel caricamento dei dati");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleMarkCornerPaid = async (commissionId: string) => {
+    try {
+      const { error } = await supabase
+        .from("commission_ledger")
+        .update({ 
+          corner_paid: true, 
+          corner_paid_at: new Date().toISOString() 
+        })
+        .eq("id", commissionId);
+
+      if (error) throw error;
+      toast.success("Commissione Corner segnata come pagata");
+      fetchData();
+    } catch (error: any) {
+      console.error("Error marking corner paid:", error);
+      toast.error("Errore nell'aggiornamento");
     }
   };
 
@@ -129,17 +174,22 @@ export default function CentroCommissioni() {
     .filter(c => c.platform_paid)
     .reduce((sum, c) => sum + c.platform_commission, 0);
   
-  // Commissione dovuta ai Corner (non pagata)
+  // Corner commissions: separate by payment method
+  // via_corner = Corner ha già incassato (non devo pagare)
+  // direct = Centro deve pagare Corner
+  const cornerCommissionsViaCorner = commissions
+    .filter(c => c.corner_id && c.payment_collection_method === 'via_corner')
+    .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
+  
   const cornerCommissionDue = commissions
-    .filter(c => c.corner_id && !c.corner_paid)
+    .filter(c => c.corner_id && c.payment_collection_method !== 'via_corner' && !c.corner_paid)
     .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
   
-  // Commissione già pagata ai Corner
   const cornerCommissionPaid = commissions
-    .filter(c => c.corner_id && c.corner_paid)
+    .filter(c => c.corner_id && c.payment_collection_method !== 'via_corner' && c.corner_paid)
     .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
   
-  // Totale da pagare
+  // Totale da pagare (solo direct, non via_corner)
   const totalDue = platformCommissionDue + cornerCommissionDue;
   
   // Guadagno netto del Centro
@@ -291,8 +341,20 @@ export default function CentroCommissioni() {
                   </div>
                   <p className="text-xs text-muted-foreground mb-2">10% del margine (se segnalazione)</p>
                   <div className="space-y-2">
+                    {cornerCommissionsViaCorner > 0 && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Wallet className="h-3 w-3" />
+                          Incassato dal Corner:
+                        </span>
+                        <span className="text-lg font-medium text-emerald-600">€{cornerCommissionsViaCorner.toFixed(2)}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between items-center">
-                      <span className="text-sm text-muted-foreground">Da pagare:</span>
+                      <span className="text-sm text-muted-foreground flex items-center gap-1">
+                        <CreditCard className="h-3 w-3" />
+                        Da pagare al Corner:
+                      </span>
                       <span className="text-xl font-bold text-warning">€{cornerCommissionDue.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between items-center">
@@ -399,16 +461,32 @@ export default function CentroCommissioni() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="font-medium text-blue-500">€{(commission.corner_commission || 0).toFixed(2)}</span>
-                                {commission.corner_paid ? (
+                                {commission.payment_collection_method === 'via_corner' ? (
+                                  <Badge className="bg-emerald-500/20 text-emerald-600 text-xs">
+                                    <Wallet className="h-3 w-3 mr-1" />
+                                    Incassato dal Corner
+                                  </Badge>
+                                ) : commission.corner_paid ? (
                                   <Badge className="bg-green-500/20 text-green-600 text-xs">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Pagato
                                   </Badge>
                                 ) : (
-                                  <Badge className="bg-yellow-500/20 text-yellow-600 text-xs">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    Da pagare
-                                  </Badge>
+                                  <div className="flex items-center gap-2">
+                                    <Badge className="bg-yellow-500/20 text-yellow-600 text-xs">
+                                      <Clock className="h-3 w-3 mr-1" />
+                                      Da pagare
+                                    </Badge>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      className="h-6 text-xs"
+                                      onClick={() => handleMarkCornerPaid(commission.id)}
+                                    >
+                                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                                      Segna Pagato
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
                             </div>
