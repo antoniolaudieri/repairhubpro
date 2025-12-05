@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Trash2, Sparkles, Loader2, Search, ExternalLink, Package, Wrench, Check, Headphones, Smartphone } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, Search, ExternalLink, Package, Wrench, Check, Headphones, Smartphone, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -126,6 +127,9 @@ export function EnhancedQuoteDialog({
   const [centroCommissionRate, setCentroCommissionRate] = useState<number>(70);
   const [cornerCommissionRate, setCornerCommissionRate] = useState<number>(10);
   const [platformCommissionRate, setPlatformCommissionRate] = useState<number>(20);
+  
+  // Payment collection method for Corner jobs
+  const [paymentCollectionMethod, setPaymentCollectionMethod] = useState<'direct' | 'via_corner'>('direct');
   
   // Utopya search
   const [utopyaSearchQuery, setUtopyaSearchQuery] = useState("");
@@ -958,6 +962,53 @@ export function EnhancedQuoteDialog({
               </div>
             )}
           </div>
+
+          {/* Payment Collection Method for Corner jobs */}
+          {repairRequestId && (
+            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl border border-amber-200 dark:border-amber-800 space-y-4">
+              <h4 className="font-semibold text-sm flex items-center gap-2">
+                💰 Modalità di Incasso
+              </h4>
+              
+              <RadioGroup 
+                value={paymentCollectionMethod} 
+                onValueChange={(value: 'direct' | 'via_corner') => setPaymentCollectionMethod(value)}
+                className="space-y-3"
+              >
+                <div className="flex items-start space-x-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value="direct" id="direct" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="direct" className="font-medium cursor-pointer">
+                      Incasso Diretto dal Cliente
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Il cliente paga direttamente a te. Incassi €{getTotalCost().toFixed(2)} e gestisci tu la fatturazione.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start space-x-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value="via_corner" id="via_corner" className="mt-1" />
+                  <div className="flex-1">
+                    <Label htmlFor="via_corner" className="font-medium cursor-pointer">
+                      Incasso tramite Corner
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Il Corner incassa dal cliente, trattiene la sua commissione ({cornerCommissionRate}% = €{getCornerCommission().toFixed(2)}) e ti versa €{(getTotalCost() - getCornerCommission()).toFixed(2)}.
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
+              
+              {/* Legal Disclaimer */}
+              <div className="flex items-start gap-2 p-3 bg-amber-100/50 dark:bg-amber-900/20 rounded-lg text-xs text-amber-800 dark:text-amber-200">
+                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                <p>
+                  <strong>Nota legale:</strong> La fatturazione, la gestione fiscale e gli adempimenti tributari relativi ai compensi percepiti sono interamente a carico tuo, come previsto dalla normativa fiscale vigente. La piattaforma non è sostituto d'imposta.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           <div>
