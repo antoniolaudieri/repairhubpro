@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, Check, Trash2, Briefcase, Package, ChevronRight, AlertCircle } from "lucide-react";
+import { Bell, Check, Trash2, Briefcase, Package, ChevronRight, AlertCircle, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,12 +20,14 @@ const notificationIcons: Record<CentroNotification["type"], typeof Briefcase> = 
   new_job_offer: AlertCircle,
   repair_assigned: Briefcase,
   order_received: Package,
+  awaiting_pickup: Truck,
 };
 
 const notificationColors: Record<CentroNotification["type"], { bg: string; text: string }> = {
   new_job_offer: { bg: "bg-amber-500/20", text: "text-amber-600" },
   repair_assigned: { bg: "bg-emerald-500/20", text: "text-emerald-600" },
   order_received: { bg: "bg-blue-500/20", text: "text-blue-600" },
+  awaiting_pickup: { bg: "bg-purple-500/20", text: "text-purple-600" },
 };
 
 export function CentroNotificationCenter() {

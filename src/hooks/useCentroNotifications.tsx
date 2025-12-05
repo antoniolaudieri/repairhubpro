@@ -6,7 +6,7 @@ import { usePushNotifications } from "./usePushNotifications";
 
 export interface CentroNotification {
   id: string;
-  type: "new_job_offer" | "repair_assigned" | "order_received";
+  type: "new_job_offer" | "repair_assigned" | "order_received" | "awaiting_pickup";
   title: string;
   message: string;
   timestamp: Date;
@@ -208,6 +208,70 @@ export function useCentroNotifications() {
           table: "repair_requests",
         },
         async (payload) => {
+          // Check if status changed to awaiting_pickup (customer signed quote, Centro needs to pick up)
+          if (
+            payload.new.assigned_provider_type === "centro" &&
+            payload.new.assigned_provider_id === centroId &&
+            payload.new.status === "awaiting_pickup" &&
+            payload.old.status !== "awaiting_pickup"
+          ) {
+            console.log("Quote signed - awaiting pickup:", payload);
+
+            const { data: repairRequest } = await supabase
+              .from("repair_requests")
+              .select(`
+                id,
+                device_type,
+                device_brand,
+                device_model,
+                issue_description,
+                corner:corners(business_name, address)
+              `)
+              .eq("id", payload.new.id)
+              .single();
+
+            if (repairRequest) {
+              const cornerName = (repairRequest.corner as any)?.business_name || "Corner";
+              const cornerAddress = (repairRequest.corner as any)?.address || "";
+              const title = "✅ Preventivo Firmato - Ritira il Dispositivo!";
+              const message = `Il cliente ha firmato il preventivo. Ritira il dispositivo presso ${cornerName}${cornerAddress ? ` (${cornerAddress})` : ""}`;
+
+              const notification: CentroNotification = {
+                id: `awaiting-pickup-${payload.new.id}-${Date.now()}`,
+                type: "awaiting_pickup",
+                title,
+                message,
+                timestamp: new Date(),
+                read: false,
+                linkTo: `/centro/lavori-corner`,
+                data: {
+                  repairRequestId: payload.new.id,
+                  cornerName,
+                  cornerAddress,
+                },
+              };
+
+              setNotifications((prev) => [notification, ...prev]);
+
+              toast.success(title, { 
+                description: message,
+                duration: 15000,
+                action: {
+                  label: "Vedi",
+                  onClick: () => window.location.href = "/centro/lavori-corner",
+                },
+              });
+
+              if (isGranted) {
+                sendNotification(title, {
+                  body: message,
+                  tag: `awaiting-pickup-${payload.new.id}`,
+                  data: { url: `/centro/lavori-corner` },
+                });
+              }
+            }
+          }
+
           // Check if this repair request is newly assigned to our Centro
           if (
             payload.new.assigned_provider_type === "centro" &&
