@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, TrendingUp, Clock, CheckCircle, Wallet } from "lucide-react";
+import { TrendingUp, Clock, CheckCircle, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -16,6 +16,7 @@ interface CommissionEntry {
   paid_at: string | null;
   corner_paid: boolean;
   corner_paid_at: string | null;
+  payment_collection_method?: string | null;
 }
 
 interface CommissionHistoryProps {
@@ -30,17 +31,26 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 };
 
 export const CommissionHistory = ({ commissions, isLoading }: CommissionHistoryProps) => {
+  // Helper to determine if commission is received
+  const isCommissionReceived = (c: CommissionEntry) => {
+    // If payment_collection_method is 'via_corner', Corner already collected the money
+    if (c.payment_collection_method === 'via_corner') {
+      return true;
+    }
+    return c.corner_paid;
+  };
+
   // Total earned = all commissions
   const totalEarned = commissions.reduce((sum, c) => sum + (c.corner_commission || 0), 0);
 
-  // Paid = corner_paid is true
+  // Paid = corner_paid is true OR via_corner payment method
   const totalPaid = commissions
-    .filter((c) => c.corner_paid)
+    .filter((c) => isCommissionReceived(c))
     .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
 
-  // Pending = corner_paid is false
+  // Pending = not received
   const totalPending = commissions
-    .filter((c) => !c.corner_paid)
+    .filter((c) => !isCommissionReceived(c))
     .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
 
   if (isLoading) {
@@ -135,8 +145,9 @@ export const CommissionHistory = ({ commissions, isLoading }: CommissionHistoryP
         ) : (
           <div className="space-y-3">
             {commissions.map((commission, index) => {
-              const isPaid = commission.corner_paid;
-              const StatusIcon = isPaid ? CheckCircle : Clock;
+              const isViaCorner = commission.payment_collection_method === 'via_corner';
+              const isPaid = isCommissionReceived(commission);
+              const StatusIcon = isPaid ? (isViaCorner ? Wallet : CheckCircle) : Clock;
 
               return (
                 <motion.div
@@ -151,10 +162,16 @@ export const CommissionHistory = ({ commissions, isLoading }: CommissionHistoryP
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge 
                           variant={isPaid ? "default" : "outline"} 
-                          className={`text-xs ${isPaid ? 'bg-emerald-500 hover:bg-emerald-600' : 'text-amber-600 border-amber-500/50'}`}
+                          className={`text-xs ${
+                            isViaCorner 
+                              ? 'bg-emerald-500 hover:bg-emerald-600' 
+                              : isPaid 
+                                ? 'bg-green-500 hover:bg-green-600' 
+                                : 'text-amber-600 border-amber-500/50'
+                          }`}
                         >
                           <StatusIcon className="h-3 w-3 mr-1" />
-                          {isPaid ? "Ricevuto" : "Da Ricevere"}
+                          {isViaCorner ? "Incassato" : isPaid ? "Pagato" : "Da Richiedere"}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           {format(new Date(commission.created_at), "dd MMM yyyy", { locale: it })}
@@ -167,9 +184,14 @@ export const CommissionHistory = ({ commissions, isLoading }: CommissionHistoryP
                         <span>•</span>
                         <span>{commission.corner_rate}%</span>
                       </div>
-                      {commission.corner_paid_at && (
+                      {isViaCorner && (
                         <p className="text-xs text-emerald-500">
-                          ✓ Ricevuto il {format(new Date(commission.corner_paid_at), "dd MMM yyyy", { locale: it })}
+                          💰 Hai trattenuto la tua commissione dall'incasso cliente
+                        </p>
+                      )}
+                      {!isViaCorner && commission.corner_paid_at && (
+                        <p className="text-xs text-green-500">
+                          ✓ Pagato il {format(new Date(commission.corner_paid_at), "dd MMM yyyy", { locale: it })}
                         </p>
                       )}
                     </div>
