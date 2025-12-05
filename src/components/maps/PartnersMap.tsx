@@ -102,9 +102,9 @@ export function PartnersMap() {
     fetchPartners();
   }, []);
 
-  // Initialize map
+  // Initialize map after loading completes
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
+    if (loading || !mapContainerRef.current || mapRef.current) return;
 
     // Default center (Italy)
     const defaultCenter: L.LatLngExpression = [41.9028, 12.4964];
@@ -117,11 +117,16 @@ export function PartnersMap() {
 
     mapRef.current = map;
 
+    // Force a resize after a short delay to ensure proper rendering
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 100);
+
     return () => {
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [loading]);
 
   // Add markers when partners change
   useEffect(() => {
