@@ -9,13 +9,22 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones, Store, CheckCircle2, PenTool, Clock, TrendingUp, Smartphone, AlertCircle, Sparkles } from "lucide-react";
+import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones, Store, CheckCircle2, PenTool, Clock, TrendingUp, Smartphone, AlertCircle, Sparkles, AlertTriangle } from "lucide-react";
 import { RepairWorkflowTimeline, getStatusLabel, getStatusColor } from "@/components/corner/RepairWorkflowTimeline";
 import { SignatureDialog } from "@/components/quotes/SignatureDialog";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+
+// Helper function to calculate days until forfeiture
+const getDaysUntilForfeiture = (atCornerAt: string | null): number | null => {
+  if (!atCornerAt) return null;
+  const atCornerDate = new Date(atCornerAt);
+  const forfeitureDate = new Date(atCornerDate);
+  forfeitureDate.setDate(forfeitureDate.getDate() + 30);
+  return differenceInDays(forfeitureDate, new Date());
+};
 
 interface QuoteItem {
   description: string;
@@ -458,29 +467,65 @@ export default function CornerSegnalazioni() {
                     ? 'border-2 border-emerald-500/50 shadow-emerald-500/10' 
                     : 'hover:border-primary/30'
                 }`}>
-                  {/* Delivery Banner */}
-                  {request.status === "at_corner" && (
-                    <div className="bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
-                            <Package className="h-6 w-6" />
+                  {/* Delivery Banner with Forfeiture Warning */}
+                  {request.status === "at_corner" && (() => {
+                    const daysLeft = getDaysUntilForfeiture(request.at_corner_at);
+                    const isUrgent = daysLeft !== null && daysLeft <= 7;
+                    const isCritical = daysLeft !== null && daysLeft <= 3;
+                    
+                    return (
+                      <div className={`p-4 ${isCritical 
+                        ? 'bg-gradient-to-r from-red-500 via-rose-500 to-red-600' 
+                        : isUrgent 
+                          ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600'
+                          : 'bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500'
+                      } text-white`}>
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                              {isCritical ? <AlertTriangle className="h-6 w-6 animate-pulse" /> : <Package className="h-6 w-6" />}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-lg">
+                                {isCritical ? '⚠️ Ritiro Urgente!' : 'Dispositivo Pronto!'}
+                              </p>
+                              <p className="text-sm text-white/80">
+                                {daysLeft !== null && daysLeft > 0 
+                                  ? `${daysLeft} giorni rimanenti per il ritiro`
+                                  : daysLeft === 0 
+                                    ? 'Ultimo giorno per il ritiro!'
+                                    : 'Dispositivo in decadenza'
+                                }
+                              </p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-semibold text-lg">Dispositivo Pronto!</p>
-                            <p className="text-sm text-white/80">Il cliente può ritirare il dispositivo</p>
+                          <div className="flex items-center gap-3">
+                            {daysLeft !== null && (
+                              <Badge className={`${isCritical 
+                                ? 'bg-white text-red-600 animate-pulse' 
+                                : isUrgent 
+                                  ? 'bg-white text-amber-600' 
+                                  : 'bg-white/20 text-white'
+                              } font-bold text-sm px-3 py-1`}>
+                                <Clock className="h-3.5 w-3.5 mr-1" />
+                                {daysLeft}g
+                              </Badge>
+                            )}
+                            <Button
+                              onClick={() => handleDelivery(request.id)}
+                              className={`${isCritical 
+                                ? 'bg-white text-red-600 hover:bg-white/90' 
+                                : 'bg-white text-emerald-600 hover:bg-white/90 hover:text-emerald-700'
+                              } font-semibold shadow-lg`}
+                            >
+                              <CheckCircle2 className="h-5 w-5 mr-2" />
+                              Consegna
+                            </Button>
                           </div>
                         </div>
-                        <Button
-                          onClick={() => handleDelivery(request.id)}
-                          className="bg-white text-emerald-600 hover:bg-white/90 hover:text-emerald-700 font-semibold shadow-lg"
-                        >
-                          <CheckCircle2 className="h-5 w-5 mr-2" />
-                          Consegna al Cliente
-                        </Button>
                       </div>
-                    </div>
-                  )}
+                    );
+                  })()}
 
                   <CardContent className="p-5">
                     <div className="flex flex-col lg:flex-row justify-between gap-4">
@@ -507,6 +552,24 @@ export default function CornerSegnalazioni() {
                               Preventivo
                             </Badge>
                           )}
+                          {/* Forfeiture countdown badge */}
+                          {request.status === "at_corner" && (() => {
+                            const daysLeft = getDaysUntilForfeiture(request.at_corner_at);
+                            if (daysLeft === null) return null;
+                            const isCritical = daysLeft <= 3;
+                            const isUrgent = daysLeft <= 7;
+                            return (
+                              <Badge className={`${isCritical 
+                                ? 'bg-red-500 text-white animate-pulse' 
+                                : isUrgent 
+                                  ? 'bg-amber-500 text-white' 
+                                  : 'bg-blue-500/10 text-blue-600 border-blue-300'
+                              }`}>
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                Ritira entro {daysLeft}g
+                              </Badge>
+                            );
+                          })()}
                         </div>
 
                         {/* Issue Description */}
