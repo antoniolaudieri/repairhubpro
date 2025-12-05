@@ -114,13 +114,12 @@ export default function CornerDashboard() {
     };
   }, [corner]);
 
-  // Calculate stats
+  // Calculate stats - include all commissions not just paid
   const stats = {
     totalRequests: requests.length,
-    pendingRequests: requests.filter((r) => r.status === "pending" || r.status === "dispatched").length,
-    completedRequests: requests.filter((r) => r.status === "completed").length,
+    pendingRequests: requests.filter((r) => r.status === "pending" || r.status === "dispatched" || r.status === "assigned").length,
+    completedRequests: requests.filter((r) => r.status === "delivered" || r.status === "completed").length,
     totalCommissions: commissions
-      .filter((c) => c.status === "paid")
       .reduce((sum, c) => sum + (c.corner_commission || 0), 0),
   };
 
@@ -164,11 +163,15 @@ export default function CornerDashboard() {
     <CornerLayout>
       <PageTransition>
         <div className="space-y-6">
-          <div>
-            <h1 className="text-2xl font-bold">Benvenuto, {corner?.business_name}</h1>
-            <p className="text-muted-foreground">
-              Gestisci le tue segnalazioni e monitora le commissioni
-            </p>
+          {/* Hero Header */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/90 via-primary to-primary/80 p-6 text-white">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRjMC0yIDItNCAyLTRzLTItMi00LTItNC0yLTItNCAyLTQgMi00cy0yLTItNC0yIi8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
+            <div className="relative">
+              <h1 className="text-2xl md:text-3xl font-bold">Benvenuto, {corner?.business_name}</h1>
+              <p className="text-white/80 mt-1">
+                Gestisci le tue segnalazioni e monitora le commissioni
+              </p>
+            </div>
           </div>
 
           {/* Pending Quotes Banner */}
@@ -179,7 +182,7 @@ export default function CornerDashboard() {
           {/* CTA Button */}
           <Button
             onClick={() => navigate("/corner/nuova-segnalazione")}
-            className="w-full md:w-auto"
+            className="w-full md:w-auto bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-lg hover:shadow-xl transition-all duration-300"
             size="lg"
           >
             <Plus className="h-5 w-5 mr-2" />
@@ -187,9 +190,13 @@ export default function CornerDashboard() {
           </Button>
 
           <Tabs defaultValue="requests" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="requests">Segnalazioni</TabsTrigger>
-              <TabsTrigger value="commissions">Commissioni</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 rounded-xl">
+              <TabsTrigger value="requests" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                Segnalazioni
+              </TabsTrigger>
+              <TabsTrigger value="commissions" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                Commissioni
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="requests" className="mt-4">
