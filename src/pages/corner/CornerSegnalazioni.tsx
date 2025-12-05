@@ -9,10 +9,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones, Truck, Store, User, CheckCircle2 } from "lucide-react";
+import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones, Truck, Store, User, CheckCircle2, PenTool } from "lucide-react";
 import { RepairWorkflowTimeline, getStatusLabel, getStatusColor } from "@/components/corner/RepairWorkflowTimeline";
+import { SignatureDialog } from "@/components/quotes/SignatureDialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface QuoteItem {
   description: string;
@@ -81,6 +83,8 @@ export default function CornerSegnalazioni() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [cornerId, setCornerId] = useState<string | null>(null);
   const [expandedQuotes, setExpandedQuotes] = useState<Set<string>>(new Set());
+  const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
+  const [selectedQuoteForSignature, setSelectedQuoteForSignature] = useState<{quoteId: string; requestId: string} | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -173,6 +177,36 @@ export default function CornerSegnalazioni() {
     } catch {
       return [];
     }
+  };
+
+  const handleOpenSignature = (quoteId: string, requestId: string) => {
+    setSelectedQuoteForSignature({ quoteId, requestId });
+    setSignatureDialogOpen(true);
+  };
+
+  const handleSignatureSuccess = async () => {
+    // Update the repair_request status to quote_accepted
+    if (selectedQuoteForSignature) {
+      const { error } = await supabase
+        .from("repair_requests")
+        .update({
+          status: "quote_accepted",
+          quote_accepted_at: new Date().toISOString(),
+        })
+        .eq("id", selectedQuoteForSignature.requestId);
+
+      if (error) {
+        console.error("Error updating repair request:", error);
+      } else {
+        toast.success("Preventivo firmato e accettato!");
+      }
+    }
+
+    // Reload requests
+    if (cornerId) {
+      await loadRequests(cornerId);
+    }
+    setSelectedQuoteForSignature(null);
   };
 
   const filteredRequests = requests.filter((req) => {
@@ -473,10 +507,18 @@ export default function CornerSegnalazioni() {
                             <span className="text-lg text-primary">€{request.quote.total_cost.toFixed(2)}</span>
                           </div>
 
-                          {request.quote.signed_at && (
+                          {request.quote.signed_at ? (
                             <div className="text-xs text-emerald-600 flex items-center gap-1 mt-2">
                               ✓ Firmato il {format(new Date(request.quote.signed_at), "dd MMM yyyy HH:mm", { locale: it })}
                             </div>
+                          ) : request.quote.status === "pending" && (
+                            <Button
+                              onClick={() => handleOpenSignature(request.quote!.id, request.id)}
+                              className="w-full mt-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
+                            >
+                              <PenTool className="h-4 w-4 mr-2" />
+                              Fai Firmare al Cliente
+                            </Button>
                           )}
                         </div>
                       </CollapsibleContent>
@@ -488,6 +530,16 @@ export default function CornerSegnalazioni() {
           )}
         </div>
       </div>
+
+      {/* Signature Dialog */}
+      {selectedQuoteForSignature && (
+        <SignatureDialog
+          open={signatureDialogOpen}
+          onOpenChange={setSignatureDialogOpen}
+          quoteId={selectedQuoteForSignature.quoteId}
+          onSuccess={handleSignatureSuccess}
+        />
+      )}
     </CornerLayout>
   );
 }
