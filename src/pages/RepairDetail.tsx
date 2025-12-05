@@ -48,6 +48,7 @@ import RepairGuide from "@/components/repair/RepairGuide";
 import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
 import { AcceptanceFormPDF } from "@/components/repair/AcceptanceFormPDF";
 import { RepairChecklistDialog } from "@/components/checklist/RepairChecklistDialog";
+import { DirectRepairTimeline } from "@/components/repair/DirectRepairTimeline";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
@@ -119,6 +120,9 @@ interface RepairDetail {
   intake_signature: string | null;
   intake_signature_date: string | null;
   created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  delivered_at: string | null;
   device: {
     brand: string;
     model: string;
@@ -248,6 +252,9 @@ export default function RepairDetail() {
         intake_signature: data.intake_signature,
         intake_signature_date: data.intake_signature_date,
         created_at: data.created_at,
+        started_at: data.started_at,
+        completed_at: data.completed_at,
+        delivered_at: data.delivered_at,
         device: data.device,
         customer: data.device.customer,
         orders: data.orders || [],
@@ -743,6 +750,33 @@ export default function RepairDetail() {
                 </p>
               </motion.div>
             </div>
+
+            {/* Workflow Timeline */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <Card className="overflow-hidden">
+                <div className="bg-gradient-to-r from-primary/5 to-transparent px-6 py-4 border-b border-border">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Clock className="h-4 w-4 text-primary" />
+                    </div>
+                    Stato Avanzamento
+                  </h2>
+                </div>
+                <div className="p-6">
+                  <DirectRepairTimeline
+                    status={repair.status}
+                    createdAt={repair.created_at}
+                    startedAt={repair.started_at}
+                    completedAt={repair.completed_at}
+                    deliveredAt={repair.delivered_at}
+                  />
+                </div>
+              </Card>
+            </motion.div>
 
             {/* Repair Info Card */}
             <motion.div
