@@ -3,18 +3,19 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CornerLayout } from "@/layouts/CornerLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones, Truck, Store, User, CheckCircle2, PenTool } from "lucide-react";
+import { Plus, Search, Phone, Mail, Calendar, Building2, ChevronDown, ChevronUp, FileText, Package, Wrench, Headphones, Store, CheckCircle2, PenTool, Clock, TrendingUp, Smartphone, AlertCircle, Sparkles } from "lucide-react";
 import { RepairWorkflowTimeline, getStatusLabel, getStatusColor } from "@/components/corner/RepairWorkflowTimeline";
 import { SignatureDialog } from "@/components/quotes/SignatureDialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 
 interface QuoteItem {
   description: string;
@@ -45,7 +46,6 @@ interface RepairRequest {
   created_at: string;
   assigned_provider_type: string | null;
   assigned_provider_id: string | null;
-  // Timestamp fields for workflow tracking
   quote_sent_at: string | null;
   quote_accepted_at: string | null;
   awaiting_pickup_at: string | null;
@@ -67,8 +67,6 @@ interface RepairRequest {
   } | null;
   quote?: Quote | null;
 }
-
-// Use imported getStatusColor and getStatusLabel from RepairWorkflowTimeline
 
 const quoteStatusLabels: Record<string, string> = {
   pending: "In Attesa Firma",
@@ -96,7 +94,6 @@ export default function CornerSegnalazioni() {
 
   const loadCornerAndRequests = async () => {
     try {
-      // Get corner ID
       const { data: corner } = await supabase
         .from("corners")
         .select("id")
@@ -129,13 +126,11 @@ export default function CornerSegnalazioni() {
       return;
     }
 
-    // Load centro names and quotes for requests
     const requestsWithData = await Promise.all(
       (data || []).map(async (req) => {
         let centro = null;
         let quote = null;
 
-        // Load centro info
         if (req.assigned_provider_type === "centro" && req.assigned_provider_id) {
           const { data: centroData } = await supabase
             .from("centri_assistenza")
@@ -145,7 +140,6 @@ export default function CornerSegnalazioni() {
           centro = centroData;
         }
 
-        // Load quote linked to this repair_request - prefer accepted/signed quotes
         const { data: quoteData } = await supabase
           .from("quotes")
           .select("id, total_cost, parts_cost, status, signed_at, signature_data, items, created_at")
@@ -190,12 +184,7 @@ export default function CornerSegnalazioni() {
   };
 
   const handleSignatureSuccess = async () => {
-    console.log("handleSignatureSuccess called with:", selectedQuoteForSignature);
-    
-    // Update the repair_request status to awaiting_pickup (Centro must come pick up device)
     if (selectedQuoteForSignature) {
-      console.log("Updating repair_request:", selectedQuoteForSignature.requestId);
-      
       const { error } = await supabase
         .from("repair_requests")
         .update({
@@ -209,16 +198,12 @@ export default function CornerSegnalazioni() {
         console.error("Error updating repair request:", error);
         toast.error("Errore nell'aggiornamento dello stato");
       } else {
-        console.log("Repair request updated successfully");
         toast.success("Preventivo firmato! Il Centro riceverà una notifica per il ritiro del dispositivo.");
       }
     }
 
-    // Reload requests
     if (cornerId) {
-      console.log("Reloading requests for corner:", cornerId);
       await loadRequests(cornerId);
-      console.log("Requests reloaded");
     }
     setSelectedQuoteForSignature(null);
   };
@@ -257,11 +242,59 @@ export default function CornerSegnalazioni() {
     return matchesSearch && matchesStatus;
   });
 
+  const stats = [
+    {
+      label: "Totale",
+      value: requests.length,
+      icon: FileText,
+      gradient: "from-blue-500 to-cyan-500",
+      bgGradient: "from-blue-500/20 to-cyan-500/10",
+    },
+    {
+      label: "In Attesa",
+      value: requests.filter((r) => r.status === "pending" || r.status === "assigned").length,
+      icon: Clock,
+      gradient: "from-amber-500 to-orange-500",
+      bgGradient: "from-amber-500/20 to-orange-500/10",
+    },
+    {
+      label: "Preventivi",
+      value: requests.filter((r) => r.status === "quote_sent" || r.status === "quote_accepted").length,
+      icon: FileText,
+      gradient: "from-violet-500 to-purple-500",
+      bgGradient: "from-violet-500/20 to-purple-500/10",
+    },
+    {
+      label: "In Lavoro",
+      value: requests.filter((r) => ['awaiting_pickup', 'picked_up', 'in_diagnosis', 'waiting_for_parts', 'in_repair'].includes(r.status)).length,
+      icon: Wrench,
+      gradient: "from-blue-600 to-indigo-600",
+      bgGradient: "from-blue-600/20 to-indigo-600/10",
+    },
+    {
+      label: "Al Corner",
+      value: requests.filter((r) => r.status === "at_corner").length,
+      icon: Store,
+      gradient: "from-pink-500 to-rose-500",
+      bgGradient: "from-pink-500/20 to-rose-500/10",
+    },
+    {
+      label: "Consegnate",
+      value: requests.filter((r) => r.status === "delivered").length,
+      icon: CheckCircle2,
+      gradient: "from-emerald-500 to-green-500",
+      bgGradient: "from-emerald-500/20 to-green-500/10",
+    },
+  ];
+
   if (loading) {
     return (
       <CornerLayout>
         <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto" />
+            <p className="text-muted-foreground">Caricamento segnalazioni...</p>
+          </div>
         </div>
       </CornerLayout>
     );
@@ -270,32 +303,79 @@ export default function CornerSegnalazioni() {
   return (
     <CornerLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Segnalazioni</h1>
-            <p className="text-muted-foreground">Gestisci le tue segnalazioni di riparazione</p>
+        {/* Hero Header */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 p-6 text-white"
+        >
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
+          <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-6 w-6" />
+                <h1 className="text-2xl sm:text-3xl font-bold">Le Mie Segnalazioni</h1>
+              </div>
+              <p className="text-white/80">Gestisci e monitora tutte le tue segnalazioni di riparazione</p>
+            </div>
+            <Button 
+              onClick={() => navigate("/corner/nuova-segnalazione")}
+              className="bg-white text-violet-700 hover:bg-white/90 shadow-lg font-semibold"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nuova Segnalazione
+            </Button>
           </div>
-          <Button onClick={() => navigate("/corner/nuova-segnalazione")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nuova Segnalazione
-          </Button>
+        </motion.div>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {stats.map((stat, index) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05 }}
+            >
+              <Card className={`relative overflow-hidden border-0 bg-gradient-to-br ${stat.bgGradient} backdrop-blur-sm hover:shadow-lg transition-all duration-300 cursor-pointer`}>
+                <div className={`absolute inset-0 bg-gradient-to-r ${stat.gradient} opacity-5`} />
+                <CardContent className="p-3 relative">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`text-xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}>
+                        {stat.value}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    </div>
+                    <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.gradient} shadow-md`}>
+                      <stat.icon className="h-4 w-4 text-white" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-col sm:flex-row gap-4"
+        >
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Cerca per cliente, dispositivo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 bg-background/50 border-border/50 focus:border-primary/50"
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full sm:w-[180px]">
-              <SelectValue placeholder="Stato" />
+            <SelectTrigger className="w-full sm:w-[200px] bg-background/50 border-border/50">
+              <SelectValue placeholder="Tutti gli stati" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutti gli stati</SelectItem>
@@ -312,332 +392,342 @@ export default function CornerSegnalazioni() {
               <SelectItem value="delivered">Consegnato</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-          <Card>
-            <CardContent className="p-3">
-              <div className="text-xl font-bold">{requests.length}</div>
-              <div className="text-xs text-muted-foreground">Totale</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="text-xl font-bold text-yellow-600">
-                {requests.filter((r) => r.status === "pending" || r.status === "assigned").length}
-              </div>
-              <div className="text-xs text-muted-foreground">In Attesa</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="text-xl font-bold text-purple-600">
-                {requests.filter((r) => r.status === "quote_sent" || r.status === "quote_accepted").length}
-              </div>
-              <div className="text-xs text-muted-foreground">Preventivi</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="text-xl font-bold text-blue-600">
-                {requests.filter((r) => ['awaiting_pickup', 'picked_up', 'in_diagnosis', 'waiting_for_parts', 'in_repair'].includes(r.status)).length}
-              </div>
-              <div className="text-xs text-muted-foreground">In Lavoro</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="text-xl font-bold text-violet-600">
-                {requests.filter((r) => r.status === "at_corner").length}
-              </div>
-              <div className="text-xs text-muted-foreground">Al Corner</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3">
-              <div className="text-xl font-bold text-green-600">
-                {requests.filter((r) => r.status === "delivered").length}
-              </div>
-              <div className="text-xs text-muted-foreground">Consegnate</div>
-            </CardContent>
-          </Card>
-        </div>
+        </motion.div>
 
         {/* Alert for devices at Corner */}
         {requests.filter((r) => r.status === "at_corner").length > 0 && (
-          <Card className="p-4 border-2 border-violet-500 bg-violet-50/50">
-            <div className="flex items-center gap-3">
-              <Store className="h-6 w-6 text-violet-600 animate-pulse" />
-              <div>
-                <p className="font-semibold text-violet-800">
-                  {requests.filter((r) => r.status === "at_corner").length} dispositivi pronti per il ritiro cliente
-                </p>
-                <p className="text-sm text-violet-600">
-                  Contatta i clienti per la consegna
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* List */}
-        <div className="space-y-4">
-          {filteredRequests.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center">
-                <p className="text-muted-foreground">Nessuna segnalazione trovata</p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => navigate("/corner/nuova-segnalazione")}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crea la prima segnalazione
-                </Button>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+          >
+            <Card className="relative overflow-hidden border-2 border-emerald-500/50 bg-gradient-to-r from-emerald-500/10 via-green-500/10 to-teal-500/10">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-green-500 shadow-lg">
+                    <Store className="h-6 w-6 text-white animate-pulse" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-emerald-700 dark:text-emerald-400">
+                      {requests.filter((r) => r.status === "at_corner").length} dispositivi pronti per il ritiro cliente
+                    </p>
+                    <p className="text-sm text-emerald-600/70 dark:text-emerald-400/70">
+                      Contatta i clienti per la consegna
+                    </p>
+                  </div>
+                  <AlertCircle className="h-5 w-5 text-emerald-500 animate-bounce" />
+                </div>
               </CardContent>
             </Card>
-          ) : (
-            filteredRequests.map((request) => (
-              <Card key={request.id} className={`hover:shadow-md transition-shadow ${request.status === 'at_corner' ? 'border-emerald-500 border-2' : ''}`}>
-                {/* Prominent Delivery Banner */}
-                {request.status === "at_corner" && (
-                  <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white p-4 rounded-t-lg">
-                    <div className="flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/20 rounded-full">
-                          <Package className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-lg">Dispositivo Pronto per la Consegna!</p>
-                          <p className="text-sm text-white/80">Il cliente può ritirare il dispositivo</p>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={() => handleDelivery(request.id)}
-                        className="bg-white text-emerald-600 hover:bg-white/90 hover:text-emerald-700 font-semibold"
-                      >
-                        <CheckCircle2 className="h-5 w-5 mr-2" />
-                        Consegna al Cliente
-                      </Button>
-                    </div>
+          </motion.div>
+        )}
+
+        {/* Requests List */}
+        <div className="space-y-4">
+          {filteredRequests.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              <Card className="border-dashed border-2">
+                <CardContent className="p-12 text-center">
+                  <div className="mx-auto w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                    <Smartphone className="h-8 w-8 text-muted-foreground" />
                   </div>
-                )}
-                <CardContent className={`p-4 ${request.status === 'at_corner' ? 'rounded-t-none' : ''}`}>
-                  <div className="flex flex-col sm:flex-row justify-between gap-4">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold">
-                          {request.device_brand} {request.device_model}
-                        </span>
-                        <Badge variant="outline" className="text-xs">
-                          {request.device_type}
-                        </Badge>
-                        <Badge className={getStatusColor(request.status)}>
-                          {getStatusLabel(request.status)}
-                        </Badge>
-                        {request.quote && (
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
-                            <FileText className="h-3 w-3 mr-1" />
-                            Preventivo
+                  <p className="text-lg font-medium text-muted-foreground mb-2">Nessuna segnalazione trovata</p>
+                  <p className="text-sm text-muted-foreground/70 mb-6">Inizia creando la tua prima segnalazione di riparazione</p>
+                  <Button
+                    onClick={() => navigate("/corner/nuova-segnalazione")}
+                    className="bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crea la prima segnalazione
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ) : (
+            filteredRequests.map((request, index) => (
+              <motion.div
+                key={request.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className={`group hover:shadow-xl transition-all duration-300 overflow-hidden ${
+                  request.status === 'at_corner' 
+                    ? 'border-2 border-emerald-500/50 shadow-emerald-500/10' 
+                    : 'hover:border-primary/30'
+                }`}>
+                  {/* Delivery Banner */}
+                  {request.status === "at_corner" && (
+                    <div className="bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 text-white p-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                            <Package className="h-6 w-6" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-lg">Dispositivo Pronto!</p>
+                            <p className="text-sm text-white/80">Il cliente può ritirare il dispositivo</p>
+                          </div>
+                        </div>
+                        <Button
+                          onClick={() => handleDelivery(request.id)}
+                          className="bg-white text-emerald-600 hover:bg-white/90 hover:text-emerald-700 font-semibold shadow-lg"
+                        >
+                          <CheckCircle2 className="h-5 w-5 mr-2" />
+                          Consegna al Cliente
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <CardContent className="p-5">
+                    <div className="flex flex-col lg:flex-row justify-between gap-4">
+                      <div className="space-y-3 flex-1">
+                        {/* Device & Status */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
+                            <div className="p-1.5 rounded-lg bg-primary/10">
+                              <Smartphone className="h-4 w-4 text-primary" />
+                            </div>
+                            <span className="font-semibold text-lg">
+                              {request.device_brand} {request.device_model}
+                            </span>
+                          </div>
+                          <Badge variant="outline" className="text-xs bg-muted/50">
+                            {request.device_type}
                           </Badge>
+                          <Badge className={`${getStatusColor(request.status)} shadow-sm`}>
+                            {getStatusLabel(request.status)}
+                          </Badge>
+                          {request.quote && (
+                            <Badge variant="outline" className="bg-violet-500/10 text-violet-600 border-violet-300">
+                              <FileText className="h-3 w-3 mr-1" />
+                              Preventivo
+                            </Badge>
+                          )}
+                        </div>
+
+                        {/* Issue Description */}
+                        <p className="text-sm text-muted-foreground line-clamp-2 bg-muted/30 p-2 rounded-lg">
+                          {request.issue_description}
+                        </p>
+
+                        {/* Customer Info */}
+                        {request.customer && (
+                          <div className="flex flex-wrap items-center gap-4 text-sm">
+                            <span className="font-medium text-foreground flex items-center gap-1.5">
+                              <div className="p-1 rounded bg-primary/10">
+                                <FileText className="h-3 w-3 text-primary" />
+                              </div>
+                              {request.customer.name}
+                            </span>
+                            <span className="flex items-center gap-1.5 text-muted-foreground">
+                              <Phone className="h-3.5 w-3.5" />
+                              {request.customer.phone}
+                            </span>
+                            {request.customer.email && (
+                              <span className="flex items-center gap-1.5 text-muted-foreground">
+                                <Mail className="h-3.5 w-3.5" />
+                                {request.customer.email}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Centro Assignment */}
+                        {request.centro && (
+                          <div className="flex items-center gap-2 text-sm">
+                            <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                              <Building2 className="h-3 w-3 mr-1" />
+                              Assegnata a: {request.centro.business_name}
+                            </Badge>
+                          </div>
+                        )}
+
+                        {/* Workflow Timeline */}
+                        {!['pending', 'assigned'].includes(request.status) && (
+                          <div className="pt-3 border-t border-border/50">
+                            <RepairWorkflowTimeline 
+                              currentStatus={request.status} 
+                              compact 
+                              timestamps={{
+                                created_at: request.created_at,
+                                quote_sent_at: request.quote_sent_at,
+                                quote_accepted_at: request.quote_accepted_at,
+                                awaiting_pickup_at: request.awaiting_pickup_at,
+                                picked_up_at: request.picked_up_at,
+                                in_diagnosis_at: request.in_diagnosis_at,
+                                waiting_for_parts_at: request.waiting_for_parts_at,
+                                in_repair_at: request.in_repair_at,
+                                repair_completed_at: request.repair_completed_at,
+                                ready_for_return_at: request.ready_for_return_at,
+                                at_corner_at: request.at_corner_at,
+                                delivered_at: request.delivered_at,
+                              }}
+                            />
+                          </div>
                         )}
                       </div>
 
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {request.issue_description}
-                      </p>
-
-                      {request.customer && (
-                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                          <span className="font-medium text-foreground">{request.customer.name}</span>
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {request.customer.phone}
-                          </span>
-                          {request.customer.email && (
-                            <span className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" />
-                              {request.customer.email}
-                            </span>
-                          )}
+                      {/* Price & Commission */}
+                      <div className="flex flex-col items-end gap-2 min-w-[140px]">
+                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {format(new Date(request.created_at), "dd MMM yyyy", { locale: it })}
                         </div>
-                      )}
-
-                      {request.centro && (
-                        <div className="flex items-center gap-1 text-sm text-primary">
-                          <Building2 className="h-3 w-3" />
-                          <span>Assegnata a: {request.centro.business_name}</span>
-                        </div>
-                      )}
-
-                      {/* Workflow Timeline */}
-                      {!['pending', 'assigned'].includes(request.status) && (
-                        <div className="mt-2 pt-2 border-t">
-                          <RepairWorkflowTimeline 
-                            currentStatus={request.status} 
-                            compact 
-                            timestamps={{
-                              created_at: request.created_at,
-                              quote_sent_at: request.quote_sent_at,
-                              quote_accepted_at: request.quote_accepted_at,
-                              awaiting_pickup_at: request.awaiting_pickup_at,
-                              picked_up_at: request.picked_up_at,
-                              in_diagnosis_at: request.in_diagnosis_at,
-                              waiting_for_parts_at: request.waiting_for_parts_at,
-                              in_repair_at: request.in_repair_at,
-                              repair_completed_at: request.repair_completed_at,
-                              ready_for_return_at: request.ready_for_return_at,
-                              at_corner_at: request.at_corner_at,
-                              delivered_at: request.delivered_at,
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2">
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(request.created_at), "dd MMM yyyy", { locale: it })}
-                      </div>
-                      
-                      {request.quote ? (
-                        (() => {
-                          const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
-                          const cornerCommission = grossMargin * 0.10;
-                          return (
-                            <>
-                              <div className="text-lg font-semibold text-primary">€{request.quote.total_cost.toFixed(2)}</div>
-                              <div className="text-sm text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded">
-                                Tuo compenso: €{cornerCommission.toFixed(2)}
-                              </div>
-                            </>
-                          );
-                        })()
-                      ) : request.estimated_cost ? (
-                        <>
-                          <div className="text-lg font-semibold">€{request.estimated_cost.toFixed(2)}</div>
-                          <div className="text-sm text-muted-foreground text-xs">
-                            (compenso da definire)
-                          </div>
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Quote Details Section - Only visible for Corner without unit prices */}
-                  {request.quote && (
-                    <Collapsible 
-                      open={expandedQuotes.has(request.id)}
-                      onOpenChange={() => toggleQuoteExpanded(request.id)}
-                      className="mt-4"
-                    >
-                      <CollapsibleTrigger asChild>
-                        <Button variant="outline" size="sm" className="w-full justify-between">
-                          <span className="flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            Dettagli Preventivo
-                            <Badge variant="secondary" className="ml-2">
-                              {request.quote.signed_at 
-                                ? "Firmato" 
-                                : quoteStatusLabels[request.quote.status] || request.quote.status}
-                            </Badge>
-                          </span>
-                          {expandedQuotes.has(request.id) ? (
-                            <ChevronUp className="h-4 w-4" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-3">
-                        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
-                          <div className="text-sm text-muted-foreground mb-2">
-                            Creato: {format(new Date(request.quote.created_at), "dd MMM yyyy HH:mm", { locale: it })}
-                          </div>
-                          
-                          {/* Items list - showing only description and total, NOT unit price */}
-                          <div className="space-y-2">
-                            {parseQuoteItems(request.quote.items).map((item, idx) => (
-                              <div key={idx} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
-                                <div className="flex items-center gap-2 flex-1 min-w-0">
-                                  <div className="h-6 w-6 rounded flex items-center justify-center bg-background">
-                                    {item.type === 'part' && <Package className="h-3.5 w-3.5 text-blue-600" />}
-                                    {item.type === 'labor' && <Wrench className="h-3.5 w-3.5 text-amber-600" />}
-                                    {item.type === 'service' && <Headphones className="h-3.5 w-3.5 text-purple-600" />}
-                                  </div>
-                                  <span className="text-sm truncate">{item.description}</span>
-                                  {item.quantity > 1 && (
-                                    <Badge variant="secondary" className="text-xs">x{item.quantity}</Badge>
-                                  )}
-                                </div>
-                                <span className="font-medium text-sm">€{item.total.toFixed(2)}</span>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Total */}
-                          <div className="flex justify-between items-center pt-3 border-t border-border font-semibold">
-                            <span>Totale Preventivo</span>
-                            <span className="text-lg text-primary">€{request.quote.total_cost.toFixed(2)}</span>
-                          </div>
-                          
-                          {/* Corner Commission - based on gross margin */}
-                          {(() => {
+                        
+                        {request.quote ? (
+                          (() => {
                             const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
                             const cornerCommission = grossMargin * 0.10;
                             return (
-                              <div className="flex justify-between items-center bg-emerald-50 rounded-lg p-3 mt-2">
-                                <div>
-                                  <span className="text-emerald-700 font-medium">💰 Tuo Compenso (10% margine)</span>
-                                  <p className="text-xs text-emerald-600/70">Margine: €{grossMargin.toFixed(2)}</p>
+                              <div className="text-right space-y-1">
+                                <div className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                                  €{request.quote.total_cost.toFixed(2)}
                                 </div>
-                                <span className="text-lg font-bold text-emerald-600">€{cornerCommission.toFixed(2)}</span>
+                                <div className="inline-flex items-center gap-1.5 text-sm font-medium bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-emerald-600 px-3 py-1 rounded-full border border-emerald-500/20">
+                                  <TrendingUp className="h-3.5 w-3.5" />
+                                  €{cornerCommission.toFixed(2)}
+                                </div>
                               </div>
                             );
-                          })()}
+                          })()
+                        ) : request.estimated_cost ? (
+                          <div className="text-right">
+                            <div className="text-xl font-semibold">€{request.estimated_cost.toFixed(2)}</div>
+                            <div className="text-xs text-muted-foreground">(compenso da definire)</div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
 
-                          {/* Signature Section */}
-                          {request.quote.signature_data && (
-                            <div className="mt-3 p-3 bg-background rounded-lg border">
-                              <p className="text-xs text-muted-foreground mb-2">Firma Cliente:</p>
-                              <img 
-                                src={request.quote.signature_data} 
-                                alt="Firma cliente" 
-                                className="max-h-16 border rounded bg-white"
-                              />
-                              {request.quote.signed_at && (
-                                <p className="text-xs text-emerald-600 mt-1">
-                                  ✓ Firmato il {format(new Date(request.quote.signed_at), "dd MMM yyyy HH:mm", { locale: it })}
-                                </p>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Sign/Re-sign Button */}
-                          <Button
-                            onClick={() => handleOpenSignature(
-                              request.quote!.id, 
-                              request.id, 
-                              request.quote!.total_cost,
-                              `${request.device_brand || ''} ${request.device_model || ''} - ${request.device_type}`.trim()
+                    {/* Quote Details Collapsible */}
+                    {request.quote && (
+                      <Collapsible 
+                        open={expandedQuotes.has(request.id)}
+                        onOpenChange={() => toggleQuoteExpanded(request.id)}
+                        className="mt-4"
+                      >
+                        <CollapsibleTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full justify-between bg-muted/30 hover:bg-muted/50 border-border/50">
+                            <span className="flex items-center gap-2">
+                              <FileText className="h-4 w-4 text-violet-500" />
+                              Dettagli Preventivo
+                              <Badge variant="secondary" className={`ml-2 ${request.quote.signed_at ? 'bg-emerald-500/10 text-emerald-600' : 'bg-amber-500/10 text-amber-600'}`}>
+                                {request.quote.signed_at 
+                                  ? "✓ Firmato" 
+                                  : quoteStatusLabels[request.quote.status] || request.quote.status}
+                              </Badge>
+                            </span>
+                            {expandedQuotes.has(request.id) ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
                             )}
-                            variant={request.quote.signed_at ? "outline" : "default"}
-                            className={request.quote.signed_at 
-                              ? "w-full mt-3" 
-                              : "w-full mt-3 bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700"
-                            }
-                          >
-                            <PenTool className="h-4 w-4 mr-2" />
-                            {request.quote.signed_at ? "Raccogli Nuova Firma" : "Fai Firmare al Cliente"}
                           </Button>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-                </CardContent>
-              </Card>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="mt-3">
+                          <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-5 space-y-4 border border-border/30">
+                            <div className="text-sm text-muted-foreground">
+                              Creato: {format(new Date(request.quote.created_at), "dd MMM yyyy HH:mm", { locale: it })}
+                            </div>
+                            
+                            {/* Items List */}
+                            <div className="space-y-2">
+                              {parseQuoteItems(request.quote.items).map((item, idx) => (
+                                <div key={idx} className="flex items-center justify-between py-2 px-3 bg-background/50 rounded-lg border border-border/30">
+                                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                                      item.type === 'part' ? 'bg-blue-500/10' :
+                                      item.type === 'labor' ? 'bg-amber-500/10' : 'bg-purple-500/10'
+                                    }`}>
+                                      {item.type === 'part' && <Package className="h-4 w-4 text-blue-600" />}
+                                      {item.type === 'labor' && <Wrench className="h-4 w-4 text-amber-600" />}
+                                      {item.type === 'service' && <Headphones className="h-4 w-4 text-purple-600" />}
+                                    </div>
+                                    <span className="text-sm truncate">{item.description}</span>
+                                    {item.quantity > 1 && (
+                                      <Badge variant="secondary" className="text-xs">x{item.quantity}</Badge>
+                                    )}
+                                  </div>
+                                  <span className="font-semibold text-sm">€{item.total.toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Total */}
+                            <div className="flex justify-between items-center pt-3 border-t border-border/50 font-semibold">
+                              <span>Totale Preventivo</span>
+                              <span className="text-xl bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                                €{request.quote.total_cost.toFixed(2)}
+                              </span>
+                            </div>
+                            
+                            {/* Corner Commission */}
+                            {(() => {
+                              const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
+                              const cornerCommission = grossMargin * 0.10;
+                              return (
+                                <div className="flex justify-between items-center bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-xl p-4 border border-emerald-500/20">
+                                  <div>
+                                    <span className="text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-2">
+                                      <TrendingUp className="h-4 w-4" />
+                                      Tuo Compenso (10% margine)
+                                    </span>
+                                    <p className="text-xs text-emerald-600/70">Margine: €{grossMargin.toFixed(2)}</p>
+                                  </div>
+                                  <span className="text-xl font-bold text-emerald-600">€{cornerCommission.toFixed(2)}</span>
+                                </div>
+                              );
+                            })()}
+
+                            {/* Signature Section */}
+                            {request.quote.signature_data && (
+                              <div className="p-4 bg-background rounded-xl border border-border/50">
+                                <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                                  <PenTool className="h-3.5 w-3.5" />
+                                  Firma Cliente:
+                                </p>
+                                <img 
+                                  src={request.quote.signature_data} 
+                                  alt="Firma cliente" 
+                                  className="max-h-16 border rounded-lg bg-white p-1"
+                                />
+                                {request.quote.signed_at && (
+                                  <p className="text-xs text-emerald-600 mt-2 flex items-center gap-1">
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    Firmato il {format(new Date(request.quote.signed_at), "dd MMM yyyy HH:mm", { locale: it })}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Sign Button */}
+                            <Button
+                              onClick={() => handleOpenSignature(
+                                request.quote!.id, 
+                                request.id, 
+                                request.quote!.total_cost,
+                                `${request.device_brand || ''} ${request.device_model || ''} - ${request.device_type}`.trim()
+                              )}
+                              variant={request.quote.signed_at ? "outline" : "default"}
+                              className={request.quote.signed_at 
+                                ? "w-full" 
+                                : "w-full bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 shadow-lg"
+                              }
+                            >
+                              <PenTool className="h-4 w-4 mr-2" />
+                              {request.quote.signed_at ? "Raccogli Nuova Firma" : "Fai Firmare al Cliente"}
+                            </Button>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))
           )}
         </div>
