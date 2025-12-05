@@ -46,6 +46,9 @@ interface Partner {
   latitude: number;
   longitude: number;
   type: 'corner' | 'centro';
+  phone?: string;
+  email?: string;
+  logo_url?: string | null;
 }
 
 export function PartnersMap() {
@@ -61,13 +64,13 @@ export function PartnersMap() {
         const [cornersRes, centriRes] = await Promise.all([
           supabase
             .from("corners")
-            .select("id, business_name, address, latitude, longitude")
+            .select("id, business_name, address, latitude, longitude, phone")
             .eq("status", "approved")
             .not("latitude", "is", null)
             .not("longitude", "is", null),
           supabase
             .from("centri_assistenza")
-            .select("id, business_name, address, latitude, longitude")
+            .select("id, business_name, address, latitude, longitude, phone, email, logo_url")
             .eq("status", "approved")
             .not("latitude", "is", null)
             .not("longitude", "is", null),
@@ -80,6 +83,7 @@ export function PartnersMap() {
           latitude: c.latitude!,
           longitude: c.longitude!,
           type: 'corner' as const,
+          phone: c.phone,
         }));
 
         const centri: Partner[] = (centriRes.data || []).map((c) => ({
@@ -89,6 +93,9 @@ export function PartnersMap() {
           latitude: c.latitude!,
           longitude: c.longitude!,
           type: 'centro' as const,
+          phone: c.phone,
+          email: c.email,
+          logo_url: c.logo_url,
         }));
 
         setPartners([...corners, ...centri]);
@@ -144,18 +151,81 @@ export function PartnersMap() {
     
     partners.forEach((partner) => {
       const icon = partner.type === 'corner' ? cornerIcon : centroIcon;
-      const typeLabel = partner.type === 'corner' ? 'Corner' : 'Centro Assistenza';
       
       const marker = L.marker([partner.latitude, partner.longitude], { icon })
         .addTo(mapRef.current!);
       
-      marker.bindPopup(`
-        <div style="min-width: 180px;">
-          <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${partner.business_name}</div>
-          <div style="font-size: 12px; color: #666; margin-bottom: 4px;">${typeLabel}</div>
-          <div style="font-size: 11px; color: #888;">${partner.address}</div>
-        </div>
-      `);
+      // Build popup content based on partner type
+      let popupContent = '';
+      
+      if (partner.type === 'centro') {
+        const logoHtml = partner.logo_url 
+          ? `<img src="${partner.logo_url}" alt="${partner.business_name}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; margin-right: 12px; border: 1px solid #e5e7eb;" />`
+          : `<div style="width: 60px; height: 60px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
+            </div>`;
+        
+        popupContent = `
+          <div style="min-width: 260px; font-family: system-ui, -apple-system, sans-serif;">
+            <div style="display: flex; align-items: flex-start;">
+              ${logoHtml}
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 15px; color: #1f2937; margin-bottom: 2px;">${partner.business_name}</div>
+                <div style="display: inline-block; background: #3b82f6; color: white; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 600; margin-bottom: 6px;">CENTRO ASSISTENZA</div>
+              </div>
+            </div>
+            <div style="border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 10px;">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${partner.address}
+              </div>
+              ${partner.phone ? `<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                ${partner.phone}
+              </div>` : ''}
+              ${partner.email ? `<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                ${partner.email}
+              </div>` : ''}
+            </div>
+            <div style="background: #eff6ff; padding: 8px 10px; border-radius: 8px; margin-top: 10px;">
+              <div style="font-size: 11px; color: #3b82f6; font-weight: 600;">🔧 Riparazioni professionali</div>
+              <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">Smartphone, tablet, PC e altri dispositivi</div>
+            </div>
+          </div>
+        `;
+      } else {
+        // Corner popup
+        popupContent = `
+          <div style="min-width: 220px; font-family: system-ui, -apple-system, sans-serif;">
+            <div style="display: flex; align-items: flex-start;">
+              <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12v0a2 2 0 0 1-2-2V7"/></svg>
+              </div>
+              <div style="flex: 1;">
+                <div style="font-weight: 700; font-size: 15px; color: #1f2937; margin-bottom: 2px;">${partner.business_name}</div>
+                <div style="display: inline-block; background: #f59e0b; color: white; font-size: 10px; padding: 2px 8px; border-radius: 12px; font-weight: 600;">CORNER</div>
+              </div>
+            </div>
+            <div style="border-top: 1px solid #e5e7eb; margin-top: 10px; padding-top: 10px;">
+              <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                ${partner.address}
+              </div>
+              ${partner.phone ? `<div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #6b7280;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                ${partner.phone}
+              </div>` : ''}
+            </div>
+            <div style="background: #fef3c7; padding: 8px 10px; border-radius: 8px; margin-top: 10px;">
+              <div style="font-size: 11px; color: #d97706; font-weight: 600;">📦 Punto Consegna & Ritiro</div>
+              <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">Lascia qui il tuo dispositivo per la riparazione</div>
+            </div>
+          </div>
+        `;
+      }
+      
+      marker.bindPopup(popupContent, { maxWidth: 300 });
 
       bounds.push([partner.latitude, partner.longitude]);
     });
