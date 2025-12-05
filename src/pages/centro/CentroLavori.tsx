@@ -30,8 +30,9 @@ import {
   MessageCircle
 } from "lucide-react";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
+import { AlertTriangle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
 
@@ -415,6 +416,37 @@ export default function CentroLavori() {
                                     {repair.device.brand} {repair.device.model}
                                   </h3>
                                   <Badge className={status.color}>{status.label}</Badge>
+                                  {/* Forfeiture countdown badge */}
+                                  {repair.status === 'completed' && repair.completed_at && !repair.delivered_at && (() => {
+                                    const daysRemaining = 30 - differenceInDays(new Date(), new Date(repair.completed_at));
+                                    return (
+                                      <TooltipProvider>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Badge 
+                                              variant="outline"
+                                              className={
+                                                daysRemaining <= 3 ? "border-destructive text-destructive bg-destructive/10" :
+                                                daysRemaining <= 7 ? "border-amber-500 text-amber-600 bg-amber-500/10" :
+                                                "border-muted-foreground/30 text-muted-foreground"
+                                              }
+                                            >
+                                              <AlertTriangle className="h-3 w-3 mr-1" />
+                                              {daysRemaining <= 0 ? "SCADUTO" : `${daysRemaining}g`}
+                                            </Badge>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="text-sm">
+                                              {daysRemaining <= 0 
+                                                ? "Dispositivo in alienazione" 
+                                                : `${daysRemaining} giorni al ritiro (Art. 2756 c.c.)`
+                                              }
+                                            </p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    );
+                                  })()}
                                 </div>
                                 <p className="text-sm text-muted-foreground line-clamp-1">
                                   {repair.device.reported_issue}
