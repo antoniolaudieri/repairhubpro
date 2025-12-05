@@ -507,7 +507,8 @@ export function EnhancedQuoteDialog({
 
     setLoading(true);
     try {
-      const partsCost = getPartsCost();
+      // Store the actual purchase cost for commission calculation
+      const partsPurchaseCost = getPartsPurchaseCost();
       const laborCost = getLaborCost() + getServicesCost();
       const totalCost = getTotalCost();
 
@@ -521,6 +522,7 @@ export function EnhancedQuoteDialog({
         unitPrice: i.unitPrice,
         total: i.total,
         type: i.type,
+        purchaseCost: i.purchaseCost || 0,
       }));
 
       const { error } = await supabase.from("quotes").insert({
@@ -532,7 +534,7 @@ export function EnhancedQuoteDialog({
         diagnosis: data.diagnosis || null,
         items: quoteItems,
         labor_cost: laborCost,
-        parts_cost: partsCost,
+        parts_cost: partsPurchaseCost, // Store purchase cost for commission calculation
         total_cost: totalCost,
         notes: data.notes || null,
         valid_until: validUntil,
