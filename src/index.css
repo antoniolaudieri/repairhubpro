@@ -254,22 +254,3 @@ All colors MUST be HSL.
   }
 }
 
-/* Leaflet map z-index fixes to prevent overlapping navigation */
-.leaflet-container {
-  z-index: 0 !important;
-}
-
-.leaflet-pane,
-.leaflet-control-container,
-.leaflet-top,
-.leaflet-bottom {
-  z-index: 1 !important;
-}
-
-.leaflet-popup-pane {
-  z-index: 40 !important;
-}
-
-.leaflet-tooltip-pane {
-  z-index: 40 !important;
-}
