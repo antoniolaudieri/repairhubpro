@@ -15,11 +15,14 @@ import {
   CheckCircle, 
   XCircle,
   Loader2,
-  MapPin
+  MapPin,
+  CalendarDays,
+  List
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
+import { AppointmentCalendar } from "@/components/corner/AppointmentCalendar";
 
 interface Appointment {
   id: string;
@@ -45,6 +48,7 @@ export default function CornerPrenotazioni() {
   const [loading, setLoading] = useState(true);
   const [cornerId, setCornerId] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
 
   // Fetch corner ID
   useEffect(() => {
@@ -162,11 +166,35 @@ export default function CornerPrenotazioni() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Prenotazioni</h1>
-        <p className="text-muted-foreground">
-          Gestisci le prenotazioni ricevute dai clienti
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Prenotazioni</h1>
+          <p className="text-muted-foreground">
+            Gestisci le prenotazioni ricevute dai clienti
+          </p>
+        </div>
+        
+        {/* View Toggle */}
+        <div className="flex items-center border rounded-lg overflow-hidden">
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("list")}
+            className="rounded-none gap-2"
+          >
+            <List className="h-4 w-4" />
+            Lista
+          </Button>
+          <Button
+            variant={viewMode === "calendar" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => setViewMode("calendar")}
+            className="rounded-none gap-2"
+          >
+            <CalendarDays className="h-4 w-4" />
+            Calendario
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -212,124 +240,137 @@ export default function CornerPrenotazioni() {
         </Card>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="pending" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="pending" className="relative">
-            In Attesa
-            {pendingCount > 0 && (
-              <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-500 text-white rounded-full">
-                {pendingCount}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="confirmed">Confermate</TabsTrigger>
-          <TabsTrigger value="all">Tutte</TabsTrigger>
-        </TabsList>
+      {/* Calendar View */}
+      {viewMode === "calendar" && (
+        <AppointmentCalendar 
+          appointments={appointments}
+          onSelectAppointment={(apt) => {
+            // Scroll to appointment in list view
+            setViewMode("list");
+          }}
+        />
+      )}
 
-        {["pending", "confirmed", "all"].map((tab) => (
-          <TabsContent key={tab} value={tab} className="space-y-4">
-            {filterByStatus(tab === "all" ? null : tab).length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessuna prenotazione {tab === "pending" ? "in attesa" : tab === "confirmed" ? "confermata" : ""}</p>
-                </CardContent>
-              </Card>
-            ) : (
-              filterByStatus(tab === "all" ? null : tab).map((appointment) => (
-                <Card key={appointment.id} className="overflow-hidden">
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-1">
-                        <CardTitle className="text-lg flex items-center gap-2">
-                          <User className="h-4 w-4" />
-                          {appointment.customer_name}
-                        </CardTitle>
-                        <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {appointment.customer_phone}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {appointment.customer_email}
-                          </span>
-                        </div>
-                      </div>
-                      {getStatusBadge(appointment.status)}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {/* Device Info */}
-                    <div className="flex items-center gap-2 text-sm">
-                      {getDeviceIcon(appointment.device_type)}
-                      <span className="font-medium">
-                        {appointment.device_type}
-                        {appointment.device_brand && ` - ${appointment.device_brand}`}
-                        {appointment.device_model && ` ${appointment.device_model}`}
-                      </span>
-                    </div>
+      {/* List View - Tabs */}
+      {viewMode === "list" && (
+        <Tabs defaultValue="pending" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="pending" className="relative">
+              In Attesa
+              {pendingCount > 0 && (
+                <span className="ml-2 px-2 py-0.5 text-xs bg-yellow-500 text-white rounded-full">
+                  {pendingCount}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="confirmed">Confermate</TabsTrigger>
+            <TabsTrigger value="all">Tutte</TabsTrigger>
+          </TabsList>
 
-                    {/* Issue */}
-                    <div className="text-sm">
-                      <span className="font-medium">Problema:</span>{" "}
-                      <span className="text-muted-foreground">{appointment.issue_description}</span>
-                    </div>
-
-                    {/* Date & Time */}
-                    <div className="flex items-center gap-4 text-sm">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4 text-primary" />
-                        {format(new Date(appointment.preferred_date), "d MMMM yyyy", { locale: it })}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4 text-primary" />
-                        {appointment.preferred_time}
-                      </span>
-                    </div>
-
-                    {/* Location if available */}
-                    {appointment.customer_latitude && appointment.customer_longitude && (
-                      <div className="text-sm text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        Posizione cliente salvata
-                      </div>
-                    )}
-
-                    {/* Actions for pending */}
-                    {appointment.status === "pending" && (
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          size="sm"
-                          onClick={() => updateStatus(appointment.id, "confirmed")}
-                          disabled={processingId === appointment.id}
-                        >
-                          {processingId === appointment.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                          )}
-                          Conferma
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => updateStatus(appointment.id, "cancelled")}
-                          disabled={processingId === appointment.id}
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Rifiuta
-                        </Button>
-                      </div>
-                    )}
+          {["pending", "confirmed", "all"].map((tab) => (
+            <TabsContent key={tab} value={tab} className="space-y-4">
+              {filterByStatus(tab === "all" ? null : tab).length === 0 ? (
+                <Card>
+                  <CardContent className="py-12 text-center text-muted-foreground">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nessuna prenotazione {tab === "pending" ? "in attesa" : tab === "confirmed" ? "confermata" : ""}</p>
                   </CardContent>
                 </Card>
-              ))
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
+              ) : (
+                filterByStatus(tab === "all" ? null : tab).map((appointment) => (
+                  <Card key={appointment.id} className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div className="space-y-1">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <User className="h-4 w-4" />
+                            {appointment.customer_name}
+                          </CardTitle>
+                          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {appointment.customer_phone}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {appointment.customer_email}
+                            </span>
+                          </div>
+                        </div>
+                        {getStatusBadge(appointment.status)}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {/* Device Info */}
+                      <div className="flex items-center gap-2 text-sm">
+                        {getDeviceIcon(appointment.device_type)}
+                        <span className="font-medium">
+                          {appointment.device_type}
+                          {appointment.device_brand && ` - ${appointment.device_brand}`}
+                          {appointment.device_model && ` ${appointment.device_model}`}
+                        </span>
+                      </div>
+
+                      {/* Issue */}
+                      <div className="text-sm">
+                        <span className="font-medium">Problema:</span>{" "}
+                        <span className="text-muted-foreground">{appointment.issue_description}</span>
+                      </div>
+
+                      {/* Date & Time */}
+                      <div className="flex items-center gap-4 text-sm">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4 text-primary" />
+                          {format(new Date(appointment.preferred_date), "d MMMM yyyy", { locale: it })}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-4 w-4 text-primary" />
+                          {appointment.preferred_time}
+                        </span>
+                      </div>
+
+                      {/* Location if available */}
+                      {appointment.customer_latitude && appointment.customer_longitude && (
+                        <div className="text-sm text-muted-foreground flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          Posizione cliente salvata
+                        </div>
+                      )}
+
+                      {/* Actions for pending */}
+                      {appointment.status === "pending" && (
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            size="sm"
+                            onClick={() => updateStatus(appointment.id, "confirmed")}
+                            disabled={processingId === appointment.id}
+                          >
+                            {processingId === appointment.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                            )}
+                            Conferma
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => updateStatus(appointment.id, "cancelled")}
+                            disabled={processingId === appointment.id}
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Rifiuta
+                          </Button>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
     </div>
   );
 }
