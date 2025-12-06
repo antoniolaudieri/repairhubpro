@@ -174,6 +174,9 @@ export default function CustomerHome() {
     issueDescription: string;
     preferredDate: Date;
     preferredTime: string;
+    cornerId: string;
+    customerLatitude?: number;
+    customerLongitude?: number;
   }) => {
     setLoading(true);
 
@@ -188,13 +191,16 @@ export default function CustomerHome() {
         issue_description: data.issueDescription,
         preferred_date: format(data.preferredDate, "yyyy-MM-dd"),
         preferred_time: data.preferredTime,
+        corner_id: data.cornerId,
+        customer_latitude: data.customerLatitude || null,
+        customer_longitude: data.customerLongitude || null,
       }]);
 
       if (error) throw error;
 
       toast({
         title: "Prenotazione Inviata!",
-        description: "Ti contatteremo presto per confermare l'appuntamento.",
+        description: "Il Corner selezionato riceverà la tua richiesta e ti contatterà presto.",
       });
 
       setBookingOpen(false);
