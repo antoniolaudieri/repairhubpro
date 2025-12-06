@@ -366,6 +366,40 @@ export default function CentroInventario() {
             </div>
             <div className="flex gap-2">
               <UtopyaPriceLookup 
+                centroId={centroId || undefined}
+                showSaveButton={true}
+                onSaveToInventory={async (product) => {
+                  if (!centroId) {
+                    toast.error('Centro non trovato');
+                    return;
+                  }
+                  try {
+                    const { error } = await supabase
+                      .from('spare_parts')
+                      .insert({
+                        name: product.name,
+                        category: 'Ricambi',
+                        cost: product.priceNumeric || 0,
+                        selling_price: product.priceNumeric ? Math.round(product.priceNumeric * 1.4) : 0,
+                        stock_quantity: 0,
+                        minimum_stock: 1,
+                        supplier: 'Utopya',
+                        supplier_code: product.sku || null,
+                        brand: product.brand || null,
+                        image_url: product.image || null,
+                        notes: `Importato da Utopya - ${product.url}`,
+                        centro_id: centroId
+                      });
+                    
+                    if (error) throw error;
+                    
+                    toast.success('Prodotto salvato in inventario');
+                    fetchParts();
+                  } catch (error) {
+                    console.error('Error saving to inventory:', error);
+                    toast.error('Errore nel salvataggio');
+                  }
+                }}
                 trigger={
                   <Button variant="outline" className="gap-2 border-orange-500/30 text-orange-600 hover:bg-orange-500/10">
                     <ExternalLink className="h-4 w-4" />
