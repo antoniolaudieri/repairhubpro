@@ -135,8 +135,8 @@ export function CentroSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <div className="h-full bg-sidebar text-sidebar-foreground flex flex-col">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border h-full">
+      <div className="min-h-full h-full bg-sidebar text-sidebar-foreground flex flex-col">
         <SidebarHeader className="h-16 border-b border-sidebar-border flex items-center justify-center">
           <motion.div 
             className={`flex items-center gap-3 transition-all duration-300 ${isCollapsed ? 'px-2' : 'px-4'}`}

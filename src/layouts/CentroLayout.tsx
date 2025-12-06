@@ -37,9 +37,9 @@ export const CentroLayout = ({ children }: CentroLayoutProps) => {
   return (
     <SidebarProvider>
       <div className="h-screen flex w-full bg-background overflow-hidden">
-        <div className="h-full sticky top-0 flex-shrink-0">
+        <aside className="h-full flex-shrink-0">
           <CentroSidebar />
-        </div>
+        </aside>
         <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
           <header className="h-14 sm:h-16 border-b bg-card/50 backdrop-blur-xl flex items-center justify-between px-3 sm:px-4 lg:px-6 flex-shrink-0 shadow-sm">
             <div className="flex items-center">
