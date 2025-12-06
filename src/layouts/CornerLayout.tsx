@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   Home, 
   Plus, 
@@ -11,10 +12,12 @@ import {
   Menu, 
   X,
   Handshake,
-  Settings
+  Settings,
+  CalendarCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CornerNotificationCenter } from "@/components/corner/CornerNotificationCenter";
+import { useCornerAppointmentNotifications } from "@/hooks/useCornerAppointmentNotifications";
 
 interface CornerLayoutProps {
   children: ReactNode;
@@ -22,6 +25,7 @@ interface CornerLayoutProps {
 
 const navItems = [
   { to: "/corner", icon: Home, label: "Dashboard" },
+  { to: "/corner/prenotazioni", icon: CalendarCheck, label: "Prenotazioni", showBadge: true },
   { to: "/corner/nuova-segnalazione", icon: Plus, label: "Nuova Segnalazione" },
   { to: "/corner/segnalazioni", icon: List, label: "Le Mie Segnalazioni" },
   { to: "/corner/commissioni", icon: DollarSign, label: "Commissioni" },
@@ -33,6 +37,7 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { pendingAppointmentsCount } = useCornerAppointmentNotifications();
 
   const handleSignOut = async () => {
     await signOut();
@@ -70,6 +75,11 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
             >
               <item.icon className="h-5 w-5" />
               <span>{item.label}</span>
+              {item.showBadge && pendingAppointmentsCount > 0 && (
+                <Badge className="ml-auto bg-orange-500 text-white">
+                  {pendingAppointmentsCount}
+                </Badge>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -122,6 +132,11 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.label}</span>
+                {item.showBadge && pendingAppointmentsCount > 0 && (
+                  <Badge className="ml-auto bg-orange-500 text-white">
+                    {pendingAppointmentsCount}
+                  </Badge>
+                )}
               </NavLink>
             ))}
             <Button

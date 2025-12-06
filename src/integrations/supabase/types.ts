@@ -49,8 +49,11 @@ export type Database = {
       }
       appointments: {
         Row: {
+          corner_id: string | null
           created_at: string
           customer_email: string
+          customer_latitude: number | null
+          customer_longitude: number | null
           customer_name: string
           customer_phone: string
           device_brand: string | null
@@ -65,8 +68,11 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          corner_id?: string | null
           created_at?: string
           customer_email: string
+          customer_latitude?: number | null
+          customer_longitude?: number | null
           customer_name: string
           customer_phone: string
           device_brand?: string | null
@@ -81,8 +87,11 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          corner_id?: string | null
           created_at?: string
           customer_email?: string
+          customer_latitude?: number | null
+          customer_longitude?: number | null
           customer_name?: string
           customer_phone?: string
           device_brand?: string | null
@@ -96,7 +105,15 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "appointments_corner_id_fkey"
+            columns: ["corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       centri_assistenza: {
         Row: {
