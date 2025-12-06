@@ -374,11 +374,71 @@ export default function CentroInventario() {
                     return;
                   }
                   try {
+                    // Extract category from product name
+                    const nameLower = product.name.toLowerCase();
+                    let category = 'Ricambi';
+                    if (nameLower.includes('display') || nameLower.includes('lcd') || nameLower.includes('schermo') || nameLower.includes('oled')) {
+                      category = 'Display';
+                    } else if (nameLower.includes('batteria') || nameLower.includes('battery')) {
+                      category = 'Batteria';
+                    } else if (nameLower.includes('connettore') || nameLower.includes('dock') || nameLower.includes('charging') || nameLower.includes('ricarica')) {
+                      category = 'Connettore';
+                    } else if (nameLower.includes('fotocamera') || nameLower.includes('camera') || nameLower.includes('cam')) {
+                      category = 'Fotocamera';
+                    } else if (nameLower.includes('altoparlante') || nameLower.includes('speaker') || nameLower.includes('earpiece') || nameLower.includes('suoneria')) {
+                      category = 'Altoparlante';
+                    } else if (nameLower.includes('microfono') || nameLower.includes('mic')) {
+                      category = 'Microfono';
+                    } else if (nameLower.includes('tasto') || nameLower.includes('button') || nameLower.includes('power') || nameLower.includes('volume')) {
+                      category = 'Tasto';
+                    } else if (nameLower.includes('cover') || nameLower.includes('back') || nameLower.includes('scocca') || nameLower.includes('housing') || nameLower.includes('coque')) {
+                      category = 'Cover';
+                    } else if (nameLower.includes('vetro') || nameLower.includes('glass') || nameLower.includes('lens')) {
+                      category = 'Vetro';
+                    } else if (nameLower.includes('flex') || nameLower.includes('flat') || nameLower.includes('cavo')) {
+                      category = 'Flex';
+                    } else if (nameLower.includes('scheda madre') || nameLower.includes('motherboard') || nameLower.includes('logic board')) {
+                      category = 'Scheda Madre';
+                    } else if (nameLower.includes('accessori') || nameLower.includes('pellicola') || nameLower.includes('custodia') || nameLower.includes('caricatore')) {
+                      category = 'Accessori';
+                    }
+                    
+                    // Extract model compatibility from product name
+                    let modelCompatibility = '';
+                    // Common patterns: iPhone 15 Pro Max, Galaxy S24, Redmi Note 13, etc.
+                    const modelPatterns = [
+                      /iphone\s*(\d+\s*(?:pro\s*max|pro|plus|mini)?)/i,
+                      /galaxy\s*(s\d+\s*(?:ultra|plus|\+)?|a\d+|z\s*(?:fold|flip)\s*\d*)/i,
+                      /redmi\s*(?:note\s*)?(\d+\s*(?:pro|ultra)?)/i,
+                      /xiaomi\s*(\d+\s*(?:t|pro|ultra)?)/i,
+                      /huawei\s*(p\d+|mate\s*\d+|nova\s*\d+)/i,
+                      /pixel\s*(\d+\s*(?:pro|a)?)/i,
+                      /oneplus\s*(\d+\s*(?:pro|t)?)/i,
+                      /oppo\s*(find\s*x\d+|reno\s*\d+|a\d+)/i,
+                      /ipad\s*(pro|air|mini)?\s*(\d+(?:\.\d+)?)?/i
+                    ];
+                    
+                    for (const pattern of modelPatterns) {
+                      const match = product.name.match(pattern);
+                      if (match) {
+                        modelCompatibility = match[0].trim();
+                        break;
+                      }
+                    }
+                    
+                    // If no pattern matched, try to extract model from name (e.g., "Display iPhone 15 Pro")
+                    if (!modelCompatibility) {
+                      const parts = product.name.split(/[-–—]/);
+                      if (parts.length > 1) {
+                        modelCompatibility = parts.slice(1).join(' ').trim();
+                      }
+                    }
+                    
                     const { error } = await supabase
                       .from('spare_parts')
                       .insert({
                         name: product.name,
-                        category: 'Ricambi',
+                        category: category,
                         cost: product.priceNumeric || 0,
                         selling_price: product.priceNumeric ? Math.round(product.priceNumeric * 1.4) : 0,
                         stock_quantity: 0,
@@ -387,13 +447,14 @@ export default function CentroInventario() {
                         supplier_code: product.sku || null,
                         brand: product.brand || null,
                         image_url: product.image || null,
+                        model_compatibility: modelCompatibility || null,
                         notes: `Importato da Utopya - ${product.url}`,
                         centro_id: centroId
                       });
                     
                     if (error) throw error;
                     
-                    toast.success('Prodotto salvato in inventario');
+                    toast.success(`Salvato in "${category}"${modelCompatibility ? ` - ${modelCompatibility}` : ''}`);
                     fetchParts();
                   } catch (error) {
                     console.error('Error saving to inventory:', error);
