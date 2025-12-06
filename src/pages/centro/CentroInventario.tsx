@@ -820,12 +820,17 @@ export default function CentroInventario() {
                               {part.selling_price ? `€${part.selling_price.toFixed(2)}` : "-"}
                             </div>
                           </div>
-                          {part.supplier_code && (
+                          {part.supplier === 'Utopya' && (
                             <Button
                               variant="ghost"
                               size="sm"
                               className="w-full mt-2 text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                              onClick={() => window.open(`https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(part.name)}`, '_blank')}
+                              onClick={() => {
+                                // Extract URL from notes if saved from Utopya
+                                const urlMatch = part.notes?.match(/https:\/\/www\.utopya\.it\/[^\s]+/);
+                                const url = urlMatch ? urlMatch[0] : `https://www.utopya.it/catalogsearch/result/?q=${encodeURIComponent(part.supplier_code || part.name)}`;
+                                window.open(url, '_blank');
+                              }}
                             >
                               <ExternalLink className="h-3 w-3 mr-1" /> Acquista su Utopya
                             </Button>
