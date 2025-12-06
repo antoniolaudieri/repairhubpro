@@ -28,6 +28,7 @@ import CornerSegnalazioni from "@/pages/corner/CornerSegnalazioni";
 import CornerCommissioni from "@/pages/corner/CornerCommissioni";
 import CornerPartnership from "@/pages/corner/CornerPartnership";
 import CornerImpostazioni from "@/pages/corner/CornerImpostazioni";
+import CornerPrenotazioni from "@/pages/corner/CornerPrenotazioni";
 import RiparatoreDashboard from "@/pages/RiparatoreDashboard";
 import CentroDashboard from "@/pages/CentroDashboard";
 import CentroLavori from "@/pages/centro/CentroLavori";
@@ -219,6 +220,14 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCorner>
               <CornerImpostazioni />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/corner/prenotazioni"
+          element={
+            <ProtectedRoute requireCorner>
+              <CornerPrenotazioni />
             </ProtectedRoute>
           }
         />

@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Smartphone, Tablet, Laptop, Monitor, ChevronRight, ChevronLeft, Check } from "lucide-react";
+import { Calendar, Smartphone, Tablet, Laptop, Monitor, ChevronRight, ChevronLeft, Check, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { CornerSelector } from "./CornerSelector";
 
 const bookingSchema = z.object({
   customerName: z.string().min(2, "Nome deve essere almeno 2 caratteri"),
@@ -24,6 +25,9 @@ const bookingSchema = z.object({
   issueDescription: z.string().min(10, "Descrivi il problema (minimo 10 caratteri)"),
   preferredDate: z.date({ required_error: "Seleziona una data" }),
   preferredTime: z.string().min(1, "Seleziona un orario"),
+  cornerId: z.string().min(1, "Seleziona un Corner"),
+  customerLatitude: z.number().optional(),
+  customerLongitude: z.number().optional(),
 });
 
 type BookingFormData = z.infer<typeof bookingSchema>;
@@ -54,7 +58,7 @@ const TIME_SLOTS = [
 
 export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: BookingWizardProps) {
   const [step, setStep] = useState(1);
-  const totalSteps = 3;
+  const totalSteps = 4;
 
   const form = useForm<BookingFormData>({
     resolver: zodResolver(bookingSchema),
@@ -68,6 +72,7 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
       deviceModel: "",
       issueDescription: "",
       preferredTime: "",
+      cornerId: "",
     },
   });
 
@@ -79,6 +84,7 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
       form.setValue("customerPhone", initialCustomerData.phone);
     }
   }, [initialCustomerData, form]);
+
   const validateStep = async (currentStep: number): Promise<boolean> => {
     let fieldsToValidate: (keyof BookingFormData)[] = [];
 
@@ -91,6 +97,9 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
         break;
       case 3:
         fieldsToValidate = ["preferredDate", "preferredTime"];
+        break;
+      case 4:
+        fieldsToValidate = ["cornerId"];
         break;
     }
 
@@ -115,14 +124,20 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
     await onSubmit(data);
   };
 
-  const progress = (step / totalSteps) * 100;
+  const handleCornerSelect = (cornerId: string, customerCoords?: { lat: number; lng: number }) => {
+    form.setValue("cornerId", cornerId);
+    if (customerCoords) {
+      form.setValue("customerLatitude", customerCoords.lat);
+      form.setValue("customerLongitude", customerCoords.lng);
+    }
+  };
 
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="flex justify-between mb-2">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div key={s} className="flex items-center">
               <div
                 className={cn(
@@ -136,10 +151,10 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
               >
                 {step > s ? <Check className="w-4 h-4" /> : s}
               </div>
-              {s < 3 && (
+              {s < 4 && (
                 <div
                   className={cn(
-                    "h-1 w-20 mx-2 transition-colors",
+                    "h-1 w-12 sm:w-16 mx-1 sm:mx-2 transition-colors",
                     step > s ? "bg-primary" : "bg-muted"
                   )}
                 />
@@ -148,9 +163,10 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
           ))}
         </div>
         <div className="flex justify-between text-xs text-muted-foreground mt-2">
-          <span>Dati Personali</span>
+          <span>Dati</span>
           <span>Dispositivo</span>
-          <span>Appuntamento</span>
+          <span>Data</span>
+          <span>Corner</span>
         </div>
       </div>
 
@@ -398,10 +414,45 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
                     </p>
                   )}
                 </div>
+              </div>
+            </motion.div>
+          )}
 
-                {/* Summary */}
+          {/* Step 4: Corner Selection */}
+          {step === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <h3 className="text-2xl font-semibold flex items-center gap-2">
+                  <Store className="h-6 w-6 text-primary" />
+                  Scegli il Punto Consegna
+                </h3>
+                <p className="text-muted-foreground">
+                  Seleziona il Corner più vicino a te dove consegnare il dispositivo
+                </p>
+              </div>
+
+              <CornerSelector
+                selectedCornerId={form.watch("cornerId")}
+                onSelect={handleCornerSelect}
+              />
+
+              {form.formState.errors.cornerId && (
+                <p className="text-sm text-destructive">
+                  {form.formState.errors.cornerId.message}
+                </p>
+              )}
+
+              {/* Summary */}
+              {form.watch("cornerId") && (
                 <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-                  <h4 className="font-medium">Riepilogo</h4>
+                  <h4 className="font-medium">Riepilogo Prenotazione</h4>
                   <div className="text-sm text-muted-foreground space-y-1">
                     <p>
                       <span className="font-medium text-foreground">Cliente:</span>{" "}
@@ -414,13 +465,17 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
                       {form.watch("deviceBrand")} {form.watch("deviceModel")}
                     </p>
                     <p>
+                      <span className="font-medium text-foreground">Data:</span>{" "}
+                      {form.watch("preferredDate") && format(form.watch("preferredDate"), "PPP")} alle {form.watch("preferredTime")}
+                    </p>
+                    <p>
                       <span className="font-medium text-foreground">Problema:</span>{" "}
                       {form.watch("issueDescription")?.substring(0, 60)}
                       {(form.watch("issueDescription")?.length || 0) > 60 ? "..." : ""}
                     </p>
                   </div>
                 </div>
-              </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -443,7 +498,7 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
               <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
           ) : (
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !form.watch("cornerId")}>
               {isSubmitting ? "Invio..." : "Conferma Prenotazione"}
             </Button>
           )}
