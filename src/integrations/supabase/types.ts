@@ -1034,6 +1034,8 @@ export type Database = {
       }
       quotes: {
         Row: {
+          commission_prepaid_amount: number | null
+          commission_prepaid_at: string | null
           created_at: string
           created_by: string | null
           customer_id: string
@@ -1057,6 +1059,8 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          commission_prepaid_amount?: number | null
+          commission_prepaid_at?: string | null
           created_at?: string
           created_by?: string | null
           customer_id: string
@@ -1080,6 +1084,8 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          commission_prepaid_amount?: number | null
+          commission_prepaid_at?: string | null
           created_at?: string
           created_by?: string | null
           customer_id?: string
