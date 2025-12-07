@@ -35,6 +35,7 @@ import { toast } from "sonner";
 import { CreditBalanceWidget } from "@/components/credit/CreditBalanceWidget";
 import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
 import { PendingJobOffersBanner } from "@/components/centro/PendingJobOffersBanner";
+import { PrepaidCommissionsHistory } from "@/components/centro/PrepaidCommissionsHistory";
 
 interface Centro {
   id: string;
@@ -768,6 +769,11 @@ export default function CentroDashboard() {
                 </div>
               </Card>
             </motion.div>
+
+            {/* Prepaid Commissions History */}
+            {centro && (
+              <PrepaidCommissionsHistory centroId={centro.id} />
+            )}
 
             {/* Main Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
