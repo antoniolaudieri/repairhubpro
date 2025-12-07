@@ -460,7 +460,7 @@ export default function CentroCommissioni() {
                         </div>
                         <div>
                           <p className="font-semibold">Corner</p>
-                          <p className="text-xs text-muted-foreground">10% del margine</p>
+                          <p className="text-xs text-muted-foreground">{platformSettings.default_corner_commission_rate}% del margine</p>
                         </div>
                       </div>
                       <div className="space-y-2">
