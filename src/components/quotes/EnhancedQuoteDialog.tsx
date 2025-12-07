@@ -488,13 +488,16 @@ export function EnhancedQuoteDialog({
   };
   
   const getPlatformCoverageAmount = () => {
-    if (!coverPlatformCost || !repairRequestId) return 0;
+    if (!coverPlatformCost) return 0;
     const baseMargin = getBaseGrossMargin();
     const centroRate = centroCommissionRate / 100;
     const platformRate = platformCommissionRate / 100;
     // Coverage = (platformRate * baseMargin) / centroRate
     return (platformRate * baseMargin) / centroRate;
   };
+  
+  // Check if this is a direct repair (no Corner involved)
+  const isDirectRepair = !repairRequestId;
   
   const getTotalCost = () => getBaseTotalCost() + getCornerCoverageAmount() + getPlatformCoverageAmount();
   const getGrossMargin = () => getTotalCost() - getPartsPurchaseCost();
@@ -963,8 +966,8 @@ export function EnhancedQuoteDialog({
               <span>€{(getLaborCost() + getServicesCost()).toFixed(2)}</span>
             </div>
             
-            {/* Cost Coverage Toggles - Only for Corner jobs */}
-            {repairRequestId && items.length > 0 && (
+            {/* Cost Coverage Toggles - For Corner jobs: both toggles, for direct repairs: only platform */}
+            {items.length > 0 && (
               <div className="mt-3 pt-3 border-t border-dashed space-y-3">
                 <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                   🎯 Copri Costi Commissioni
@@ -974,23 +977,25 @@ export function EnhancedQuoteDialog({
                 </p>
                 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {/* Cover Corner Cost */}
-                  <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${coverCornerCost ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700' : 'bg-card border-border'}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">📍 Corner ({cornerCommissionRate}%)</span>
-                      {coverCornerCost && (
-                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                          +€{getCornerCoverageAmount().toFixed(2)}
-                        </Badge>
-                      )}
+                  {/* Cover Corner Cost - Only for Corner jobs */}
+                  {!isDirectRepair && (
+                    <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${coverCornerCost ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700' : 'bg-card border-border'}`}>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">📍 Corner ({cornerCommissionRate}%)</span>
+                        {coverCornerCost && (
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                            +€{getCornerCoverageAmount().toFixed(2)}
+                          </Badge>
+                        )}
+                      </div>
+                      <Switch
+                        checked={coverCornerCost}
+                        onCheckedChange={setCoverCornerCost}
+                      />
                     </div>
-                    <Switch
-                      checked={coverCornerCost}
-                      onCheckedChange={setCoverCornerCost}
-                    />
-                  </div>
+                  )}
                   
-                  {/* Cover Platform Cost */}
+                  {/* Cover Platform Cost - Always visible */}
                   <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${coverPlatformCost ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-700' : 'bg-card border-border'}`}>
                     <div className="flex items-center gap-2">
                       <span className="text-sm">🏢 Piattaforma ({platformCommissionRate}%)</span>
@@ -1014,8 +1019,8 @@ export function EnhancedQuoteDialog({
               <span className="text-primary">€{getTotalCost().toFixed(2)}</span>
             </div>
             
-            {/* Commission breakdown for Corner jobs */}
-            {repairRequestId && items.length > 0 && (
+            {/* Commission breakdown */}
+            {items.length > 0 && (
               <div className="mt-4 pt-4 border-t border-dashed space-y-2">
                 <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
                   📊 Ripartizione Guadagni
@@ -1029,13 +1034,15 @@ export function EnhancedQuoteDialog({
                   <span>€{getGrossMargin().toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
-                  <span>🏪 Tuo Guadagno (Centro {centroCommissionRate}%):</span>
-                  <span className="font-semibold">€{getCentroCommission().toFixed(2)}</span>
+                  <span>🏪 Tuo Guadagno (Centro {isDirectRepair ? (100 - platformCommissionRate) : centroCommissionRate}%):</span>
+                  <span className="font-semibold">€{isDirectRepair ? (getGrossMargin() * ((100 - platformCommissionRate) / 100)).toFixed(2) : getCentroCommission().toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
-                  <span>📍 Guadagno Corner ({cornerCommissionRate}%):</span>
-                  <span className="font-semibold">€{getCornerCommission().toFixed(2)}</span>
-                </div>
+                {!isDirectRepair && (
+                  <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
+                    <span>📍 Guadagno Corner ({cornerCommissionRate}%):</span>
+                    <span className="font-semibold">€{getCornerCommission().toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-sm text-purple-600 dark:text-purple-400">
                   <span>🏢 Commissione Piattaforma ({platformCommissionRate}%):</span>
                   <span className="font-semibold">€{getPlatformCommission().toFixed(2)}</span>
