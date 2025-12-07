@@ -1366,6 +1366,8 @@ export type Database = {
           acconto: number | null
           ai_suggestions: string | null
           assigned_to: string | null
+          commission_prepaid_amount: number | null
+          commission_prepaid_at: string | null
           completed_at: string | null
           created_at: string
           customer_email: string | null
@@ -1393,6 +1395,8 @@ export type Database = {
           acconto?: number | null
           ai_suggestions?: string | null
           assigned_to?: string | null
+          commission_prepaid_amount?: number | null
+          commission_prepaid_at?: string | null
           completed_at?: string | null
           created_at?: string
           customer_email?: string | null
@@ -1420,6 +1424,8 @@ export type Database = {
           acconto?: number | null
           ai_suggestions?: string | null
           assigned_to?: string | null
+          commission_prepaid_amount?: number | null
+          commission_prepaid_at?: string | null
           completed_at?: string | null
           created_at?: string
           customer_email?: string | null
