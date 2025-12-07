@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Trash2, Sparkles, Loader2, Search, ExternalLink, Package, Wrench, Check, Headphones, Smartphone, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Sparkles, Loader2, Search, ExternalLink, Package, Wrench, Check, Headphones, Smartphone, AlertTriangle, ToggleLeft } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
@@ -130,6 +131,10 @@ export function EnhancedQuoteDialog({
   
   // Payment collection method for Corner jobs
   const [paymentCollectionMethod, setPaymentCollectionMethod] = useState<'direct' | 'via_corner'>('direct');
+  
+  // Cost coverage flags (only for Centro - disabled by default)
+  const [coverCornerCost, setCoverCornerCost] = useState(false);
+  const [coverPlatformCost, setCoverPlatformCost] = useState(false);
   
   // Utopya search
   const [utopyaSearchQuery, setUtopyaSearchQuery] = useState("");
@@ -464,13 +469,33 @@ export function EnhancedQuoteDialog({
   const getPartsCost = () => items.filter(i => i.type === 'part').reduce((sum, i) => sum + i.total, 0);
   const getLaborCost = () => items.filter(i => i.type === 'labor').reduce((sum, i) => sum + i.total, 0);
   const getServicesCost = () => items.filter(i => i.type === 'service').reduce((sum, i) => sum + i.total, 0);
-  const getTotalCost = () => items.reduce((sum, i) => sum + i.total, 0);
+  const getBaseTotalCost = () => items.reduce((sum, i) => sum + i.total, 0);
   
   // Commission calculations for Corner jobs (using dynamic rates from database)
   const getPartsPurchaseCost = () => items.filter(i => i.type === 'part').reduce((sum, i) => sum + ((i.purchaseCost || 0) * i.quantity), 0);
+  const getBaseGrossMargin = () => getBaseTotalCost() - getPartsPurchaseCost();
+  
+  // Calculate additional costs to cover commissions
+  const getCornerCoverageAmount = () => {
+    if (!coverCornerCost || !repairRequestId) return 0;
+    // To cover corner cost, we need to add enough so the margin still covers it
+    const baseMargin = getBaseGrossMargin();
+    const cornerCost = baseMargin * (cornerCommissionRate / 100);
+    return cornerCost;
+  };
+  
+  const getPlatformCoverageAmount = () => {
+    if (!coverPlatformCost || !repairRequestId) return 0;
+    const baseMargin = getBaseGrossMargin();
+    const platformCost = baseMargin * (platformCommissionRate / 100);
+    return platformCost;
+  };
+  
+  const getTotalCost = () => getBaseTotalCost() + getCornerCoverageAmount() + getPlatformCoverageAmount();
   const getGrossMargin = () => getTotalCost() - getPartsPurchaseCost();
   const getCentroCommission = () => getGrossMargin() * (centroCommissionRate / 100);
   const getCornerCommission = () => getGrossMargin() * (cornerCommissionRate / 100);
+  const getPlatformCommission = () => getGrossMargin() * (platformCommissionRate / 100);
 
   const filteredInventory = spareParts.filter(part => {
     if (!inventorySearch) return false;
@@ -932,6 +957,53 @@ export function EnhancedQuoteDialog({
               <span>Lavorazioni + Servizi:</span>
               <span>€{(getLaborCost() + getServicesCost()).toFixed(2)}</span>
             </div>
+            
+            {/* Cost Coverage Toggles - Only for Corner jobs */}
+            {repairRequestId && items.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-dashed space-y-3">
+                <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+                  🎯 Copri Costi Commissioni
+                </h4>
+                <p className="text-xs text-muted-foreground">
+                  Attiva per aggiungere i costi delle commissioni al prezzo finale (il cliente paga di più, tu non ci rimetti)
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  {/* Cover Corner Cost */}
+                  <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${coverCornerCost ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700' : 'bg-card border-border'}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">📍 Corner ({cornerCommissionRate}%)</span>
+                      {coverCornerCost && (
+                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                          +€{getCornerCoverageAmount().toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                    <Switch
+                      checked={coverCornerCost}
+                      onCheckedChange={setCoverCornerCost}
+                    />
+                  </div>
+                  
+                  {/* Cover Platform Cost */}
+                  <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${coverPlatformCost ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-700' : 'bg-card border-border'}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">🏢 Piattaforma ({platformCommissionRate}%)</span>
+                      {coverPlatformCost && (
+                        <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                          +€{getPlatformCoverageAmount().toFixed(2)}
+                        </Badge>
+                      )}
+                    </div>
+                    <Switch
+                      checked={coverPlatformCost}
+                      onCheckedChange={setCoverPlatformCost}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="flex justify-between text-lg font-bold pt-2 border-t">
               <span>Totale Preventivo:</span>
               <span className="text-primary">€{getTotalCost().toFixed(2)}</span>
@@ -959,9 +1031,10 @@ export function EnhancedQuoteDialog({
                   <span>📍 Guadagno Corner ({cornerCommissionRate}%):</span>
                   <span className="font-semibold">€{getCornerCommission().toFixed(2)}</span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  * Piattaforma: {platformCommissionRate}% del margine
-                </p>
+                <div className="flex justify-between text-sm text-purple-600 dark:text-purple-400">
+                  <span>🏢 Commissione Piattaforma ({platformCommissionRate}%):</span>
+                  <span className="font-semibold">€{getPlatformCommission().toFixed(2)}</span>
+                </div>
               </div>
             )}
           </div>
