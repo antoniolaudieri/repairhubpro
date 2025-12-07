@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useRoleBasedRedirect } from "@/hooks/useRoleBasedRedirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,11 +12,11 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { user, signIn, signUp, userRoles, loading: authLoading } = useAuth();
-  const { getRedirectPath } = useRoleBasedRedirect();
+  const { user, signIn, signUp, userRoles, loading: authLoading, isPlatformAdmin, isTechnician, isAdmin, isCentroAdmin, isCentroTech, isRiparatore, isCorner } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
   const [waitingForRoles, setWaitingForRoles] = useState(false);
+  const hasRedirected = useRef(false);
   
   // Form states
   const [email, setEmail] = useState("");
@@ -25,24 +24,27 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
 
-  // Handle redirect after login with roles loaded
+  // Handle redirect after login with roles loaded - only once
   useEffect(() => {
-    if (user && !authLoading) {
-      if (userRoles.length > 0) {
-        const redirectPath = getRedirectPath();
-        navigate(redirectPath, { replace: true });
-      } else if (waitingForRoles) {
-        // Retry after a short delay if waiting for roles
-        const timeout = setTimeout(() => {
-          if (userRoles.length > 0) {
-            const redirectPath = getRedirectPath();
-            navigate(redirectPath, { replace: true });
-          }
-        }, 500);
-        return () => clearTimeout(timeout);
+    if (user && !authLoading && userRoles.length > 0 && !hasRedirected.current) {
+      hasRedirected.current = true;
+      
+      let redirectPath = "/customer-dashboard";
+      if (isPlatformAdmin) {
+        redirectPath = "/admin";
+      } else if (isTechnician || isAdmin) {
+        redirectPath = "/dashboard";
+      } else if (isCentroAdmin || isCentroTech) {
+        redirectPath = "/centro";
+      } else if (isRiparatore) {
+        redirectPath = "/riparatore";
+      } else if (isCorner) {
+        redirectPath = "/corner";
       }
+      
+      navigate(redirectPath, { replace: true });
     }
-  }, [user, userRoles, authLoading, navigate, getRedirectPath, waitingForRoles]);
+  }, [user, userRoles, authLoading, navigate, isPlatformAdmin, isTechnician, isAdmin, isCentroAdmin, isCentroTech, isRiparatore, isCorner]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
