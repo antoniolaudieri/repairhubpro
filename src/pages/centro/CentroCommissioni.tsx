@@ -39,6 +39,11 @@ interface Centro {
   commission_rate: number;
 }
 
+interface PlatformSettings {
+  platform_commission_rate: number;
+  default_corner_commission_rate: number;
+}
+
 interface RepairInfo {
   id: string;
   device_type?: string;
@@ -81,6 +86,10 @@ export default function CentroCommissioni() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>("current");
+  const [platformSettings, setPlatformSettings] = useState<PlatformSettings>({ 
+    platform_commission_rate: 10, 
+    default_corner_commission_rate: 10 
+  });
 
   const getMonthRange = (monthKey: string) => {
     const now = new Date();
@@ -104,6 +113,24 @@ export default function CentroCommissioni() {
     if (!user) return;
 
     try {
+      // Fetch platform settings
+      const { data: settingsData } = await supabase
+        .from("platform_settings")
+        .select("key, value")
+        .in("key", ["platform_commission_rate", "default_corner_commission_rate"]);
+      
+      if (settingsData) {
+        const settings: PlatformSettings = { 
+          platform_commission_rate: 10, 
+          default_corner_commission_rate: 10 
+        };
+        settingsData.forEach(s => {
+          if (s.key === "platform_commission_rate") settings.platform_commission_rate = s.value;
+          if (s.key === "default_corner_commission_rate") settings.default_corner_commission_rate = s.value;
+        });
+        setPlatformSettings(settings);
+      }
+
       const { data: centroData, error: centroError } = await supabase
         .from("centri_assistenza")
         .select("id, business_name, commission_rate")
@@ -407,7 +434,7 @@ export default function CentroCommissioni() {
                         </div>
                         <div>
                           <p className="font-semibold">Piattaforma</p>
-                          <p className="text-xs text-muted-foreground">20% del margine</p>
+                          <p className="text-xs text-muted-foreground">{platformSettings.platform_commission_rate}% del margine</p>
                         </div>
                       </div>
                       <div className="space-y-2">
