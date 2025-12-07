@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CentroLayout } from "@/layouts/CentroLayout";
@@ -18,7 +19,10 @@ import {
   Store,
   FileText,
   Wallet,
-  CreditCard
+  CreditCard,
+  Smartphone,
+  User,
+  ExternalLink
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -28,6 +32,16 @@ interface Centro {
   id: string;
   business_name: string;
   commission_rate: number;
+}
+
+interface RepairInfo {
+  id: string;
+  device_type?: string;
+  device_brand?: string;
+  device_model?: string;
+  issue_description?: string;
+  customer_name?: string;
+  source: 'direct' | 'corner';
 }
 
 interface Commission {
@@ -52,9 +66,11 @@ interface Commission {
   corner_paid_at: string | null;
   created_at: string;
   payment_collection_method?: string | null;
+  repair_info?: RepairInfo | null;
 }
 
 export default function CentroCommissioni() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [centro, setCentro] = useState<Centro | null>(null);
   const [commissions, setCommissions] = useState<Commission[]>([]);
@@ -105,28 +121,92 @@ export default function CentroCommissioni() {
 
         if (commissionsError) throw commissionsError;
         
-        // Fetch payment_collection_method from quotes for each commission
-        const commissionsWithPaymentMethod = await Promise.all(
+        // Fetch payment_collection_method and repair info for each commission
+        const commissionsWithDetails = await Promise.all(
           (commissionsData || []).map(async (commission) => {
-            if (commission.repair_request_id && commission.corner_id) {
-              const { data: quoteData } = await supabase
-                .from("quotes")
-                .select("payment_collection_method")
-                .eq("repair_request_id", commission.repair_request_id)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
+            let payment_collection_method: string | null = null;
+            let repair_info: RepairInfo | null = null;
+
+            // Fetch repair info based on source (direct repair or corner repair_request)
+            if (commission.repair_id) {
+              // Direct repair - fetch from repairs table
+              const { data: repairData } = await supabase
+                .from("repairs")
+                .select(`
+                  id,
+                  device:devices(
+                    device_type,
+                    brand,
+                    model,
+                    reported_issue,
+                    customer:customers(name)
+                  )
+                `)
+                .eq("id", commission.repair_id)
+                .single();
               
-              return {
-                ...commission,
-                payment_collection_method: quoteData?.payment_collection_method || 'direct'
-              };
+              if (repairData?.device) {
+                const device = repairData.device as any;
+                repair_info = {
+                  id: repairData.id,
+                  device_type: device.device_type,
+                  device_brand: device.brand,
+                  device_model: device.model,
+                  issue_description: device.reported_issue,
+                  customer_name: device.customer?.name,
+                  source: 'direct'
+                };
+              }
+            } else if (commission.repair_request_id) {
+              // Corner repair - fetch from repair_requests table
+              const { data: requestData } = await supabase
+                .from("repair_requests")
+                .select(`
+                  id,
+                  device_type,
+                  device_brand,
+                  device_model,
+                  issue_description,
+                  customer:customers(name)
+                `)
+                .eq("id", commission.repair_request_id)
+                .single();
+              
+              if (requestData) {
+                repair_info = {
+                  id: requestData.id,
+                  device_type: requestData.device_type,
+                  device_brand: requestData.device_brand || undefined,
+                  device_model: requestData.device_model || undefined,
+                  issue_description: requestData.issue_description,
+                  customer_name: (requestData.customer as any)?.name,
+                  source: 'corner'
+                };
+              }
+
+              // Fetch payment_collection_method for corner repairs
+              if (commission.corner_id) {
+                const { data: quoteData } = await supabase
+                  .from("quotes")
+                  .select("payment_collection_method")
+                  .eq("repair_request_id", commission.repair_request_id)
+                  .order("created_at", { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+                
+                payment_collection_method = quoteData?.payment_collection_method || 'direct';
+              }
             }
-            return { ...commission, payment_collection_method: null };
+
+            return {
+              ...commission,
+              payment_collection_method,
+              repair_info
+            };
           })
         );
         
-        setCommissions(commissionsWithPaymentMethod);
+        setCommissions(commissionsWithDetails);
       }
     } catch (error: any) {
       console.error("Error fetching data:", error);
@@ -393,13 +473,19 @@ export default function CentroCommissioni() {
                       className="p-4 rounded-lg border border-border bg-card/50"
                     >
                       <div className="flex flex-col gap-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div>
+                        {/* Repair Info Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                          <div className="flex-1">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
-                              {commission.corner_id && (
+                              {commission.corner_id ? (
                                 <Badge variant="outline" className="text-blue-500 border-blue-500/30">
                                   <Store className="h-3 w-3 mr-1" />
                                   Via Corner
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-primary border-primary/30">
+                                  <Building2 className="h-3 w-3 mr-1" />
+                                  Diretto
                                 </Badge>
                               )}
                               <span className="text-sm text-muted-foreground flex items-center gap-1">
@@ -407,6 +493,51 @@ export default function CentroCommissioni() {
                                 {format(new Date(commission.created_at), "dd MMM yyyy", { locale: it })}
                               </span>
                             </div>
+                            
+                            {/* Device & Customer Info */}
+                            {commission.repair_info && (
+                              <div className="mb-3 p-3 rounded-lg bg-muted/30 border border-border/50">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="flex-1 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <Smartphone className="h-4 w-4 text-primary" />
+                                      <span className="font-medium">
+                                        {commission.repair_info.device_type}
+                                        {commission.repair_info.device_brand && ` - ${commission.repair_info.device_brand}`}
+                                        {commission.repair_info.device_model && ` ${commission.repair_info.device_model}`}
+                                      </span>
+                                    </div>
+                                    {commission.repair_info.customer_name && (
+                                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                        <User className="h-3 w-3" />
+                                        <span>{commission.repair_info.customer_name}</span>
+                                      </div>
+                                    )}
+                                    {commission.repair_info.issue_description && (
+                                      <p className="text-sm text-muted-foreground line-clamp-1">
+                                        {commission.repair_info.issue_description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="shrink-0"
+                                    onClick={() => {
+                                      if (commission.repair_info?.source === 'corner') {
+                                        navigate(`/centro/lavori-corner`);
+                                      } else {
+                                        navigate(`/centro/lavori/${commission.repair_info?.id}`);
+                                      }
+                                    }}
+                                  >
+                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                    Vedi Lavoro
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+
                             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
                               <div>
                                 <p className="text-muted-foreground">Fatturato</p>
