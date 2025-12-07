@@ -50,6 +50,7 @@ export default function CentroNuovoRitiro() {
   const [laborCost, setLaborCost] = useState<number>(0);
   const [diagnosticFee, setDiagnosticFee] = useState<number>(15);
   const [isFeeDisabledBySettings, setIsFeeDisabledBySettings] = useState(false);
+  const [acconto, setAcconto] = useState<number>(0);
   const [aiConditionAssessment, setAiConditionAssessment] = useState<any>(null);
   const [showChecklistDialog, setShowChecklistDialog] = useState(false);
   const [createdRepairId, setCreatedRepairId] = useState<string | null>(null);
@@ -466,6 +467,10 @@ export default function CentroNuovoRitiro() {
       }
       const servicesNotes = notesArray.join(" | ");
 
+      // Calculate acconto - if full payment mode, acconto = total + diagnostic, else use custom acconto
+      const totalWithDiagnostic = estimatedTotal + diagnosticFee;
+      const finalAcconto = acconto > 0 ? acconto : totalWithDiagnostic;
+
       const { data: repairData, error: repairError } = await supabase
         .from("repairs")
         .insert({
@@ -478,6 +483,7 @@ export default function CentroNuovoRitiro() {
           diagnostic_fee_paid: diagnosticFee === 0 ? true : false,
           estimated_cost: estimatedTotal > 0 ? estimatedTotal : null,
           repair_notes: servicesNotes || null,
+          acconto: finalAcconto,
         })
         .select()
         .single();
@@ -776,17 +782,20 @@ export default function CentroNuovoRitiro() {
         );
 
       case 4:
+        const estimatedCostTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + selectedServices.reduce((sum, s) => sum + s.price, 0) + laborCost;
         return (
           <IntakeSignatureStep
             onSignatureComplete={(signature) => setIntakeSignature(signature)}
             currentSignature={intakeSignature}
-            estimatedCost={selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + selectedServices.reduce((sum, s) => sum + s.price, 0) + laborCost}
+            estimatedCost={estimatedCostTotal}
             partsTotal={selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0)}
             servicesTotal={selectedServices.reduce((sum, s) => sum + s.price, 0)}
             laborTotal={laborCost}
             diagnosticFee={diagnosticFee}
             onDiagnosticFeeChange={isFeeDisabledBySettings ? undefined : setDiagnosticFee}
             isFeeDisabledBySettings={isFeeDisabledBySettings}
+            acconto={acconto}
+            onAccontoChange={setAcconto}
           />
         );
 

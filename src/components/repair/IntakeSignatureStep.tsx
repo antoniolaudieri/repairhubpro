@@ -1,12 +1,15 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileSignature, X, Euro, Shield, CheckCircle2, Gift } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { motion } from "framer-motion";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface IntakeSignatureStepProps {
   onSignatureComplete: (signatureData: string) => void;
@@ -18,6 +21,8 @@ interface IntakeSignatureStepProps {
   diagnosticFee?: number;
   onDiagnosticFeeChange?: (fee: number) => void;
   isFeeDisabledBySettings?: boolean;
+  acconto?: number;
+  onAccontoChange?: (acconto: number) => void;
 }
 
 export function IntakeSignatureStep({ 
@@ -30,8 +35,11 @@ export function IntakeSignatureStep({
   diagnosticFee = 15,
   onDiagnosticFeeChange,
   isFeeDisabledBySettings = false,
+  acconto = 0,
+  onAccontoChange,
 }: IntakeSignatureStepProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
+  const [paymentMode, setPaymentMode] = useState<"full" | "partial">("full");
   
   // Suggerimento sconto diagnosi per preventivi sopra €100
   const suggestDiscount = estimatedCost >= 100;
@@ -55,6 +63,28 @@ export function IntakeSignatureStep({
   };
 
   const totalWithDiagnostic = Math.ceil(estimatedCost + diagnosticFee);
+  
+  // Calculate what customer pays now based on payment mode
+  const amountDueNow = paymentMode === "full" ? totalWithDiagnostic : (acconto || diagnosticFee);
+  const remainingBalance = paymentMode === "full" ? 0 : (totalWithDiagnostic - amountDueNow);
+
+  const handlePaymentModeChange = (mode: "full" | "partial") => {
+    setPaymentMode(mode);
+    if (mode === "full" && onAccontoChange) {
+      onAccontoChange(totalWithDiagnostic);
+    } else if (mode === "partial" && onAccontoChange) {
+      // Default partial to diagnostic fee minimum
+      onAccontoChange(diagnosticFee);
+    }
+  };
+
+  const handleAccontoInputChange = (value: string) => {
+    const numValue = parseFloat(value) || 0;
+    const clampedValue = Math.min(Math.max(numValue, diagnosticFee), totalWithDiagnostic);
+    if (onAccontoChange) {
+      onAccontoChange(clampedValue);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -141,61 +171,128 @@ export function IntakeSignatureStep({
         </Card>
       </motion.div>
 
-      {/* Diagnostic Fee Card */}
+      {/* Payment Mode Selection */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >
-        <Card className={`p-3 md:p-4 border ${isDiscounted || isFeeDisabledBySettings ? "border-green-500/30 bg-green-500/5" : "border-primary/30 bg-primary/5"}`}>
-          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${isDiscounted || isFeeDisabledBySettings ? "bg-green-500" : "bg-primary"} flex items-center justify-center flex-shrink-0`}>
-              <Euro className="h-5 w-5 md:h-6 md:w-6 text-primary-foreground" />
+        <Card className="p-4 border-2 border-primary/30">
+          <div className="flex items-center gap-2 mb-4">
+            <CreditCard className="h-5 w-5 text-primary" />
+            <h3 className="text-sm font-bold text-foreground">Modalità di Pagamento</h3>
+          </div>
+          
+          <RadioGroup 
+            value={paymentMode} 
+            onValueChange={(v) => handlePaymentModeChange(v as "full" | "partial")}
+            className="space-y-3"
+          >
+            <div className={`flex items-center space-x-3 p-3 rounded-lg border-2 transition-all ${paymentMode === "full" ? "border-primary bg-primary/5" : "border-muted"}`}>
+              <RadioGroupItem value="full" id="full" />
+              <Label htmlFor="full" className="flex-1 cursor-pointer">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">Pagamento Completo</p>
+                    <p className="text-xs text-muted-foreground">Il cliente paga subito l'intero importo</p>
+                  </div>
+                  <span className="text-lg font-bold text-primary">€{totalWithDiagnostic.toFixed(2)}</span>
+                </div>
+              </Label>
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-sm md:text-base font-bold text-foreground">
-                Gestione Diagnosi
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                {isFeeDisabledBySettings 
-                  ? "Fee disattivato per questo Centro" 
-                  : isDiscounted 
-                    ? "Fee omaggio per questo ritiro" 
-                    : "Costo fisso per analisi del dispositivo"}
-              </p>
+            
+            <div className={`flex items-start space-x-3 p-3 rounded-lg border-2 transition-all ${paymentMode === "partial" ? "border-amber-500 bg-amber-500/5" : "border-muted"}`}>
+              <RadioGroupItem value="partial" id="partial" className="mt-1" />
+              <Label htmlFor="partial" className="flex-1 cursor-pointer">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-medium">Acconto</p>
+                      <p className="text-xs text-muted-foreground">Il cliente lascia un acconto (min. €{diagnosticFee})</p>
+                    </div>
+                    <Wallet className="h-5 w-5 text-amber-500" />
+                  </div>
+                  
+                  {paymentMode === "partial" && (
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">€</span>
+                        <Input
+                          type="number"
+                          min={diagnosticFee}
+                          max={totalWithDiagnostic}
+                          step="0.01"
+                          value={acconto || diagnosticFee}
+                          onChange={(e) => handleAccontoInputChange(e.target.value)}
+                          className="w-24 h-8 text-center font-bold"
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          su €{totalWithDiagnostic.toFixed(2)}
+                        </span>
+                      </div>
+                      {remainingBalance > 0 && (
+                        <p className="text-xs text-amber-600 font-medium">
+                          Saldo residuo: €{remainingBalance.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Label>
             </div>
+          </RadioGroup>
+          
+          {/* Amount Summary */}
+          <div className="mt-4 p-3 rounded-lg bg-muted/50 border">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Da incassare ora:</span>
+              <span className="text-xl font-bold text-primary">€{amountDueNow.toFixed(2)}</span>
+            </div>
+            {remainingBalance > 0 && (
+              <div className="flex items-center justify-between mt-1 text-amber-600">
+                <span className="text-xs">Saldo al ritiro:</span>
+                <span className="text-sm font-medium">€{remainingBalance.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+        </Card>
+      </motion.div>
+
+      {/* Diagnostic Fee Card - only show if fee is separate/discountable */}
+      {!isFeeDisabledBySettings && onDiagnosticFeeChange && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className={`p-3 md:p-4 border ${isDiscounted ? "border-green-500/30 bg-green-500/5" : "border-muted"}`}>
             <div className="flex items-center gap-3">
-              {/* Switch per abilitare/disabilitare fee */}
-              {onDiagnosticFeeChange && !isFeeDisabledBySettings && (
+              <div className={`w-10 h-10 rounded-xl ${isDiscounted ? "bg-green-500" : "bg-muted"} flex items-center justify-center flex-shrink-0`}>
+                <Euro className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-foreground">
+                  Fee Diagnosi
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {isDiscounted ? "Fee omaggio applicato" : "Incluso nel totale"}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
                 <div className="flex flex-col items-center gap-0.5">
                   <Switch
                     checked={!isDiscounted}
                     onCheckedChange={(checked) => onDiagnosticFeeChange(checked ? 15 : 0)}
                   />
                   <span className="text-[9px] text-muted-foreground">
-                    {isDiscounted ? "OFF" : "ON"}
+                    {isDiscounted ? "GRATIS" : "€15"}
                   </span>
                 </div>
-              )}
-              <div className="text-right">
-                {isFeeDisabledBySettings || isDiscounted ? (
-                  <>
-                    <span className="text-xl md:text-2xl font-bold text-green-600">€0</span>
-                    <p className="text-[10px] text-green-600 font-medium">
-                      {isFeeDisabledBySettings ? "Disattivato" : "Omaggio"}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-xl md:text-2xl font-bold text-primary">€15</span>
-                    <p className="text-[10px] text-amber-600 font-medium">Anticipo</p>
-                  </>
-                )}
               </div>
             </div>
-          </div>
-        </Card>
-      </motion.div>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Disclaimer */}
       <motion.div
@@ -259,8 +356,8 @@ export function IntakeSignatureStep({
 
               {/* Firma */}
               <p className="pt-2 border-t text-foreground font-medium">
-                Firmando digitalmente, il cliente autorizza gli interventi, accetta il pagamento 
-                anticipato di €15 per la diagnosi, le clausole di esonero responsabilità e 
+                Firmando digitalmente, il cliente autorizza gli interventi, conferma il pagamento 
+                anticipato di €{amountDueNow.toFixed(2)}, le clausole di esonero responsabilità e 
                 alienazione sopra indicate. La firma digitale costituisce prova dell'accettazione 
                 dei termini contrattuali ai sensi del Regolamento eIDAS e del CAD.
               </p>
