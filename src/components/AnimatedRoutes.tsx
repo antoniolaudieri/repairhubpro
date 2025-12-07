@@ -3,7 +3,6 @@ import { AnimatePresence } from "framer-motion";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageTransition } from "@/components/PageTransition";
 import TechnicianLayout from "@/layouts/TechnicianLayout";
-import { CornerLayout } from "@/layouts/CornerLayout";
 import CustomerHome from "@/pages/CustomerHome";
 import CustomerDashboard from "@/pages/CustomerDashboard";
 import CustomerRepairDetail from "@/pages/CustomerRepairDetail";
@@ -180,9 +179,7 @@ export const AnimatedRoutes = () => {
           path="/corner"
           element={
             <ProtectedRoute requireCorner>
-              <CornerLayout>
-                <CornerDashboard />
-              </CornerLayout>
+              <CornerDashboard />
             </ProtectedRoute>
           }
         />
@@ -190,9 +187,7 @@ export const AnimatedRoutes = () => {
           path="/corner/nuova-segnalazione"
           element={
             <ProtectedRoute requireCorner>
-              <CornerLayout>
-                <CornerNuovaSegnalazione />
-              </CornerLayout>
+              <CornerNuovaSegnalazione />
             </ProtectedRoute>
           }
         />
@@ -200,9 +195,7 @@ export const AnimatedRoutes = () => {
           path="/corner/segnalazioni"
           element={
             <ProtectedRoute requireCorner>
-              <CornerLayout>
-                <CornerSegnalazioni />
-              </CornerLayout>
+              <CornerSegnalazioni />
             </ProtectedRoute>
           }
         />
@@ -210,9 +203,7 @@ export const AnimatedRoutes = () => {
           path="/corner/commissioni"
           element={
             <ProtectedRoute requireCorner>
-              <CornerLayout>
-                <CornerCommissioni />
-              </CornerLayout>
+              <CornerCommissioni />
             </ProtectedRoute>
           }
         />
@@ -220,9 +211,7 @@ export const AnimatedRoutes = () => {
           path="/corner/partnership"
           element={
             <ProtectedRoute requireCorner>
-              <CornerLayout>
-                <CornerPartnership />
-              </CornerLayout>
+              <CornerPartnership />
             </ProtectedRoute>
           }
         />
@@ -230,9 +219,7 @@ export const AnimatedRoutes = () => {
           path="/corner/impostazioni"
           element={
             <ProtectedRoute requireCorner>
-              <CornerLayout>
-                <CornerImpostazioni />
-              </CornerLayout>
+              <CornerImpostazioni />
             </ProtectedRoute>
           }
         />
@@ -240,9 +227,7 @@ export const AnimatedRoutes = () => {
           path="/corner/prenotazioni"
           element={
             <ProtectedRoute requireCorner>
-              <CornerLayout>
-                <CornerPrenotazioni />
-              </CornerLayout>
+              <CornerPrenotazioni />
             </ProtectedRoute>
           }
         />
