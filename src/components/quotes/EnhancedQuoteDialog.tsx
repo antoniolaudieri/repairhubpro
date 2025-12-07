@@ -475,20 +475,25 @@ export function EnhancedQuoteDialog({
   const getPartsPurchaseCost = () => items.filter(i => i.type === 'part').reduce((sum, i) => sum + ((i.purchaseCost || 0) * i.quantity), 0);
   const getBaseGrossMargin = () => getBaseTotalCost() - getPartsPurchaseCost();
   
-  // Calculate additional costs to cover commissions
+  // Calculate additional costs to cover commissions using inverse formula
+  // Formula: coverage = (rate * baseMargin) / centroRate
+  // This ensures that after commissions are calculated on the new total, Centro nets the same as if that commission didn't exist
   const getCornerCoverageAmount = () => {
     if (!coverCornerCost || !repairRequestId) return 0;
-    // To cover corner cost, we need to add enough so the margin still covers it
     const baseMargin = getBaseGrossMargin();
-    const cornerCost = baseMargin * (cornerCommissionRate / 100);
-    return cornerCost;
+    const centroRate = centroCommissionRate / 100;
+    const cornerRate = cornerCommissionRate / 100;
+    // Coverage = (cornerRate * baseMargin) / centroRate
+    return (cornerRate * baseMargin) / centroRate;
   };
   
   const getPlatformCoverageAmount = () => {
     if (!coverPlatformCost || !repairRequestId) return 0;
     const baseMargin = getBaseGrossMargin();
-    const platformCost = baseMargin * (platformCommissionRate / 100);
-    return platformCost;
+    const centroRate = centroCommissionRate / 100;
+    const platformRate = platformCommissionRate / 100;
+    // Coverage = (platformRate * baseMargin) / centroRate
+    return (platformRate * baseMargin) / centroRate;
   };
   
   const getTotalCost = () => getBaseTotalCost() + getCornerCoverageAmount() + getPlatformCoverageAmount();
