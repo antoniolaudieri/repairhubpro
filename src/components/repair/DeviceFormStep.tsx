@@ -1,8 +1,8 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Smartphone, Tablet, Laptop, Monitor, HelpCircle, KeyRound, FileText, AlertCircle, Info, ImageOff } from "lucide-react";
-import { useState } from "react";
+import { Smartphone, Tablet, Laptop, Monitor, HelpCircle, KeyRound, FileText, AlertCircle, ImageOff } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -47,10 +47,81 @@ const deviceTypes = [
   { value: "other", label: "Altro", icon: HelpCircle },
 ];
 
+// Generate fallback image URLs based on brand
+const getFallbackImageUrls = (brand: string, model: string): string[] => {
+  const normalizedBrand = brand.toLowerCase().trim();
+  const normalizedModel = model.toLowerCase().trim().replace(/\s+/g, '-');
+  
+  const urls: string[] = [];
+  
+  // Brand-specific logo fallbacks
+  if (normalizedBrand.includes('apple') || normalizedBrand.includes('iphone') || normalizedBrand.includes('ipad')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg');
+  } else if (normalizedBrand.includes('samsung')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg');
+  } else if (normalizedBrand.includes('huawei')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/e/e8/Huawei_Logo.svg');
+  } else if (normalizedBrand.includes('xiaomi')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/a/ae/Xiaomi_logo_%282021-%29.svg');
+  } else if (normalizedBrand.includes('oppo')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/0/0a/OPPO_LOGO_2019.svg');
+  } else if (normalizedBrand.includes('oneplus')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/d/d6/OnePlus_logo.svg');
+  } else if (normalizedBrand.includes('google') || normalizedBrand.includes('pixel')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg');
+  } else if (normalizedBrand.includes('sony')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg');
+  } else if (normalizedBrand.includes('lg')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/2/20/LG_symbol.svg');
+  } else if (normalizedBrand.includes('motorola')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/4/45/Motorola-logo.svg');
+  } else if (normalizedBrand.includes('nokia')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/0/02/Nokia_wordmark.svg');
+  } else if (normalizedBrand.includes('asus')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/d/d9/Asus_logo.svg');
+  } else if (normalizedBrand.includes('lenovo')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/b/b8/Lenovo_logo_2015.svg');
+  } else if (normalizedBrand.includes('hp')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/a/ad/HP_logo_2012.svg');
+  } else if (normalizedBrand.includes('dell')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/8/82/Dell_Logo.png');
+  } else if (normalizedBrand.includes('acer')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/0/00/Acer_2011.svg');
+  }
+  
+  return urls;
+};
+
 export const DeviceFormStep = ({ deviceData, onChange, detectedDevice }: DeviceFormStepProps) => {
   const [imageError, setImageError] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  const [fallbackIndex, setFallbackIndex] = useState(0);
   
   const hasDeviceInfo = detectedDevice && (detectedDevice.imageUrl || detectedDevice.specs || detectedDevice.year);
+  
+  // Reset image error when detectedDevice changes
+  useEffect(() => {
+    setImageError(false);
+    setFallbackIndex(0);
+    setCurrentImageUrl(detectedDevice?.imageUrl || null);
+  }, [detectedDevice?.imageUrl]);
+  
+  const handleImageError = () => {
+    const fallbacks = getFallbackImageUrls(deviceData.brand, deviceData.model);
+    if (fallbackIndex < fallbacks.length) {
+      setCurrentImageUrl(fallbacks[fallbackIndex]);
+      setFallbackIndex(prev => prev + 1);
+    } else {
+      setImageError(true);
+    }
+  };
+
+  // Get device type icon as fallback
+  const getDeviceIcon = () => {
+    const deviceType = deviceTypes.find(t => t.value === deviceData.device_type);
+    const Icon = deviceType?.icon || Smartphone;
+    return <Icon className="h-10 w-10 text-muted-foreground" />;
+  };
   
   return (
     <div className="space-y-4">
@@ -60,13 +131,15 @@ export const DeviceFormStep = ({ deviceData, onChange, detectedDevice }: DeviceF
           <div className="flex gap-4">
             {/* Device Image */}
             <div className="flex-shrink-0">
-              {detectedDevice.imageUrl && !imageError ? (
+              {currentImageUrl && !imageError ? (
                 <div className="relative">
                   <img
-                    src={detectedDevice.imageUrl}
+                    src={currentImageUrl}
                     alt={`${deviceData.brand} ${deviceData.model}`}
-                    className="h-24 w-24 object-contain rounded-lg bg-white p-1"
-                    onError={() => setImageError(true)}
+                    className="h-24 w-24 object-contain rounded-lg bg-white p-2"
+                    onError={handleImageError}
+                    crossOrigin="anonymous"
+                    referrerPolicy="no-referrer"
                   />
                   <Badge 
                     variant="secondary" 
@@ -76,8 +149,11 @@ export const DeviceFormStep = ({ deviceData, onChange, detectedDevice }: DeviceF
                   </Badge>
                 </div>
               ) : (
-                <div className="h-24 w-24 rounded-lg bg-muted flex items-center justify-center">
-                  <ImageOff className="h-8 w-8 text-muted-foreground" />
+                <div className="h-24 w-24 rounded-lg bg-muted flex flex-col items-center justify-center gap-1">
+                  {getDeviceIcon()}
+                  <span className="text-[8px] text-muted-foreground uppercase font-medium">
+                    {deviceData.brand || 'Device'}
+                  </span>
                 </div>
               )}
             </div>
