@@ -453,77 +453,110 @@ export function IntakeSignatureStep({
             <FileSignature className="h-3.5 w-3.5 text-primary" />
             Firma del Cliente
           </label>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleClear}
-            className="text-muted-foreground hover:text-foreground h-7 text-xs px-2"
-          >
-            <X className="h-3 w-3 mr-1" />
-            Cancella
-          </Button>
+          {!currentSignature && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleClear}
+              className="text-muted-foreground hover:text-foreground h-7 text-xs px-2"
+            >
+              <X className="h-3 w-3 mr-1" />
+              Cancella
+            </Button>
+          )}
         </div>
         
-        <Card className="p-0.5 bg-white border-2 border-dashed border-primary/40">
-          <SignatureCanvas
-            ref={sigCanvas}
-            canvasProps={{
-              className: "w-full h-32 md:h-36 rounded cursor-crosshair",
-              style: { touchAction: "none" }
-            }}
-            backgroundColor="white"
-            penColor="#000000"
-          />
-        </Card>
-        
-        <p className="text-[10px] text-center text-muted-foreground">
-          {isFeeDisabledBySettings 
-            ? "Firma per accettare i termini del servizio"
-            : "Firma per accettare i termini e il pagamento di €15"}
-        </p>
-
-        {currentSignature && (
+        {/* Show received signature OR signature canvas */}
+        {currentSignature ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
+            className="space-y-3"
           >
-            <Alert className="border-green-500/30 bg-green-500/5 py-2">
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-              <AlertDescription className="text-xs text-green-700 dark:text-green-400">
-                Firma salvata. Puoi modificarla firmando di nuovo.
+            {/* Display the received signature */}
+            <Card className="p-2 bg-white border-2 border-green-500/50">
+              <div className="relative">
+                <img 
+                  src={currentSignature} 
+                  alt="Firma del cliente" 
+                  className="w-full h-32 md:h-36 object-contain rounded"
+                />
+                <div className="absolute top-2 right-2 flex items-center gap-1 px-2 py-1 rounded-full bg-green-500 text-white text-xs font-medium">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Firmato
+                </div>
+              </div>
+            </Card>
+            
+            <Alert className="border-green-500/30 bg-green-500/10 py-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <AlertDescription className="text-sm text-green-700 dark:text-green-400 font-medium">
+                Firma ricevuta e validata. Puoi procedere con il completamento.
               </AlertDescription>
             </Alert>
+
+            {/* Button to clear and re-sign */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                onSignatureComplete("");
+                sigCanvas.current?.clear();
+              }}
+              className="w-full h-9 text-xs border-dashed"
+            >
+              <X className="mr-2 h-3 w-3" />
+              Richiedi Nuova Firma
+            </Button>
           </motion.div>
+        ) : (
+          <>
+            <Card className="p-0.5 bg-white border-2 border-dashed border-primary/40">
+              <SignatureCanvas
+                ref={sigCanvas}
+                canvasProps={{
+                  className: "w-full h-32 md:h-36 rounded cursor-crosshair",
+                  style: { touchAction: "none" }
+                }}
+                backgroundColor="white"
+                penColor="#000000"
+              />
+            </Card>
+            
+            <p className="text-[10px] text-center text-muted-foreground">
+              {isFeeDisabledBySettings 
+                ? "Firma per accettare i termini del servizio"
+                : "Firma per accettare i termini e il pagamento di €15"}
+            </p>
+
+            {/* Remote Signature Button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={generateRemoteSignUrl}
+              className="w-full h-10 text-sm font-semibold border-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5"
+              disabled={isGeneratingLink}
+            >
+              {isGeneratingLink ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Tablet className="mr-2 h-4 w-4" />
+              )}
+              Invia a Dispositivo Esterno
+            </Button>
+
+            <Button
+              type="button"
+              onClick={handleSave}
+              className="w-full h-10 text-sm font-semibold bg-primary hover:bg-primary/90"
+            >
+              <FileSignature className="mr-2 h-4 w-4" />
+              Salva Firma
+            </Button>
+          </>
         )}
-
-        {/* Remote Signature Button */}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={generateRemoteSignUrl}
-          className="w-full h-10 text-sm font-semibold border-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5"
-          disabled={isGeneratingLink}
-        >
-          {isGeneratingLink ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Tablet className="mr-2 h-4 w-4" />
-          )}
-          Invia a Dispositivo Esterno
-        </Button>
-
-        <Button
-          type="button"
-          onClick={handleSave}
-          className="w-full h-10 text-sm font-semibold bg-primary hover:bg-primary/90"
-        >
-          <FileSignature className="mr-2 h-4 w-4" />
-          Salva Firma
-        </Button>
       </motion.div>
-
-      {/* Remote Signature Dialog */}
       <Dialog open={showRemoteSignDialog} onOpenChange={setShowRemoteSignDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
