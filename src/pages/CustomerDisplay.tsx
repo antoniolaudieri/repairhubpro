@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Smartphone, 
   Tablet, 
@@ -26,13 +27,16 @@ import {
   Euro,
   Sparkles,
   ClipboardCheck,
-  Scale
+  Scale,
+  Grid3X3,
+  KeyRound
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import SignatureCanvas from "react-signature-canvas";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PatternLock } from "@/components/customer/PatternLock";
 
 type DisplayMode = "standby" | "confirm_data" | "enter_password" | "signature" | "completed";
 
@@ -150,7 +154,9 @@ export default function CustomerDisplay() {
   const [mode, setMode] = useState<DisplayMode>("standby");
   const [session, setSession] = useState<IntakeSession | null>(null);
   const [password, setPassword] = useState("");
+  const [unlockPattern, setUnlockPattern] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [unlockType, setUnlockType] = useState<"pin" | "pattern">("pin");
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dataConfirmed, setDataConfirmed] = useState(false);
@@ -276,6 +282,8 @@ export default function CustomerDisplay() {
     setMode("standby");
     setSession(null);
     setPassword("");
+    setUnlockPattern("");
+    setUnlockType("pin");
     setDataConfirmed(false);
     setPrivacyConsent(false);
     sigCanvas.current?.clear();
@@ -299,8 +307,10 @@ export default function CustomerDisplay() {
   };
 
   const handleSubmitPassword = async () => {
-    if (!centroId || !session || !password.trim()) {
-      toast.error("Inserisci la password del dispositivo");
+    const credential = unlockType === "pattern" ? unlockPattern : password;
+    
+    if (!centroId || !session || !credential.trim()) {
+      toast.error(unlockType === "pattern" ? "Disegna il pattern di sblocco" : "Inserisci la password del dispositivo");
       return;
     }
     
@@ -314,12 +324,13 @@ export default function CustomerDisplay() {
         event: 'password_submitted',
         payload: { 
           sessionId: session.sessionId, 
-          password: password 
+          password: unlockType === "pattern" ? `[PATTERN] ${credential}` : credential,
+          unlockType: unlockType
         }
       });
       supabase.removeChannel(channel);
       
-      toast.success("Password salvata!");
+      toast.success(unlockType === "pattern" ? "Pattern salvato!" : "Password salvata!");
       setMode("signature");
     } catch (error) {
       console.error("Error submitting password:", error);
@@ -831,41 +842,78 @@ export default function CustomerDisplay() {
                     >
                       <Lock className="h-10 w-10 sm:h-12 sm:w-12 text-white" />
                     </motion.div>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-white">Password Dispositivo</h2>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white">Sblocco Dispositivo</h2>
                     <p className="text-white/60 mt-2 text-sm sm:text-base">
-                      Inserisci la password, PIN o pattern per sbloccare
+                      Inserisci PIN/Password o disegna il pattern di sblocco
                     </p>
                   </div>
 
-                  <div className="space-y-3">
-                    <Label htmlFor="password" className="text-base sm:text-lg font-medium text-white/80">Password / PIN</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="h-14 sm:h-16 text-xl sm:text-2xl text-center pr-14 rounded-xl border-2 border-white/20 bg-white/10 text-white placeholder:text-white/30 focus:border-blue-500"
-                        autoComplete="off"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white hover:bg-white/10"
-                        onClick={() => setShowPassword(!showPassword)}
+                  {/* Tabs for PIN/Password or Pattern */}
+                  <Tabs 
+                    value={unlockType} 
+                    onValueChange={(v) => setUnlockType(v as "pin" | "pattern")}
+                    className="w-full"
+                  >
+                    <TabsList className="grid w-full grid-cols-2 bg-white/10 rounded-xl p-1">
+                      <TabsTrigger 
+                        value="pin" 
+                        className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-500 data-[state=active]:to-indigo-600 data-[state=active]:text-white text-white/70"
                       >
-                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                      </Button>
-                    </div>
-                  </div>
+                        <KeyRound className="h-4 w-4 mr-2" />
+                        PIN / Password
+                      </TabsTrigger>
+                      <TabsTrigger 
+                        value="pattern"
+                        className="rounded-lg data-[state=active]:bg-gradient-to-r data-[state=active]:from-violet-500 data-[state=active]:to-purple-600 data-[state=active]:text-white text-white/70"
+                      >
+                        <Grid3X3 className="h-4 w-4 mr-2" />
+                        Pattern
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="pin" className="mt-4 space-y-3">
+                      <Label htmlFor="password" className="text-base sm:text-lg font-medium text-white/80">Password / PIN</Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="h-14 sm:h-16 text-xl sm:text-2xl text-center pr-14 rounded-xl border-2 border-white/20 bg-white/10 text-white placeholder:text-white/30 focus:border-blue-500"
+                          autoComplete="off"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 hover:text-white hover:bg-white/10"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </Button>
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="pattern" className="mt-4">
+                      <div className="text-center mb-3">
+                        <p className="text-sm text-white/60">Disegna il pattern come sul tuo dispositivo</p>
+                      </div>
+                      <PatternLock 
+                        pattern={unlockPattern}
+                        onPatternComplete={setUnlockPattern}
+                      />
+                    </TabsContent>
+                  </Tabs>
 
                   <div className="p-4 bg-amber-500/10 backdrop-blur-sm rounded-xl border border-amber-500/30">
                     <div className="flex items-start gap-3">
                       <Shield className="h-5 w-5 text-amber-400 mt-0.5 shrink-0" />
                       <p className="text-sm text-amber-200/80">
-                        La password verrà utilizzata solo per la diagnosi e sarà trattata in modo confidenziale.
+                        {unlockType === "pattern" 
+                          ? "Il pattern verrà utilizzato solo per la diagnosi e sarà trattato in modo confidenziale."
+                          : "La password verrà utilizzata solo per la diagnosi e sarà trattata in modo confidenziale."
+                        }
                       </p>
                     </div>
                   </div>
@@ -880,7 +928,7 @@ export default function CustomerDisplay() {
                     </Button>
                     <Button
                       onClick={handleSubmitPassword}
-                      disabled={isSubmitting || !password.trim()}
+                      disabled={isSubmitting || (unlockType === "pin" ? !password.trim() : !unlockPattern)}
                       className="flex-1 h-12 sm:h-14 text-base sm:text-lg font-bold rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-400 hover:to-indigo-500"
                     >
                       {isSubmitting ? (
