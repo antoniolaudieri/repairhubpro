@@ -21,8 +21,13 @@ import {
   Trash2,
   Receipt,
   Search,
-  Loader2
+  Loader2,
+  Monitor,
+  Copy,
+  ExternalLink,
+  QrCode
 } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
@@ -555,8 +560,80 @@ export default function CentroImpostazioni() {
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-2">
-                Per modificare la tua commissione, contatta l'amministratore della piattaforma.
+              Per modificare la tua commissione, contatta l'amministratore della piattaforma.
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Customer Display */}
+          <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="h-5 w-5 text-primary" />
+                Display Cliente
+              </CardTitle>
+              <CardDescription>
+                Schermo dedicato per tablet o monitor esterno da mostrare ai clienti durante il ritiro
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Usa questo link per aprire il display cliente su un dispositivo esterno (tablet, monitor).
+                Il display mostrerà i dati del cliente in tempo reale durante il ritiro, permetterà 
+                l'inserimento della password e la firma. Quando non in uso, mostrerà pubblicità.
+              </p>
+              
+              {centro && (
+                <div className="space-y-4">
+                  {/* QR Code */}
+                  <div className="flex justify-center">
+                    <div className="p-4 bg-white rounded-xl border-2 border-primary/20 shadow-lg">
+                      <QRCodeSVG 
+                        value={`${window.location.origin}/display/${centro.id}`}
+                        size={150}
+                        level="H"
+                        includeMargin={true}
+                      />
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-center text-muted-foreground">
+                    Scansiona il QR code con il dispositivo dedicato
+                  </p>
+
+                  {/* URL Display */}
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">URL Display:</p>
+                    <p className="text-xs font-mono break-all">
+                      {window.location.origin}/display/{centro.id}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/display/${centro.id}`);
+                        toast.success("Link copiato!");
+                      }}
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copia Link
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => window.open(`/display/${centro.id}`, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Apri Display
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
