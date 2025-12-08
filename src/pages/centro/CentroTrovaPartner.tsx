@@ -23,7 +23,8 @@ import {
   Radar,
   Globe,
   ExternalLink,
-  Smartphone
+  Smartphone,
+  MessageCircle
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
@@ -595,16 +596,44 @@ export default function CentroTrovaPartner() {
                           </div>
                         </div>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
                           {shop.phone && (
+                            <>
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                asChild
+                              >
+                                <a href={`tel:${shop.phone}`}>
+                                  <Phone className="h-4 w-4 mr-1" />
+                                  Chiama
+                                </a>
+                              </Button>
+                              <Button 
+                                size="sm"
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                asChild
+                              >
+                                <a 
+                                  href={`https://wa.me/${shop.phone.replace(/[^0-9]/g, '')}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                >
+                                  <MessageCircle className="h-4 w-4 mr-1" />
+                                  WhatsApp
+                                </a>
+                              </Button>
+                            </>
+                          )}
+                          {shop.email && (
                             <Button 
                               variant="outline"
                               size="sm"
                               asChild
                             >
-                              <a href={`tel:${shop.phone}`}>
-                                <Phone className="h-4 w-4 mr-1" />
-                                Chiama
+                              <a href={`mailto:${shop.email}?subject=Proposta di Partnership RepairHubPro&body=Buongiorno,%0A%0ASiamo un Centro di Assistenza e vorremmo proporvi una collaborazione sulla piattaforma RepairHubPro.%0A%0ACordiali saluti`}>
+                                <Mail className="h-4 w-4 mr-1" />
+                                Email
                               </a>
                             </Button>
                           )}
