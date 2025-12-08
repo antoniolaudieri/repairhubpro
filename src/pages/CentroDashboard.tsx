@@ -36,6 +36,7 @@ import { CreditBalanceWidget } from "@/components/credit/CreditBalanceWidget";
 import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
 import { PendingJobOffersBanner } from "@/components/centro/PendingJobOffersBanner";
 import { PrepaidCommissionsHistory } from "@/components/centro/PrepaidCommissionsHistory";
+import { GamificationWidget } from "@/components/centro/GamificationWidget";
 
 interface Centro {
   id: string;
@@ -776,7 +777,7 @@ export default function CentroDashboard() {
             )}
 
             {/* Main Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Recent Repairs */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -850,41 +851,17 @@ export default function CentroDashboard() {
                 </Card>
               </motion.div>
 
-              {/* Quick Access */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-              >
-                <Card className="border-border/50 h-full">
-                  <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-muted-foreground" />
-                    <h2 className="font-medium text-foreground">Accesso Rapido</h2>
-                  </div>
-                  <div className="p-3 space-y-1">
-                    {[
-                      { icon: Wrench, label: "Gestione Lavori", path: "/centro/lavori", color: "text-blue-500 bg-blue-100" },
-                      { icon: Users, label: "Clienti", path: "/centro/clienti", color: "text-violet-500 bg-violet-100" },
-                      { icon: Package, label: "Inventario", path: "/centro/inventario", color: "text-orange-500 bg-orange-100" },
-                      { icon: ShoppingCart, label: "Ordini Ricambi", path: "/centro/ordini", color: "text-emerald-500 bg-emerald-100" },
-                      { icon: UserPlus, label: "Collaboratori", path: "/centro/collaboratori", color: "text-pink-500 bg-pink-100" },
-                    ].map((item) => (
-                      <Button
-                        key={item.path}
-                        variant="ghost"
-                        className="w-full justify-start h-11 font-normal hover:bg-muted/50 group"
-                        onClick={() => navigate(item.path)}
-                      >
-                        <div className={`h-7 w-7 rounded-md ${item.color} flex items-center justify-center mr-3`}>
-                          <item.icon className="h-3.5 w-3.5" />
-                        </div>
-                        <span className="flex-1 text-left text-sm">{item.label}</span>
-                        <ChevronRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Button>
-                    ))}
-                  </div>
-                </Card>
-              </motion.div>
+              {/* Gamification Widget */}
+              {centro && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="lg:row-span-1"
+                >
+                  <GamificationWidget centroId={centro.id} />
+                </motion.div>
+              )}
             </div>
           </div>
         </PageTransition>
