@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LocationPicker } from "@/components/maps/LocationPicker";
+import { DisplayAdEditor, DisplayAd } from "@/components/centro/DisplayAdEditor";
 import { 
   Settings,
   Building2,
@@ -29,20 +30,17 @@ import {
   Plus,
   Megaphone,
   Zap,
-  Star
+  Star,
+  Edit,
+  Smartphone,
+  Wrench,
+  Shield,
+  Cpu,
+  Tablet
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-
-interface DisplayAd {
-  id: string;
-  title: string;
-  description: string;
-  gradient: string;
-  icon: string;
-}
 
 interface CentroSettings {
   disable_diagnostic_fee?: boolean;
@@ -65,25 +63,19 @@ interface Centro {
   settings: CentroSettings | null;
 }
 
-const defaultGradients = [
-  { label: "Blu/Ciano", value: "from-blue-500 to-cyan-500" },
-  { label: "Verde/Smeraldo", value: "from-green-500 to-emerald-500" },
-  { label: "Viola/Rosa", value: "from-purple-500 to-pink-500" },
-  { label: "Arancio/Rosso", value: "from-orange-500 to-red-500" },
-  { label: "Indaco/Viola", value: "from-indigo-500 to-violet-500" },
-  { label: "Giallo/Ambra", value: "from-yellow-500 to-amber-500" },
-];
-
-const iconOptions = [
-  { label: "Smartphone", value: "smartphone" },
-  { label: "Riparazione", value: "wrench" },
-  { label: "Scudo", value: "shield" },
-  { label: "CPU", value: "cpu" },
-  { label: "Tablet", value: "tablet" },
-  { label: "Monitor", value: "monitor" },
-  { label: "Fulmine", value: "zap" },
-  { label: "Stella", value: "star" },
-];
+const getIconComponent = (iconName: string) => {
+  const icons: Record<string, any> = {
+    smartphone: Smartphone,
+    wrench: Wrench,
+    shield: Shield,
+    cpu: Cpu,
+    tablet: Tablet,
+    monitor: Monitor,
+    zap: Zap,
+    star: Star,
+  };
+  return icons[iconName] || Smartphone;
+};
 
 export default function CentroImpostazioni() {
   const { user } = useAuth();
@@ -93,6 +85,7 @@ export default function CentroImpostazioni() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [disableDiagnosticFee, setDisableDiagnosticFee] = useState(false);
   const [displayAds, setDisplayAds] = useState<DisplayAd[]>([]);
+  const [editingAd, setEditingAd] = useState<DisplayAd | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -692,105 +685,62 @@ export default function CentroImpostazioni() {
                 </p>
               )}
               
-              {displayAds.map((ad, index) => (
-                <div key={ad.id} className="p-4 border rounded-lg space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Pubblicità {index + 1}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setDisplayAds(prev => prev.filter(a => a.id !== ad.id));
-                      }}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="grid gap-3">
-                    <div>
-                      <Label className="text-xs">Titolo</Label>
-                      <Input
-                        value={ad.title}
-                        onChange={(e) => {
-                          setDisplayAds(prev => prev.map(a => 
-                            a.id === ad.id ? { ...a, title: e.target.value } : a
-                          ));
-                        }}
-                        placeholder="es. Riparazione Express"
-                      />
+              {displayAds.map((ad, index) => {
+                const IconComponent = getIconComponent(ad.icon);
+                return (
+                  <div key={ad.id} className="border rounded-lg overflow-hidden">
+                    {/* Preview */}
+                    <div className="relative h-32">
+                      {ad.type === 'image' && ad.imageUrl ? (
+                        <div className="relative h-full">
+                          <img 
+                            src={ad.imageUrl} 
+                            alt={ad.title} 
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
+                          <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                            <p className="font-bold text-sm">{ad.title || "Titolo"}</p>
+                            <p className="text-xs opacity-80">{ad.description || "Descrizione"}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={`h-full bg-gradient-to-br ${ad.gradient} flex flex-col items-center justify-center text-white p-3`}>
+                          <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-2">
+                            <IconComponent className="h-5 w-5 text-white" />
+                          </div>
+                          <p className="font-bold text-sm text-center">{ad.title || "Titolo"}</p>
+                          <p className="text-xs opacity-80 text-center">{ad.description || "Descrizione"}</p>
+                        </div>
+                      )}
                     </div>
                     
-                    <div>
-                      <Label className="text-xs">Descrizione</Label>
-                      <Input
-                        value={ad.description}
-                        onChange={(e) => {
-                          setDisplayAds(prev => prev.map(a => 
-                            a.id === ad.id ? { ...a, description: e.target.value } : a
-                          ));
-                        }}
-                        placeholder="es. Riparazioni in meno di 1 ora"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label className="text-xs">Icona</Label>
-                        <Select
-                          value={ad.icon}
-                          onValueChange={(value) => {
-                            setDisplayAds(prev => prev.map(a => 
-                              a.id === ad.id ? { ...a, icon: value } : a
-                            ));
-                          }}
+                    {/* Actions */}
+                    <div className="flex items-center justify-between p-2 bg-muted/50">
+                      <span className="text-xs text-muted-foreground">
+                        Slide {index + 1} • {ad.type === 'image' ? 'Immagine' : 'Gradiente'}
+                      </span>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditingAd(ad)}
                         >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {iconOptions.map((icon) => (
-                              <SelectItem key={icon.value} value={icon.value}>
-                                {icon.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      
-                      <div>
-                        <Label className="text-xs">Colore</Label>
-                        <Select
-                          value={ad.gradient}
-                          onValueChange={(value) => {
-                            setDisplayAds(prev => prev.map(a => 
-                              a.id === ad.id ? { ...a, gradient: value } : a
-                            ));
-                          }}
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setDisplayAds(prev => prev.filter(a => a.id !== ad.id))}
+                          className="text-destructive hover:text-destructive"
                         >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {defaultGradients.map((grad) => (
-                              <SelectItem key={grad.value} value={grad.value}>
-                                {grad.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Preview */}
-                  <div className={`p-3 rounded-lg bg-gradient-to-r ${ad.gradient} text-white text-center`}>
-                    <p className="font-bold text-sm">{ad.title || "Titolo"}</p>
-                    <p className="text-xs opacity-80">{ad.description || "Descrizione"}</p>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               
               <Button
                 variant="outline"
@@ -801,9 +751,10 @@ export default function CentroImpostazioni() {
                     title: "",
                     description: "",
                     gradient: "from-blue-500 to-cyan-500",
-                    icon: "smartphone"
+                    icon: "smartphone",
+                    type: "gradient"
                   };
-                  setDisplayAds(prev => [...prev, newAd]);
+                  setEditingAd(newAd);
                 }}
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -815,6 +766,26 @@ export default function CentroImpostazioni() {
               </p>
             </CardContent>
           </Card>
+          
+          {/* Ad Editor Dialog */}
+          {editingAd && centro && (
+            <DisplayAdEditor
+              ad={editingAd}
+              open={!!editingAd}
+              onClose={() => setEditingAd(null)}
+              centroId={centro.id}
+              onSave={(updatedAd) => {
+                setDisplayAds(prev => {
+                  const exists = prev.find(a => a.id === updatedAd.id);
+                  if (exists) {
+                    return prev.map(a => a.id === updatedAd.id ? updatedAd : a);
+                  }
+                  return [...prev, updatedAd];
+                });
+                setEditingAd(null);
+              }}
+            />
+          )}
 
           {/* Location Picker */}
           <Card>
