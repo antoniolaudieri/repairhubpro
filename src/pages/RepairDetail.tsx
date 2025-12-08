@@ -702,7 +702,7 @@ export default function RepairDetail() {
           {/* Left Column - Main Content */}
           <div className="xl:col-span-2 space-y-6">
             {/* Quick Stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -725,6 +725,18 @@ export default function RepairDetail() {
                 <p className="text-xs text-muted-foreground">Finale</p>
                 <p className="text-lg font-bold text-foreground">
                   €{repair.final_cost?.toFixed(2) || "0.00"}
+                </p>
+              </motion.div>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.18 }}
+                className={`rounded-xl border p-4 text-center ${repair.acconto && repair.acconto > 0 ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-card border-border'}`}
+              >
+                <Euro className="h-5 w-5 text-emerald-600 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Acconto</p>
+                <p className={`text-lg font-bold ${repair.acconto && repair.acconto > 0 ? 'text-emerald-600' : 'text-foreground'}`}>
+                  €{repair.acconto?.toFixed(2) || "0.00"}
                 </p>
               </motion.div>
               <motion.div 
