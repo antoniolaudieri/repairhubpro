@@ -15,6 +15,7 @@ interface DeviceData {
   reported_issue: string;
   imei?: string;
   serial_number?: string;
+  photo_url?: string;
 }
 
 interface QuoteItem {
