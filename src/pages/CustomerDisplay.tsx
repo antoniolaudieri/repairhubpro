@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +23,9 @@ import {
   Loader2,
   Wrench,
   Cpu,
-  AlertTriangle
+  AlertTriangle,
+  Maximize,
+  Minimize
 } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { motion, AnimatePresence } from "framer-motion";
@@ -139,8 +141,37 @@ export default function CustomerDisplay() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dataConfirmed, setDataConfirmed] = useState(false);
   const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdvertisements);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const sigCanvas = useRef<SignatureCanvas>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
+  // Fullscreen toggle
+  const toggleFullscreen = useCallback(async () => {
+    if (!document.fullscreenElement) {
+      try {
+        await containerRef.current?.requestFullscreen();
+        setIsFullscreen(true);
+      } catch (err) {
+        console.error('Error entering fullscreen:', err);
+      }
+    } else {
+      try {
+        await document.exitFullscreen();
+        setIsFullscreen(false);
+      } catch (err) {
+        console.error('Error exiting fullscreen:', err);
+      }
+    }
+  }, []);
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
   // Fetch custom ads from centro settings
   useEffect(() => {
     if (!centroId) return;
@@ -330,13 +361,26 @@ export default function CustomerDisplay() {
     }
   };
 
+  // Fullscreen button component
+  const FullscreenButton = () => (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={toggleFullscreen}
+      className="fixed top-4 right-4 z-50 bg-black/30 hover:bg-black/50 text-white rounded-full backdrop-blur-sm"
+    >
+      {isFullscreen ? <Minimize className="h-5 w-5" /> : <Maximize className="h-5 w-5" />}
+    </Button>
+  );
+
   // Standby mode with rotating ads
   if (mode === "standby") {
     const currentAd = advertisements[currentAdIndex];
     const isImageAd = currentAd.type === 'image' && currentAd.imageUrl;
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-8">
+      <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-8">
+        <FullscreenButton />
         <AnimatePresence mode="wait">
           <motion.div
             key={currentAdIndex}
@@ -419,7 +463,8 @@ export default function CustomerDisplay() {
   // Completed mode
   if (mode === "completed") {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 flex items-center justify-center p-8">
+      <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-emerald-900 flex items-center justify-center p-8">
+        <FullscreenButton />
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -447,7 +492,8 @@ export default function CustomerDisplay() {
 
   // Active session modes (confirm_data, enter_password, signature)
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-6 md:p-8">
+    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-6 md:p-8">
+      <FullscreenButton />
       <div className="max-w-4xl mx-auto space-y-6">
         {/* Header */}
         <motion.div

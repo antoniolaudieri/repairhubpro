@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface CustomerData {
@@ -37,85 +37,95 @@ interface IntakeSessionData {
 }
 
 export function useCustomerDisplay(centroId: string | null) {
-  const startIntakeSession = useCallback(async (data: IntakeSessionData) => {
+  // Persistent channel reference for sending events
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const isSubscribedRef = useRef(false);
+
+  // Initialize and maintain persistent channel
+  useEffect(() => {
     if (!centroId) return;
-    
-    const channel = supabase.channel(`display-${centroId}`);
-    await channel.subscribe();
-    await channel.send({
-      type: 'broadcast',
-      event: 'intake_started',
-      payload: data
+
+    const channel = supabase.channel(`display-${centroId}`, {
+      config: {
+        broadcast: { self: false }
+      }
     });
     
-    // Keep channel open for updates
-    return channel;
+    channel.subscribe((status) => {
+      console.log('[CustomerDisplay] Channel status:', status);
+      if (status === 'SUBSCRIBED') {
+        isSubscribedRef.current = true;
+      }
+    });
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+        isSubscribedRef.current = false;
+      }
+    };
   }, [centroId]);
+
+  // Helper to send broadcast with retry
+  const sendBroadcast = useCallback(async (event: string, payload: any = {}) => {
+    if (!channelRef.current) {
+      console.warn('[CustomerDisplay] No channel available');
+      return;
+    }
+
+    // Wait for subscription if not ready
+    let retries = 0;
+    while (!isSubscribedRef.current && retries < 10) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      retries++;
+    }
+
+    if (!isSubscribedRef.current) {
+      console.warn('[CustomerDisplay] Channel not subscribed after retries');
+      return;
+    }
+
+    console.log('[CustomerDisplay] Sending event:', event, payload);
+    await channelRef.current.send({
+      type: 'broadcast',
+      event,
+      payload
+    });
+  }, []);
+
+  const startIntakeSession = useCallback(async (data: IntakeSessionData) => {
+    if (!centroId) return;
+    await sendBroadcast('intake_started', data);
+  }, [centroId, sendBroadcast]);
 
   const updateIntakeSession = useCallback(async (data: Partial<IntakeSessionData>) => {
     if (!centroId) return;
-    
-    const channel = supabase.channel(`display-${centroId}`);
-    await channel.subscribe();
-    await channel.send({
-      type: 'broadcast',
-      event: 'intake_update',
-      payload: data
-    });
-    supabase.removeChannel(channel);
-  }, [centroId]);
+    await sendBroadcast('intake_update', data);
+  }, [centroId, sendBroadcast]);
 
   const requestPassword = useCallback(async () => {
     if (!centroId) return;
-    
-    const channel = supabase.channel(`display-${centroId}`);
-    await channel.subscribe();
-    await channel.send({
-      type: 'broadcast',
-      event: 'request_password',
-      payload: {}
-    });
-    supabase.removeChannel(channel);
-  }, [centroId]);
+    await sendBroadcast('request_password', {});
+  }, [centroId, sendBroadcast]);
 
   const requestSignature = useCallback(async () => {
     if (!centroId) return;
-    
-    const channel = supabase.channel(`display-${centroId}`);
-    await channel.subscribe();
-    await channel.send({
-      type: 'broadcast',
-      event: 'request_signature',
-      payload: {}
-    });
-    supabase.removeChannel(channel);
-  }, [centroId]);
+    console.log('[CustomerDisplay] Requesting signature');
+    await sendBroadcast('request_signature', {});
+  }, [centroId, sendBroadcast]);
 
   const cancelIntake = useCallback(async () => {
     if (!centroId) return;
-    
-    const channel = supabase.channel(`display-${centroId}`);
-    await channel.subscribe();
-    await channel.send({
-      type: 'broadcast',
-      event: 'intake_cancelled',
-      payload: {}
-    });
-    supabase.removeChannel(channel);
-  }, [centroId]);
+    await sendBroadcast('intake_cancelled', {});
+  }, [centroId, sendBroadcast]);
 
   const completeIntake = useCallback(async () => {
     if (!centroId) return;
-    
-    const channel = supabase.channel(`display-${centroId}`);
-    await channel.subscribe();
-    await channel.send({
-      type: 'broadcast',
-      event: 'intake_completed',
-      payload: {}
-    });
-    supabase.removeChannel(channel);
-  }, [centroId]);
+    await sendBroadcast('intake_completed', {});
+  }, [centroId, sendBroadcast]);
 
   // Listen for responses from customer display
   const listenForCustomerResponses = useCallback((callbacks: {

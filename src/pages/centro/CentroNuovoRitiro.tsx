@@ -66,7 +66,6 @@ export default function CentroNuovoRitiro() {
     completeIntake,
     listenForCustomerResponses 
   } = useCustomerDisplay(centroId);
-  const displayChannelRef = useRef<any>(null);
   const sessionIdRef = useRef<string>(`session-${Date.now()}`);
 
   const [customerData, setCustomerData] = useState({
@@ -196,9 +195,7 @@ export default function CentroNuovoRitiro() {
     
     // Start session when customer data is available
     if (customerData.name && currentStep >= 0) {
-      startIntakeSession(sessionData).then(channel => {
-        if (channel) displayChannelRef.current = channel;
-      });
+      startIntakeSession(sessionData);
     }
     
     // Update session with latest data
@@ -234,10 +231,6 @@ export default function CentroNuovoRitiro() {
   // Complete intake and cleanup on successful submission
   const handleCompleteIntake = async () => {
     await completeIntake();
-    if (displayChannelRef.current) {
-      supabase.removeChannel(displayChannelRef.current);
-      displayChannelRef.current = null;
-    }
   };
 
   // Block if suspended
