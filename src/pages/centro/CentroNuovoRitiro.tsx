@@ -20,6 +20,7 @@ import { getBrandSuggestions, getModelSuggestions } from "@/data/commonDevices";
 import { SparePartsStep } from "@/components/repair/SparePartsStep";
 import { RepairChecklistDialog } from "@/components/checklist";
 import { useCustomerDisplay } from "@/hooks/useCustomerDisplay";
+import { TopupRequestDialog } from "@/components/credit/TopupRequestDialog";
 
 export default function CentroNuovoRitiro() {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ export default function CentroNuovoRitiro() {
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [creditBalance, setCreditBalance] = useState<number | null>(null);
   const [isAccountBlocked, setIsAccountBlocked] = useState(false);
+  const [showTopupDialog, setShowTopupDialog] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
@@ -1098,7 +1100,7 @@ export default function CentroNuovoRitiro() {
               
               <div className="flex flex-col gap-3">
                 <Button 
-                  onClick={() => navigate("/centro/commissioni")} 
+                  onClick={() => setShowTopupDialog(true)} 
                   className="w-full"
                   size="lg"
                 >
@@ -1120,6 +1122,18 @@ export default function CentroNuovoRitiro() {
             </Card>
           </div>
         </PageTransition>
+        
+        <TopupRequestDialog
+          open={showTopupDialog}
+          onOpenChange={setShowTopupDialog}
+          entityType="centro"
+          entityId={centroId || ""}
+          currentBalance={creditBalance ?? 0}
+          onSuccess={() => {
+            setShowTopupDialog(false);
+            navigate("/centro/lavori");
+          }}
+        />
       </CentroLayout>
     );
   }
