@@ -59,33 +59,51 @@ interface IntakeSession {
   amountDueNow: number;
 }
 
-// Advertisements for standby mode
-const advertisements = [
+// Default advertisements for standby mode
+const defaultAdvertisements = [
   {
+    id: "default-1",
     title: "Riparazione Express",
     description: "Riparazioni smartphone in meno di 1 ora",
-    icon: Wrench,
+    icon: "wrench",
     gradient: "from-blue-500 to-cyan-500"
   },
   {
+    id: "default-2",
     title: "Garanzia 12 Mesi",
     description: "Su tutti i ricambi originali",
-    icon: Shield,
+    icon: "shield",
     gradient: "from-green-500 to-emerald-500"
   },
   {
+    id: "default-3",
     title: "Diagnosi Gratuita",
     description: "Per preventivi superiori a €100",
-    icon: Cpu,
+    icon: "cpu",
     gradient: "from-purple-500 to-pink-500"
   },
   {
+    id: "default-4",
     title: "Recupero Dati",
     description: "Servizio professionale di recupero dati",
-    icon: Smartphone,
+    icon: "smartphone",
     gradient: "from-orange-500 to-red-500"
   }
 ];
+
+const getIconComponent = (iconName: string) => {
+  const icons: Record<string, any> = {
+    smartphone: Smartphone,
+    wrench: Wrench,
+    shield: Shield,
+    cpu: Cpu,
+    tablet: Tablet,
+    monitor: Monitor,
+    zap: AlertTriangle,
+    star: Shield,
+  };
+  return icons[iconName] || Smartphone;
+};
 
 export default function CustomerDisplay() {
   const { centroId } = useParams();
@@ -96,7 +114,30 @@ export default function CustomerDisplay() {
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dataConfirmed, setDataConfirmed] = useState(false);
+  const [advertisements, setAdvertisements] = useState(defaultAdvertisements);
   const sigCanvas = useRef<SignatureCanvas>(null);
+
+  // Fetch custom ads from centro settings
+  useEffect(() => {
+    if (!centroId) return;
+    
+    const fetchCentroAds = async () => {
+      const { data } = await supabase
+        .from("centri_assistenza")
+        .select("settings")
+        .eq("id", centroId)
+        .single();
+      
+      if (data?.settings) {
+        const settings = data.settings as { display_ads?: typeof defaultAdvertisements };
+        if (settings.display_ads && settings.display_ads.length > 0) {
+          setAdvertisements(settings.display_ads);
+        }
+      }
+    };
+    
+    fetchCentroAds();
+  }, [centroId]);
 
   // Rotate ads in standby mode
   useEffect(() => {
@@ -107,7 +148,7 @@ export default function CustomerDisplay() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [mode]);
+  }, [mode, advertisements.length]);
 
   // Listen for intake sessions via Supabase Realtime
   useEffect(() => {
@@ -287,8 +328,8 @@ export default function CustomerDisplay() {
                   className="w-24 h-24 mx-auto rounded-3xl bg-white/20 backdrop-blur flex items-center justify-center"
                 >
                   {(() => {
-                    const Icon = advertisements[currentAdIndex].icon;
-                    return <Icon className="h-12 w-12 text-white" />;
+                    const IconComponent = getIconComponent(advertisements[currentAdIndex].icon);
+                    return <IconComponent className="h-12 w-12 text-white" />;
                   })()}
                 </motion.div>
                 <h1 className="text-4xl md:text-5xl font-bold">
