@@ -53,6 +53,7 @@ interface RepairDetail {
   forfeiture_warning_sent_at: string | null;
   estimated_cost: number | null;
   final_cost: number | null;
+  acconto: number | null;
   final_cost_signature: string | null;
   final_cost_accepted_at: string | null;
   diagnosis: string | null;
@@ -737,12 +738,27 @@ const getStatusInfo = (status: string) => {
                       </p>
                     </div>
                   )}
+                  {repair.acconto !== null && repair.acconto > 0 && (
+                    <div className="border-t pt-4">
+                      <p className="text-sm text-muted-foreground mb-1">Acconto Versato</p>
+                      <p className="text-xl font-bold text-emerald-600">
+                        €{repair.acconto.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
                   {repair.final_cost !== null && (
                     <div className="border-t pt-4">
                       <p className="text-sm text-muted-foreground mb-1">Costo Finale</p>
                       <p className="text-3xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
                         €{repair.final_cost.toFixed(2)}
                       </p>
+                      {repair.acconto !== null && repair.acconto > 0 && (
+                        <div className="mt-2 p-2 rounded-lg bg-muted/50">
+                          <p className="text-sm text-muted-foreground">
+                            Saldo da pagare al ritiro: <span className="font-bold text-foreground">€{(repair.final_cost - repair.acconto).toFixed(2)}</span>
+                          </p>
+                        </div>
+                      )}
                       {repair.final_cost_accepted_at && (
                         <Badge className="mt-2 bg-gradient-to-r from-primary to-accent text-white">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
