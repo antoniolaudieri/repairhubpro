@@ -956,29 +956,53 @@ export default function CentroImpostazioni() {
                 })}
               </div>
               
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  const newAd: DisplayAd = {
-                    id: `ad-${Date.now()}`,
-                    title: "",
-                    description: "",
-                    gradient: "from-blue-500 to-cyan-500",
-                    icon: "smartphone",
-                    type: "gradient"
-                  };
-                  setEditingAd(newAd);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Aggiungi Pubblicità
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    const newAd: DisplayAd = {
+                      id: `ad-${Date.now()}`,
+                      title: "",
+                      description: "",
+                      gradient: "from-blue-500 to-cyan-500",
+                      icon: "smartphone",
+                      type: "gradient"
+                    };
+                    setEditingAd(newAd);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Aggiungi Pubblicità
+                </Button>
+                
+                {displayAds.length === 0 && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      // Copy default ads as custom ones with new IDs
+                      const copiedAds = defaultAdvertisements.map(ad => ({
+                        ...ad,
+                        id: `ad-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+                      }));
+                      setDisplayAds(copiedAds);
+                      toast.success("Slide predefinite copiate! Ora puoi modificarle.");
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copia Predefinite
+                  </Button>
+                )}
+              </div>
               
               <p className="text-xs text-muted-foreground text-center">
                 Le pubblicità verranno mostrate a rotazione ogni 5 secondi sul display cliente.
                 <br />
-                Usa le frecce per riordinare le slide.
+                {displayAds.length === 0 ? (
+                  <span className="text-amber-600">⚠️ Clicca "Copia Predefinite" per modificare le slide o "Aggiungi" per crearne di nuove.</span>
+                ) : (
+                  <span className="text-green-600">✓ Ricorda di cliccare "Salva Modifiche" in fondo alla pagina per salvare.</span>
+                )}
               </p>
             </CardContent>
           </Card>
