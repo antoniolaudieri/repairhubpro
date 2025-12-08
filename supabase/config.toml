@@ -29,3 +29,9 @@ verify_jwt = false
 
 [functions.dispatch-repair]
 verify_jwt = false
+
+[functions.send-partnership-invite]
+verify_jwt = false
+
+[functions.search-phone-shops]
+verify_jwt = false
