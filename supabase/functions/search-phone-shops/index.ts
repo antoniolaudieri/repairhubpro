@@ -15,6 +15,7 @@ interface PhoneShop {
   latitude: number;
   longitude: number;
   distance?: number;
+  shopType: string;
 }
 
 serve(async (req) => {
@@ -33,7 +34,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Searching for phone shops near ${latitude}, ${longitude} within ${radiusKm}km`);
+    console.log(`Searching for electronics shops near ${latitude}, ${longitude} within ${radiusKm}km`);
 
     // Overpass API query for electronics/phone/computer shops
     const overpassQuery = `
@@ -76,6 +77,27 @@ serve(async (req) => {
     const data = await response.json();
     console.log(`Found ${data.elements?.length || 0} elements from Overpass`);
 
+    // Helper function to determine shop type
+    const getShopType = (tags: any): string => {
+      const shop = tags?.shop || '';
+      switch (shop) {
+        case 'mobile_phone':
+          return 'telefonia';
+        case 'electronics':
+          return 'elettronica';
+        case 'computer':
+          return 'computer';
+        case 'telecommunication':
+          return 'telecomunicazioni';
+        case 'hifi':
+          return 'hi-fi';
+        case 'appliance':
+          return 'elettrodomestici';
+        default:
+          return 'altro';
+      }
+    };
+
     // Parse and format results
     const shops: PhoneShop[] = (data.elements || [])
       .filter((el: any) => el.tags?.name) // Only include named places
@@ -111,12 +133,13 @@ serve(async (req) => {
           website: el.tags.website || el.tags['contact:website'] || null,
           latitude: lat,
           longitude: lon,
-          distance: Math.round(distance * 10) / 10
+          distance: Math.round(distance * 10) / 10,
+          shopType: getShopType(el.tags)
         };
       })
       .sort((a: PhoneShop, b: PhoneShop) => (a.distance || 0) - (b.distance || 0));
 
-    console.log(`Returning ${shops.length} phone shops`);
+    console.log(`Returning ${shops.length} electronics shops`);
 
     return new Response(
       JSON.stringify({ shops }),

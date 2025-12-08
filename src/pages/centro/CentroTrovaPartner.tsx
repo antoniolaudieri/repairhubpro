@@ -27,7 +27,12 @@ import {
   MessageCircle,
   Bookmark,
   BookmarkCheck,
-  Star
+  Star,
+  Cpu,
+  Laptop,
+  Radio,
+  Speaker,
+  Plug
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
@@ -64,7 +69,28 @@ interface ExternalShop {
   isSaved?: boolean;
   savedId?: string;
   contactStatus?: string;
+  shopType?: string;
 }
+
+// Helper function to get shop type badge styling
+const getShopTypeBadge = (shopType: string) => {
+  switch (shopType) {
+    case 'telefonia':
+      return { icon: 'smartphone', color: 'bg-blue-500/10 text-blue-600 border-blue-500/30', label: 'Telefonia' };
+    case 'elettronica':
+      return { icon: 'cpu', color: 'bg-purple-500/10 text-purple-600 border-purple-500/30', label: 'Elettronica' };
+    case 'computer':
+      return { icon: 'laptop', color: 'bg-green-500/10 text-green-600 border-green-500/30', label: 'Computer' };
+    case 'telecomunicazioni':
+      return { icon: 'radio', color: 'bg-cyan-500/10 text-cyan-600 border-cyan-500/30', label: 'Telecomunicazioni' };
+    case 'hi-fi':
+      return { icon: 'speaker', color: 'bg-orange-500/10 text-orange-600 border-orange-500/30', label: 'Hi-Fi' };
+    case 'elettrodomestici':
+      return { icon: 'plug', color: 'bg-rose-500/10 text-rose-600 border-rose-500/30', label: 'Elettrodomestici' };
+    default:
+      return { icon: 'store', color: 'bg-gray-500/10 text-gray-600 border-gray-500/30', label: 'Altro' };
+  }
+};
 
 export default function CentroTrovaPartner() {
   const { user } = useAuth();
@@ -729,16 +755,37 @@ export default function CentroTrovaPartner() {
                       <CardContent className="p-4">
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                           <div className="flex items-start gap-4">
-                            <div className={`p-3 rounded-xl ${isSaved ? 'bg-amber-500/10' : 'bg-blue-500/10'}`}>
-                              {isSaved ? (
-                                <Star className="h-6 w-6 text-amber-600" />
-                              ) : (
-                                <Smartphone className="h-6 w-6 text-blue-600" />
-                              )}
-                            </div>
+                            {(() => {
+                              const shopTypeBadge = getShopTypeBadge(shop.shopType || 'altro');
+                              const IconComponent = {
+                                'smartphone': Smartphone,
+                                'cpu': Cpu,
+                                'laptop': Laptop,
+                                'radio': Radio,
+                                'speaker': Speaker,
+                                'plug': Plug,
+                                'store': Store
+                              }[shopTypeBadge.icon] || Store;
+                              
+                              return (
+                                <div className={`p-3 rounded-xl ${isSaved ? 'bg-amber-500/10' : shopTypeBadge.color.split(' ')[0]}`}>
+                                  {isSaved ? (
+                                    <Star className="h-6 w-6 text-amber-600" />
+                                  ) : (
+                                    <IconComponent className="h-6 w-6" style={{ color: shopTypeBadge.color.includes('blue') ? '#2563eb' : shopTypeBadge.color.includes('purple') ? '#9333ea' : shopTypeBadge.color.includes('green') ? '#16a34a' : shopTypeBadge.color.includes('cyan') ? '#0891b2' : shopTypeBadge.color.includes('orange') ? '#ea580c' : shopTypeBadge.color.includes('rose') ? '#e11d48' : '#6b7280' }} />
+                                  )}
+                                </div>
+                              );
+                            })()}
                             <div>
                               <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="font-semibold text-lg">{shop.name}</h3>
+                                {/* Shop Type Badge */}
+                                {shop.shopType && (
+                                  <Badge className={getShopTypeBadge(shop.shopType).color}>
+                                    {getShopTypeBadge(shop.shopType).label}
+                                  </Badge>
+                                )}
                                 {isSaved && (
                                   <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30">
                                     <BookmarkCheck className="h-3 w-3 mr-1" />
@@ -751,10 +798,6 @@ export default function CentroTrovaPartner() {
                                     Contattato
                                   </Badge>
                                 )}
-                                <Badge variant="outline" className="border-blue-500/30 text-blue-600 text-xs">
-                                  <Globe className="h-3 w-3 mr-1" />
-                                  OpenStreetMap
-                                </Badge>
                               </div>
                               <div className="text-sm text-muted-foreground space-y-1 mt-1">
                                 <div className="flex items-center gap-1">
