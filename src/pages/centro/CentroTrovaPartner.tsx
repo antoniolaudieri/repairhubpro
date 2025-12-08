@@ -19,8 +19,10 @@ import {
   Clock,
   X,
   Users,
-  Loader2
+  Loader2,
+  Radar
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { PartnerDiscoveryMap } from "@/components/centro/PartnerDiscoveryMap";
 import { PartnershipInviteDialog } from "@/components/centro/PartnershipInviteDialog";
@@ -52,6 +54,7 @@ export default function CentroTrovaPartner() {
   const [selectedCorner, setSelectedCorner] = useState<Corner | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("map");
+  const [radiusKm, setRadiusKm] = useState(20);
 
   useEffect(() => {
     if (user) {
@@ -170,10 +173,12 @@ export default function CentroTrovaPartner() {
     setSelectedCorner(null);
   };
 
-  const filteredCorners = corners.filter(corner => 
-    corner.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    corner.address.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCorners = corners.filter(corner => {
+    const matchesSearch = corner.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      corner.address.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesRadius = corner.distance === undefined || corner.distance <= radiusKm;
+    return matchesSearch && matchesRadius;
+  });
 
   const getStatusBadge = (cornerId: string) => {
     const status = inviteStatuses[cornerId];
@@ -248,15 +253,48 @@ export default function CentroTrovaPartner() {
           </CardContent>
         </Card>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Cerca per nome o indirizzo..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        {/* Search & Filters */}
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cerca per nome o indirizzo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          
+          {/* Radius Filter */}
+          {centroLocation && (
+            <Card className="flex-1 max-w-sm">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-3">
+                  <Radar className="h-5 w-5 text-primary shrink-0" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Raggio di ricerca</span>
+                      <Badge variant="secondary" className="text-primary">
+                        {radiusKm} km
+                      </Badge>
+                    </div>
+                    <Slider
+                      value={[radiusKm]}
+                      onValueChange={(value) => setRadiusKm(value[0])}
+                      min={5}
+                      max={100}
+                      step={5}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                      <span>5 km</span>
+                      <span>100 km</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Tabs */}
