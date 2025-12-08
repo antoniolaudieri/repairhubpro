@@ -43,6 +43,7 @@ interface Repair {
   delivered_at: string | null;
   estimated_cost: number | null;
   final_cost: number | null;
+  acconto: number | null;
   final_cost_signature: string | null;
   final_cost_accepted_at: string | null;
   diagnosis: string | null;
@@ -576,6 +577,11 @@ export default function CustomerDashboard() {
                           {!repair.final_cost && repair.estimated_cost && (
                             <p className="text-sm text-muted-foreground">
                               Stima: €{repair.estimated_cost.toFixed(2)}
+                            </p>
+                          )}
+                          {repair.acconto !== null && repair.acconto > 0 && (
+                            <p className="text-xs text-emerald-600 mt-1">
+                              Acconto: €{repair.acconto.toFixed(2)}
                             </p>
                           )}
                         </div>
