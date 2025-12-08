@@ -719,93 +719,69 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
               </motion.div>
             )}
 
-            {/* Signature Mode - Ultra compact for small screens with fixed button */}
+            {/* Signature Mode - Single page layout without scroll */}
             {mode === "signature" && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col h-[calc(100vh-1rem)] sm:h-auto"
+                className="fixed inset-0 flex flex-col p-2 sm:p-4 md:p-6 bg-gradient-to-br from-background via-background to-primary/5"
               >
-                {/* Scrollable content */}
-                <div className="flex-1 overflow-y-auto space-y-1.5 sm:space-y-3 md:space-y-6 pb-16 sm:pb-0">
-                  {/* Quote Details - very compact */}
-                  {session.quoteItems && session.quoteItems.length > 0 && (
-                    <Card className="p-1.5 sm:p-3 md:p-6 border border-accent/20">
-                      <div className="space-y-1 max-h-12 sm:max-h-24 md:max-h-48 overflow-y-auto text-[10px] sm:text-xs md:text-sm">
-                        {session.quoteItems.slice(0, 2).map((item, index) => (
-                          <div key={index} className="flex justify-between items-center px-1.5 py-0.5 bg-muted/50 rounded">
-                            <span className="truncate flex-1">{item.name}</span>
-                            <span className="font-semibold ml-1">€{item.total.toFixed(0)}</span>
-                          </div>
-                        ))}
-                        {session.quoteItems.length > 2 && (
-                          <p className="text-center text-muted-foreground text-[8px]">+{session.quoteItems.length - 2} altri</p>
-                        )}
-                      </div>
-                      <div className="flex justify-between font-bold text-primary pt-1 mt-1 border-t text-xs sm:text-base md:text-xl">
-                        <span>Totale</span>
-                        <span>€{(session.estimatedCost + session.diagnosticFee).toFixed(2)}</span>
-                      </div>
-                    </Card>
-                  )}
-
-                  {/* Amount to pay - inline on small screens */}
-                  <div className="flex items-center justify-between p-1.5 sm:p-3 md:p-6 rounded-lg border-2 border-primary bg-primary/5">
-                    <span className="text-[9px] sm:text-xs md:text-sm text-muted-foreground">Da pagare</span>
-                    <span className="text-base sm:text-2xl md:text-5xl font-bold text-primary">€{session.amountDueNow.toFixed(2)}</span>
-                  </div>
-
-                  {/* Disclaimer - minimal on small screens */}
-                  <div className="flex items-center gap-1 p-1 sm:p-2 md:p-4 rounded bg-amber-500/5 border border-amber-500/30 text-[7px] sm:text-[10px] md:text-sm text-muted-foreground">
-                    <AlertTriangle className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-amber-500 shrink-0" />
-                    <span className="line-clamp-1">Esonero responsabilità • 30gg = proprietà lab</span>
-                  </div>
-
-                  {/* Signature Canvas - shorter on small screens */}
-                  <div className="space-y-0.5 sm:space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] sm:text-sm md:text-lg font-semibold flex items-center gap-1">
-                        <FileSignature className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-primary" />
-                        Firma
-                      </span>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleClearSignature}
-                        className="h-5 sm:h-8 px-1 sm:px-2 text-[9px] sm:text-xs"
-                      >
-                        <X className="h-2.5 w-2.5 mr-0.5" />
-                        Cancella
-                      </Button>
-                    </div>
-
-                    <Card className="p-0.5 sm:p-1 bg-white border-2 border-dashed border-primary/40">
-                      <SignatureCanvas
-                        ref={sigCanvas}
-                        canvasProps={{
-                          className: "w-full h-16 sm:h-32 md:h-56 rounded cursor-crosshair",
-                          style: { touchAction: "none" }
-                        }}
-                        backgroundColor="white"
-                        penColor="#000000"
-                      />
-                    </Card>
-                  </div>
+                {/* Top: Amount to pay - prominent */}
+                <div className="flex items-center justify-center gap-2 py-2 sm:py-3 md:py-4 rounded-lg border-2 border-primary bg-primary/10">
+                  <span className="text-xs sm:text-sm md:text-lg text-muted-foreground">Da pagare:</span>
+                  <span className="text-2xl sm:text-4xl md:text-6xl font-bold text-primary">€{session.amountDueNow.toFixed(2)}</span>
                 </div>
 
-                {/* Fixed Submit Button at bottom for small screens */}
-                <div className="fixed bottom-0 left-0 right-0 p-2 bg-background/95 backdrop-blur border-t sm:relative sm:p-0 sm:bg-transparent sm:border-0 sm:mt-3 md:mt-6">
+                {/* Middle: Signature area - takes remaining space */}
+                <div className="flex-1 flex flex-col min-h-0 py-2 sm:py-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs sm:text-sm md:text-base font-semibold flex items-center gap-1">
+                      <FileSignature className="h-3 w-3 sm:h-4 sm:w-4 text-primary" />
+                      Firma qui sotto
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleClearSignature}
+                      className="h-6 sm:h-8 px-2 text-[10px] sm:text-xs"
+                    >
+                      <X className="h-3 w-3 mr-1" />
+                      Cancella
+                    </Button>
+                  </div>
+                  <Card className="flex-1 p-0.5 bg-white border-2 border-dashed border-primary/40 min-h-0">
+                    <SignatureCanvas
+                      ref={sigCanvas}
+                      canvasProps={{
+                        className: "w-full h-full rounded cursor-crosshair",
+                        style: { touchAction: "none" }
+                      }}
+                      backgroundColor="white"
+                      penColor="#000000"
+                    />
+                  </Card>
+                </div>
+
+                {/* Bottom: Disclaimer + Confirm button */}
+                <div className="space-y-2 sm:space-y-3">
+                  {/* Disclaimer - compact */}
+                  <div className="flex items-center justify-center gap-1 px-2 py-1.5 sm:py-2 rounded bg-amber-500/10 border border-amber-500/30 text-[8px] sm:text-[10px] md:text-xs text-muted-foreground">
+                    <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500 shrink-0" />
+                    <span>Esonero responsabilità dati • Dispositivi non ritirati entro 30gg diventano proprietà del laboratorio</span>
+                  </div>
+
+                  {/* Confirm Button */}
                   <Button
                     onClick={handleSubmitSignature}
                     disabled={isSubmitting}
-                    className="w-full h-10 sm:h-12 md:h-16 text-sm sm:text-base md:text-xl font-bold bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
+                    className="w-full h-12 sm:h-14 md:h-16 text-base sm:text-lg md:text-xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90"
                   >
                     {isSubmitting ? (
-                      <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                      <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
                     ) : (
                       <>
-                        <CheckCircle2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        <CheckCircle2 className="mr-2 h-5 w-5 sm:h-6 sm:w-6" />
                         Firma e Conferma
                       </>
                     )}
