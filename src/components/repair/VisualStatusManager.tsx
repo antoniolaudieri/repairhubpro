@@ -2,6 +2,16 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Clock, 
   Check, 
@@ -207,6 +217,7 @@ export function VisualStatusManager({
   timestamps = {}
 }: VisualStatusManagerProps) {
   const [hoveredStatus, setHoveredStatus] = useState<string | null>(null);
+  const [terminalConfirmDialog, setTerminalConfirmDialog] = useState<{ open: boolean; statusId: string | null }>({ open: false, statusId: null });
   
   // Filter out terminal states for the main workflow
   const workflowStatuses = statuses.filter(s => !['cancelled', 'forfeited'].includes(s.id));
@@ -449,7 +460,7 @@ export function VisualStatusManager({
                     key={status.id}
                     variant="outline"
                     size="sm"
-                    onClick={() => onStatusChange(status.id)}
+                    onClick={() => setTerminalConfirmDialog({ open: true, statusId: status.id })}
                     className={cn(
                       "gap-1.5 text-xs",
                       status.id === 'cancelled' && "text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200",
@@ -465,6 +476,54 @@ export function VisualStatusManager({
           </div>
         )}
       </div>
+
+      {/* Terminal state confirmation dialog */}
+      <AlertDialog 
+        open={terminalConfirmDialog.open} 
+        onOpenChange={(open) => setTerminalConfirmDialog({ open, statusId: open ? terminalConfirmDialog.statusId : null })}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              {terminalConfirmDialog.statusId === 'cancelled' ? (
+                <>
+                  <XCircle className="h-5 w-5 text-red-600" />
+                  Conferma Annullamento
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-5 w-5 text-rose-600" />
+                  Conferma Alienazione
+                </>
+              )}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {terminalConfirmDialog.statusId === 'cancelled' 
+                ? "Stai per annullare questa riparazione. Questa azione è irreversibile e la riparazione non potrà più essere modificata."
+                : "Stai per contrassegnare questo dispositivo come alienato. Questa azione è irreversibile e indica che il dispositivo è diventato proprietà del negozio."
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (terminalConfirmDialog.statusId && onStatusChange) {
+                  onStatusChange(terminalConfirmDialog.statusId);
+                }
+                setTerminalConfirmDialog({ open: false, statusId: null });
+              }}
+              className={cn(
+                terminalConfirmDialog.statusId === 'cancelled' 
+                  ? "bg-red-600 hover:bg-red-700" 
+                  : "bg-rose-600 hover:bg-rose-700"
+              )}
+            >
+              Conferma
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
