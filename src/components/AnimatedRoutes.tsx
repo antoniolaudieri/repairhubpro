@@ -57,6 +57,7 @@ import AdminFatturazione from "@/pages/admin/AdminFatturazione";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import NotFound from "@/pages/NotFound";
 import RemoteSignature from "@/pages/RemoteSignature";
+import CustomerDisplay from "@/pages/CustomerDisplay";
 
 export const AnimatedRoutes = () => {
   const location = useLocation();
@@ -66,6 +67,9 @@ export const AnimatedRoutes = () => {
       <Routes location={location} key={location.pathname}>
         {/* Public Remote Signature Route */}
         <Route path="/firma-remota/:sessionId" element={<PageTransition><RemoteSignature /></PageTransition>} />
+        
+        {/* Public Customer Display for external monitor */}
+        <Route path="/display/:centroId" element={<PageTransition><CustomerDisplay /></PageTransition>} />
         
         <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
