@@ -565,31 +565,6 @@ export function VisualStatusManager({
         {/* Spacer for labels */}
         <div className="h-8" />
 
-        {/* Quick actions for non-terminal states */}
-        {!readOnly && onStatusChange && !isTerminalState && (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="flex items-center justify-between pt-3 border-t border-border/50"
-          >
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Info className="h-3.5 w-3.5" />
-              <span>Clicca sugli stati per avanzare o retrocedere</span>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs h-8 text-red-600 hover:text-red-700 hover:bg-red-500/10"
-                onClick={() => onStatusChange('cancelled')}
-              >
-                <XCircle className="h-3.5 w-3.5 mr-1" />
-                Annulla
-              </Button>
-            </div>
-          </motion.div>
-        )}
       </div>
     </Card>
   );
