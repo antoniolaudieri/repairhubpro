@@ -137,6 +137,9 @@ export default function CentroNuovoRitiro() {
     };
   }, [centroId, listenForCustomerResponses, cancelIntake]);
 
+  // Track if session has been started
+  const sessionStartedRef = useRef(false);
+
   // Send data to customer display when step changes or data updates
   useEffect(() => {
     if (!centroId) return;
@@ -193,13 +196,14 @@ export default function CentroNuovoRitiro() {
       laborCost: laborCost
     };
     
-    // Start session when customer data is available
-    if (customerData.name && currentStep >= 0) {
+    // Start session ONLY ONCE when customer data becomes available
+    if (customerData.name && currentStep >= 0 && !sessionStartedRef.current) {
+      sessionStartedRef.current = true;
       startIntakeSession(sessionData);
     }
     
-    // Update session with latest data
-    if (currentStep >= 1) {
+    // Update session with latest data (but NOT start again)
+    if (sessionStartedRef.current && currentStep >= 1) {
       updateIntakeSession(sessionData);
     }
     
