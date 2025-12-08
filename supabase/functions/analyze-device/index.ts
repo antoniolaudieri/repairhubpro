@@ -113,15 +113,25 @@ Se non riesci a identificare qualcosa, usa "unknown". Per condizioni non valutab
     // Try to parse JSON from AI response
     let deviceInfo;
     try {
-      // Extract JSON from response if it's embedded in text
-      const jsonMatch = aiResponse.match(/\{[^}]+\}/);
-      if (jsonMatch) {
-        deviceInfo = JSON.parse(jsonMatch[0]);
+      // Clean the response - remove markdown code blocks if present
+      let cleanedResponse = aiResponse
+        .replace(/```json\s*/gi, '')
+        .replace(/```\s*/g, '')
+        .trim();
+      
+      // Find the JSON object - match from first { to last }
+      const startIndex = cleanedResponse.indexOf('{');
+      const endIndex = cleanedResponse.lastIndexOf('}');
+      
+      if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+        const jsonString = cleanedResponse.substring(startIndex, endIndex + 1);
+        deviceInfo = JSON.parse(jsonString);
       } else {
-        deviceInfo = JSON.parse(aiResponse);
+        deviceInfo = JSON.parse(cleanedResponse);
       }
     } catch (parseError) {
       console.error("Failed to parse AI response as JSON:", parseError);
+      console.error("Raw AI response:", aiResponse);
       // Fallback: try to extract info from text
       deviceInfo = {
         type: "unknown",
