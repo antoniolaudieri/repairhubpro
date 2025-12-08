@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
+import { PatternDisplay } from "@/components/customer/PatternDisplay";
 import RepairGuide from "@/components/repair/RepairGuide";
 import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
 import { AcceptanceFormPDF } from "@/components/repair/AcceptanceFormPDF";
@@ -1309,12 +1310,29 @@ export default function RepairDetail() {
                       </div>
                       <div className="space-y-2">
                         {repair.device.password && (
-                          <div className="flex items-center gap-3 bg-primary/5 rounded-lg p-3">
-                            <Key className="h-4 w-4 text-primary" />
-                            <div>
-                              <p className="text-xs text-muted-foreground">PIN/Password</p>
-                              <p className="font-mono font-semibold text-foreground">{repair.device.password}</p>
-                            </div>
+                          <div className="bg-primary/5 rounded-lg p-3">
+                            {repair.device.password.startsWith('[PATTERN]') ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <Key className="h-4 w-4 text-primary" />
+                                  <p className="text-xs text-muted-foreground">Pattern di Sblocco</p>
+                                </div>
+                                <div className="flex justify-center">
+                                  <PatternDisplay 
+                                    pattern={repair.device.password.replace('[PATTERN] ', '')} 
+                                    size="md" 
+                                  />
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-3">
+                                <Key className="h-4 w-4 text-primary" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">PIN/Password</p>
+                                  <p className="font-mono font-semibold text-foreground">{repair.device.password}</p>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                         {repair.device.imei && (
