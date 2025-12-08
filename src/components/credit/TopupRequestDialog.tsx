@@ -19,11 +19,7 @@ interface TopupRequestDialogProps {
   onSuccess?: () => void;
 }
 
-const PAYMENT_METHODS = [
-  { value: "bank_transfer", label: "Bonifico Bancario", icon: Building2 },
-  { value: "cash", label: "Contanti", icon: Banknote },
-  { value: "card", label: "Carta", icon: CreditCard },
-];
+const PAYMENT_METHOD = { value: "bank_transfer", label: "Bonifico Bancario", icon: Building2 };
 
 export function TopupRequestDialog({
   open,
@@ -34,7 +30,7 @@ export function TopupRequestDialog({
   onSuccess,
 }: TopupRequestDialogProps) {
   const [amount, setAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("bank_transfer");
+  const paymentMethod = "bank_transfer";
   const [paymentReference, setPaymentReference] = useState("");
   const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,9 +58,9 @@ export function TopupRequestDialog({
 
       toast.success("Richiesta di ricarica inviata! Riceverai conferma a breve.");
       setAmount("");
-      setPaymentMethod("bank_transfer");
       setPaymentReference("");
       setNotes("");
+      onOpenChange(false);
       onSuccess?.();
     } catch (error: any) {
       console.error("Error creating topup request:", error);
@@ -123,33 +119,20 @@ export function TopupRequestDialog({
 
           <div className="space-y-2">
             <Label>Metodo di pagamento</Label>
-            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {PAYMENT_METHODS.map((method) => (
-                  <SelectItem key={method.value} value={method.value}>
-                    <div className="flex items-center gap-2">
-                      <method.icon className="h-4 w-4" />
-                      {method.label}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">Bonifico Bancario</span>
+            </div>
           </div>
 
-          {paymentMethod === "bank_transfer" && (
-            <div className="space-y-2">
-              <Label>Riferimento pagamento (CRO/TRN)</Label>
-              <Input
-                placeholder="Inserisci il codice del bonifico"
-                value={paymentReference}
-                onChange={(e) => setPaymentReference(e.target.value)}
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label>Riferimento pagamento (CRO/TRN)</Label>
+            <Input
+              placeholder="Inserisci il codice del bonifico"
+              value={paymentReference}
+              onChange={(e) => setPaymentReference(e.target.value)}
+            />
+          </div>
 
           <div className="space-y-2">
             <Label>Note (opzionale)</Label>
@@ -161,18 +144,18 @@ export function TopupRequestDialog({
             />
           </div>
 
-          {paymentMethod === "bank_transfer" && (
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-3 text-xs space-y-1">
-                <p className="font-medium text-primary">Coordinate bancarie:</p>
-                <p>IBAN: IT00X0000000000000000000000</p>
-                <p>Intestato a: [Nome Azienda]</p>
-                <p className="text-muted-foreground mt-2">
-                  Inserisci come causale: "Ricarica credito - {entityType === "centro" ? "Centro" : "Corner"}"
-                </p>
-              </CardContent>
-            </Card>
-          )}
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-4 text-sm space-y-2">
+              <p className="font-semibold text-primary">Coordinate bancarie:</p>
+              <div className="space-y-1 font-mono text-xs bg-background/50 p-3 rounded-md">
+                <p><span className="text-muted-foreground">IBAN:</span> IT32D0200810500000420425905</p>
+                <p><span className="text-muted-foreground">Intestato a:</span> Riccardo Casagrande</p>
+              </div>
+              <p className="text-muted-foreground text-xs mt-3">
+                Inserisci come causale: <span className="font-medium text-foreground">"Ricarica credito - {entityType === "centro" ? "Centro" : "Corner"}"</span>
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <DialogFooter>
