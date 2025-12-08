@@ -6,6 +6,14 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
 
+interface CentroData {
+  business_name: string;
+  address: string;
+  phone: string;
+  email: string;
+  vat_number?: string | null;
+}
+
 interface AcceptanceFormPDFProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -32,6 +40,7 @@ interface AcceptanceFormPDFProps {
       phone: string;
       address?: string | null;
     };
+    centro?: CentroData | null;
   };
 }
 
@@ -351,10 +360,27 @@ Il Team TechRepair
               
               <div className="signature-box">
                 <p>Timbro Laboratorio</p>
-                <div className="signature-img">
+                <div className="signature-img" style={{ height: "auto", minHeight: "80px", padding: "8px" }}>
                   <div style={{ textAlign: "center" }}>
-                    <p style={{ fontWeight: "bold", fontSize: "14px", margin: 0 }}>TechRepair</p>
-                    <p style={{ fontSize: "10px", margin: 0 }}>Centro Assistenza Tecnica</p>
+                    <p style={{ fontWeight: "bold", fontSize: "14px", margin: 0 }}>
+                      {repairData.centro?.business_name || "TechRepair"}
+                    </p>
+                    <p style={{ fontSize: "10px", margin: "2px 0" }}>Centro Assistenza Tecnica</p>
+                    {repairData.centro && (
+                      <>
+                        <p style={{ fontSize: "9px", margin: "2px 0", color: "#444" }}>
+                          {repairData.centro.address}
+                        </p>
+                        <p style={{ fontSize: "9px", margin: "2px 0", color: "#444" }}>
+                          Tel: {repairData.centro.phone} | {repairData.centro.email}
+                        </p>
+                        {repairData.centro.vat_number && (
+                          <p style={{ fontSize: "9px", margin: "2px 0", color: "#444" }}>
+                            P.IVA: {repairData.centro.vat_number}
+                          </p>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

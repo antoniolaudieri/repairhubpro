@@ -105,6 +105,14 @@ interface RepairPart {
   };
 }
 
+interface CentroInfo {
+  business_name: string;
+  address: string;
+  phone: string;
+  email: string;
+  vat_number: string | null;
+}
+
 interface RepairDetail {
   id: string;
   status: string;
@@ -140,9 +148,11 @@ interface RepairDetail {
     phone: string;
     email: string | null;
     address: string | null;
+    centro_id: string | null;
   };
   orders?: OrderInfo[];
   repair_parts?: RepairPart[];
+  centro?: CentroInfo | null;
 }
 
 const statusConfig = {
@@ -208,7 +218,8 @@ export default function RepairDetail() {
               name,
               phone,
               email,
-              address
+              address,
+              centro_id
             )
           ),
           orders (
@@ -238,6 +249,20 @@ export default function RepairDetail() {
 
       if (error) throw error;
 
+      // Load centro data if customer has centro_id
+      let centroData: CentroInfo | null = null;
+      if (data.device?.customer?.centro_id) {
+        const { data: centro } = await supabase
+          .from("centri_assistenza")
+          .select("business_name, address, phone, email, vat_number")
+          .eq("id", data.device.customer.centro_id)
+          .single();
+        
+        if (centro) {
+          centroData = centro;
+        }
+      }
+
       const repairData = {
         id: data.id,
         status: data.status,
@@ -261,6 +286,7 @@ export default function RepairDetail() {
         customer: data.device.customer,
         orders: data.orders || [],
         repair_parts: data.repair_parts || [],
+        centro: centroData,
       };
       setRepair(repairData);
       setPreviousStatus(data.status);
@@ -1475,6 +1501,7 @@ export default function RepairDetail() {
             phone: repair.customer.phone,
             address: repair.customer.address,
           },
+          centro: repair.centro,
         }}
       />
 
