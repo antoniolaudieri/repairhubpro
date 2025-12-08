@@ -387,47 +387,67 @@ export default function CentroTrovaPartner() {
   return (
     <CentroLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Users className="h-7 w-7 text-primary" />
-              Trova Partner
-            </h1>
-            <p className="text-muted-foreground">
-              Cerca Corner nella tua zona e avvia nuove collaborazioni
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Badge variant="outline" className="text-lg px-4 py-2">
-              <Store className="h-4 w-4 mr-2" />
-              {corners.filter(c => c.status === 'approved').length} Attivi
-            </Badge>
-            <Badge variant="outline" className="text-lg px-4 py-2 border-amber-500/50 text-amber-600">
-              <Clock className="h-4 w-4 mr-2" />
-              {corners.filter(c => c.status === 'pending').length} In attesa
-            </Badge>
-          </div>
-        </div>
-
-        {/* Info Card */}
-        <Card className="bg-gradient-to-r from-primary/5 to-primary/10 border-primary/20">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Send className="h-5 w-5 text-primary" />
+        {/* Hero Header */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-blue-500/10 to-purple-500/10 border border-primary/20">
+          <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          
+          <div className="relative p-6 md:p-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div className="flex items-start gap-4">
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-primary to-blue-600 shadow-lg shadow-primary/25">
+                  <Users className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                    Trova Partner
+                  </h1>
+                  <p className="text-muted-foreground mt-1 max-w-lg">
+                    Espandi la tua rete di collaboratori. I Corner possono inviarti riparazioni dai loro clienti.
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-semibold">Espandi la tua rete</h3>
-                <p className="text-sm text-muted-foreground">
-                  I Corner possono inviarti riparazioni dai loro clienti. Sono mostrati sia i Corner già attivi 
-                  che quelli in attesa di approvazione - contattali per far conoscere questa opportunità!
-                </p>
+
+              {/* Stats Pills */}
+              <div className="flex items-center gap-3">
+                <div className="px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 backdrop-blur-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-green-500/20">
+                      <Store className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-green-600">{corners.filter(c => c.status === 'approved').length}</p>
+                      <p className="text-xs text-green-600/70">Attivi</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 backdrop-blur-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-amber-500/20">
+                      <Clock className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-amber-600">{corners.filter(c => c.status === 'pending').length}</p>
+                      <p className="text-xs text-amber-600/70">In attesa</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 backdrop-blur-sm">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-blue-500/20">
+                      <BookmarkCheck className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-blue-600">{savedShops.size}</p>
+                      <p className="text-xs text-blue-600/70">Salvati</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Search & Filters */}
         <div className="flex flex-col md:flex-row gap-4">
@@ -437,20 +457,22 @@ export default function CentroTrovaPartner() {
               placeholder="Cerca per nome o indirizzo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 h-11 bg-background/50 backdrop-blur-sm border-border/50"
             />
           </div>
           
           {/* Radius Filter */}
           {centroLocation && (
-            <Card className="flex-1 max-w-sm">
-              <CardContent className="p-3">
-                <div className="flex items-center gap-3">
-                  <Radar className="h-5 w-5 text-primary shrink-0" />
+            <Card className="flex-1 max-w-sm bg-gradient-to-r from-primary/5 to-transparent border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 rounded-xl bg-primary/10">
+                    <Radar className="h-5 w-5 text-primary" />
+                  </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">Raggio di ricerca</span>
-                      <Badge variant="secondary" className="text-primary">
+                      <Badge className="bg-primary/10 text-primary border-primary/20 font-bold">
                         {radiusKm} km
                       </Badge>
                     </div>
@@ -475,20 +497,22 @@ export default function CentroTrovaPartner() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 max-w-lg">
-            <TabsTrigger value="registered" className="gap-2">
+          <TabsList className="h-12 p-1 bg-muted/50 backdrop-blur-sm border border-border/50 rounded-xl">
+            <TabsTrigger value="registered" className="gap-2 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Store className="h-4 w-4" />
-              Corner
+              <span className="hidden sm:inline">Corner Registrati</span>
+              <span className="sm:hidden">Corner</span>
             </TabsTrigger>
-            <TabsTrigger value="discover" className="gap-2">
+            <TabsTrigger value="discover" className="gap-2 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Globe className="h-4 w-4" />
-              Scopri
+              <span className="hidden sm:inline">Scopri Negozi</span>
+              <span className="sm:hidden">Scopri</span>
             </TabsTrigger>
-            <TabsTrigger value="saved" className="gap-2">
+            <TabsTrigger value="saved" className="gap-2 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <BookmarkCheck className="h-4 w-4" />
-              Salvati
+              <span className="hidden sm:inline">Salvati</span>
               {savedShops.size > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                <Badge className="ml-1 h-5 px-1.5 text-xs bg-amber-500/20 text-amber-600 border-0">
                   {savedShops.size}
                 </Badge>
               )}
@@ -613,33 +637,46 @@ export default function CentroTrovaPartner() {
           </TabsContent>
 
           {/* Discover External Shops Tab */}
-          <TabsContent value="discover" className="mt-4 space-y-4">
-            <Card className="bg-gradient-to-r from-blue-500/5 to-purple-500/10 border-blue-500/20">
-              <CardContent className="p-4">
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                  <div className="flex items-start gap-3 flex-1">
-                    <div className="p-2 bg-blue-500/10 rounded-lg">
-                      <Globe className="h-5 w-5 text-blue-500" />
+          <TabsContent value="discover" className="mt-6 space-y-6">
+            {/* Search CTA Card */}
+            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10">
+              <div className="absolute inset-0 bg-grid-white/5" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+              <CardContent className="relative p-6">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/25">
+                      <Globe className="h-6 w-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-semibold">Cerca negozi di telefonia su OpenStreetMap</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Trova negozi di telefonia nella tua zona che non sono ancora registrati sulla piattaforma. 
-                        Contattali per proporre una partnership!
+                      <h3 className="font-bold text-lg">Cerca negozi di telefonia</h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Trova negozi nella tua zona non ancora registrati. Contattali via WhatsApp, email o telefono per proporre una collaborazione!
                       </p>
+                      <div className="flex items-center gap-2 mt-3">
+                        <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-600 bg-blue-500/5">
+                          <Smartphone className="h-3 w-3 mr-1" />
+                          OpenStreetMap
+                        </Badge>
+                        <Badge variant="outline" className="text-xs border-green-500/30 text-green-600 bg-green-500/5">
+                          <MessageCircle className="h-3 w-3 mr-1" />
+                          Contatto Diretto
+                        </Badge>
+                      </div>
                     </div>
                   </div>
                   <Button 
                     onClick={searchExternalShops} 
                     disabled={loadingExternal || !centroLocation}
-                    className="gap-2"
+                    size="lg"
+                    className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25"
                   >
                     {loadingExternal ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-5 w-5 animate-spin" />
                     ) : (
-                      <Search className="h-4 w-4" />
+                      <Search className="h-5 w-5" />
                     )}
-                    Cerca Negozi ({radiusKm}km)
+                    Cerca nel raggio di {radiusKm}km
                   </Button>
                 </div>
               </CardContent>
@@ -647,24 +684,28 @@ export default function CentroTrovaPartner() {
 
             {/* External shops results */}
             {externalShops.length > 0 && (
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between px-1">
                 <p className="text-sm text-muted-foreground">
-                  Negozi trovati su OpenStreetMap
+                  Negozi trovati nella tua zona
                 </p>
-                <Badge variant="outline" className="border-blue-500/50 text-blue-600">
+                <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
                   <Smartphone className="h-3 w-3 mr-1" />
-                  {filteredExternalShops.length} negozi
+                  {filteredExternalShops.length} risultati
                 </Badge>
               </div>
             )}
 
             <div className="grid gap-4">
               {externalShops.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center text-muted-foreground">
-                    <Globe className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p>Clicca "Cerca Negozi" per trovare negozi di telefonia nella tua zona</p>
-                    <p className="text-xs mt-2">I dati provengono da OpenStreetMap (fonte collaborativa)</p>
+                <Card className="border-dashed border-2 bg-muted/30">
+                  <CardContent className="p-12 text-center">
+                    <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4">
+                      <Globe className="h-8 w-8 text-blue-500/70" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Inizia la ricerca</h3>
+                    <p className="text-muted-foreground max-w-sm mx-auto">
+                      Clicca "Cerca" per trovare negozi di telefonia nella tua zona tramite OpenStreetMap
+                    </p>
                   </CardContent>
                 </Card>
               ) : filteredExternalShops.length === 0 ? (
@@ -865,23 +906,38 @@ export default function CentroTrovaPartner() {
           </TabsContent>
 
           {/* Saved Shops Tab */}
-          <TabsContent value="saved" className="mt-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Negozi salvati da seguire e contattare
-              </p>
-              <Badge variant="outline" className="border-amber-500/50 text-amber-600">
+          <TabsContent value="saved" className="mt-6 space-y-6">
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <h3 className="font-medium">Negozi da seguire</h3>
+                <p className="text-sm text-muted-foreground">
+                  Tieni traccia delle conversazioni con potenziali partner
+                </p>
+              </div>
+              <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">
                 <BookmarkCheck className="h-3 w-3 mr-1" />
                 {savedShops.size} salvati
               </Badge>
             </div>
 
             {savedShops.size === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  <Bookmark className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Nessun negozio salvato</p>
-                  <p className="text-xs mt-2">Vai su "Scopri" per cercare e salvare negozi di telefonia</p>
+              <Card className="border-dashed border-2 bg-muted/30">
+                <CardContent className="p-12 text-center">
+                  <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center mb-4">
+                    <Bookmark className="h-8 w-8 text-amber-500/70" />
+                  </div>
+                  <h3 className="font-semibold text-lg mb-2">Nessun negozio salvato</h3>
+                  <p className="text-muted-foreground max-w-sm mx-auto mb-4">
+                    Vai su "Scopri Negozi" per cercare e salvare negozi di telefonia da contattare
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setActiveTab("discover")}
+                    className="gap-2"
+                  >
+                    <Globe className="h-4 w-4" />
+                    Scopri Negozi
+                  </Button>
                 </CardContent>
               </Card>
             ) : (
