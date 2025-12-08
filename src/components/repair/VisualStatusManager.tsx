@@ -41,6 +41,7 @@ export interface StatusConfig {
   bgColor: string;
 }
 
+// Stati validi nel database: pending, in_progress, completed, delivered, cancelled
 export const DIRECT_REPAIR_STATUSES: StatusConfig[] = [
   { 
     id: 'pending', 
@@ -49,22 +50,6 @@ export const DIRECT_REPAIR_STATUSES: StatusConfig[] = [
     icon: Clock, 
     color: 'text-yellow-600',
     bgColor: 'bg-yellow-500',
-  },
-  { 
-    id: 'in_diagnosis', 
-    label: 'In Diagnosi', 
-    shortLabel: 'Diagnosi',
-    icon: Search, 
-    color: 'text-indigo-600',
-    bgColor: 'bg-indigo-500',
-  },
-  { 
-    id: 'waiting_for_parts', 
-    label: 'Attesa Ricambi',
-    shortLabel: 'Ricambi',
-    icon: Package, 
-    color: 'text-orange-600',
-    bgColor: 'bg-orange-500',
   },
   { 
     id: 'in_progress', 
@@ -97,14 +82,6 @@ export const DIRECT_REPAIR_STATUSES: StatusConfig[] = [
     icon: XCircle, 
     color: 'text-red-600',
     bgColor: 'bg-red-500',
-  },
-  { 
-    id: 'forfeited', 
-    label: 'Alienato', 
-    shortLabel: 'Alienato',
-    icon: AlertTriangle, 
-    color: 'text-rose-600',
-    bgColor: 'bg-rose-600',
   },
 ];
 
@@ -228,12 +205,12 @@ export function VisualStatusManager({
   const [terminalConfirmDialog, setTerminalConfirmDialog] = useState<{ open: boolean; statusId: string | null }>({ open: false, statusId: null });
   
   // Filter out terminal states for the main workflow
-  const workflowStatuses = statuses.filter(s => !['cancelled', 'forfeited'].includes(s.id));
-  const terminalStatuses = statuses.filter(s => ['cancelled', 'forfeited'].includes(s.id));
+  const workflowStatuses = statuses.filter(s => s.id !== 'cancelled');
+  const terminalStatuses = statuses.filter(s => s.id === 'cancelled');
   
   const currentIndex = workflowStatuses.findIndex(s => s.id === currentStatus);
   const currentConfig = statuses.find(s => s.id === currentStatus);
-  const isTerminalState = ['cancelled', 'forfeited'].includes(currentStatus);
+  const isTerminalState = currentStatus === 'cancelled';
   
   const getStatusState = (index: number) => {
     if (isTerminalState) return 'disabled';
@@ -351,22 +328,10 @@ export function VisualStatusManager({
       <div className="p-6 space-y-6">
         {/* Terminal state banner */}
         {isTerminalState && (
-          <div className={cn(
-            "flex items-center gap-3 p-4 rounded-lg border",
-            currentStatus === 'cancelled' 
-              ? "bg-red-50 border-red-200 text-red-800"
-              : "bg-rose-50 border-rose-200 text-rose-800"
-          )}>
-            {currentStatus === 'cancelled' ? (
-              <XCircle className="h-5 w-5 flex-shrink-0" />
-            ) : (
-              <AlertTriangle className="h-5 w-5 flex-shrink-0" />
-            )}
+          <div className="flex items-center gap-3 p-4 rounded-lg border bg-red-50 border-red-200 text-red-800">
+            <XCircle className="h-5 w-5 flex-shrink-0" />
             <p className="text-sm font-medium">
-              {currentStatus === 'cancelled' 
-                ? "Questa riparazione è stata annullata."
-                : "Il dispositivo è stato alienato dopo 30 giorni."
-              }
+              Questa riparazione è stata annullata.
             </p>
           </div>
         )}
@@ -469,11 +434,7 @@ export function VisualStatusManager({
                     variant="outline"
                     size="sm"
                     onClick={() => setTerminalConfirmDialog({ open: true, statusId: status.id })}
-                    className={cn(
-                      "gap-1.5 text-xs",
-                      status.id === 'cancelled' && "text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200",
-                      status.id === 'forfeited' && "text-rose-600 hover:text-rose-700 hover:bg-rose-50 border-rose-200"
-                    )}
+                    className="gap-1.5 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                   >
                     <Icon className="h-3.5 w-3.5" />
                     {status.label}
@@ -493,23 +454,11 @@ export function VisualStatusManager({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
-              {terminalConfirmDialog.statusId === 'cancelled' ? (
-                <>
-                  <XCircle className="h-5 w-5 text-red-600" />
-                  Conferma Annullamento
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="h-5 w-5 text-rose-600" />
-                  Conferma Alienazione
-                </>
-              )}
+              <XCircle className="h-5 w-5 text-red-600" />
+              Conferma Annullamento
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {terminalConfirmDialog.statusId === 'cancelled' 
-                ? "Stai per annullare questa riparazione. Questa azione è irreversibile e la riparazione non potrà più essere modificata."
-                : "Stai per contrassegnare questo dispositivo come alienato. Questa azione è irreversibile e indica che il dispositivo è diventato proprietà del negozio."
-              }
+              Stai per annullare questa riparazione. Questa azione è irreversibile e la riparazione non potrà più essere modificata.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -521,11 +470,7 @@ export function VisualStatusManager({
                 }
                 setTerminalConfirmDialog({ open: false, statusId: null });
               }}
-              className={cn(
-                terminalConfirmDialog.statusId === 'cancelled' 
-                  ? "bg-red-600 hover:bg-red-700" 
-                  : "bg-rose-600 hover:bg-rose-700"
-              )}
+              className="bg-red-600 hover:bg-red-700"
             >
               Conferma
             </AlertDialogAction>
