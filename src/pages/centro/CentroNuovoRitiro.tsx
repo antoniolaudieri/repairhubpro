@@ -106,8 +106,8 @@ export default function CentroNuovoRitiro() {
         setPaymentStatus(data.payment_status);
         setCreditBalance(data.credit_balance ?? 0);
         
-        // Block if suspended or credit below minimum threshold (€50)
-        const minBalance = 50;
+        // Block if suspended or credit below minimum threshold (€5)
+        const minBalance = 5;
         if (data.payment_status === 'suspended' || (data.credit_balance ?? 0) < minBalance) {
           setIsAccountBlocked(true);
         }
@@ -1091,10 +1091,10 @@ export default function CentroNuovoRitiro() {
               
               <div className="p-4 bg-muted/50 rounded-lg space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  Per creare nuove riparazioni è necessario un saldo minimo di <span className="font-semibold text-foreground">€50,00</span>
+                  Per creare nuove riparazioni è necessario un saldo minimo di <span className="font-semibold text-foreground">€5,00</span>
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Ricarica almeno <span className="font-bold text-primary">€{Math.max(50 - (creditBalance ?? 0), 50).toFixed(2)}</span> per riprendere l'operatività.
+                  Ricarica almeno <span className="font-bold text-primary">€50,00</span> per riprendere l'operatività.
                 </p>
               </div>
               
