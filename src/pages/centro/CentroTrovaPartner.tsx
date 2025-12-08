@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { CentroLayout } from "@/layouts/CentroLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +32,12 @@ import {
   Laptop,
   Radio,
   Speaker,
-  Plug
+  Plug,
+  Plus
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import { PartnerDiscoveryMap } from "@/components/centro/PartnerDiscoveryMap";
 import { PartnershipInviteDialog } from "@/components/centro/PartnershipInviteDialog";
 import { SavedShopsList } from "@/components/centro/SavedShopsList";
@@ -403,102 +405,119 @@ export default function CentroTrovaPartner() {
   if (loading) {
     return (
       <CentroLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center"
+          >
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary/20 border-t-primary mx-auto" />
+            <p className="text-muted-foreground text-sm mt-3">Caricamento...</p>
+          </motion.div>
         </div>
       </CentroLayout>
     );
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  const statsCards = [
+    {
+      title: "Corner Attivi",
+      value: corners.filter(c => c.status === 'approved').length,
+      icon: Store,
+      iconBg: "bg-gradient-to-br from-emerald-500 to-green-500",
+    },
+    {
+      title: "In Attesa",
+      value: corners.filter(c => c.status === 'pending').length,
+      icon: Clock,
+      iconBg: "bg-gradient-to-br from-amber-500 to-orange-500",
+    },
+    {
+      title: "Negozi Salvati",
+      value: savedShops.size,
+      icon: BookmarkCheck,
+      iconBg: "bg-gradient-to-br from-blue-500 to-cyan-500",
+    },
+    {
+      title: "Partner Attivi",
+      value: Object.values(inviteStatuses).filter(s => s === 'partner' || s === 'accepted').length,
+      icon: Users,
+      iconBg: "bg-gradient-to-br from-violet-500 to-purple-500",
+    },
+  ];
+
   return (
     <CentroLayout>
-      <div className="space-y-6">
-        {/* Hero Header */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-blue-500/10 to-purple-500/10 border border-primary/20">
-          <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
-          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
-          
-          <div className="relative p-6 md:p-8">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-              <div className="flex items-start gap-4">
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-primary to-blue-600 shadow-lg shadow-primary/25">
-                  <Users className="h-8 w-8 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
-                    Trova Partner
-                  </h1>
-                  <p className="text-muted-foreground mt-1 max-w-lg">
-                    Espandi la tua rete di collaboratori. I Corner possono inviarti riparazioni dai loro clienti.
-                  </p>
-                </div>
-              </div>
-
-              {/* Stats Pills */}
-              <div className="flex items-center gap-3">
-                <div className="px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/20 backdrop-blur-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-green-500/20">
-                      <Store className="h-4 w-4 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-green-600">{corners.filter(c => c.status === 'approved').length}</p>
-                      <p className="text-xs text-green-600/70">Attivi</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 backdrop-blur-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-amber-500/20">
-                      <Clock className="h-4 w-4 text-amber-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-amber-600">{corners.filter(c => c.status === 'pending').length}</p>
-                      <p className="text-xs text-amber-600/70">In attesa</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="px-4 py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 backdrop-blur-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-blue-500/20">
-                      <BookmarkCheck className="h-4 w-4 text-blue-600" />
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold text-blue-600">{savedShops.size}</p>
-                      <p className="text-xs text-blue-600/70">Salvati</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+      <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl md:text-2xl font-semibold text-foreground">Trova Partner</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">Espandi la tua rete di collaboratori</p>
           </div>
         </div>
 
+        {/* Stats Cards */}
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4"
+        >
+          {statsCards.map((card) => (
+            <motion.div key={card.title} variants={itemVariants}>
+              <Card className="p-3 md:p-4 border-border/50 hover:border-border transition-colors">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className={`h-8 w-8 md:h-10 md:w-10 rounded-lg ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
+                    <card.icon className="h-4 w-4 md:h-5 md:w-5 text-white" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xl md:text-2xl font-bold text-foreground leading-none">{card.value}</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5 leading-tight">{card.title}</p>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
+
         {/* Search & Filters */}
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Cerca per nome o indirizzo..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-11 bg-background/50 backdrop-blur-sm border-border/50"
+              className="pl-10 h-10 border-border/50"
             />
           </div>
           
           {/* Radius Filter */}
           {centroLocation && (
-            <Card className="flex-1 max-w-sm bg-gradient-to-r from-primary/5 to-transparent border-primary/20">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="p-2 rounded-xl bg-primary/10">
-                    <Radar className="h-5 w-5 text-primary" />
+            <Card className="flex-1 max-w-xs border-border/50">
+              <CardContent className="p-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center flex-shrink-0">
+                    <Radar className="h-4 w-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">Raggio di ricerca</span>
-                      <Badge className="bg-primary/10 text-primary border-primary/20 font-bold">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-medium">Raggio</span>
+                      <Badge variant="outline" className="h-5 text-xs font-bold">
                         {radiusKm} km
                       </Badge>
                     </div>
@@ -510,10 +529,6 @@ export default function CentroTrovaPartner() {
                       step={5}
                       className="w-full"
                     />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                      <span>5 km</span>
-                      <span>100 km</span>
-                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -523,22 +538,20 @@ export default function CentroTrovaPartner() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="h-12 p-1 bg-muted/50 backdrop-blur-sm border border-border/50 rounded-xl">
-            <TabsTrigger value="registered" className="gap-2 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsList className="h-10 p-1 bg-muted/50 border border-border/50">
+            <TabsTrigger value="registered" className="gap-2 px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Store className="h-4 w-4" />
-              <span className="hidden sm:inline">Corner Registrati</span>
-              <span className="sm:hidden">Corner</span>
+              <span className="hidden sm:inline">Corner</span>
             </TabsTrigger>
-            <TabsTrigger value="discover" className="gap-2 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <TabsTrigger value="discover" className="gap-2 px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Globe className="h-4 w-4" />
-              <span className="hidden sm:inline">Scopri Negozi</span>
-              <span className="sm:hidden">Scopri</span>
+              <span className="hidden sm:inline">Scopri</span>
             </TabsTrigger>
-            <TabsTrigger value="saved" className="gap-2 px-6 rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <TabsTrigger value="saved" className="gap-2 px-4 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <BookmarkCheck className="h-4 w-4" />
               <span className="hidden sm:inline">Salvati</span>
               {savedShops.size > 0 && (
-                <Badge className="ml-1 h-5 px-1.5 text-xs bg-amber-500/20 text-amber-600 border-0">
+                <Badge variant="outline" className="ml-1 h-5 px-1.5 text-xs">
                   {savedShops.size}
                 </Badge>
               )}
@@ -568,10 +581,10 @@ export default function CentroTrovaPartner() {
             </Card>
 
             {/* List of registered corners */}
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {filteredCorners.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center text-muted-foreground">
+                <Card className="border-border/50">
+                  <CardContent className="p-6 text-center text-muted-foreground text-sm">
                     Nessun Corner trovato con i criteri di ricerca
                   </CardContent>
                 </Card>
@@ -579,77 +592,73 @@ export default function CentroTrovaPartner() {
                 filteredCorners.map((corner) => (
                   <Card 
                     key={corner.id} 
-                    className={`transition-all hover:shadow-md ${
-                      inviteStatuses[corner.id] === "partner" ? "border-green-500/30 bg-green-500/5" : ""
+                    className={`border-border/50 hover:border-border transition-colors ${
+                      inviteStatuses[corner.id] === "partner" ? "border-green-500/30" : ""
                     }`}
                   >
-                    <CardContent className="p-4">
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className={`p-3 rounded-xl ${corner.status === 'approved' ? 'bg-green-500/10' : 'bg-amber-500/10'}`}>
-                            <Store className={`h-6 w-6 ${corner.status === 'approved' ? 'text-green-600' : 'text-amber-600'}`} />
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                            corner.status === 'approved' 
+                              ? 'bg-gradient-to-br from-emerald-500 to-green-500' 
+                              : 'bg-gradient-to-br from-amber-500 to-orange-500'
+                          }`}>
+                            <Store className="h-4 w-4 text-white" />
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-lg">{corner.business_name}</h3>
+                              <h3 className="font-medium text-sm">{corner.business_name}</h3>
                               {corner.status === 'pending' && (
-                                <Badge variant="outline" className="border-amber-500/50 text-amber-600 text-xs">
-                                  <Clock className="h-3 w-3 mr-1" />
-                                  Non ancora attivo
+                                <Badge variant="outline" className="text-[10px] h-5">
+                                  <Clock className="h-2.5 w-2.5 mr-1" />
+                                  Non attivo
                                 </Badge>
                               )}
                               {getStatusBadge(corner.id)}
                             </div>
-                            <div className="text-sm text-muted-foreground space-y-1 mt-1">
-                              <div className="flex items-center gap-1">
+                            <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-3 flex-wrap">
+                              <span className="flex items-center gap-1">
                                 <MapPin className="h-3 w-3" />
                                 {corner.address}
-                                {corner.distance !== undefined && (
-                                  <span className="ml-2 text-primary font-medium">
-                                    ({corner.distance.toFixed(1)} km)
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <span className="flex items-center gap-1">
-                                  <Phone className="h-3 w-3" />
-                                  {corner.phone}
+                              </span>
+                              {corner.distance !== undefined && (
+                                <span className="text-primary font-medium">
+                                  {corner.distance.toFixed(1)} km
                                 </span>
-                                <span className="flex items-center gap-1">
-                                  <Mail className="h-3 w-3" />
-                                  {corner.email}
-                                </span>
-                              </div>
+                              )}
                             </div>
                           </div>
                         </div>
 
-                        <div>
+                        <div className="flex-shrink-0">
                           {!inviteStatuses[corner.id] ? (
                             <Button 
+                              size="sm"
                               onClick={() => handleSelectCorner(corner)}
-                              className="gap-2"
+                              className="gap-1.5 h-8"
                             >
-                              <Send className="h-4 w-4" />
-                              Invia Richiesta
+                              <Send className="h-3.5 w-3.5" />
+                              Invita
                             </Button>
                           ) : inviteStatuses[corner.id] === "partner" ? (
-                            <Button variant="outline" disabled className="gap-2">
-                              <Check className="h-4 w-4" />
-                              Già Partner
+                            <Button variant="outline" size="sm" disabled className="gap-1.5 h-8">
+                              <Check className="h-3.5 w-3.5" />
+                              Partner
                             </Button>
                           ) : inviteStatuses[corner.id] === "pending" ? (
-                            <Button variant="outline" disabled className="gap-2">
-                              <Clock className="h-4 w-4" />
-                              Richiesta Inviata
+                            <Button variant="outline" size="sm" disabled className="gap-1.5 h-8">
+                              <Clock className="h-3.5 w-3.5" />
+                              Inviata
                             </Button>
                           ) : inviteStatuses[corner.id] === "declined" ? (
                             <Button 
                               variant="outline" 
+                              size="sm"
                               onClick={() => handleSelectCorner(corner)}
-                              className="gap-2"
+                              className="gap-1.5 h-8"
                             >
-                              <Send className="h-4 w-4" />
+                              <Send className="h-3.5 w-3.5" />
                               Riprova
                             </Button>
                           ) : null}
@@ -663,46 +672,33 @@ export default function CentroTrovaPartner() {
           </TabsContent>
 
           {/* Discover External Shops Tab */}
-          <TabsContent value="discover" className="mt-6 space-y-6">
+          <TabsContent value="discover" className="mt-4 space-y-4">
             {/* Search CTA Card */}
-            <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/10 via-purple-500/10 to-pink-500/10">
-              <div className="absolute inset-0 bg-grid-white/5" />
-              <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <CardContent className="relative p-6">
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="p-3 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/25">
-                      <Globe className="h-6 w-6 text-white" />
+            <Card className="border-border/50">
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                      <Globe className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg">Cerca negozi di telefonia</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Trova negozi nella tua zona non ancora registrati. Contattali via WhatsApp, email o telefono per proporre una collaborazione!
+                      <h3 className="font-medium text-sm">Cerca negozi esterni</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Trova negozi di elettronica nella tua zona non ancora registrati
                       </p>
-                      <div className="flex items-center gap-2 mt-3">
-                        <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-600 bg-blue-500/5">
-                          <Smartphone className="h-3 w-3 mr-1" />
-                          OpenStreetMap
-                        </Badge>
-                        <Badge variant="outline" className="text-xs border-green-500/30 text-green-600 bg-green-500/5">
-                          <MessageCircle className="h-3 w-3 mr-1" />
-                          Contatto Diretto
-                        </Badge>
-                      </div>
                     </div>
                   </div>
                   <Button 
                     onClick={searchExternalShops} 
                     disabled={loadingExternal || !centroLocation}
-                    size="lg"
-                    className="gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25"
+                    className="gap-2"
                   >
                     {loadingExternal ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Search className="h-5 w-5" />
+                      <Search className="h-4 w-4" />
                     )}
-                    Cerca nel raggio di {radiusKm}km
+                    Cerca ({radiusKm}km)
                   </Button>
                 </div>
               </CardContent>
@@ -710,33 +706,32 @@ export default function CentroTrovaPartner() {
 
             {/* External shops results */}
             {externalShops.length > 0 && (
-              <div className="flex items-center justify-between px-1">
+              <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
                   Negozi trovati nella tua zona
                 </p>
-                <Badge className="bg-blue-500/10 text-blue-600 border-blue-500/20">
-                  <Smartphone className="h-3 w-3 mr-1" />
+                <Badge variant="outline">
                   {filteredExternalShops.length} risultati
                 </Badge>
               </div>
             )}
 
-            <div className="grid gap-4">
+            <div className="grid gap-3">
               {externalShops.length === 0 ? (
-                <Card className="border-dashed border-2 bg-muted/30">
-                  <CardContent className="p-12 text-center">
-                    <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center mb-4">
-                      <Globe className="h-8 w-8 text-blue-500/70" />
+                <Card className="border-dashed border-border/50">
+                  <CardContent className="p-8 text-center">
+                    <div className="h-12 w-12 mx-auto rounded-lg bg-muted flex items-center justify-center mb-3">
+                      <Globe className="h-6 w-6 text-muted-foreground" />
                     </div>
-                    <h3 className="font-semibold text-lg mb-2">Inizia la ricerca</h3>
-                    <p className="text-muted-foreground max-w-sm mx-auto">
-                      Clicca "Cerca" per trovare negozi di telefonia nella tua zona tramite OpenStreetMap
+                    <h3 className="font-medium text-sm mb-1">Inizia la ricerca</h3>
+                    <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+                      Clicca "Cerca" per trovare negozi nella tua zona
                     </p>
                   </CardContent>
                 </Card>
               ) : filteredExternalShops.length === 0 ? (
-                <Card>
-                  <CardContent className="p-8 text-center text-muted-foreground">
+                <Card className="border-border/50">
+                  <CardContent className="p-6 text-center text-muted-foreground text-sm">
                     Nessun negozio corrisponde ai criteri di ricerca
                   </CardContent>
                 </Card>
@@ -744,200 +739,116 @@ export default function CentroTrovaPartner() {
                 filteredExternalShops.map((shop) => {
                   const isSaved = savedShops.has(shop.id);
                   const savedInfo = savedShops.get(shop.id);
+                  const shopTypeBadge = getShopTypeBadge(shop.shopType || 'altro');
+                  const IconComponent = {
+                    'smartphone': Smartphone,
+                    'cpu': Cpu,
+                    'laptop': Laptop,
+                    'radio': Radio,
+                    'speaker': Speaker,
+                    'plug': Plug,
+                    'store': Store
+                  }[shopTypeBadge.icon] || Store;
                   
                   return (
                     <Card 
                       key={shop.id} 
-                      className={`transition-all hover:shadow-md ${
-                        isSaved ? 'border-amber-500/30 bg-amber-500/5' : 'border-blue-500/10'
+                      className={`border-border/50 hover:border-border transition-colors ${
+                        isSaved ? 'border-amber-500/30' : ''
                       }`}
                     >
-                      <CardContent className="p-4">
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                          <div className="flex items-start gap-4">
-                            {(() => {
-                              const shopTypeBadge = getShopTypeBadge(shop.shopType || 'altro');
-                              const IconComponent = {
-                                'smartphone': Smartphone,
-                                'cpu': Cpu,
-                                'laptop': Laptop,
-                                'radio': Radio,
-                                'speaker': Speaker,
-                                'plug': Plug,
-                                'store': Store
-                              }[shopTypeBadge.icon] || Store;
-                              
-                              return (
-                                <div className={`p-3 rounded-xl ${isSaved ? 'bg-amber-500/10' : shopTypeBadge.color.split(' ')[0]}`}>
-                                  {isSaved ? (
-                                    <Star className="h-6 w-6 text-amber-600" />
-                                  ) : (
-                                    <IconComponent className="h-6 w-6" style={{ color: shopTypeBadge.color.includes('blue') ? '#2563eb' : shopTypeBadge.color.includes('purple') ? '#9333ea' : shopTypeBadge.color.includes('green') ? '#16a34a' : shopTypeBadge.color.includes('cyan') ? '#0891b2' : shopTypeBadge.color.includes('orange') ? '#ea580c' : shopTypeBadge.color.includes('rose') ? '#e11d48' : '#6b7280' }} />
-                                  )}
-                                </div>
-                              );
-                            })()}
-                            <div>
+                      <CardContent className="p-3 md:p-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                              isSaved ? 'bg-gradient-to-br from-amber-500 to-orange-500' : shopTypeBadge.color.split(' ')[0].replace('/10', '')
+                            }`} style={{ background: isSaved ? undefined : shopTypeBadge.color.includes('blue') ? 'linear-gradient(135deg, #3b82f6, #6366f1)' : shopTypeBadge.color.includes('purple') ? 'linear-gradient(135deg, #9333ea, #a855f7)' : shopTypeBadge.color.includes('green') ? 'linear-gradient(135deg, #22c55e, #10b981)' : shopTypeBadge.color.includes('cyan') ? 'linear-gradient(135deg, #06b6d4, #0891b2)' : shopTypeBadge.color.includes('orange') ? 'linear-gradient(135deg, #f97316, #ea580c)' : shopTypeBadge.color.includes('rose') ? 'linear-gradient(135deg, #f43f5e, #e11d48)' : 'linear-gradient(135deg, #6b7280, #4b5563)' }}>
+                              {isSaved ? (
+                                <Star className="h-4 w-4 text-white" />
+                              ) : (
+                                <IconComponent className="h-4 w-4 text-white" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2 flex-wrap">
-                                <h3 className="font-semibold text-lg">{shop.name}</h3>
-                                {/* Shop Type Badge */}
+                                <h3 className="font-medium text-sm">{shop.name}</h3>
                                 {shop.shopType && (
-                                  <Badge className={getShopTypeBadge(shop.shopType).color}>
+                                  <Badge variant="outline" className="text-[10px] h-5">
                                     {getShopTypeBadge(shop.shopType).label}
                                   </Badge>
                                 )}
                                 {isSaved && (
-                                  <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30">
-                                    <BookmarkCheck className="h-3 w-3 mr-1" />
+                                  <Badge variant="outline" className="text-[10px] h-5 border-amber-500/50 text-amber-600">
                                     Salvato
                                   </Badge>
                                 )}
                                 {savedInfo?.contactStatus === 'contacted' && (
-                                  <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
-                                    <Check className="h-3 w-3 mr-1" />
+                                  <Badge variant="outline" className="text-[10px] h-5 border-green-500/50 text-green-600">
                                     Contattato
                                   </Badge>
                                 )}
                               </div>
-                              <div className="text-sm text-muted-foreground space-y-1 mt-1">
-                                <div className="flex items-center gap-1">
+                              <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-3 flex-wrap">
+                                <span className="flex items-center gap-1">
                                   <MapPin className="h-3 w-3" />
                                   {shop.address}
-                                  {shop.distance !== undefined && (
-                                    <span className="ml-2 text-primary font-medium">
-                                      ({shop.distance} km)
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-4 flex-wrap">
-                                  {shop.phone && (
-                                    <a href={`tel:${shop.phone}`} className="flex items-center gap-1 text-primary hover:underline">
-                                      <Phone className="h-3 w-3" />
-                                      {shop.phone}
-                                    </a>
-                                  )}
-                                  {shop.email && (
-                                    <a href={`mailto:${shop.email}`} className="flex items-center gap-1 text-primary hover:underline">
-                                      <Mail className="h-3 w-3" />
-                                      {shop.email}
-                                    </a>
-                                  )}
-                                  {shop.website && (
-                                    <a href={shop.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
-                                      <ExternalLink className="h-3 w-3" />
-                                      Sito web
-                                    </a>
-                                  )}
-                                </div>
+                                </span>
+                                {shop.distance !== undefined && (
+                                  <span className="text-primary font-medium">
+                                    {shop.distance} km
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>
 
-                          <div className="flex gap-2 flex-wrap">
-                            {/* Save/Unsave button */}
+                          <div className="flex gap-1.5 flex-wrap flex-shrink-0">
                             {isSaved ? (
-                              <>
-                                {savedInfo?.contactStatus !== 'contacted' && (
-                                  <Button 
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleUpdateContactStatus(shop, 'contacted')}
-                                    className="border-green-500/50 text-green-600 hover:bg-green-500/10"
-                                  >
-                                    <Check className="h-4 w-4 mr-1" />
-                                    Contattato
-                                  </Button>
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRemoveSavedShop(shop)}
+                                disabled={savingShop === shop.id}
+                                className="h-8 text-xs"
+                              >
+                                {savingShop === shop.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <X className="h-3.5 w-3.5" />
                                 )}
-                                <Button 
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleRemoveSavedShop(shop)}
-                                  disabled={savingShop === shop.id}
-                                  className="border-red-500/50 text-red-600 hover:bg-red-500/10"
-                                >
-                                  {savingShop === shop.id ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <>
-                                      <X className="h-4 w-4 mr-1" />
-                                      Rimuovi
-                                    </>
-                                  )}
-                                </Button>
-                              </>
+                              </Button>
                             ) : (
                               <Button 
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleSaveShop(shop)}
                                 disabled={savingShop === shop.id}
-                                className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                                className="h-8 text-xs"
                               >
                                 {savingShop === shop.id ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                 ) : (
-                                  <>
-                                    <Bookmark className="h-4 w-4 mr-1" />
-                                    Salva
-                                  </>
+                                  <Bookmark className="h-3.5 w-3.5" />
                                 )}
                               </Button>
                             )}
                             
                             {shop.phone && (
-                              <>
-                                <Button 
-                                  variant="outline"
-                                  size="sm"
-                                  asChild
-                                >
-                                  <a href={`tel:${shop.phone}`}>
-                                    <Phone className="h-4 w-4 mr-1" />
-                                    Chiama
-                                  </a>
-                                </Button>
-                                <Button 
-                                  size="sm"
-                                  className="bg-green-600 hover:bg-green-700 text-white"
-                                  asChild
-                                >
-                                  <a 
-                                    href={`https://wa.me/${shop.phone.replace(/[^0-9]/g, '')}`} 
-                                    target="_blank" 
-                                    rel="noopener noreferrer"
-                                  >
-                                    <MessageCircle className="h-4 w-4 mr-1" />
-                                    WhatsApp
-                                  </a>
-                                </Button>
-                              </>
-                            )}
-                            {shop.email && (
                               <Button 
-                                variant="outline"
                                 size="sm"
+                                className="h-8 text-xs gap-1"
                                 asChild
                               >
-                                <a href={`mailto:${shop.email}?subject=Proposta di Partnership RepairHubPro&body=Buongiorno,%0A%0ASiamo un Centro di Assistenza e vorremmo proporvi una collaborazione sulla piattaforma RepairHubPro.%0A%0ACordiali saluti`}>
-                                  <Mail className="h-4 w-4 mr-1" />
-                                  Email
+                                <a 
+                                  href={`https://wa.me/${shop.phone.replace(/[^0-9]/g, '')}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                >
+                                  <MessageCircle className="h-3.5 w-3.5" />
+                                  WhatsApp
                                 </a>
                               </Button>
                             )}
-                            <Button 
-                              variant="outline"
-                              size="sm"
-                              asChild
-                            >
-                              <a 
-                                href={`https://www.google.com/maps/search/?api=1&query=${shop.latitude},${shop.longitude}`} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                              >
-                                <MapPin className="h-4 w-4 mr-1" />
-                                Mappa
-                              </a>
-                            </Button>
                           </div>
                         </div>
                       </CardContent>
