@@ -36,7 +36,10 @@ import {
   Wrench,
   Shield,
   Cpu,
-  Tablet
+  Tablet,
+  GripVertical,
+  ChevronUp,
+  ChevronDown
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Switch } from "@/components/ui/switch";
@@ -675,72 +678,119 @@ export default function CentroImpostazioni() {
                 Pubblicità Display
               </CardTitle>
               <CardDescription>
-                Personalizza le pubblicità mostrate in modalità standby sul display cliente
+                Personalizza le pubblicità mostrate in modalità standby sul display cliente. Trascina le slide per riordinarle.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {displayAds.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
-                  Nessuna pubblicità personalizzata. Verranno mostrate le pubblicità predefinite.
-                </p>
+                <div className="text-center py-8 border-2 border-dashed rounded-lg space-y-3">
+                  <Megaphone className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Nessuna pubblicità personalizzata</p>
+                    <p className="text-xs text-muted-foreground/70">Verranno mostrate le pubblicità predefinite sul display cliente</p>
+                  </div>
+                </div>
               )}
               
-              {displayAds.map((ad, index) => {
-                const IconComponent = getIconComponent(ad.icon);
-                return (
-                  <div key={ad.id} className="border rounded-lg overflow-hidden">
-                    {/* Preview */}
-                    <div className="relative h-32">
-                      {ad.type === 'image' && ad.imageUrl ? (
-                        <div className="relative h-full">
-                          <img 
-                            src={ad.imageUrl} 
-                            alt={ad.title} 
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                          <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                            <p className="font-bold text-sm">{ad.title || "Titolo"}</p>
-                            <p className="text-xs opacity-80">{ad.description || "Descrizione"}</p>
+              <div className="grid gap-3">
+                {displayAds.map((ad, index) => {
+                  const IconComponent = getIconComponent(ad.icon);
+                  return (
+                    <div 
+                      key={ad.id} 
+                      className="border rounded-lg overflow-hidden bg-card hover:border-primary/50 transition-colors group"
+                    >
+                      <div className="flex">
+                        {/* Drag Handle & Order Controls */}
+                        <div className="flex flex-col items-center justify-center px-2 bg-muted/30 border-r gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            disabled={index === 0}
+                            onClick={() => {
+                              if (index > 0) {
+                                const newAds = [...displayAds];
+                                [newAds[index - 1], newAds[index]] = [newAds[index], newAds[index - 1]];
+                                setDisplayAds(newAds);
+                              }
+                            }}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <div className="text-xs font-bold text-muted-foreground">{index + 1}</div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            disabled={index === displayAds.length - 1}
+                            onClick={() => {
+                              if (index < displayAds.length - 1) {
+                                const newAds = [...displayAds];
+                                [newAds[index], newAds[index + 1]] = [newAds[index + 1], newAds[index]];
+                                setDisplayAds(newAds);
+                              }
+                            }}
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        {/* Preview */}
+                        <div className="relative w-40 h-24 flex-shrink-0">
+                          {ad.type === 'image' && ad.imageUrl ? (
+                            <div className="relative h-full">
+                              <img 
+                                src={ad.imageUrl} 
+                                alt={ad.title} 
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                            </div>
+                          ) : (
+                            <div className={`h-full bg-gradient-to-br ${ad.gradient} flex items-center justify-center`}>
+                              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                                <IconComponent className="h-5 w-5 text-white" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Info */}
+                        <div className="flex-1 p-3 flex flex-col justify-center min-w-0">
+                          <p className="font-semibold text-sm truncate">{ad.title || "Senza titolo"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{ad.description || "Nessuna descrizione"}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${ad.type === 'image' ? 'bg-blue-500/10 text-blue-600' : 'bg-purple-500/10 text-purple-600'}`}>
+                              {ad.type === 'image' ? 'Immagine' : 'Gradiente'}
+                            </span>
                           </div>
                         </div>
-                      ) : (
-                        <div className={`h-full bg-gradient-to-br ${ad.gradient} flex flex-col items-center justify-center text-white p-3`}>
-                          <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-2">
-                            <IconComponent className="h-5 w-5 text-white" />
-                          </div>
-                          <p className="font-bold text-sm text-center">{ad.title || "Titolo"}</p>
-                          <p className="text-xs opacity-80 text-center">{ad.description || "Descrizione"}</p>
+                        
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 pr-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setEditingAd(ad)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setDisplayAds(prev => prev.filter(a => a.id !== ad.id))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                    
-                    {/* Actions */}
-                    <div className="flex items-center justify-between p-2 bg-muted/50">
-                      <span className="text-xs text-muted-foreground">
-                        Slide {index + 1} • {ad.type === 'image' ? 'Immagine' : 'Gradiente'}
-                      </span>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditingAd(ad)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setDisplayAds(prev => prev.filter(a => a.id !== ad.id))}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
               
               <Button
                 variant="outline"
@@ -761,8 +811,10 @@ export default function CentroImpostazioni() {
                 Aggiungi Pubblicità
               </Button>
               
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground text-center">
                 Le pubblicità verranno mostrate a rotazione ogni 5 secondi sul display cliente.
+                <br />
+                Usa le frecce per riordinare le slide.
               </p>
             </CardContent>
           </Card>
