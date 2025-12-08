@@ -27,6 +27,7 @@ function generateImageUrls(brand: string, model: string): string[] {
   const modelLower = model.toLowerCase().trim();
   const fullName = `${brandLower}-${modelLower}`.replace(/\s+/g, '-').replace(/[()]/g, '');
   const modelSlug = modelLower.replace(/\s+/g, '-').replace(/[()]/g, '');
+  const modelNoSpaces = modelLower.replace(/\s+/g, '');
   
   const urls: string[] = [];
   
@@ -34,44 +35,63 @@ function generateImageUrls(brand: string, model: string): string[] {
   urls.push(`https://fdn2.gsmarena.com/vv/bigpic/${fullName}.jpg`);
   urls.push(`https://fdn2.gsmarena.com/vv/bigpic/${brandLower}-${modelSlug}.jpg`);
   
-  // PhoneArena patterns
-  urls.push(`https://i-cdn.phonearena.com/images/phones/${encodeURIComponent(brand)}-${encodeURIComponent(model)}.jpg`);
-  
   // Device-specific patterns for common brands
-  if (brandLower === 'apple' || brandLower === 'iphone') {
+  if (brandLower === 'apple' || brandLower === 'iphone' || modelLower.includes('iphone')) {
     const iphoneModel = modelLower.replace('iphone', '').trim().replace(/\s+/g, '-');
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneModel}.jpg`);
-    urls.push(`https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-${iphoneModel.replace(/-/g, '')}-select?wid=470&hei=556&fmt=png-alpha`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${modelNoSpaces}.jpg`);
+    // iPhone specific - try different naming conventions
+    const iphoneNumbers = modelLower.match(/\d+/);
+    if (iphoneNumbers) {
+      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneNumbers[0]}.jpg`);
+      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneNumbers[0]}-pro.jpg`);
+      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneNumbers[0]}-pro-max.jpg`);
+    }
   }
   
   if (brandLower === 'samsung') {
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-${modelSlug}.jpg`);
-    urls.push(`https://images.samsung.com/is/image/samsung/${modelSlug}`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/samsung-${modelSlug}.jpg`);
+    // Galaxy specific patterns
+    if (modelLower.includes('s2') && modelLower.includes('ultra')) {
+      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra.jpg`);
+    }
+    if (modelLower.includes('fold')) {
+      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-${modelSlug}.jpg`);
+    }
   }
   
   if (brandLower === 'xiaomi') {
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/xiaomi-${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/xiaomi-${modelNoSpaces}.jpg`);
   }
   
   if (brandLower === 'huawei') {
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/huawei-${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/huawei-p${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/huawei-mate-${modelSlug}.jpg`);
   }
   
   if (brandLower === 'lg') {
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/lg-${modelSlug}.jpg`);
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/lg-${modelSlug}-new.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/lg-g${modelSlug}.jpg`);
   }
   
   if (brandLower === 'sony') {
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/sony-${modelSlug}.jpg`);
   }
   
   if (brandLower === 'oneplus') {
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oneplus-${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oneplus-${modelNoSpaces}.jpg`);
   }
   
   if (brandLower === 'google' || brandLower === 'pixel') {
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/google-pixel-${modelSlug}.jpg`);
+    const pixelNum = modelLower.replace('pixel', '').trim();
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/google-pixel-${pixelNum}.jpg`);
   }
   
   if (brandLower === 'motorola') {
@@ -81,22 +101,41 @@ function generateImageUrls(brand: string, model: string): string[] {
   
   if (brandLower === 'oppo') {
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oppo-${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oppo-find-${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oppo-reno-${modelSlug}.jpg`);
   }
   
   if (brandLower === 'realme') {
     urls.push(`https://fdn2.gsmarena.com/vv/bigpic/realme-${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/realme-${modelNoSpaces}.jpg`);
+  }
+  
+  if (brandLower === 'vivo') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/vivo-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'poco') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/xiaomi-poco-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'nothing') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'honor') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/honor-${modelSlug}.jpg`);
   }
   
   return urls;
 }
 
-// Find first working image URL
+// Find first working image URL - check more URLs in parallel
 async function findWorkingImageUrl(brand: string, model: string): Promise<string> {
   const urls = generateImageUrls(brand, model);
   
-  // Check URLs in parallel, but limit concurrency
+  // Check more URLs in parallel for better chances
   const results = await Promise.all(
-    urls.slice(0, 6).map(async (url) => {
+    urls.slice(0, 12).map(async (url) => {
       const accessible = await isImageAccessible(url);
       return { url, accessible };
     })
