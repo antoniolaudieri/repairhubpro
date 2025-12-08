@@ -719,93 +719,98 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
               </motion.div>
             )}
 
-            {/* Signature Mode - Ultra compact for small screens */}
+            {/* Signature Mode - Ultra compact for small screens with fixed button */}
             {mode === "signature" && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-1.5 sm:space-y-3 md:space-y-6"
+                className="flex flex-col h-[calc(100vh-1rem)] sm:h-auto"
               >
-                {/* Quote Details - very compact */}
-                {session.quoteItems && session.quoteItems.length > 0 && (
-                  <Card className="p-1.5 sm:p-3 md:p-6 border border-accent/20">
-                    <div className="space-y-1 max-h-16 sm:max-h-24 md:max-h-48 overflow-y-auto text-[10px] sm:text-xs md:text-sm">
-                      {session.quoteItems.slice(0, 3).map((item, index) => (
-                        <div key={index} className="flex justify-between items-center px-1.5 py-1 bg-muted/50 rounded">
-                          <span className="truncate flex-1">{item.name}</span>
-                          <span className="font-semibold ml-1">€{item.total.toFixed(0)}</span>
-                        </div>
-                      ))}
-                      {session.quoteItems.length > 3 && (
-                        <p className="text-center text-muted-foreground">+{session.quoteItems.length - 3} altri...</p>
-                      )}
-                    </div>
-                    <div className="flex justify-between font-bold text-primary pt-1 mt-1 border-t text-xs sm:text-base md:text-xl">
-                      <span>Totale</span>
-                      <span>€{(session.estimatedCost + session.diagnosticFee).toFixed(2)}</span>
-                    </div>
-                  </Card>
-                )}
+                {/* Scrollable content */}
+                <div className="flex-1 overflow-y-auto space-y-1.5 sm:space-y-3 md:space-y-6 pb-16 sm:pb-0">
+                  {/* Quote Details - very compact */}
+                  {session.quoteItems && session.quoteItems.length > 0 && (
+                    <Card className="p-1.5 sm:p-3 md:p-6 border border-accent/20">
+                      <div className="space-y-1 max-h-12 sm:max-h-24 md:max-h-48 overflow-y-auto text-[10px] sm:text-xs md:text-sm">
+                        {session.quoteItems.slice(0, 2).map((item, index) => (
+                          <div key={index} className="flex justify-between items-center px-1.5 py-0.5 bg-muted/50 rounded">
+                            <span className="truncate flex-1">{item.name}</span>
+                            <span className="font-semibold ml-1">€{item.total.toFixed(0)}</span>
+                          </div>
+                        ))}
+                        {session.quoteItems.length > 2 && (
+                          <p className="text-center text-muted-foreground text-[8px]">+{session.quoteItems.length - 2} altri</p>
+                        )}
+                      </div>
+                      <div className="flex justify-between font-bold text-primary pt-1 mt-1 border-t text-xs sm:text-base md:text-xl">
+                        <span>Totale</span>
+                        <span>€{(session.estimatedCost + session.diagnosticFee).toFixed(2)}</span>
+                      </div>
+                    </Card>
+                  )}
 
-                {/* Amount to pay - inline on small screens */}
-                <div className="flex items-center justify-between p-2 sm:p-3 md:p-6 rounded-lg border-2 border-primary bg-primary/5">
-                  <span className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Da pagare ora</span>
-                  <span className="text-lg sm:text-2xl md:text-5xl font-bold text-primary">€{session.amountDueNow.toFixed(2)}</span>
-                </div>
-
-                {/* Disclaimer - single line on small screens */}
-                <div className="flex items-center gap-1 p-1.5 sm:p-2 md:p-4 rounded bg-amber-500/5 border border-amber-500/30 text-[8px] sm:text-[10px] md:text-sm text-muted-foreground">
-                  <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 text-amber-500 shrink-0" />
-                  <span>Esonero responsabilità dati • <span className="text-rose-600">30gg non ritiro = proprietà lab</span></span>
-                </div>
-
-                {/* Signature Canvas - shorter on small screens */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm md:text-lg font-semibold flex items-center gap-1">
-                      <FileSignature className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-primary" />
-                      Firma qui
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleClearSignature}
-                      className="h-6 sm:h-8 px-1 sm:px-2 text-[10px] sm:text-xs"
-                    >
-                      <X className="h-3 w-3 mr-0.5" />
-                      Cancella
-                    </Button>
+                  {/* Amount to pay - inline on small screens */}
+                  <div className="flex items-center justify-between p-1.5 sm:p-3 md:p-6 rounded-lg border-2 border-primary bg-primary/5">
+                    <span className="text-[9px] sm:text-xs md:text-sm text-muted-foreground">Da pagare</span>
+                    <span className="text-base sm:text-2xl md:text-5xl font-bold text-primary">€{session.amountDueNow.toFixed(2)}</span>
                   </div>
 
-                  <Card className="p-0.5 sm:p-1 bg-white border-2 border-dashed border-primary/40">
-                    <SignatureCanvas
-                      ref={sigCanvas}
-                      canvasProps={{
-                        className: "w-full h-20 sm:h-32 md:h-56 rounded cursor-crosshair",
-                        style: { touchAction: "none" }
-                      }}
-                      backgroundColor="white"
-                      penColor="#000000"
-                    />
-                  </Card>
+                  {/* Disclaimer - minimal on small screens */}
+                  <div className="flex items-center gap-1 p-1 sm:p-2 md:p-4 rounded bg-amber-500/5 border border-amber-500/30 text-[7px] sm:text-[10px] md:text-sm text-muted-foreground">
+                    <AlertTriangle className="h-2.5 w-2.5 sm:h-4 sm:w-4 text-amber-500 shrink-0" />
+                    <span className="line-clamp-1">Esonero responsabilità • 30gg = proprietà lab</span>
+                  </div>
+
+                  {/* Signature Canvas - shorter on small screens */}
+                  <div className="space-y-0.5 sm:space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] sm:text-sm md:text-lg font-semibold flex items-center gap-1">
+                        <FileSignature className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-primary" />
+                        Firma
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleClearSignature}
+                        className="h-5 sm:h-8 px-1 sm:px-2 text-[9px] sm:text-xs"
+                      >
+                        <X className="h-2.5 w-2.5 mr-0.5" />
+                        Cancella
+                      </Button>
+                    </div>
+
+                    <Card className="p-0.5 sm:p-1 bg-white border-2 border-dashed border-primary/40">
+                      <SignatureCanvas
+                        ref={sigCanvas}
+                        canvasProps={{
+                          className: "w-full h-16 sm:h-32 md:h-56 rounded cursor-crosshair",
+                          style: { touchAction: "none" }
+                        }}
+                        backgroundColor="white"
+                        penColor="#000000"
+                      />
+                    </Card>
+                  </div>
                 </div>
 
-                {/* Submit Button */}
-                <Button
-                  onClick={handleSubmitSignature}
-                  disabled={isSubmitting}
-                  className="w-full h-10 sm:h-12 md:h-16 text-sm sm:text-base md:text-xl font-bold bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-                  ) : (
-                    <>
-                      <CheckCircle2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                      Conferma
-                    </>
-                  )}
-                </Button>
+                {/* Fixed Submit Button at bottom for small screens */}
+                <div className="fixed bottom-0 left-0 right-0 p-2 bg-background/95 backdrop-blur border-t sm:relative sm:p-0 sm:bg-transparent sm:border-0 sm:mt-3 md:mt-6">
+                  <Button
+                    onClick={handleSubmitSignature}
+                    disabled={isSubmitting}
+                    className="w-full h-10 sm:h-12 md:h-16 text-sm sm:text-base md:text-xl font-bold bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
+                  >
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-1 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                        Firma e Conferma
+                      </>
+                    )}
+                  </Button>
+                </div>
               </motion.div>
             )}
           </>
