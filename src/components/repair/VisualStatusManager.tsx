@@ -41,7 +41,7 @@ export interface StatusConfig {
   bgColor: string;
 }
 
-// Stati validi nel database: pending, in_progress, completed, delivered, cancelled
+// Stati validi nel database: pending, in_progress, waiting_for_parts, completed, delivered, cancelled
 export const DIRECT_REPAIR_STATUSES: StatusConfig[] = [
   { 
     id: 'pending', 
@@ -58,6 +58,14 @@ export const DIRECT_REPAIR_STATUSES: StatusConfig[] = [
     icon: Wrench, 
     color: 'text-blue-600',
     bgColor: 'bg-blue-500',
+  },
+  { 
+    id: 'waiting_for_parts', 
+    label: 'Attesa Ricambi', 
+    shortLabel: 'Ricambi',
+    icon: Package, 
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-500',
   },
   { 
     id: 'completed', 
