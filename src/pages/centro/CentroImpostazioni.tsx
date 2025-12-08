@@ -94,7 +94,11 @@ const defaultAdvertisements: DisplayAd[] = [
     description: "Riparazioni smartphone in meno di 1 ora",
     icon: "wrench",
     gradient: "from-blue-500 to-cyan-500",
-    type: "gradient"
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center",
+    titleFont: "font-sans",
+    descriptionFont: "font-sans"
   },
   {
     id: "default-2",
@@ -102,7 +106,11 @@ const defaultAdvertisements: DisplayAd[] = [
     description: "Su tutti i ricambi originali",
     icon: "shield",
     gradient: "from-green-500 to-emerald-500",
-    type: "gradient"
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center",
+    titleFont: "font-sans",
+    descriptionFont: "font-sans"
   },
   {
     id: "default-3",
@@ -110,7 +118,11 @@ const defaultAdvertisements: DisplayAd[] = [
     description: "Per preventivi superiori a €100",
     icon: "cpu",
     gradient: "from-purple-500 to-pink-500",
-    type: "gradient"
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center",
+    titleFont: "font-sans",
+    descriptionFont: "font-sans"
   }
 ];
 
@@ -129,6 +141,7 @@ export default function CentroImpostazioni() {
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [previewAdIndex, setPreviewAdIndex] = useState(0);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(true);
+  const [slideInterval, setSlideInterval] = useState(5); // seconds
   const fileInputRef = useRef<HTMLInputElement>(null);
   const geocodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -140,10 +153,10 @@ export default function CentroImpostazioni() {
     
     const interval = setInterval(() => {
       setPreviewAdIndex((prev) => (prev + 1) % previewAds.length);
-    }, 3000);
+    }, slideInterval * 1000);
     
     return () => clearInterval(interval);
-  }, [isPreviewPlaying, previewAds.length]);
+  }, [isPreviewPlaying, previewAds.length, slideInterval]);
 
   // Geocode address to coordinates
   const geocodeAddress = useCallback(async (address: string) => {
@@ -822,6 +835,19 @@ export default function CentroImpostazioni() {
                     
                     {/* Playback controls */}
                     <div className="flex items-center gap-1">
+                      {/* Timing selector */}
+                      <select
+                        value={slideInterval}
+                        onChange={(e) => setSlideInterval(Number(e.target.value))}
+                        className="h-6 text-[10px] bg-white/20 text-white border-0 rounded px-1 focus:ring-0 cursor-pointer"
+                      >
+                        <option value={3} className="text-black">3s</option>
+                        <option value={5} className="text-black">5s</option>
+                        <option value={7} className="text-black">7s</option>
+                        <option value={10} className="text-black">10s</option>
+                        <option value={15} className="text-black">15s</option>
+                      </select>
+                      
                       <Button
                         variant="ghost"
                         size="icon"
