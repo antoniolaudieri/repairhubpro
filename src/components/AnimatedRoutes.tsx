@@ -56,6 +56,7 @@ import AdminCommissioni from "@/pages/admin/AdminCommissioni";
 import AdminFatturazione from "@/pages/admin/AdminFatturazione";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import NotFound from "@/pages/NotFound";
+import RemoteSignature from "@/pages/RemoteSignature";
 
 export const AnimatedRoutes = () => {
   const location = useLocation();
@@ -63,6 +64,9 @@ export const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
+        {/* Public Remote Signature Route */}
+        <Route path="/firma-remota/:sessionId" element={<PageTransition><RemoteSignature /></PageTransition>} />
+        
         <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
         <Route
