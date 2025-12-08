@@ -24,6 +24,7 @@ import {
   Ban,
   TrendingUp,
   Plus,
+  Minus,
   Loader2,
   Euro,
   Percent,
@@ -72,6 +73,8 @@ export function CreditManagement() {
   const [selectedEntity, setSelectedEntity] = useState<EntityCredit | null>(null);
   const [manualAmount, setManualAmount] = useState("");
   const [showManualTopup, setShowManualTopup] = useState(false);
+  const [showManualDeduct, setShowManualDeduct] = useState(false);
+  const [deductReason, setDeductReason] = useState("");
   const [showEditCommission, setShowEditCommission] = useState(false);
   const [newCommissionRate, setNewCommissionRate] = useState("");
 
@@ -231,6 +234,52 @@ export function CreditManagement() {
     },
   });
 
+  // Manual deduct mutation
+  const manualDeductMutation = useMutation({
+    mutationFn: async ({ entity, amount, reason }: { entity: EntityCredit; amount: number; reason: string }) => {
+      const table = entity.type === "centro" ? "centri_assistenza" : "corners";
+      const newBalance = entity.credit_balance - amount;
+      
+      // Update balance
+      const { error: updateError } = await supabase
+        .from(table)
+        .update({ 
+          credit_balance: newBalance,
+          last_credit_update: new Date().toISOString(),
+          payment_status: newBalance <= 0 ? 'suspended' : newBalance < 50 ? 'warning' : 'good_standing'
+        })
+        .eq("id", entity.id);
+
+      if (updateError) throw updateError;
+
+      // Create transaction record
+      const { error: txError } = await supabase
+        .from("credit_transactions")
+        .insert({
+          entity_type: entity.type,
+          entity_id: entity.id,
+          transaction_type: "manual_deduction",
+          amount: -amount,
+          balance_after: newBalance,
+          description: reason || "Deduzione manuale da admin",
+          created_by: user?.id
+        });
+
+      if (txError) throw txError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-credit-entities"] });
+      toast.success("Credito rimosso con successo");
+      setShowManualDeduct(false);
+      setSelectedEntity(null);
+      setManualAmount("");
+      setDeductReason("");
+    },
+    onError: () => {
+      toast.error("Errore nella rimozione del credito");
+    },
+  });
+
   // Update commission rate mutation
   const updateCommissionMutation = useMutation({
     mutationFn: async ({ entity, rate }: { entity: EntityCredit; rate: number }) => {
@@ -261,6 +310,16 @@ export function CreditManagement() {
       return;
     }
     manualTopupMutation.mutate({ entity: selectedEntity, amount });
+  };
+
+  const handleManualDeduct = () => {
+    if (!selectedEntity || !manualAmount) return;
+    const amount = parseFloat(manualAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Inserisci un importo valido");
+      return;
+    }
+    manualDeductMutation.mutate({ entity: selectedEntity, amount, reason: deductReason });
   };
 
   const handleUpdateCommission = () => {
@@ -491,11 +550,27 @@ export function CreditManagement() {
                             variant="outline"
                             onClick={() => {
                               setSelectedEntity(entity);
+                              setManualAmount("");
                               setShowManualTopup(true);
                             }}
+                            className="text-success border-success/30 hover:bg-success/10"
                           >
                             <Plus className="h-4 w-4 mr-1" />
                             Aggiungi
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedEntity(entity);
+                              setManualAmount("");
+                              setDeductReason("");
+                              setShowManualDeduct(true);
+                            }}
+                            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                          >
+                            <Minus className="h-4 w-4 mr-1" />
+                            Togli
                           </Button>
                         </div>
                       </div>
@@ -554,6 +629,76 @@ export function CreditManagement() {
             <Button onClick={handleManualTopup} disabled={manualTopupMutation.isPending}>
               {manualTopupMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Aggiungi Credito
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Deduct Dialog */}
+      <Dialog open={showManualDeduct} onOpenChange={setShowManualDeduct}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">Rimuovi Credito Manualmente</DialogTitle>
+          </DialogHeader>
+          {selectedEntity && (
+            <div className="space-y-4 py-4">
+              <Card className="bg-muted/50">
+                <CardContent className="p-3">
+                  <div className="flex items-center gap-3">
+                    {selectedEntity.type === "centro" ? (
+                      <Building2 className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Store className="h-5 w-5 text-info" />
+                    )}
+                    <div>
+                      <p className="font-medium">{selectedEntity.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Saldo attuale: €{selectedEntity.credit_balance.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="space-y-2">
+                <Label>Importo da rimuovere</Label>
+                <Input
+                  type="number"
+                  placeholder="50.00"
+                  value={manualAmount}
+                  onChange={(e) => setManualAmount(e.target.value)}
+                  min={1}
+                  step={10}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Motivo (opzionale)</Label>
+                <Input
+                  placeholder="Es: Rettifica saldo, penale, ecc."
+                  value={deductReason}
+                  onChange={(e) => setDeductReason(e.target.value)}
+                />
+              </div>
+
+              <Card className="bg-destructive/5 border-destructive/20">
+                <CardContent className="p-3 text-sm text-destructive">
+                  ⚠️ Questa operazione rimuoverà €{manualAmount || "0"} dal saldo. Il nuovo saldo sarà: €{(selectedEntity.credit_balance - (parseFloat(manualAmount) || 0)).toFixed(2)}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManualDeduct(false)}>
+              Annulla
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleManualDeduct} 
+              disabled={manualDeductMutation.isPending}
+            >
+              {manualDeductMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Rimuovi Credito
             </Button>
           </DialogFooter>
         </DialogContent>
