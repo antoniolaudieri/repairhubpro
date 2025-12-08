@@ -541,6 +541,41 @@ export default function CentroNuovoRitiro() {
     setLoading(true);
 
     try {
+      // Verify credit balance is sufficient for commission
+      const partsTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0);
+      const servicesTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
+      const estimatedTotal = partsTotal + servicesTotal + laborCost;
+      
+      // Get current credit balance and platform rate
+      const { data: centroData } = await supabase
+        .from("centri_assistenza")
+        .select("credit_balance, payment_status")
+        .eq("id", centroId)
+        .maybeSingle();
+      
+      const { data: platformSettings } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "platform_commission_rate")
+        .maybeSingle();
+      
+      const platformRate = platformSettings?.value ?? 10;
+      const estimatedCommission = estimatedTotal * (platformRate / 100);
+      const currentBalance = centroData?.credit_balance ?? 0;
+      
+      // Block if account is suspended
+      if (centroData?.payment_status === 'suspended') {
+        toast.error("Account sospeso per credito insufficiente. Richiedi una ricarica.");
+        setLoading(false);
+        return;
+      }
+      
+      // Block if insufficient balance for commission
+      if (estimatedTotal > 0 && currentBalance < estimatedCommission) {
+        toast.error(`Credito insufficiente (€${currentBalance.toFixed(2)}) per commissione stimata (€${estimatedCommission.toFixed(2)}). Richiedi una ricarica.`);
+        setLoading(false);
+        return;
+      }
       let customerId = existingCustomerId;
 
       if (!existingCustomerId) {
@@ -604,10 +639,7 @@ export default function CentroNuovoRitiro() {
 
       if (deviceError) throw deviceError;
 
-      // Calculate totals
-      const partsTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0);
-      const servicesTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
-      const estimatedTotal = partsTotal + servicesTotal + laborCost;
+      // Use already calculated totals from credit check
       
       let notesArray = [];
       if (selectedServices.length > 0) {
