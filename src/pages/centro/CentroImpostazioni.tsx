@@ -25,15 +25,29 @@ import {
   Monitor,
   Copy,
   ExternalLink,
-  QrCode
+  QrCode,
+  Plus,
+  Megaphone,
+  Zap,
+  Star
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
+interface DisplayAd {
+  id: string;
+  title: string;
+  description: string;
+  gradient: string;
+  icon: string;
+}
+
 interface CentroSettings {
   disable_diagnostic_fee?: boolean;
-  [key: string]: boolean | string | number | undefined;
+  display_ads?: DisplayAd[];
+  [key: string]: boolean | string | number | DisplayAd[] | undefined;
 }
 
 interface Centro {
@@ -51,6 +65,26 @@ interface Centro {
   settings: CentroSettings | null;
 }
 
+const defaultGradients = [
+  { label: "Blu/Ciano", value: "from-blue-500 to-cyan-500" },
+  { label: "Verde/Smeraldo", value: "from-green-500 to-emerald-500" },
+  { label: "Viola/Rosa", value: "from-purple-500 to-pink-500" },
+  { label: "Arancio/Rosso", value: "from-orange-500 to-red-500" },
+  { label: "Indaco/Viola", value: "from-indigo-500 to-violet-500" },
+  { label: "Giallo/Ambra", value: "from-yellow-500 to-amber-500" },
+];
+
+const iconOptions = [
+  { label: "Smartphone", value: "smartphone" },
+  { label: "Riparazione", value: "wrench" },
+  { label: "Scudo", value: "shield" },
+  { label: "CPU", value: "cpu" },
+  { label: "Tablet", value: "tablet" },
+  { label: "Monitor", value: "monitor" },
+  { label: "Fulmine", value: "zap" },
+  { label: "Stella", value: "star" },
+];
+
 export default function CentroImpostazioni() {
   const { user } = useAuth();
   const [centro, setCentro] = useState<Centro | null>(null);
@@ -58,6 +92,7 @@ export default function CentroImpostazioni() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [disableDiagnosticFee, setDisableDiagnosticFee] = useState(false);
+  const [displayAds, setDisplayAds] = useState<DisplayAd[]>([]);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -146,6 +181,7 @@ export default function CentroImpostazioni() {
       
       const settings = centroData.settings as CentroSettings | null;
       setDisableDiagnosticFee(settings?.disable_diagnostic_fee || false);
+      setDisplayAds(settings?.display_ads || []);
       
       setCentro({
         id: centroData.id,
@@ -190,9 +226,10 @@ export default function CentroImpostazioni() {
 
     setIsSaving(true);
     try {
-      const newSettings: CentroSettings = {
-        ...(centro.settings as CentroSettings || {}),
+      const newSettings = {
+        ...(centro.settings || {}),
         disable_diagnostic_fee: disableDiagnosticFee,
+        display_ads: displayAds,
       };
       
       const { error } = await supabase
@@ -206,7 +243,7 @@ export default function CentroImpostazioni() {
           notes: formData.notes || null,
           latitude,
           longitude,
-          settings: newSettings,
+          settings: newSettings as any,
         })
         .eq("id", centro.id);
 
@@ -634,6 +671,148 @@ export default function CentroImpostazioni() {
                   </div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Display Ads Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="h-5 w-5" />
+                Pubblicità Display
+              </CardTitle>
+              <CardDescription>
+                Personalizza le pubblicità mostrate in modalità standby sul display cliente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {displayAds.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
+                  Nessuna pubblicità personalizzata. Verranno mostrate le pubblicità predefinite.
+                </p>
+              )}
+              
+              {displayAds.map((ad, index) => (
+                <div key={ad.id} className="p-4 border rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Pubblicità {index + 1}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setDisplayAds(prev => prev.filter(a => a.id !== ad.id));
+                      }}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="grid gap-3">
+                    <div>
+                      <Label className="text-xs">Titolo</Label>
+                      <Input
+                        value={ad.title}
+                        onChange={(e) => {
+                          setDisplayAds(prev => prev.map(a => 
+                            a.id === ad.id ? { ...a, title: e.target.value } : a
+                          ));
+                        }}
+                        placeholder="es. Riparazione Express"
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label className="text-xs">Descrizione</Label>
+                      <Input
+                        value={ad.description}
+                        onChange={(e) => {
+                          setDisplayAds(prev => prev.map(a => 
+                            a.id === ad.id ? { ...a, description: e.target.value } : a
+                          ));
+                        }}
+                        placeholder="es. Riparazioni in meno di 1 ora"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">Icona</Label>
+                        <Select
+                          value={ad.icon}
+                          onValueChange={(value) => {
+                            setDisplayAds(prev => prev.map(a => 
+                              a.id === ad.id ? { ...a, icon: value } : a
+                            ));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {iconOptions.map((icon) => (
+                              <SelectItem key={icon.value} value={icon.value}>
+                                {icon.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div>
+                        <Label className="text-xs">Colore</Label>
+                        <Select
+                          value={ad.gradient}
+                          onValueChange={(value) => {
+                            setDisplayAds(prev => prev.map(a => 
+                              a.id === ad.id ? { ...a, gradient: value } : a
+                            ));
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {defaultGradients.map((grad) => (
+                              <SelectItem key={grad.value} value={grad.value}>
+                                {grad.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Preview */}
+                  <div className={`p-3 rounded-lg bg-gradient-to-r ${ad.gradient} text-white text-center`}>
+                    <p className="font-bold text-sm">{ad.title || "Titolo"}</p>
+                    <p className="text-xs opacity-80">{ad.description || "Descrizione"}</p>
+                  </div>
+                </div>
+              ))}
+              
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => {
+                  const newAd: DisplayAd = {
+                    id: `ad-${Date.now()}`,
+                    title: "",
+                    description: "",
+                    gradient: "from-blue-500 to-cyan-500",
+                    icon: "smartphone"
+                  };
+                  setDisplayAds(prev => [...prev, newAd]);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Aggiungi Pubblicità
+              </Button>
+              
+              <p className="text-xs text-muted-foreground">
+                Le pubblicità verranno mostrate a rotazione ogni 5 secondi sul display cliente.
+              </p>
             </CardContent>
           </Card>
 
