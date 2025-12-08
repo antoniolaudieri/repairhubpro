@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +19,7 @@ import { IntakeSignatureStep } from "@/components/repair/IntakeSignatureStep";
 import { getBrandSuggestions, getModelSuggestions } from "@/data/commonDevices";
 import { SparePartsStep } from "@/components/repair/SparePartsStep";
 import { RepairChecklistDialog } from "@/components/checklist";
+import { useCustomerDisplay } from "@/hooks/useCustomerDisplay";
 
 export default function CentroNuovoRitiro() {
   const navigate = useNavigate();
@@ -54,6 +55,19 @@ export default function CentroNuovoRitiro() {
   const [aiConditionAssessment, setAiConditionAssessment] = useState<any>(null);
   const [showChecklistDialog, setShowChecklistDialog] = useState(false);
   const [createdRepairId, setCreatedRepairId] = useState<string | null>(null);
+  
+  // Customer display integration
+  const { 
+    startIntakeSession, 
+    updateIntakeSession, 
+    requestPassword, 
+    requestSignature, 
+    cancelIntake, 
+    completeIntake,
+    listenForCustomerResponses 
+  } = useCustomerDisplay(centroId);
+  const displayChannelRef = useRef<any>(null);
+  const sessionIdRef = useRef<string>(`session-${Date.now()}`);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -96,6 +110,108 @@ export default function CentroNuovoRitiro() {
     };
     fetchCentro();
   }, [user]);
+
+  // Listen for customer responses from display
+  useEffect(() => {
+    if (!centroId) return;
+    
+    const unsubscribe = listenForCustomerResponses({
+      onDataConfirmed: () => {
+        toast.success("Il cliente ha confermato i dati!");
+      },
+      onPasswordSubmitted: (password) => {
+        setDeviceData(prev => ({ ...prev, password }));
+        toast.success("Password ricevuta dal display cliente!");
+      },
+      onPasswordSkipped: () => {
+        toast.info("Il cliente ha saltato l'inserimento della password");
+      },
+      onSignatureSubmitted: (signatureData) => {
+        setIntakeSignature(signatureData);
+        toast.success("Firma ricevuta dal display cliente!");
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      cancelIntake();
+    };
+  }, [centroId, listenForCustomerResponses, cancelIntake]);
+
+  // Send data to customer display when step changes or data updates
+  useEffect(() => {
+    if (!centroId) return;
+    
+    const estimatedTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) 
+      + selectedServices.reduce((sum, s) => sum + s.price, 0) 
+      + laborCost;
+    
+    const sessionData = {
+      sessionId: sessionIdRef.current,
+      customer: {
+        name: customerData.name,
+        phone: customerData.phone,
+        email: customerData.email,
+        address: customerData.address
+      },
+      device: {
+        brand: deviceData.brand,
+        model: deviceData.model,
+        device_type: deviceData.device_type,
+        reported_issue: deviceData.reported_issue,
+        imei: deviceData.imei,
+        serial_number: deviceData.serial_number
+      },
+      estimatedCost: estimatedTotal,
+      diagnosticFee: diagnosticFee,
+      amountDueNow: diagnosticFee + (acconto > 0 ? acconto : 0)
+    };
+    
+    // Start session when customer data is available
+    if (customerData.name && currentStep >= 0) {
+      startIntakeSession(sessionData).then(channel => {
+        if (channel) displayChannelRef.current = channel;
+      });
+    }
+    
+    // Update session with latest data
+    if (currentStep >= 1) {
+      updateIntakeSession(sessionData);
+    }
+    
+    // Request password when on device details step
+    if (currentStep === 2 && deviceData.brand && deviceData.model) {
+      requestPassword();
+    }
+    
+    // Request signature when on signature step
+    if (currentStep === 4) {
+      requestSignature();
+    }
+  }, [
+    centroId, 
+    currentStep, 
+    customerData, 
+    deviceData, 
+    selectedSpareParts, 
+    selectedServices, 
+    laborCost, 
+    diagnosticFee, 
+    acconto,
+    startIntakeSession,
+    updateIntakeSession,
+    requestPassword,
+    requestSignature
+  ]);
+
+  // Complete intake and cleanup on successful submission
+  const handleCompleteIntake = async () => {
+    await completeIntake();
+    if (displayChannelRef.current) {
+      supabase.removeChannel(displayChannelRef.current);
+      displayChannelRef.current = null;
+    }
+  };
 
   // Block if suspended
   if (paymentStatus === "suspended") {
@@ -566,6 +682,9 @@ export default function CentroNuovoRitiro() {
 
       // Save repair ID and offer checklist
       setCreatedRepairId(repairData.id);
+      
+      // Complete customer display session
+      await handleCompleteIntake();
       
       // If AI analyzed conditions, offer to open checklist
       if (aiConditionAssessment) {
