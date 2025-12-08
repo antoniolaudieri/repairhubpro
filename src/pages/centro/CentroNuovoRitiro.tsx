@@ -137,8 +137,11 @@ export default function CentroNuovoRitiro() {
     };
   }, [centroId, listenForCustomerResponses, cancelIntake]);
 
-  // Track if session has been started
+  // Track if session has been started and signature requested
   const sessionStartedRef = useRef(false);
+  const signatureRequestedRef = useRef(false);
+  const passwordRequestedRef = useRef(false);
+  const lastStepRef = useRef<number>(-1);
 
   // Send data to customer display when step changes or data updates
   useEffect(() => {
@@ -202,20 +205,27 @@ export default function CentroNuovoRitiro() {
       startIntakeSession(sessionData);
     }
     
-    // Update session with latest data (but NOT start again)
+    // Update session with latest data (but NOT start again, and NOT trigger mode changes)
     if (sessionStartedRef.current && currentStep >= 1) {
       updateIntakeSession(sessionData);
     }
     
-    // Request password when on device details step
-    if (currentStep === 2 && deviceData.brand && deviceData.model) {
+    // Only request password/signature when STEP actually changes (not on data updates)
+    const stepChanged = lastStepRef.current !== currentStep;
+    
+    // Request password when entering device details step
+    if (stepChanged && currentStep === 2 && deviceData.brand && deviceData.model && !passwordRequestedRef.current) {
+      passwordRequestedRef.current = true;
       requestPassword();
     }
     
-    // Request signature when on signature step
-    if (currentStep === 4) {
+    // Request signature ONLY when entering signature step for the first time
+    if (stepChanged && currentStep === 4 && !signatureRequestedRef.current) {
+      signatureRequestedRef.current = true;
       requestSignature();
     }
+    
+    lastStepRef.current = currentStep;
   }, [
     centroId, 
     currentStep, 
