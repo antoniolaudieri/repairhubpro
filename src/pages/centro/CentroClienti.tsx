@@ -17,7 +17,9 @@ import {
   ArrowRight,
   Calendar,
   Sparkles,
-  TrendingUp
+  TrendingUp,
+  Euro,
+  CreditCard
 } from "lucide-react";
 import { toast } from "sonner";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
@@ -32,6 +34,11 @@ interface Customer {
   created_at: string;
 }
 
+interface CustomerStats {
+  repairCount: number;
+  totalSpent: number;
+}
+
 export default function CentroClienti() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -40,7 +47,7 @@ export default function CentroClienti() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [repairCounts, setRepairCounts] = useState<Record<string, number>>({});
+  const [customerStats, setCustomerStats] = useState<Record<string, CustomerStats>>({});
 
   const loadCustomers = async () => {
     if (!user) return;
@@ -56,7 +63,8 @@ export default function CentroClienti() {
       setCustomers(data || []);
       setFilteredCustomers(data || []);
 
-      const counts: Record<string, number> = {};
+      // Load repair counts and spending for each customer
+      const stats: Record<string, CustomerStats> = {};
       for (const customer of data || []) {
         const { data: devices } = await supabase
           .from("devices")
@@ -65,17 +73,24 @@ export default function CentroClienti() {
 
         if (devices && devices.length > 0) {
           const deviceIds = devices.map(d => d.id);
-          const { count } = await supabase
+          
+          // Get repairs with costs
+          const { data: repairs } = await supabase
             .from("repairs")
-            .select("*", { count: "exact", head: true })
+            .select("id, final_cost, estimated_cost")
             .in("device_id", deviceIds);
 
-          counts[customer.id] = count || 0;
+          const repairCount = repairs?.length || 0;
+          const totalSpent = repairs?.reduce((sum, repair) => {
+            return sum + (repair.final_cost || repair.estimated_cost || 0);
+          }, 0) || 0;
+
+          stats[customer.id] = { repairCount, totalSpent };
         } else {
-          counts[customer.id] = 0;
+          stats[customer.id] = { repairCount: 0, totalSpent: 0 };
         }
       }
-      setRepairCounts(counts);
+      setCustomerStats(stats);
     } catch (error: any) {
       toast.error(error.message || "Errore nel caricamento dei clienti");
     } finally {
@@ -97,7 +112,9 @@ export default function CentroClienti() {
     setFilteredCustomers(filtered);
   }, [searchQuery, customers]);
 
-  const totalRepairs = Object.values(repairCounts).reduce((a, b) => a + b, 0);
+  const totalRepairs = Object.values(customerStats).reduce((a, b) => a + b.repairCount, 0);
+  const totalRevenue = Object.values(customerStats).reduce((a, b) => a + b.totalSpent, 0);
+  const avgPerCustomer = customers.length > 0 ? totalRevenue / customers.length : 0;
 
   if (loading) {
     return (
@@ -143,14 +160,14 @@ export default function CentroClienti() {
                   <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                     I Tuoi Clienti
                   </h1>
-                  <p className="text-muted-foreground mt-1 flex items-center gap-2">
+                  <p className="text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1">
                       <span className="font-semibold text-foreground">{customers.length}</span> clienti
                     </span>
                     <span className="text-muted-foreground/40">•</span>
                     <span className="inline-flex items-center gap-1">
-                      <TrendingUp className="h-3.5 w-3.5 text-green-500" />
-                      <span className="font-semibold text-foreground">{totalRepairs}</span> riparazioni
+                      <Euro className="h-3.5 w-3.5 text-green-500" />
+                      <span className="font-semibold text-foreground">€{totalRevenue.toFixed(0)}</span> fatturato
                     </span>
                   </p>
                 </div>
@@ -172,7 +189,7 @@ export default function CentroClienti() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-4"
           >
             <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm">
               <div className="flex items-center gap-3">
@@ -181,30 +198,28 @@ export default function CentroClienti() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-foreground">{customers.length}</p>
-                  <p className="text-xs text-muted-foreground">Totale</p>
+                  <p className="text-xs text-muted-foreground">Clienti Totali</p>
                 </div>
               </div>
             </Card>
             <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                  <Wrench className="h-5 w-5 text-green-500" />
+                  <Euro className="h-5 w-5 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{totalRepairs}</p>
-                  <p className="text-xs text-muted-foreground">Riparazioni</p>
+                  <p className="text-2xl font-bold text-foreground">€{totalRevenue.toFixed(0)}</p>
+                  <p className="text-xs text-muted-foreground">Fatturato Totale</p>
                 </div>
               </div>
             </Card>
             <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                  <Sparkles className="h-5 w-5 text-amber-500" />
+                  <CreditCard className="h-5 w-5 text-amber-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {customers.length > 0 ? (totalRepairs / customers.length).toFixed(1) : "0"}
-                  </p>
+                  <p className="text-2xl font-bold text-foreground">€{avgPerCustomer.toFixed(0)}</p>
                   <p className="text-xs text-muted-foreground">Media/Cliente</p>
                 </div>
               </div>
@@ -212,16 +227,11 @@ export default function CentroClienti() {
             <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm">
               <div className="flex items-center gap-3">
                 <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-purple-500" />
+                  <Wrench className="h-5 w-5 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">
-                    {customers.filter(c => {
-                      const days = (Date.now() - new Date(c.created_at).getTime()) / (1000 * 60 * 60 * 24);
-                      return days <= 30;
-                    }).length}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Nuovi (30gg)</p>
+                  <p className="text-2xl font-bold text-foreground">{totalRepairs}</p>
+                  <p className="text-xs text-muted-foreground">Riparazioni Totali</p>
                 </div>
               </div>
             </Card>
@@ -280,8 +290,8 @@ export default function CentroClienti() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredCustomers.map((customer, index) => {
-                  const repairs = repairCounts[customer.id] || 0;
-                  const isVip = repairs >= 5;
+                  const stats = customerStats[customer.id] || { repairCount: 0, totalSpent: 0 };
+                  const isVip = stats.totalSpent >= 200;
                   const isNew = (Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24) <= 7;
                   
                   return (
@@ -347,19 +357,35 @@ export default function CentroClienti() {
                                 )}
                               </div>
                             </div>
-                            
+                          </div>
+
+                          {/* Stats Row */}
+                          <div className="flex items-center gap-3 mb-4">
                             <Badge 
                               variant="secondary" 
                               className={`
-                                flex-shrink-0 gap-1.5 font-semibold
-                                ${repairs > 0 
+                                gap-1.5 font-semibold
+                                ${stats.repairCount > 0 
                                   ? 'bg-primary/10 text-primary border-primary/20' 
                                   : 'bg-muted text-muted-foreground'
                                 }
                               `}
                             >
                               <Wrench className="h-3 w-3" />
-                              {repairs}
+                              {stats.repairCount} {stats.repairCount === 1 ? 'riparazione' : 'riparazioni'}
+                            </Badge>
+                            <Badge 
+                              variant="secondary" 
+                              className={`
+                                gap-1.5 font-semibold
+                                ${stats.totalSpent > 0 
+                                  ? 'bg-green-500/10 text-green-600 border-green-500/20' 
+                                  : 'bg-muted text-muted-foreground'
+                                }
+                              `}
+                            >
+                              <Euro className="h-3 w-3" />
+                              €{stats.totalSpent.toFixed(0)}
                             </Badge>
                           </div>
 
@@ -396,9 +422,10 @@ export default function CentroClienti() {
                           {/* Footer */}
                           <div className="pt-4 border-t border-border/50 flex items-center justify-between">
                             <span className="text-xs text-muted-foreground">
-                              {repairs === 0 && "Nessuna riparazione"}
-                              {repairs === 1 && "1 riparazione"}
-                              {repairs > 1 && `${repairs} riparazioni totali`}
+                              {stats.totalSpent === 0 && "Nessuna spesa"}
+                              {stats.totalSpent > 0 && stats.totalSpent < 100 && "Cliente occasionale"}
+                              {stats.totalSpent >= 100 && stats.totalSpent < 200 && "Cliente abituale"}
+                              {stats.totalSpent >= 200 && "Cliente VIP ⭐"}
                             </span>
                             <div className="flex items-center gap-1 text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
                               <span>Dettagli</span>
