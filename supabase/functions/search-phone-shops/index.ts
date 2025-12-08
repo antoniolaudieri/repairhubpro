@@ -35,15 +35,22 @@ serve(async (req) => {
 
     console.log(`Searching for phone shops near ${latitude}, ${longitude} within ${radiusKm}km`);
 
-    // Overpass API query for phone/mobile shops
+    // Overpass API query for electronics/phone/computer shops
     const overpassQuery = `
-      [out:json][timeout:25];
+      [out:json][timeout:30];
       (
         node["shop"="mobile_phone"](around:${radiusKm * 1000},${latitude},${longitude});
         way["shop"="mobile_phone"](around:${radiusKm * 1000},${latitude},${longitude});
-        node["shop"="electronics"]["name"~"phone|cell|mobile|telefon",i](around:${radiusKm * 1000},${latitude},${longitude});
-        node["amenity"="telephone"](around:${radiusKm * 1000},${latitude},${longitude});
+        node["shop"="electronics"](around:${radiusKm * 1000},${latitude},${longitude});
+        way["shop"="electronics"](around:${radiusKm * 1000},${latitude},${longitude});
+        node["shop"="computer"](around:${radiusKm * 1000},${latitude},${longitude});
+        way["shop"="computer"](around:${radiusKm * 1000},${latitude},${longitude});
         node["shop"="telecommunication"](around:${radiusKm * 1000},${latitude},${longitude});
+        way["shop"="telecommunication"](around:${radiusKm * 1000},${latitude},${longitude});
+        node["shop"="hifi"](around:${radiusKm * 1000},${latitude},${longitude});
+        way["shop"="hifi"](around:${radiusKm * 1000},${latitude},${longitude});
+        node["shop"="appliance"](around:${radiusKm * 1000},${latitude},${longitude});
+        way["shop"="appliance"](around:${radiusKm * 1000},${latitude},${longitude});
       );
       out body center;
     `;
