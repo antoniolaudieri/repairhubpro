@@ -153,8 +153,11 @@ export default function CustomerDisplay() {
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [dataConfirmed, setDataConfirmed] = useState(false);
-  const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdvertisements);
+const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdvertisements);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [slideInterval, setSlideInterval] = useState(5000);
+  const [centroLogo, setCentroLogo] = useState<string | null>(null);
+  const [centroName, setCentroName] = useState<string>("");
   const sigCanvas = useRef<SignatureCanvas>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -185,26 +188,38 @@ export default function CustomerDisplay() {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
-  // Fetch custom ads from centro settings
+  // Fetch custom ads and centro info from settings
   useEffect(() => {
     if (!centroId) return;
     
-    const fetchCentroAds = async () => {
+    const fetchCentroData = async () => {
       const { data } = await supabase
         .from("centri_assistenza")
-        .select("settings")
+        .select("settings, logo_url, business_name")
         .eq("id", centroId)
         .single();
       
-      if (data?.settings) {
-        const settings = data.settings as { display_ads?: typeof defaultAdvertisements };
-        if (settings.display_ads && settings.display_ads.length > 0) {
-          setAdvertisements(settings.display_ads);
+      if (data) {
+        setCentroLogo(data.logo_url);
+        setCentroName(data.business_name || "");
+        
+        if (data.settings) {
+          const settings = data.settings as { 
+            display_ads?: DisplayAd[]; 
+            slide_interval?: number;
+          };
+          if (settings.display_ads && settings.display_ads.length > 0) {
+            console.log('Loading ads from settings:', settings.display_ads);
+            setAdvertisements(settings.display_ads);
+          }
+          if (settings.slide_interval) {
+            setSlideInterval(settings.slide_interval);
+          }
         }
       }
     };
     
-    fetchCentroAds();
+    fetchCentroData();
   }, [centroId]);
 
   // Rotate ads in standby mode
@@ -213,10 +228,10 @@ export default function CustomerDisplay() {
     
     const interval = setInterval(() => {
       setCurrentAdIndex((prev) => (prev + 1) % advertisements.length);
-    }, 5000);
+    }, slideInterval);
 
     return () => clearInterval(interval);
-  }, [mode, advertisements.length]);
+  }, [mode, advertisements.length, slideInterval]);
 
   // Listen for intake sessions via Supabase Realtime
   useEffect(() => {
@@ -488,6 +503,21 @@ export default function CustomerDisplay() {
             </div>
           </motion.div>
         </AnimatePresence>
+        
+        {/* Logo and branding in bottom right */}
+        <div className="fixed bottom-4 right-4 flex items-center gap-3 bg-black/30 backdrop-blur-sm rounded-lg px-4 py-2">
+          {centroLogo && (
+            <img 
+              src={centroLogo} 
+              alt={centroName} 
+              className="h-10 w-10 object-contain rounded"
+            />
+          )}
+          <div className="text-white text-right">
+            {centroName && <p className="text-sm font-medium">{centroName}</p>}
+            <p className="text-xs text-white/60">Powered by RepairHubPro</p>
+          </div>
+        </div>
       </div>
     );
   }

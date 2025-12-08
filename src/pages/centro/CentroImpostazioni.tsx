@@ -54,6 +54,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface CentroSettings {
   disable_diagnostic_fee?: boolean;
   display_ads?: DisplayAd[];
+  slide_interval?: number;
   [key: string]: boolean | string | number | DisplayAd[] | undefined;
 }
 
@@ -240,6 +241,8 @@ export default function CentroImpostazioni() {
       const settings = centroData.settings as CentroSettings | null;
       setDisableDiagnosticFee(settings?.disable_diagnostic_fee || false);
       setDisplayAds(settings?.display_ads || []);
+      // slide_interval is stored in ms, convert to seconds for the UI
+      setSlideInterval(settings?.slide_interval ? settings.slide_interval / 1000 : 5);
       
       setCentro({
         id: centroData.id,
@@ -288,6 +291,7 @@ export default function CentroImpostazioni() {
         ...(centro.settings || {}),
         disable_diagnostic_fee: disableDiagnosticFee,
         display_ads: displayAds,
+        slide_interval: slideInterval * 1000, // Save in milliseconds
       };
       
       const { error } = await supabase
