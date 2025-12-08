@@ -972,6 +972,42 @@ export type Database = {
           },
         ]
       }
+      partnership_invites: {
+        Row: {
+          created_at: string
+          from_id: string
+          from_type: string
+          id: string
+          message: string | null
+          responded_at: string | null
+          status: string
+          to_id: string
+          to_type: string
+        }
+        Insert: {
+          created_at?: string
+          from_id: string
+          from_type: string
+          id?: string
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+          to_id: string
+          to_type: string
+        }
+        Update: {
+          created_at?: string
+          from_id?: string
+          from_type?: string
+          id?: string
+          message?: string | null
+          responded_at?: string | null
+          status?: string
+          to_id?: string
+          to_type?: string
+        }
+        Relationships: []
+      }
       platform_settings: {
         Row: {
           created_at: string
