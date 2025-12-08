@@ -1730,6 +1730,190 @@ export type Database = {
         }
         Relationships: []
       }
+      used_device_interests: {
+        Row: {
+          brands: string[] | null
+          created_at: string
+          customer_id: string | null
+          device_types: string[] | null
+          email: string
+          id: string
+          last_notified_at: string | null
+          max_price: number | null
+          notify_enabled: boolean
+          updated_at: string
+        }
+        Insert: {
+          brands?: string[] | null
+          created_at?: string
+          customer_id?: string | null
+          device_types?: string[] | null
+          email: string
+          id?: string
+          last_notified_at?: string | null
+          max_price?: number | null
+          notify_enabled?: boolean
+          updated_at?: string
+        }
+        Update: {
+          brands?: string[] | null
+          created_at?: string
+          customer_id?: string | null
+          device_types?: string[] | null
+          email?: string
+          id?: string
+          last_notified_at?: string | null
+          max_price?: number | null
+          notify_enabled?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "used_device_interests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      used_device_reservations: {
+        Row: {
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          device_id: string
+          id: string
+          message: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string
+          device_id: string
+          id?: string
+          message?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string
+          device_id?: string
+          id?: string
+          message?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "used_device_reservations_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "used_devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      used_devices: {
+        Row: {
+          brand: string
+          centro_id: string
+          color: string | null
+          condition: Database["public"]["Enums"]["device_condition"]
+          created_at: string
+          description: string | null
+          device_type: string
+          id: string
+          model: string
+          original_price: number | null
+          photos: string[] | null
+          price: number
+          published_at: string | null
+          repair_id: string | null
+          reserved_at: string | null
+          sold_at: string | null
+          source: Database["public"]["Enums"]["device_source"]
+          specifications: Json | null
+          status: string
+          storage_capacity: string | null
+          updated_at: string
+          views_count: number | null
+          warranty_months: number | null
+        }
+        Insert: {
+          brand: string
+          centro_id: string
+          color?: string | null
+          condition?: Database["public"]["Enums"]["device_condition"]
+          created_at?: string
+          description?: string | null
+          device_type: string
+          id?: string
+          model: string
+          original_price?: number | null
+          photos?: string[] | null
+          price: number
+          published_at?: string | null
+          repair_id?: string | null
+          reserved_at?: string | null
+          sold_at?: string | null
+          source?: Database["public"]["Enums"]["device_source"]
+          specifications?: Json | null
+          status?: string
+          storage_capacity?: string | null
+          updated_at?: string
+          views_count?: number | null
+          warranty_months?: number | null
+        }
+        Update: {
+          brand?: string
+          centro_id?: string
+          color?: string | null
+          condition?: Database["public"]["Enums"]["device_condition"]
+          created_at?: string
+          description?: string | null
+          device_type?: string
+          id?: string
+          model?: string
+          original_price?: number | null
+          photos?: string[] | null
+          price?: number
+          published_at?: string | null
+          repair_id?: string | null
+          reserved_at?: string | null
+          sold_at?: string | null
+          source?: Database["public"]["Enums"]["device_source"]
+          specifications?: Json | null
+          status?: string
+          storage_capacity?: string | null
+          updated_at?: string
+          views_count?: number | null
+          warranty_months?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "used_devices_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "used_devices_repair_id_fkey"
+            columns: ["repair_id"]
+            isOneToOne: false
+            referencedRelation: "repairs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -1775,6 +1959,17 @@ export type Database = {
         | "centro_admin"
         | "centro_tech"
         | "platform_admin"
+      device_condition:
+        | "ricondizionato"
+        | "usato_ottimo"
+        | "usato_buono"
+        | "usato_discreto"
+        | "alienato"
+      device_source:
+        | "riparazione_alienata"
+        | "permuta"
+        | "acquisto"
+        | "ricondizionato"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1911,6 +2106,19 @@ export const Constants = {
         "centro_admin",
         "centro_tech",
         "platform_admin",
+      ],
+      device_condition: [
+        "ricondizionato",
+        "usato_ottimo",
+        "usato_buono",
+        "usato_discreto",
+        "alienato",
+      ],
+      device_source: [
+        "riparazione_alienata",
+        "permuta",
+        "acquisto",
+        "ricondizionato",
       ],
     },
   },
