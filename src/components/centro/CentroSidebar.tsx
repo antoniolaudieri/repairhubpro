@@ -39,9 +39,12 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { Search } from "lucide-react";
+
 const menuItems = [
   { title: "Dashboard", url: "/centro", icon: LayoutDashboard },
   { title: "Nuovo Ritiro", url: "/centro/nuovo-ritiro", icon: PlusCircle },
+  { title: "Trova Partner", url: "/centro/trova-partner", icon: Search },
   { title: "Lavori Corner", url: "/centro/lavori-corner", icon: Store, hasBadge: true },
   { title: "Lavori", url: "/centro/lavori", icon: Wrench },
   { title: "Guide IA", url: "/centro/guide", icon: BookOpen },

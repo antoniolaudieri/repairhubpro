@@ -46,6 +46,7 @@ import CentroOrdini from "@/pages/centro/CentroOrdini";
 import CentroListino from "@/pages/centro/CentroListino";
 import CentroNuovoRitiro from "@/pages/centro/CentroNuovoRitiro";
 import CentroClienteDetail from "@/pages/centro/CentroClienteDetail";
+import CentroTrovaPartner from "@/pages/centro/CentroTrovaPartner";
 // Admin pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminCorners from "@/pages/admin/AdminCorners";
@@ -270,6 +271,14 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCentro>
               <CentroLavori />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/trova-partner"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroTrovaPartner />
             </ProtectedRoute>
           }
         />
