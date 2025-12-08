@@ -27,6 +27,8 @@ interface IntakeSignatureStepProps {
   isFeeDisabledBySettings?: boolean;
   acconto?: number;
   onAccontoChange?: (acconto: number) => void;
+  paymentMode?: "full" | "partial";
+  onPaymentModeChange?: (mode: "full" | "partial") => void;
 }
 
 export function IntakeSignatureStep({ 
@@ -41,9 +43,17 @@ export function IntakeSignatureStep({
   isFeeDisabledBySettings = false,
   acconto = 0,
   onAccontoChange,
+  paymentMode: controlledPaymentMode,
+  onPaymentModeChange,
 }: IntakeSignatureStepProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
-  const [paymentMode, setPaymentMode] = useState<"full" | "partial">("full");
+  const [internalPaymentMode, setInternalPaymentMode] = useState<"full" | "partial">("full");
+  const paymentMode = controlledPaymentMode ?? internalPaymentMode;
+  
+  const handlePaymentModeChange = (mode: "full" | "partial") => {
+    setInternalPaymentMode(mode);
+    onPaymentModeChange?.(mode);
+  };
   const [showRemoteSignDialog, setShowRemoteSignDialog] = useState(false);
   const [remoteSignUrl, setRemoteSignUrl] = useState<string | null>(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
@@ -143,8 +153,8 @@ export function IntakeSignatureStep({
   };
 
 
-  const handlePaymentModeChange = (mode: "full" | "partial") => {
-    setPaymentMode(mode);
+  const handlePaymentModeSelect = (mode: "full" | "partial") => {
+    handlePaymentModeChange(mode);
     if (mode === "full" && onAccontoChange) {
       onAccontoChange(totalWithDiagnostic);
     } else if (mode === "partial" && onAccontoChange) {
@@ -260,7 +270,7 @@ export function IntakeSignatureStep({
           
           <RadioGroup 
             value={paymentMode} 
-            onValueChange={(v) => handlePaymentModeChange(v as "full" | "partial")}
+            onValueChange={(v) => handlePaymentModeSelect(v as "full" | "partial")}
             className="space-y-3"
           >
             <div className={`flex items-center space-x-3 p-3 rounded-lg border-2 transition-all ${paymentMode === "full" ? "border-primary bg-primary/5" : "border-muted"}`}>
