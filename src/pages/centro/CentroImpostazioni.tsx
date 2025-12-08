@@ -830,6 +830,28 @@ export default function CentroImpostazioni() {
                     {displayAds.length > 0 ? `${displayAds.length} slide personalizzate` : 'Slide predefinite'}
                   </span>
                 </div>
+                
+                {/* Logos - Bottom Right */}
+                <div className="absolute bottom-14 right-3 flex items-center gap-3">
+                  {/* Centro Logo */}
+                  {centro?.logo_url && (
+                    <div className="h-10 w-10 rounded-lg overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 shadow-lg">
+                      <img 
+                        src={centro.logo_url} 
+                        alt={centro.business_name}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Platform Logo */}
+                  <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white/10 backdrop-blur-sm border border-white/20">
+                    <div className="h-5 w-5 rounded bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center">
+                      <Wrench className="h-3 w-3 text-white" />
+                    </div>
+                    <span className="text-[10px] font-medium text-white/80">Powered by Lovable</span>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>
