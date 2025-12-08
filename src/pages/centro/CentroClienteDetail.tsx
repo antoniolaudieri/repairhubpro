@@ -44,6 +44,7 @@ interface Device {
     status: string;
     diagnosis: string | null;
     final_cost: number | null;
+    estimated_cost: number | null;
     acconto: number | null;
     created_at: string;
     completed_at: string | null;
@@ -107,6 +108,7 @@ export default function CentroClienteDetail() {
             status,
             diagnosis,
             final_cost,
+            estimated_cost,
             acconto,
             created_at,
             completed_at
@@ -153,7 +155,8 @@ export default function CentroClienteDetail() {
   const completedRepairs = allRepairs.filter(r => r.status === "completed" || r.status === "delivered");
   const pendingRepairs = allRepairs.filter(r => r.status === "pending").length;
   const inProgressRepairs = allRepairs.filter(r => r.status === "in-progress").length;
-  const totalSpent = completedRepairs.reduce((sum, r) => sum + (r.final_cost || 0), 0);
+  // Calcola spesa totale usando final_cost o estimated_cost come fallback
+  const totalSpent = allRepairs.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
   const avgRepairTime = completedRepairs.length > 0
     ? Math.round(
         completedRepairs.reduce((sum, r) => {
