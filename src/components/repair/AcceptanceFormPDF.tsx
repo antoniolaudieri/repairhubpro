@@ -16,6 +16,8 @@ interface AcceptanceFormPDFProps {
     intake_signature_date?: string | null;
     estimated_cost?: number | null;
     diagnostic_fee?: number;
+    diagnostic_fee_paid?: boolean;
+    acconto?: number | null;
     device: {
       brand: string;
       model: string;
@@ -171,6 +173,16 @@ Il Team TechRepair
   };
 
   const diagnosticFee = repairData.diagnostic_fee ?? 15;
+  const acconto = repairData.acconto ?? 0;
+  const estimatedCost = repairData.estimated_cost ?? 0;
+  
+  // Check if diagnostic fee is waived (free for high-value repairs >= €100)
+  const isDiagnosticFeeWaived = diagnosticFee === 0 || (estimatedCost >= 100 && diagnosticFee === 0);
+  const isDiagnosticFeePaid = repairData.diagnostic_fee_paid ?? false;
+  
+  // Calculate remaining balance
+  const totalPaid = acconto + (isDiagnosticFeePaid ? diagnosticFee : 0);
+  const remainingBalance = estimatedCost > 0 ? estimatedCost - totalPaid : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -230,15 +242,57 @@ Il Team TechRepair
           </div>
 
           <div className="section">
-            <h2>COSTI</h2>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span>Gestione Diagnosi (anticipo obbligatorio):</span>
-              <strong>€ {diagnosticFee.toFixed(2)}</strong>
+            <h2>COSTI E PAGAMENTI</h2>
+            
+            {/* Diagnostic Fee Row */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Gestione Diagnosi:</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {isDiagnosticFeeWaived || diagnosticFee === 0 ? (
+                  <>
+                    <span style={{ textDecoration: "line-through", color: "#999" }}>€ 15.00</span>
+                    <strong style={{ color: "#16a34a" }}>OMAGGIO</strong>
+                    <span style={{ fontSize: "10px", color: "#666" }}>(preventivo ≥ €100)</span>
+                  </>
+                ) : (
+                  <>
+                    <strong>€ {diagnosticFee.toFixed(2)}</strong>
+                    {isDiagnosticFeePaid ? (
+                      <span style={{ backgroundColor: "#16a34a", color: "white", padding: "2px 6px", borderRadius: "4px", fontSize: "10px" }}>SALDATO</span>
+                    ) : (
+                      <span style={{ backgroundColor: "#eab308", color: "white", padding: "2px 6px", borderRadius: "4px", fontSize: "10px" }}>DA SALDARE</span>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
-            {repairData.estimated_cost && (
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "4px" }}>
+            
+            {/* Estimated Cost Row */}
+            {estimatedCost > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "8px" }}>
                 <span>Preventivo Stimato (soggetto a variazione):</span>
-                <strong>€ {repairData.estimated_cost.toFixed(2)}</strong>
+                <strong>€ {estimatedCost.toFixed(2)}</strong>
+              </div>
+            )}
+            
+            {/* Acconto (Deposit) Row */}
+            {acconto > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "8px", backgroundColor: "#f0fdf4", padding: "8px", borderRadius: "4px" }}>
+                <span>Acconto Versato:</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <strong style={{ color: "#16a34a" }}>€ {acconto.toFixed(2)}</strong>
+                  <span style={{ backgroundColor: "#16a34a", color: "white", padding: "2px 6px", borderRadius: "4px", fontSize: "10px" }}>INCASSATO</span>
+                </div>
+              </div>
+            )}
+            
+            {/* Remaining Balance Row */}
+            {estimatedCost > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "12px", paddingTop: "8px", borderTop: "1px dashed #ccc" }}>
+                <span><strong>Saldo da incassare al ritiro:</strong></span>
+                <strong style={{ fontSize: "14px", color: remainingBalance > 0 ? "#dc2626" : "#16a34a" }}>
+                  € {remainingBalance.toFixed(2)}
+                </strong>
               </div>
             )}
           </div>
@@ -260,7 +314,15 @@ Il Team TechRepair
               </div>
               <div>
                 <p><strong>4. PAGAMENTO</strong></p>
-                <p>Pagamento anticipato di € {diagnosticFee.toFixed(2)} per gestione diagnosi. Saldo finale al ritiro del dispositivo.</p>
+                <p>
+                  {isDiagnosticFeeWaived || diagnosticFee === 0 
+                    ? "Gestione diagnosi OMAGGIO per preventivo ≥ €100. " 
+                    : `Pagamento anticipato di € ${diagnosticFee.toFixed(2)} per gestione diagnosi${isDiagnosticFeePaid ? " (SALDATO)" : ""}. `}
+                  {acconto > 0 && `Acconto versato: € ${acconto.toFixed(2)}. `}
+                  {remainingBalance > 0 
+                    ? `Saldo residuo di € ${remainingBalance.toFixed(2)} da corrispondere al ritiro del dispositivo.`
+                    : estimatedCost > 0 ? "Nessun saldo residuo da corrispondere." : "Saldo finale al ritiro del dispositivo."}
+                </p>
               </div>
             </div>
           </div>
