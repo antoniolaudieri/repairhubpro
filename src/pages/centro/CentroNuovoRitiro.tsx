@@ -26,6 +26,8 @@ export default function CentroNuovoRitiro() {
   const { user } = useAuth();
   const [centroId, setCentroId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+  const [creditBalance, setCreditBalance] = useState<number | null>(null);
+  const [isAccountBlocked, setIsAccountBlocked] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
@@ -94,12 +96,20 @@ export default function CentroNuovoRitiro() {
       if (!user) return;
       const { data } = await supabase
         .from("centri_assistenza")
-        .select("id, payment_status, settings")
+        .select("id, payment_status, settings, credit_balance, credit_warning_threshold")
         .eq("owner_user_id", user.id)
         .maybeSingle();
       if (data) {
         setCentroId(data.id);
         setPaymentStatus(data.payment_status);
+        setCreditBalance(data.credit_balance ?? 0);
+        
+        // Block if suspended or credit below minimum threshold (€50)
+        const minBalance = 50;
+        if (data.payment_status === 'suspended' || (data.credit_balance ?? 0) < minBalance) {
+          setIsAccountBlocked(true);
+        }
+        
         // Check if diagnostic fee is disabled in settings
         const settings = data.settings as { disable_diagnostic_fee?: boolean } | null;
         if (settings?.disable_diagnostic_fee) {
@@ -1058,6 +1068,61 @@ export default function CentroNuovoRitiro() {
         return null;
     }
   };
+
+  // Blocked account overlay
+  if (isAccountBlocked) {
+    return (
+      <CentroLayout>
+        <PageTransition>
+          <div className="min-h-screen bg-background flex items-center justify-center p-4">
+            <Card className="max-w-md w-full p-8 text-center space-y-6 border-destructive/50 bg-destructive/5">
+              <div className="mx-auto w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center">
+                <AlertTriangle className="h-10 w-10 text-destructive" />
+              </div>
+              
+              <div className="space-y-2">
+                <h1 className="text-2xl font-bold text-destructive">Credito Insufficiente</h1>
+                <p className="text-muted-foreground">
+                  Il tuo saldo crediti è di <span className="font-bold text-foreground">€{(creditBalance ?? 0).toFixed(2)}</span>
+                </p>
+              </div>
+              
+              <div className="p-4 bg-muted/50 rounded-lg space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Per creare nuove riparazioni è necessario un saldo minimo di <span className="font-semibold text-foreground">€50,00</span>
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Ricarica almeno <span className="font-bold text-primary">€{Math.max(50 - (creditBalance ?? 0), 50).toFixed(2)}</span> per riprendere l'operatività.
+                </p>
+              </div>
+              
+              <div className="flex flex-col gap-3">
+                <Button 
+                  onClick={() => navigate("/centro/commissioni")} 
+                  className="w-full"
+                  size="lg"
+                >
+                  Richiedi Ricarica
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/centro/lavori")}
+                  className="w-full"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Torna ai Lavori
+                </Button>
+              </div>
+              
+              <p className="text-xs text-muted-foreground">
+                Contatta l'amministratore per accelerare la conferma della ricarica.
+              </p>
+            </Card>
+          </div>
+        </PageTransition>
+      </CentroLayout>
+    );
+  }
 
   return (
     <CentroLayout>
