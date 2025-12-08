@@ -20,7 +20,10 @@ import {
   X,
   Users,
   Loader2,
-  Radar
+  Radar,
+  Globe,
+  ExternalLink,
+  Smartphone
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
@@ -43,6 +46,18 @@ interface InviteStatus {
   [cornerId: string]: "pending" | "accepted" | "declined" | "partner";
 }
 
+interface ExternalShop {
+  id: string;
+  name: string;
+  address: string;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  latitude: number;
+  longitude: number;
+  distance?: number;
+}
+
 export default function CentroTrovaPartner() {
   const { user } = useAuth();
   const [corners, setCorners] = useState<Corner[]>([]);
@@ -53,8 +68,10 @@ export default function CentroTrovaPartner() {
   const [inviteStatuses, setInviteStatuses] = useState<InviteStatus>({});
   const [selectedCorner, setSelectedCorner] = useState<Corner | null>(null);
   const [inviteDialogOpen, setInviteDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("map");
+  const [activeTab, setActiveTab] = useState("registered");
   const [radiusKm, setRadiusKm] = useState(20);
+  const [externalShops, setExternalShops] = useState<ExternalShop[]>([]);
+  const [loadingExternal, setLoadingExternal] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -173,12 +190,51 @@ export default function CentroTrovaPartner() {
     setSelectedCorner(null);
   };
 
+  const searchExternalShops = async () => {
+    if (!centroLocation) {
+      toast.error("Posizione del Centro non disponibile");
+      return;
+    }
+    
+    setLoadingExternal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('search-phone-shops', {
+        body: {
+          latitude: centroLocation.lat,
+          longitude: centroLocation.lng,
+          radiusKm: radiusKm
+        }
+      });
+
+      if (error) throw error;
+      
+      const shops = data?.shops || [];
+      setExternalShops(shops);
+      
+      if (shops.length === 0) {
+        toast.info("Nessun negozio trovato in questa zona");
+      } else {
+        toast.success(`Trovati ${shops.length} negozi di telefonia`);
+      }
+    } catch (error) {
+      console.error('Error searching external shops:', error);
+      toast.error("Errore nella ricerca dei negozi");
+    } finally {
+      setLoadingExternal(false);
+    }
+  };
+
   const filteredCorners = corners.filter(corner => {
     const matchesSearch = corner.business_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       corner.address.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRadius = corner.distance === undefined || corner.distance <= radiusKm;
     return matchesSearch && matchesRadius;
   });
+
+  const filteredExternalShops = externalShops.filter(shop => 
+    shop.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    shop.address.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const getStatusBadge = (cornerId: string) => {
     const status = inviteStatuses[cornerId];
@@ -299,18 +355,28 @@ export default function CentroTrovaPartner() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="map" className="gap-2">
-              <MapPin className="h-4 w-4" />
-              Mappa
-            </TabsTrigger>
-            <TabsTrigger value="list" className="gap-2">
+          <TabsList className="grid w-full grid-cols-2 max-w-md">
+            <TabsTrigger value="registered" className="gap-2">
               <Store className="h-4 w-4" />
-              Lista
+              Corner Registrati
+            </TabsTrigger>
+            <TabsTrigger value="discover" className="gap-2">
+              <Globe className="h-4 w-4" />
+              Scopri Negozi
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="map" className="mt-4">
+          {/* Registered Corners Tab */}
+          <TabsContent value="registered" className="mt-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Corner già registrati sulla piattaforma
+              </p>
+              <Badge variant="outline">
+                {filteredCorners.length} risultati
+              </Badge>
+            </div>
+            
             <Card>
               <CardContent className="p-0">
                 <PartnerDiscoveryMap
@@ -321,9 +387,8 @@ export default function CentroTrovaPartner() {
                 />
               </CardContent>
             </Card>
-          </TabsContent>
 
-          <TabsContent value="list" className="mt-4">
+            {/* List of registered corners */}
             <div className="grid gap-4">
               {filteredCorners.length === 0 ? (
                 <Card>
@@ -409,6 +474,154 @@ export default function CentroTrovaPartner() {
                               Riprova
                             </Button>
                           ) : null}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
+            </div>
+          </TabsContent>
+
+          {/* Discover External Shops Tab */}
+          <TabsContent value="discover" className="mt-4 space-y-4">
+            <Card className="bg-gradient-to-r from-blue-500/5 to-purple-500/10 border-blue-500/20">
+              <CardContent className="p-4">
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className="p-2 bg-blue-500/10 rounded-lg">
+                      <Globe className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Cerca negozi di telefonia su OpenStreetMap</h3>
+                      <p className="text-sm text-muted-foreground">
+                        Trova negozi di telefonia nella tua zona che non sono ancora registrati sulla piattaforma. 
+                        Contattali per proporre una partnership!
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={searchExternalShops} 
+                    disabled={loadingExternal || !centroLocation}
+                    className="gap-2"
+                  >
+                    {loadingExternal ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                    Cerca Negozi ({radiusKm}km)
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* External shops results */}
+            {externalShops.length > 0 && (
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  Negozi trovati su OpenStreetMap
+                </p>
+                <Badge variant="outline" className="border-blue-500/50 text-blue-600">
+                  <Smartphone className="h-3 w-3 mr-1" />
+                  {filteredExternalShops.length} negozi
+                </Badge>
+              </div>
+            )}
+
+            <div className="grid gap-4">
+              {externalShops.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    <Globe className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p>Clicca "Cerca Negozi" per trovare negozi di telefonia nella tua zona</p>
+                    <p className="text-xs mt-2">I dati provengono da OpenStreetMap (fonte collaborativa)</p>
+                  </CardContent>
+                </Card>
+              ) : filteredExternalShops.length === 0 ? (
+                <Card>
+                  <CardContent className="p-8 text-center text-muted-foreground">
+                    Nessun negozio corrisponde ai criteri di ricerca
+                  </CardContent>
+                </Card>
+              ) : (
+                filteredExternalShops.map((shop) => (
+                  <Card key={shop.id} className="transition-all hover:shadow-md border-blue-500/10">
+                    <CardContent className="p-4">
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex items-start gap-4">
+                          <div className="p-3 rounded-xl bg-blue-500/10">
+                            <Smartphone className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h3 className="font-semibold text-lg">{shop.name}</h3>
+                              <Badge variant="outline" className="border-blue-500/30 text-blue-600 text-xs">
+                                <Globe className="h-3 w-3 mr-1" />
+                                OpenStreetMap
+                              </Badge>
+                            </div>
+                            <div className="text-sm text-muted-foreground space-y-1 mt-1">
+                              <div className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {shop.address}
+                                {shop.distance !== undefined && (
+                                  <span className="ml-2 text-primary font-medium">
+                                    ({shop.distance} km)
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-4 flex-wrap">
+                                {shop.phone && (
+                                  <a href={`tel:${shop.phone}`} className="flex items-center gap-1 text-primary hover:underline">
+                                    <Phone className="h-3 w-3" />
+                                    {shop.phone}
+                                  </a>
+                                )}
+                                {shop.email && (
+                                  <a href={`mailto:${shop.email}`} className="flex items-center gap-1 text-primary hover:underline">
+                                    <Mail className="h-3 w-3" />
+                                    {shop.email}
+                                  </a>
+                                )}
+                                {shop.website && (
+                                  <a href={shop.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                                    <ExternalLink className="h-3 w-3" />
+                                    Sito web
+                                  </a>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          {shop.phone && (
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              asChild
+                            >
+                              <a href={`tel:${shop.phone}`}>
+                                <Phone className="h-4 w-4 mr-1" />
+                                Chiama
+                              </a>
+                            </Button>
+                          )}
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            asChild
+                          >
+                            <a 
+                              href={`https://www.google.com/maps/search/?api=1&query=${shop.latitude},${shop.longitude}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                            >
+                              <MapPin className="h-4 w-4 mr-1" />
+                              Mappa
+                            </a>
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
