@@ -48,7 +48,6 @@ import RepairGuide from "@/components/repair/RepairGuide";
 import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
 import { AcceptanceFormPDF } from "@/components/repair/AcceptanceFormPDF";
 import { RepairChecklistDialog } from "@/components/checklist/RepairChecklistDialog";
-import { DirectRepairTimeline } from "@/components/repair/DirectRepairTimeline";
 import { VisualStatusManager, DIRECT_REPAIR_STATUSES } from "@/components/repair/VisualStatusManager";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -812,33 +811,6 @@ export default function RepairDetail() {
               />
             </motion.div>
 
-            {/* Detailed Timeline */}
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.35 }}
-            >
-              <Card className="overflow-hidden">
-                <div className="bg-gradient-to-r from-primary/5 to-transparent px-6 py-4 border-b border-border">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <Clock className="h-4 w-4 text-primary" />
-                    </div>
-                    Cronologia Dettagliata
-                  </h2>
-                </div>
-                <div className="p-6">
-                  <DirectRepairTimeline
-                    status={repair.status}
-                    createdAt={repair.created_at}
-                    startedAt={repair.started_at}
-                    completedAt={repair.completed_at}
-                    deliveredAt={repair.delivered_at}
-                    forfeitedAt={repair.forfeited_at}
-                  />
-                </div>
-              </Card>
-            </motion.div>
 
             {/* Repair Info Card */}
             <motion.div
@@ -857,26 +829,6 @@ export default function RepairDetail() {
                 </div>
                 <div className="p-6 space-y-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium">Stato</Label>
-                      <Select
-                        value={repair.status}
-                        onValueChange={(value) => setRepair({ ...repair, status: value })}
-                      >
-                        <SelectTrigger className="h-11">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">🟡 In attesa</SelectItem>
-                          <SelectItem value="waiting_parts">🟠 In attesa ricambi</SelectItem>
-                          <SelectItem value="in_progress">🔵 In corso</SelectItem>
-                          <SelectItem value="completed">🟢 Completata</SelectItem>
-                          <SelectItem value="delivered">✅ Consegnato</SelectItem>
-                          <SelectItem value="cancelled">🔴 Annullata</SelectItem>
-                          <SelectItem value="forfeited">⚫ Alienato</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
                     <div className="space-y-2">
                       <Label className="text-sm font-medium">Priorità</Label>
                       <Select
