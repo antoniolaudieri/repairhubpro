@@ -52,8 +52,8 @@ export const DIRECT_REPAIR_STATUSES: StatusConfig[] = [
     glowColor: 'shadow-blue-500/50'
   },
   { 
-    id: 'waiting_for_parts', 
-    label: 'Attesa Ricambi', 
+    id: 'waiting_parts', 
+    label: 'Attesa Ricambi',
     shortLabel: 'Ricambi',
     icon: Package, 
     color: 'text-orange-600',
