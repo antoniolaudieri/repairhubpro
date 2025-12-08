@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   MapPin, 
   Phone, 
@@ -13,7 +14,10 @@ import {
   Check,
   X,
   Loader2,
-  Globe
+  Globe,
+  StickyNote,
+  Save,
+  Edit3
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,6 +33,7 @@ interface SavedShop {
   longitude: number;
   contact_status: string;
   last_contacted_at: string | null;
+  notes: string | null;
   created_at: string;
 }
 
@@ -113,6 +118,25 @@ export function SavedShopsList({ centroId, savedShops, onRemove, onStatusUpdate 
     }
   };
 
+  const handleUpdateNotes = async (shop: SavedShop, notes: string) => {
+    try {
+      const { error } = await supabase
+        .from("saved_external_shops")
+        .update({ notes })
+        .eq("id", shop.id);
+
+      if (error) throw error;
+      
+      setShops(prev => prev.map(s => 
+        s.id === shop.id ? { ...s, notes } : s
+      ));
+      toast.success("Note salvate");
+    } catch (error) {
+      console.error("Error updating notes:", error);
+      toast.error("Errore nel salvataggio delle note");
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -141,6 +165,7 @@ export function SavedShopsList({ centroId, savedShops, onRemove, onStatusUpdate 
                 actionLoading={actionLoading}
                 onRemove={handleRemove}
                 onUpdateStatus={handleUpdateStatus}
+                onUpdateNotes={handleUpdateNotes}
               />
             ))}
           </div>
@@ -162,6 +187,7 @@ export function SavedShopsList({ centroId, savedShops, onRemove, onStatusUpdate 
                 actionLoading={actionLoading}
                 onRemove={handleRemove}
                 onUpdateStatus={handleUpdateStatus}
+                onUpdateNotes={handleUpdateNotes}
               />
             ))}
           </div>
@@ -175,20 +201,32 @@ function ShopCard({
   shop, 
   actionLoading, 
   onRemove, 
-  onUpdateStatus 
+  onUpdateStatus,
+  onUpdateNotes
 }: { 
   shop: SavedShop; 
   actionLoading: string | null;
   onRemove: (shop: SavedShop) => void;
   onUpdateStatus: (shop: SavedShop, status: string) => void;
+  onUpdateNotes: (shop: SavedShop, notes: string) => void;
 }) {
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [notes, setNotes] = useState(shop.notes || "");
+  const [savingNotes, setSavingNotes] = useState(false);
   const isContacted = shop.contact_status === 'contacted';
+
+  const handleSaveNotes = async () => {
+    setSavingNotes(true);
+    await onUpdateNotes(shop, notes);
+    setSavingNotes(false);
+    setIsEditingNotes(false);
+  };
 
   return (
     <Card className={`transition-all hover:shadow-md ${isContacted ? 'border-green-500/20 bg-green-500/5' : 'border-amber-500/20 bg-amber-500/5'}`}>
       <CardContent className="p-4">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-start gap-3">
+          <div className="flex items-start gap-3 flex-1">
             <div className={`p-2 rounded-lg ${isContacted ? 'bg-green-500/10' : 'bg-amber-500/10'}`}>
               {isContacted ? (
                 <Check className="h-5 w-5 text-green-600" />
@@ -196,7 +234,7 @@ function ShopCard({
                 <Star className="h-5 w-5 text-amber-600" />
               )}
             </div>
-            <div>
+            <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-semibold">{shop.name}</h3>
                 <Badge variant="outline" className="text-xs border-blue-500/30 text-blue-600">
@@ -285,6 +323,63 @@ function ShopCard({
               )}
             </Button>
           </div>
+        </div>
+
+        {/* Notes Section */}
+        <div className="mt-4 pt-3 border-t border-border/50">
+          {isEditingNotes ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <StickyNote className="h-4 w-4" />
+                <span>Note</span>
+              </div>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Aggiungi note sulla conversazione..."
+                className="min-h-[80px] text-sm"
+              />
+              <div className="flex gap-2 justify-end">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => {
+                    setNotes(shop.notes || "");
+                    setIsEditingNotes(false);
+                  }}
+                >
+                  Annulla
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={handleSaveNotes}
+                  disabled={savingNotes}
+                >
+                  {savingNotes ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-1" />
+                  )}
+                  Salva
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div 
+              className="flex items-start gap-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -m-2 transition-colors"
+              onClick={() => setIsEditingNotes(true)}
+            >
+              <StickyNote className="h-4 w-4 text-muted-foreground mt-0.5" />
+              {shop.notes ? (
+                <p className="text-sm text-foreground flex-1">{shop.notes}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic flex-1">
+                  Clicca per aggiungere note...
+                </p>
+              )}
+              <Edit3 className="h-4 w-4 text-muted-foreground" />
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
