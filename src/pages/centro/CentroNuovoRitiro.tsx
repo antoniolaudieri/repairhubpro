@@ -203,7 +203,8 @@ export default function CentroNuovoRitiro() {
         device_type: deviceData.device_type,
         reported_issue: deviceData.reported_issue,
         imei: deviceData.imei,
-        serial_number: deviceData.serial_number
+        serial_number: deviceData.serial_number,
+        photo_url: detectedDevice?.imageUrl || ""
       },
       estimatedCost: estimatedTotal,
       diagnosticFee: diagnosticFee,
@@ -246,6 +247,7 @@ export default function CentroNuovoRitiro() {
     currentStep, 
     customerData, 
     deviceData, 
+    detectedDevice,
     selectedSpareParts, 
     selectedServices, 
     laborCost, 

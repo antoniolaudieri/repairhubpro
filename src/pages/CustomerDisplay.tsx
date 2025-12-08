@@ -50,6 +50,7 @@ interface DeviceData {
   reported_issue: string;
   imei?: string;
   serial_number?: string;
+  photo_url?: string;
 }
 
 interface QuoteItem {
@@ -633,156 +634,176 @@ export default function CustomerDisplay() {
               </motion.div>
               
               {/* Content */}
-              <div className="flex-1 flex flex-col gap-4 sm:gap-5 md:gap-6 min-h-0 relative z-10">
-                {/* Customer & Device Info */}
+              <div className="flex-1 flex flex-col lg:flex-row gap-4 sm:gap-5 md:gap-6 min-h-0 relative z-10">
+                {/* Left Column - Device Photo */}
                 <motion.div
-                  initial={{ y: 30, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
+                  initial={{ x: -30, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: 0.1 }}
+                  className="lg:w-1/3 flex items-center justify-center"
                 >
+                  <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl w-full h-full flex flex-col items-center justify-center">
+                    {session.device.photo_url ? (
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-500/30 to-violet-500/30 rounded-3xl blur-2xl" />
+                        <img 
+                          src={session.device.photo_url} 
+                          alt={`${session.device.brand} ${session.device.model}`}
+                          className="relative z-10 max-h-48 sm:max-h-64 lg:max-h-80 w-auto object-contain drop-shadow-2xl"
+                        />
+                      </div>
+                    ) : (
+                      <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 rounded-3xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center border border-white/10">
+                        <Smartphone className="h-16 w-16 sm:h-20 sm:w-20 lg:h-24 lg:w-24 text-white/40" />
+                      </div>
+                    )}
+                    <motion.div
+                      initial={{ y: 10, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="mt-4 text-center"
+                    >
+                      <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-white">
+                        {session.device.brand} {session.device.model}
+                      </p>
+                      <p className="text-sm sm:text-base text-white/60 mt-1 capitalize">
+                        {session.device.device_type}
+                      </p>
+                    </motion.div>
+                  </Card>
+                </motion.div>
+
+                {/* Right Column - Customer & Device Details */}
+                <motion.div
+                  initial={{ x: 30, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                  className="lg:flex-1 flex flex-col gap-4"
+                >
+                  {/* Customer Info */}
                   <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl">
                     <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       <motion.div 
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.15 }}
-                        className="p-3 sm:p-5 bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-2xl border border-blue-500/20"
+                        transition={{ delay: 0.2 }}
+                        className="p-3 sm:p-4 bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-2xl border border-blue-500/20"
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-blue-500/30 flex items-center justify-center">
-                            <User className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400" />
+                          <div className="w-8 h-8 rounded-xl bg-blue-500/30 flex items-center justify-center">
+                            <User className="h-4 w-4 text-blue-400" />
                           </div>
                           <p className="text-xs sm:text-sm text-blue-400/80 font-medium">Cliente</p>
                         </div>
-                        <p className="font-bold text-base sm:text-xl text-white truncate">{session.customer.name}</p>
-                      </motion.div>
-                      <motion.div 
-                        initial={{ scale: 0.9, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                        className="p-3 sm:p-5 bg-gradient-to-br from-violet-500/20 to-violet-600/10 rounded-2xl border border-violet-500/20"
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-violet-500/30 flex items-center justify-center">
-                            <PhoneIcon className="h-4 w-4 sm:h-5 sm:w-5 text-violet-400" />
-                          </div>
-                          <p className="text-xs sm:text-sm text-violet-400/80 font-medium">Telefono</p>
-                        </div>
-                        <p className="font-bold text-base sm:text-xl text-white truncate">{session.customer.phone}</p>
+                        <p className="font-bold text-base sm:text-lg text-white truncate">{session.customer.name}</p>
                       </motion.div>
                       <motion.div 
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ delay: 0.25 }}
-                        className="p-3 sm:p-5 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-2xl border border-emerald-500/20"
+                        className="p-3 sm:p-4 bg-gradient-to-br from-violet-500/20 to-violet-600/10 rounded-2xl border border-violet-500/20"
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-emerald-500/30 flex items-center justify-center">
-                            <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400" />
+                          <div className="w-8 h-8 rounded-xl bg-violet-500/30 flex items-center justify-center">
+                            <PhoneIcon className="h-4 w-4 text-violet-400" />
                           </div>
-                          <p className="text-xs sm:text-sm text-emerald-400/80 font-medium">Dispositivo</p>
+                          <p className="text-xs sm:text-sm text-violet-400/80 font-medium">Telefono</p>
                         </div>
-                        <p className="font-bold text-base sm:text-xl text-white truncate">{session.device.brand} {session.device.model}</p>
+                        <p className="font-bold text-base sm:text-lg text-white truncate">{session.customer.phone}</p>
                       </motion.div>
+                    </div>
+                  </Card>
+
+                  {/* Device Details */}
+                  <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl flex-1">
+                    <div className="space-y-4">
+                      {/* Problem Description */}
                       <motion.div 
                         initial={{ scale: 0.9, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ delay: 0.3 }}
-                        className="p-3 sm:p-5 bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-2xl border border-amber-500/20"
+                        className="p-4 bg-gradient-to-br from-amber-500/20 to-amber-600/10 rounded-2xl border border-amber-500/20"
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-amber-500/30 flex items-center justify-center">
-                            <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
+                          <div className="w-8 h-8 rounded-xl bg-amber-500/30 flex items-center justify-center">
+                            <Wrench className="h-4 w-4 text-amber-400" />
                           </div>
-                          <p className="text-xs sm:text-sm text-amber-400/80 font-medium">Problema</p>
+                          <p className="text-xs sm:text-sm text-amber-400/80 font-medium">Problema Segnalato</p>
                         </div>
-                        <p className="font-bold text-sm sm:text-lg text-white line-clamp-2">{session.device.reported_issue}</p>
+                        <p className="font-semibold text-sm sm:text-base text-white">{session.device.reported_issue}</p>
                       </motion.div>
+
+                      {/* IMEI & Serial */}
+                      {(session.device.imei || session.device.serial_number) && (
+                        <div className="grid grid-cols-2 gap-3">
+                          {session.device.imei && (
+                            <motion.div 
+                              initial={{ scale: 0.9, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ delay: 0.35 }}
+                              className="p-3 bg-gradient-to-br from-slate-500/20 to-slate-600/10 rounded-2xl border border-slate-500/20"
+                            >
+                              <p className="text-xs text-slate-400/80 font-medium mb-1">IMEI</p>
+                              <p className="font-mono text-sm text-white/90">{session.device.imei}</p>
+                            </motion.div>
+                          )}
+                          {session.device.serial_number && (
+                            <motion.div 
+                              initial={{ scale: 0.9, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ delay: 0.4 }}
+                              className="p-3 bg-gradient-to-br from-slate-500/20 to-slate-600/10 rounded-2xl border border-slate-500/20"
+                            >
+                              <p className="text-xs text-slate-400/80 font-medium mb-1">Seriale</p>
+                              <p className="font-mono text-sm text-white/90">{session.device.serial_number}</p>
+                            </motion.div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </Card>
                 </motion.div>
-
-                {/* Estimated Cost - Premium */}
-                <motion.div
-                  initial={{ y: 30, opacity: 0, scale: 0.95 }}
-                  animate={{ y: 0, opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.2, type: "spring" }}
-                  className="flex-1 flex items-center justify-center"
-                >
-                  <div className="w-full relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500 rounded-3xl blur-2xl opacity-40" />
-                    <Card className="w-full p-5 sm:p-8 md:p-10 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-600 border-0 shadow-2xl rounded-3xl relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                      <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-white/5 rounded-full" />
-                      
-                      <div className="text-center relative z-10">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full mb-4">
-                          <Euro className="h-5 w-5 sm:h-6 sm:w-6 text-white/90" />
-                          <p className="text-sm sm:text-lg text-white/90 font-semibold">Preventivo Totale</p>
-                        </div>
-                        <motion.p 
-                          initial={{ scale: 0.5, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: 0.4, type: "spring" }}
-                          className="text-5xl sm:text-7xl md:text-8xl font-black text-white drop-shadow-2xl tracking-tight"
-                        >
-                          €{(session.estimatedCost + session.diagnosticFee).toFixed(2)}
-                        </motion.p>
-                        <motion.div 
-                          initial={{ y: 20, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          transition={{ delay: 0.5 }}
-                          className="mt-4 sm:mt-6 px-5 py-3 bg-white/20 rounded-2xl inline-block backdrop-blur-sm border border-white/20"
-                        >
-                          <p className="text-base sm:text-lg md:text-xl text-white font-bold">
-                            💰 Da pagare ora: €{session.amountDueNow.toFixed(2)}
-                          </p>
-                        </motion.div>
-                      </div>
-                    </Card>
-                  </div>
-                </motion.div>
-
-                {/* Confirm Button */}
-                <motion.div
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.35 }}
-                >
-                  <motion.div
-                    whileHover={{ scale: dataConfirmed ? 1 : 1.02 }}
-                    whileTap={{ scale: dataConfirmed ? 1 : 0.98 }}
-                  >
-                    <Button
-                      onClick={handleConfirmData}
-                      disabled={dataConfirmed}
-                      className={`w-full h-16 sm:h-20 text-xl sm:text-2xl font-bold rounded-2xl shadow-2xl transition-all duration-300 relative overflow-hidden ${
-                        dataConfirmed 
-                          ? "bg-emerald-600 hover:bg-emerald-600" 
-                          : "bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500"
-                      }`}
-                    >
-                      {!dataConfirmed && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                      )}
-                      <CheckCircle2 className="mr-3 h-7 w-7 sm:h-8 sm:w-8" />
-                      {dataConfirmed ? "✓ Dati Confermati" : "Conferma Dati"}
-                    </Button>
-                  </motion.div>
-                  
-                  {dataConfirmed && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="mt-4 p-4 bg-emerald-500/20 backdrop-blur-sm rounded-2xl flex items-center justify-center gap-3 border border-emerald-500/30"
-                    >
-                      <Loader2 className="h-5 w-5 text-emerald-400 animate-spin" />
-                      <p className="text-emerald-300 font-semibold text-base sm:text-lg">In attesa del prossimo passaggio...</p>
-                    </motion.div>
-                  )}
-                </motion.div>
               </div>
+
+              {/* Confirm Button */}
+              <motion.div
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.35 }}
+                className="relative z-10 mt-4"
+              >
+                <motion.div
+                  whileHover={{ scale: dataConfirmed ? 1 : 1.02 }}
+                  whileTap={{ scale: dataConfirmed ? 1 : 0.98 }}
+                >
+                  <Button
+                    onClick={handleConfirmData}
+                    disabled={dataConfirmed}
+                    className={`w-full h-16 sm:h-20 text-xl sm:text-2xl font-bold rounded-2xl shadow-2xl transition-all duration-300 relative overflow-hidden ${
+                      dataConfirmed 
+                        ? "bg-emerald-600 hover:bg-emerald-600" 
+                        : "bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500"
+                    }`}
+                  >
+                    {!dataConfirmed && (
+                      <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                    )}
+                    <CheckCircle2 className="mr-3 h-7 w-7 sm:h-8 sm:w-8" />
+                    {dataConfirmed ? "✓ Dati Confermati" : "Conferma Dati"}
+                  </Button>
+                </motion.div>
+                
+                {dataConfirmed && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-4 bg-emerald-500/20 backdrop-blur-sm rounded-2xl flex items-center justify-center gap-3 border border-emerald-500/30"
+                  >
+                    <Loader2 className="h-5 w-5 text-emerald-400 animate-spin" />
+                    <p className="text-emerald-300 font-semibold text-base sm:text-lg">In attesa del prossimo passaggio...</p>
+                  </motion.div>
+                )}
+              </motion.div>
             </motion.div>
           )}
 
