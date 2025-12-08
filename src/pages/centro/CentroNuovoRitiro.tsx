@@ -52,6 +52,7 @@ export default function CentroNuovoRitiro() {
   const [diagnosticFee, setDiagnosticFee] = useState<number>(15);
   const [isFeeDisabledBySettings, setIsFeeDisabledBySettings] = useState(false);
   const [acconto, setAcconto] = useState<number>(0);
+  const [paymentMode, setPaymentMode] = useState<"full" | "partial">("full");
   const [aiConditionAssessment, setAiConditionAssessment] = useState<any>(null);
   const [showChecklistDialog, setShowChecklistDialog] = useState(false);
   const [createdRepairId, setCreatedRepairId] = useState<string | null>(null);
@@ -194,7 +195,9 @@ export default function CentroNuovoRitiro() {
       },
       estimatedCost: estimatedTotal,
       diagnosticFee: diagnosticFee,
-      amountDueNow: diagnosticFee + (acconto > 0 ? acconto : 0),
+      amountDueNow: paymentMode === "full" 
+        ? Math.ceil(estimatedTotal + diagnosticFee) 
+        : (acconto > 0 ? acconto : diagnosticFee),
       quoteItems: quoteItems,
       laborCost: laborCost
     };
@@ -236,6 +239,7 @@ export default function CentroNuovoRitiro() {
     laborCost, 
     diagnosticFee, 
     acconto,
+    paymentMode,
     startIntakeSession,
     updateIntakeSession,
     requestPassword,
@@ -949,6 +953,8 @@ export default function CentroNuovoRitiro() {
             isFeeDisabledBySettings={isFeeDisabledBySettings}
             acconto={acconto}
             onAccontoChange={setAcconto}
+            paymentMode={paymentMode}
+            onPaymentModeChange={setPaymentMode}
           />
         );
 
