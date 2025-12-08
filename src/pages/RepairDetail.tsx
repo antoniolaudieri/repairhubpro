@@ -49,6 +49,7 @@ import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
 import { AcceptanceFormPDF } from "@/components/repair/AcceptanceFormPDF";
 import { RepairChecklistDialog } from "@/components/checklist/RepairChecklistDialog";
 import { DirectRepairTimeline } from "@/components/repair/DirectRepairTimeline";
+import { VisualStatusManager, DIRECT_REPAIR_STATUSES } from "@/components/repair/VisualStatusManager";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
@@ -792,11 +793,30 @@ export default function RepairDetail() {
               </motion.div>
             </div>
 
-            {/* Workflow Timeline */}
+            {/* Visual Status Manager */}
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
+            >
+              <VisualStatusManager
+                currentStatus={repair.status}
+                onStatusChange={(newStatus) => setRepair({ ...repair, status: newStatus })}
+                statuses={DIRECT_REPAIR_STATUSES}
+                timestamps={{
+                  pending_at: repair.created_at,
+                  in_progress_at: repair.started_at,
+                  completed_at: repair.completed_at,
+                  delivered_at: repair.delivered_at,
+                }}
+              />
+            </motion.div>
+
+            {/* Detailed Timeline */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.35 }}
             >
               <Card className="overflow-hidden">
                 <div className="bg-gradient-to-r from-primary/5 to-transparent px-6 py-4 border-b border-border">
@@ -804,7 +824,7 @@ export default function RepairDetail() {
                     <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
                       <Clock className="h-4 w-4 text-primary" />
                     </div>
-                    Stato Avanzamento
+                    Cronologia Dettagliata
                   </h2>
                 </div>
                 <div className="p-6">

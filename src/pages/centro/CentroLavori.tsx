@@ -7,9 +7,9 @@ import { PageTransition } from "@/components/PageTransition";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
+import { StatusBadge, DIRECT_REPAIR_STATUSES } from "@/components/repair/VisualStatusManager";
 import { 
   Plus, 
   Search, 
@@ -25,16 +25,18 @@ import {
   Package,
   UserPlus,
   Phone,
+  AlertTriangle,
   Eye,
-  Mail,
   MessageCircle,
-  AlertTriangle
+  Mail
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
+import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
 
 interface Centro {
   id: string;
@@ -74,17 +76,6 @@ const deviceIcons: Record<string, any> = {
   smartwatch: Watch,
   computer: Monitor,
   console: Gamepad,
-};
-
-const statusConfig: Record<string, { label: string; color: string }> = {
-  pending: { label: "In Attesa", color: "bg-yellow-500/20 text-yellow-600" },
-  assigned: { label: "Assegnato", color: "bg-blue-500/20 text-blue-600" },
-  in_progress: { label: "In Corso", color: "bg-primary/20 text-primary" },
-  waiting_for_parts: { label: "Attesa Ricambi", color: "bg-orange-500/20 text-orange-600" },
-  completed: { label: "Completato", color: "bg-green-500/20 text-green-600" },
-  delivered: { label: "Consegnato", color: "bg-emerald-500/20 text-emerald-600" },
-  cancelled: { label: "Annullato", color: "bg-red-500/20 text-red-600" },
-  forfeited: { label: "Alienato", color: "bg-rose-900/20 text-rose-900" },
 };
 
 export default function CentroLavori() {
@@ -404,36 +395,41 @@ export default function CentroLavori() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-4">
-                  {filteredRepairs.map((repair) => {
-                    const status = statusConfig[repair.status] || statusConfig.pending;
-                    
+                <div className="space-y-3">
+                  {filteredRepairs.map((repair, index) => {
                     return (
-                      <Card
+                      <motion.div
                         key={repair.id}
-                        className="hover:bg-accent/50 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/centro/lavori/${repair.id}`)}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
                       >
-                        <CardContent className="p-4">
-                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                            <div className="flex items-start gap-4">
-                              {repair.device.photo_url ? (
-                                <img
-                                  src={repair.device.photo_url}
-                                  alt="Device"
-                                  className="h-16 w-16 rounded-lg object-cover"
-                                />
-                              ) : (
-                                <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center">
-                                  {DeviceIcon(repair.device.device_type)}
-                                </div>
-                              )}
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h3 className="font-semibold">
-                                    {repair.device.brand} {repair.device.model}
-                                  </h3>
-                                  <Badge className={status.color}>{status.label}</Badge>
+                        <Card
+                          className="hover:bg-accent/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 group"
+                          onClick={() => navigate(`/centro/lavori/${repair.id}`)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                              <div className="flex items-start gap-4">
+                                {repair.device.photo_url ? (
+                                  <div className="relative">
+                                    <img
+                                      src={repair.device.photo_url}
+                                      alt="Device"
+                                      className="h-16 w-16 rounded-xl object-cover ring-2 ring-border group-hover:ring-primary/30 transition-all"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center ring-2 ring-border group-hover:ring-primary/30 transition-all">
+                                    {DeviceIcon(repair.device.device_type)}
+                                  </div>
+                                )}
+                                <div className="space-y-1.5">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="font-semibold">
+                                      {repair.device.brand} {repair.device.model}
+                                    </h3>
+                                    <StatusBadge status={repair.status} statuses={DIRECT_REPAIR_STATUSES} />
                                   {/* Forfeiture countdown badge */}
                                   {repair.status === 'completed' && repair.completed_at && !repair.delivered_at && (() => {
                                     const daysRemaining = 30 - differenceInDays(new Date(), new Date(repair.completed_at));
@@ -582,6 +578,7 @@ export default function CentroLavori() {
                           </div>
                         </CardContent>
                       </Card>
+                    </motion.div>
                     );
                   })}
                 </div>
