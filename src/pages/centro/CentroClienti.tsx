@@ -141,26 +141,26 @@ export default function CentroClienti() {
   return (
     <CentroLayout>
       <PageTransition>
-        <div className="space-y-8">
+        <div className="space-y-5">
           {/* Hero Header */}
           <motion.div 
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 p-6 sm:p-8"
+            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10 p-5 sm:p-6"
           >
             <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
             <div className="absolute bottom-0 left-0 w-48 h-48 bg-primary/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
             
-            <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-              <div className="flex items-center gap-5">
-                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center shadow-lg shadow-primary/20">
-                  <Users className="h-8 w-8 text-primary" />
+            <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 sm:h-14 sm:w-14 rounded-xl bg-primary/10 flex items-center justify-center shadow-lg shadow-primary/20">
+                  <Users className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
                 </div>
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                  <h1 className="text-xl sm:text-2xl font-bold text-foreground">
                     I Tuoi Clienti
                   </h1>
-                  <p className="text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                  <p className="text-muted-foreground text-sm mt-0.5 flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1">
                       <span className="font-semibold text-foreground">{customers.length}</span> clienti
                     </span>
@@ -175,10 +175,9 @@ export default function CentroClienti() {
               
               <Button 
                 onClick={() => setDialogOpen(true)} 
-                size="lg"
                 className="gap-2 shadow-lg hover:shadow-xl transition-all bg-primary hover:bg-primary/90"
               >
-                <Plus className="h-5 w-5" />
+                <Plus className="h-4 w-4" />
                 Nuovo Cliente
               </Button>
             </div>
@@ -189,49 +188,49 @@ export default function CentroClienti() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3"
           >
-            <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm">
+            <Card className="p-3.5 border-border/50 bg-card/50 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                  <Users className="h-5 w-5 text-blue-500" />
+                <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{customers.length}</p>
-                  <p className="text-xs text-muted-foreground">Clienti Totali</p>
+                  <p className="text-xl font-bold text-foreground">{customers.length}</p>
+                  <p className="text-[11px] text-muted-foreground">Clienti</p>
                 </div>
               </div>
             </Card>
-            <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm">
+            <Card className="p-3.5 border-border/50 bg-card/50 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                  <Euro className="h-5 w-5 text-green-500" />
+                <div className="h-9 w-9 rounded-lg bg-green-500/10 flex items-center justify-center">
+                  <Euro className="h-4 w-4 text-green-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">€{totalRevenue.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">Fatturato Totale</p>
+                  <p className="text-xl font-bold text-foreground">€{totalRevenue.toFixed(0)}</p>
+                  <p className="text-[11px] text-muted-foreground">Fatturato</p>
                 </div>
               </div>
             </Card>
-            <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm">
+            <Card className="p-3.5 border-border/50 bg-card/50 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-amber-500" />
+                <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                  <CreditCard className="h-4 w-4 text-amber-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">€{avgPerCustomer.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">Media/Cliente</p>
+                  <p className="text-xl font-bold text-foreground">€{avgPerCustomer.toFixed(0)}</p>
+                  <p className="text-[11px] text-muted-foreground">Media</p>
                 </div>
               </div>
             </Card>
-            <Card className="p-4 border-border/50 bg-card/50 backdrop-blur-sm">
+            <Card className="p-3.5 border-border/50 bg-card/50 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                  <Wrench className="h-5 w-5 text-purple-500" />
+                <div className="h-9 w-9 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <Wrench className="h-4 w-4 text-purple-500" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-foreground">{totalRepairs}</p>
-                  <p className="text-xs text-muted-foreground">Riparazioni Totali</p>
+                  <p className="text-xl font-bold text-foreground">{totalRepairs}</p>
+                  <p className="text-[11px] text-muted-foreground">Riparazioni</p>
                 </div>
               </div>
             </Card>
