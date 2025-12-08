@@ -889,68 +889,43 @@ export default function CustomerDisplay() {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-emerald-500/5 to-transparent rounded-full" />
               </div>
 
-              {/* Amount to pay - Premium Hero */}
+              {/* Amount to pay - Compact */}
               <motion.div
-                initial={{ y: -30, opacity: 0, scale: 0.95 }}
-                animate={{ y: 0, opacity: 1, scale: 1 }}
-                transition={{ type: "spring", stiffness: 100 }}
-                className="mb-4 sm:mb-6 relative z-10"
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 120 }}
+                className="mb-3 relative z-10"
               >
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 rounded-3xl blur-xl opacity-50" />
-                  <Card className="p-4 sm:p-6 md:p-8 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 border-0 shadow-2xl rounded-3xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-                    <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/20 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
-                    
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 relative z-10">
-                      <motion.div
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ scale: 1, rotate: 0 }}
-                        transition={{ delay: 0.2, type: "spring" }}
-                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center border border-white/30"
-                      >
-                        <Euro className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
-                      </motion.div>
-                      <div className="text-center sm:text-left">
-                        <p className="text-sm sm:text-lg text-white/80 font-medium mb-1">Importo da pagare ora</p>
-                        <motion.p 
-                          initial={{ scale: 0.5, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ delay: 0.3, type: "spring" }}
-                          className="text-4xl sm:text-5xl md:text-7xl font-black text-white drop-shadow-2xl tracking-tight"
-                        >
-                          €{session.amountDueNow.toFixed(2)}
-                        </motion.p>
-                      </div>
+                <Card className="px-4 py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 border-0 shadow-lg rounded-2xl">
+                  <div className="flex items-center justify-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                      <Euro className="h-5 w-5 text-white" />
                     </div>
-                  </Card>
-                </div>
+                    <div className="text-center">
+                      <p className="text-xs text-white/80 font-medium">Importo da pagare ora</p>
+                      <p className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+                        €{session.amountDueNow.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </Card>
               </motion.div>
 
-              {/* Signature Area - Premium Glass Card */}
+              {/* Signature Area - Maximized */}
               <motion.div
-                initial={{ y: 30, opacity: 0 }}
+                initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.15 }}
-                className="flex-1 flex flex-col min-h-0 mb-4 relative z-10"
+                transition={{ delay: 0.1 }}
+                className="flex-1 flex flex-col min-h-0 mb-3 relative z-10"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <motion.div 
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      transition={{ delay: 0.3, type: "spring" }}
-                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30"
-                    >
-                      <FileSignature className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                    </motion.div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                      <FileSignature className="h-4 w-4 text-white" />
+                    </div>
                     <div>
-                      <span className="text-lg sm:text-xl font-bold text-white block">
-                        Firma qui sotto
-                      </span>
-                      <span className="text-xs sm:text-sm text-white/60">
-                        Usa il dito o una penna touch
-                      </span>
+                      <span className="text-base font-bold text-white">Firma qui sotto</span>
+                      <span className="text-xs text-white/60 ml-2">Usa il dito o una penna touch</span>
                     </div>
                   </div>
                   <Button
@@ -958,14 +933,14 @@ export default function CustomerDisplay() {
                     variant="outline"
                     size="sm"
                     onClick={handleClearSignature}
-                    className="h-10 px-4 text-sm rounded-xl border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white backdrop-blur-sm"
+                    className="h-8 px-3 text-xs rounded-lg border-white/20 bg-white/10 text-white hover:bg-white/20"
                   >
-                    <X className="h-4 w-4 mr-2" />
+                    <X className="h-3 w-3 mr-1" />
                     Cancella
                   </Button>
                 </div>
                 
-                <Card className="flex-1 p-2 bg-white/95 backdrop-blur-xl border-2 border-white/50 rounded-3xl shadow-2xl shadow-black/20 min-h-0 relative overflow-hidden">
+                <Card className="flex-1 p-1 bg-white/95 backdrop-blur-xl border-2 border-white/50 rounded-2xl shadow-2xl min-h-0 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-50/80 via-white to-indigo-50/80 pointer-events-none" />
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-slate-300 text-sm font-medium pointer-events-none z-0">
                     ✍️ Firma qui
@@ -973,7 +948,7 @@ export default function CustomerDisplay() {
                   <SignatureCanvas
                     ref={sigCanvas}
                     canvasProps={{
-                      className: "w-full h-full rounded-2xl cursor-crosshair relative z-10",
+                      className: "w-full h-full rounded-xl cursor-crosshair relative z-10",
                       style: { touchAction: "none" }
                     }}
                     backgroundColor="rgba(255,255,255,0)"
@@ -984,78 +959,56 @@ export default function CustomerDisplay() {
                 </Card>
               </motion.div>
 
-              {/* Privacy Consent + Disclaimer + Button - Premium */}
+              {/* Bottom Section - Compact */}
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.25 }}
-                className="space-y-3 sm:space-y-4 relative z-10"
+                transition={{ delay: 0.2 }}
+                className="space-y-2 relative z-10"
               >
-                {/* Privacy Info */}
-                <div className="px-4 py-3 bg-blue-500/10 backdrop-blur-sm rounded-2xl border border-blue-500/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Scale className="h-4 w-4 text-blue-400" />
-                    <span className="text-xs sm:text-sm font-semibold text-blue-200">Informativa Privacy (GDPR)</span>
+                {/* Privacy + Disclaimer Row */}
+                <div className="flex gap-2">
+                  {/* Privacy Checkbox */}
+                  <div className={`flex-1 flex items-center gap-2 px-3 py-2 backdrop-blur-sm rounded-xl border transition-colors ${
+                    privacyConsent 
+                      ? "bg-green-500/10 border-green-500/30" 
+                      : "bg-white/10 border-white/20"
+                  }`}>
+                    <Checkbox 
+                      id="privacy-consent-display"
+                      checked={privacyConsent}
+                      onCheckedChange={(checked) => setPrivacyConsent(checked === true)}
+                      className="h-5 w-5 border-2 border-white/50 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                    />
+                    <Label htmlFor="privacy-consent-display" className="text-xs text-white/90 cursor-pointer leading-tight">
+                      Accetto privacy e GDPR <span className="text-red-400">*</span>
+                    </Label>
                   </div>
-                  <p className="text-xs text-blue-200/80 leading-relaxed">
-                    I tuoi dati saranno trattati per la gestione della riparazione (Art. 13 GDPR). 
-                    Hai diritto di accesso, rettifica e cancellazione.
-                  </p>
-                </div>
 
-                {/* Privacy Checkbox */}
-                <div className={`flex items-center gap-3 px-4 py-3 backdrop-blur-sm rounded-2xl border transition-colors ${
-                  privacyConsent 
-                    ? "bg-green-500/10 border-green-500/30" 
-                    : "bg-white/10 border-white/20"
-                }`}>
-                  <Checkbox 
-                    id="privacy-consent-display"
-                    checked={privacyConsent}
-                    onCheckedChange={(checked) => setPrivacyConsent(checked === true)}
-                    className="h-6 w-6 border-2 border-white/50 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
-                  />
-                  <Label htmlFor="privacy-consent-display" className="text-sm text-white/90 cursor-pointer leading-relaxed">
-                    Accetto l'informativa privacy e il trattamento dei dati <span className="text-red-400">*</span>
-                  </Label>
-                </div>
-
-                {/* Disclaimer */}
-                <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/10 backdrop-blur-sm rounded-2xl border border-amber-500/30">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
-                    <AlertTriangle className="h-5 w-5 text-amber-400" />
-                  </div>
-                  <p className="text-xs sm:text-sm text-amber-200/90 leading-relaxed">
-                    Firmando accetti i termini del servizio, l'esonero responsabilità per i dati e la clausola di decadenza per dispositivi non ritirati entro 30 giorni.
-                  </p>
-                </div>
-
-                <motion.div
-                  whileHover={{ scale: privacyConsent ? 1.02 : 1 }}
-                  whileTap={{ scale: privacyConsent ? 0.98 : 1 }}
-                >
-                  <Button
-                    onClick={handleSubmitSignature}
-                    disabled={isSubmitting || !privacyConsent}
-                    className="w-full h-16 sm:h-20 text-xl sm:text-2xl font-bold rounded-2xl shadow-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-400 hover:via-green-400 hover:to-teal-400 border-0 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                    {isSubmitting ? (
-                      <Loader2 className="h-8 w-8 animate-spin" />
-                    ) : (
-                      <>
-                        <CheckCircle2 className="mr-3 h-7 w-7 sm:h-8 sm:w-8" />
-                        Firma e Conferma
-                        <Sparkles className="ml-3 h-5 w-5 sm:h-6 sm:w-6 opacity-70" />
-                      </>
-                    )}
-                  </Button>
-                  {!privacyConsent && (
-                    <p className="text-xs text-center text-red-400 mt-2">
-                      Devi accettare l'informativa privacy per procedere
+                  {/* Disclaimer Compact */}
+                  <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-amber-500/10 backdrop-blur-sm rounded-xl border border-amber-500/30">
+                    <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+                    <p className="text-[10px] text-amber-200/90 leading-tight">
+                      Firmando accetti termini, esonero responsabilità dati e decadenza 30gg.
                     </p>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleSubmitSignature}
+                  disabled={isSubmitting || !privacyConsent}
+                  className="w-full h-14 text-lg font-bold rounded-xl shadow-xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-400 hover:via-green-400 hover:to-teal-400 border-0 relative overflow-hidden group disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-6 w-6" />
+                      Firma e Conferma
+                      {!privacyConsent && <span className="ml-2 text-xs opacity-70">(accetta privacy)</span>}
+                    </>
                   )}
-                </motion.div>
+                </Button>
               </motion.div>
             </motion.div>
           )}
