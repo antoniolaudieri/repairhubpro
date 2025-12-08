@@ -17,6 +17,14 @@ interface DeviceData {
   serial_number?: string;
 }
 
+interface QuoteItem {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  type: 'part' | 'service' | 'labor';
+}
+
 interface IntakeSessionData {
   sessionId: string;
   customer: CustomerData;
@@ -24,6 +32,8 @@ interface IntakeSessionData {
   estimatedCost: number;
   diagnosticFee: number;
   amountDueNow: number;
+  quoteItems?: QuoteItem[];
+  laborCost?: number;
 }
 
 export function useCustomerDisplay(centroId: string | null) {
