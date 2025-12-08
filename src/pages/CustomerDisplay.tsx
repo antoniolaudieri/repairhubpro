@@ -554,26 +554,26 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
 
   // Active session modes (confirm_data, enter_password, signature)
   return (
-    <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 p-6 md:p-8">
+    <div ref={containerRef} className="min-h-screen max-h-screen overflow-y-auto bg-gradient-to-br from-background via-background to-primary/5 p-4 md:p-8">
       <FullscreenButton />
       <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
+        {/* Header - compact on small screens */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-2"
+          className="text-center space-y-1"
         >
-          <div className="flex justify-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Monitor className="h-7 w-7 text-primary" />
+          <div className="flex justify-center gap-4 mb-2">
+            <div className="w-10 h-10 md:w-14 md:h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Monitor className="h-5 w-5 md:h-7 md:w-7 text-primary" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-xl md:text-3xl font-bold text-foreground">
             {mode === "confirm_data" && "Conferma i Tuoi Dati"}
             {mode === "enter_password" && "Inserisci Password Dispositivo"}
             {mode === "signature" && "Firma per Accettazione"}
           </h1>
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-sm md:text-lg">
             {mode === "confirm_data" && "Verifica che le informazioni siano corrette"}
             {mode === "enter_password" && "Inserisci la password per sbloccare il dispositivo"}
             {mode === "signature" && "Firma per accettare i termini del servizio"}
@@ -587,44 +587,44 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
+                className="space-y-3 md:space-y-6"
               >
                 {/* Customer Info */}
-                <Card className="p-6 border-2 border-primary/20">
-                  <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                    <User className="h-5 w-5 text-primary" />
+                <Card className="p-3 md:p-6 border-2 border-primary/20">
+                  <h2 className="text-base md:text-xl font-bold text-foreground mb-2 md:mb-4 flex items-center gap-2">
+                    <User className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                     Dati Cliente
                   </h2>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <User className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Nome</p>
-                        <p className="text-lg font-semibold">{session.customer.name}</p>
+                  <div className="grid grid-cols-2 gap-2 md:gap-4">
+                    <div className="flex items-center gap-2 p-2 md:p-4 bg-muted/50 rounded-lg">
+                      <User className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] md:text-xs text-muted-foreground">Nome</p>
+                        <p className="text-sm md:text-lg font-semibold truncate">{session.customer.name}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                      <PhoneIcon className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Telefono</p>
-                        <p className="text-lg font-semibold">{session.customer.phone}</p>
+                    <div className="flex items-center gap-2 p-2 md:p-4 bg-muted/50 rounded-lg">
+                      <PhoneIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-[10px] md:text-xs text-muted-foreground">Telefono</p>
+                        <p className="text-sm md:text-lg font-semibold truncate">{session.customer.phone}</p>
                       </div>
                     </div>
                     {session.customer.email && (
-                      <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                        <Mail className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Email</p>
-                          <p className="text-lg font-semibold">{session.customer.email}</p>
+                      <div className="flex items-center gap-2 p-2 md:p-4 bg-muted/50 rounded-lg">
+                        <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] md:text-xs text-muted-foreground">Email</p>
+                          <p className="text-sm md:text-lg font-semibold truncate">{session.customer.email}</p>
                         </div>
                       </div>
                     )}
                     {session.customer.address && (
-                      <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                        <MapPin className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Indirizzo</p>
-                          <p className="text-lg font-semibold">{session.customer.address}</p>
+                      <div className="flex items-center gap-2 p-2 md:p-4 bg-muted/50 rounded-lg">
+                        <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] md:text-xs text-muted-foreground">Indirizzo</p>
+                          <p className="text-sm md:text-lg font-semibold truncate">{session.customer.address}</p>
                         </div>
                       </div>
                     )}
@@ -632,57 +632,57 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
                 </Card>
 
                 {/* Device Info */}
-                <Card className="p-6 border-2 border-accent/20">
-                  <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                    <Smartphone className="h-5 w-5 text-accent" />
+                <Card className="p-3 md:p-6 border-2 border-accent/20">
+                  <h2 className="text-base md:text-xl font-bold text-foreground mb-2 md:mb-4 flex items-center gap-2">
+                    <Smartphone className="h-4 w-4 md:h-5 md:w-5 text-accent" />
                     Dispositivo
                   </h2>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground">Marca e Modello</p>
-                      <p className="text-lg font-semibold">
+                  <div className="grid grid-cols-2 gap-2 md:gap-4">
+                    <div className="p-2 md:p-4 bg-muted/50 rounded-lg">
+                      <p className="text-[10px] md:text-xs text-muted-foreground">Marca e Modello</p>
+                      <p className="text-sm md:text-lg font-semibold truncate">
                         {session.device.brand} {session.device.model}
                       </p>
                     </div>
-                    <div className="p-4 bg-muted/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground">Tipo</p>
-                      <p className="text-lg font-semibold capitalize">{session.device.device_type}</p>
+                    <div className="p-2 md:p-4 bg-muted/50 rounded-lg">
+                      <p className="text-[10px] md:text-xs text-muted-foreground">Tipo</p>
+                      <p className="text-sm md:text-lg font-semibold capitalize">{session.device.device_type}</p>
                     </div>
-                    <div className="md:col-span-2 p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                      <p className="text-xs text-amber-600">Problema Segnalato</p>
-                      <p className="text-lg font-semibold text-amber-700">{session.device.reported_issue}</p>
+                    <div className="col-span-2 p-2 md:p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                      <p className="text-[10px] md:text-xs text-amber-600">Problema Segnalato</p>
+                      <p className="text-sm md:text-lg font-semibold text-amber-700">{session.device.reported_issue}</p>
                     </div>
                   </div>
                 </Card>
 
                 {/* Estimated Cost */}
-                <Card className="p-6 border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5">
-                  <div className="text-center space-y-2">
-                    <p className="text-sm text-muted-foreground">Preventivo Stimato</p>
-                    <p className="text-5xl font-bold text-primary">
+                <Card className="p-3 md:p-6 border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5">
+                  <div className="text-center space-y-1 md:space-y-2">
+                    <p className="text-xs md:text-sm text-muted-foreground">Preventivo Stimato</p>
+                    <p className="text-3xl md:text-5xl font-bold text-primary">
                       €{(session.estimatedCost + session.diagnosticFee).toFixed(2)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] md:text-xs text-muted-foreground">
                       Da pagare ora: €{session.amountDueNow.toFixed(2)}
                     </p>
                   </div>
                 </Card>
 
                 {/* Confirm Button */}
-                <div className="flex gap-4">
+                <div className="flex gap-4 pb-4">
                   <Button
                     onClick={handleConfirmData}
                     disabled={dataConfirmed}
-                    className="flex-1 h-16 text-xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90"
+                    className="flex-1 h-12 md:h-16 text-base md:text-xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:opacity-90"
                   >
                     {dataConfirmed ? (
                       <>
-                        <CheckCircle2 className="mr-3 h-6 w-6" />
+                        <CheckCircle2 className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
                         Dati Confermati
                       </>
                     ) : (
                       <>
-                        <CheckCircle2 className="mr-3 h-6 w-6" />
+                        <CheckCircle2 className="mr-2 md:mr-3 h-5 w-5 md:h-6 md:w-6" />
                         Conferma Dati
                       </>
                     )}
@@ -691,8 +691,8 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
 
                 {dataConfirmed && (
                   <Alert className="border-green-500/30 bg-green-500/10">
-                    <CheckCircle2 className="h-5 w-5 text-green-600" />
-                    <AlertDescription className="text-green-700 text-base">
+                    <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
+                    <AlertDescription className="text-green-700 text-sm md:text-base">
                       Dati confermati. In attesa del prossimo passaggio...
                     </AlertDescription>
                   </Alert>
@@ -785,38 +785,38 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
+                className="space-y-3 md:space-y-6"
               >
-                {/* Quote Details */}
+                {/* Quote Details - collapsible on small screens */}
                 {session.quoteItems && session.quoteItems.length > 0 && (
-                  <Card className="p-6 border-2 border-accent/20">
-                    <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                      <Wrench className="h-5 w-5 text-accent" />
+                  <Card className="p-3 md:p-6 border-2 border-accent/20">
+                    <h2 className="text-base md:text-xl font-bold text-foreground mb-2 md:mb-4 flex items-center gap-2">
+                      <Wrench className="h-4 w-4 md:h-5 md:w-5 text-accent" />
                       Dettaglio Preventivo
                     </h2>
-                    <div className="space-y-3 max-h-48 overflow-y-auto">
+                    <div className="space-y-2 max-h-24 md:max-h-48 overflow-y-auto">
                       {session.quoteItems.map((item, index) => (
-                        <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        <div key={index} className="flex justify-between items-center p-2 md:p-3 bg-muted/50 rounded-lg text-sm">
+                          <div className="flex items-center gap-1 md:gap-2 min-w-0 flex-1">
+                            <span className={`px-1.5 py-0.5 rounded text-[10px] md:text-xs font-medium shrink-0 ${
                               item.type === 'part' ? 'bg-blue-500/20 text-blue-600' :
                               item.type === 'service' ? 'bg-purple-500/20 text-purple-600' :
                               'bg-green-500/20 text-green-600'
                             }`}>
-                              {item.type === 'part' ? 'Ricambio' : item.type === 'service' ? 'Servizio' : 'Manodopera'}
+                              {item.type === 'part' ? 'Ric.' : item.type === 'service' ? 'Serv.' : 'Man.'}
                             </span>
-                            <span className="font-medium">{item.name}</span>
+                            <span className="font-medium truncate">{item.name}</span>
                             {item.quantity > 1 && (
-                              <span className="text-muted-foreground text-sm">x{item.quantity}</span>
+                              <span className="text-muted-foreground text-xs shrink-0">x{item.quantity}</span>
                             )}
                           </div>
-                          <span className="font-semibold">€{item.total.toFixed(2)}</span>
+                          <span className="font-semibold shrink-0 ml-2">€{item.total.toFixed(2)}</span>
                         </div>
                       ))}
                     </div>
                     
                     {/* Totals breakdown */}
-                    <div className="mt-4 pt-4 border-t border-border space-y-2">
+                    <div className="mt-2 md:mt-4 pt-2 md:pt-4 border-t border-border space-y-1 text-sm">
                       <div className="flex justify-between text-muted-foreground">
                         <span>Subtotale lavori</span>
                         <span>€{session.estimatedCost.toFixed(2)}</span>
@@ -827,8 +827,8 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
                           <span>€{session.diagnosticFee.toFixed(2)}</span>
                         </div>
                       )}
-                      <div className="flex justify-between text-xl font-bold text-primary pt-2 border-t border-border">
-                        <span>Totale Preventivo</span>
+                      <div className="flex justify-between text-base md:text-xl font-bold text-primary pt-1 md:pt-2 border-t border-border">
+                        <span>Totale</span>
                         <span>€{(session.estimatedCost + session.diagnosticFee).toFixed(2)}</span>
                       </div>
                     </div>
@@ -836,45 +836,36 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
                 )}
 
                 {/* Amount to pay now */}
-                <Card className="p-6 border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5">
-                  <div className="text-center space-y-2">
-                    <p className="text-sm text-muted-foreground">Importo da Pagare Ora</p>
-                    <p className="text-5xl font-bold text-primary">
+                <Card className="p-3 md:p-6 border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5">
+                  <div className="text-center space-y-1">
+                    <p className="text-xs md:text-sm text-muted-foreground">Importo da Pagare Ora</p>
+                    <p className="text-2xl md:text-5xl font-bold text-primary">
                       €{session.amountDueNow.toFixed(2)}
                     </p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] md:text-xs text-muted-foreground">
                       {session.amountDueNow < (session.estimatedCost + session.diagnosticFee) 
-                        ? `Saldo rimanente: €${((session.estimatedCost + session.diagnosticFee) - session.amountDueNow).toFixed(2)} al ritiro`
+                        ? `Saldo: €${((session.estimatedCost + session.diagnosticFee) - session.amountDueNow).toFixed(2)} al ritiro`
                         : "Pagamento completo"}
                     </p>
                   </div>
                 </Card>
 
-                {/* Disclaimer */}
-                <Card className="p-4 border border-amber-500/30 bg-amber-500/5">
-                  <div className="flex items-center gap-2 mb-3">
-                    <AlertTriangle className="h-5 w-5 text-amber-500" />
-                    <h4 className="font-semibold text-foreground">Informativa</h4>
-                  </div>
-                  <ScrollArea className="h-[100px]">
-                    <div className="space-y-2 text-sm text-muted-foreground pr-2">
-                      <p>
-                        <strong>Esonero Responsabilità:</strong> Il laboratorio è esonerato da responsabilità 
-                        per perdita dati, danni preesistenti non dichiarati.
-                      </p>
-                      <p className="text-rose-600">
-                        <strong>Clausola Alienazione:</strong> Dispositivi non ritirati entro 30 giorni 
-                        diventeranno proprietà del laboratorio (Art. 2756 c.c.).
-                      </p>
+                {/* Disclaimer - compact */}
+                <Card className="p-2 md:p-4 border border-amber-500/30 bg-amber-500/5">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="text-[10px] md:text-sm text-muted-foreground">
+                      <p><strong>Esonero:</strong> No responsabilità per perdita dati.</p>
+                      <p className="text-rose-600"><strong>30 giorni:</strong> Dispositivi non ritirati → proprietà laboratorio.</p>
                     </div>
-                  </ScrollArea>
+                  </div>
                 </Card>
 
                 {/* Signature Canvas */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-lg font-semibold flex items-center gap-2">
-                      <FileSignature className="h-5 w-5 text-primary" />
+                    <Label className="text-sm md:text-lg font-semibold flex items-center gap-2">
+                      <FileSignature className="h-4 w-4 md:h-5 md:w-5 text-primary" />
                       La Tua Firma
                     </Label>
                     <Button
@@ -882,6 +873,7 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
                       variant="ghost"
                       size="sm"
                       onClick={handleClearSignature}
+                      className="h-8 px-2"
                     >
                       <X className="h-4 w-4 mr-1" />
                       Cancella
@@ -892,7 +884,7 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
                     <SignatureCanvas
                       ref={sigCanvas}
                       canvasProps={{
-                        className: "w-full h-56 md:h-64 rounded cursor-crosshair",
+                        className: "w-full h-32 md:h-56 rounded cursor-crosshair",
                         style: { touchAction: "none" }
                       }}
                       backgroundColor="white"
@@ -900,8 +892,8 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
                     />
                   </Card>
 
-                  <p className="text-sm text-center text-muted-foreground">
-                    Firma nell'area sopra usando il dito o lo stilo
+                  <p className="text-[10px] md:text-sm text-center text-muted-foreground">
+                    Firma sopra usando il dito o lo stilo
                   </p>
                 </div>
 
@@ -909,23 +901,23 @@ const [advertisements, setAdvertisements] = useState<DisplayAd[]>(defaultAdverti
                 <Button
                   onClick={handleSubmitSignature}
                   disabled={isSubmitting}
-                  className="w-full h-16 text-xl font-bold bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
+                  className="w-full h-12 md:h-16 text-base md:text-xl font-bold bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
                 >
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-3 h-6 w-6 animate-spin" />
-                      Invio in corso...
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Invio...
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="mr-3 h-6 w-6" />
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
                       Conferma e Firma
                     </>
                   )}
                 </Button>
 
-                <p className="text-xs text-center text-muted-foreground">
-                  La firma digitale è valida ai sensi del Regolamento eIDAS e del CAD
+                <p className="text-[10px] md:text-xs text-center text-muted-foreground pb-4">
+                  Firma valida ai sensi eIDAS e CAD
                 </p>
               </motion.div>
             )}
