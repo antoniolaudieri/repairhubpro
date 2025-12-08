@@ -18,6 +18,7 @@ interface Corner {
   email: string;
   latitude: number | null;
   longitude: number | null;
+  status: string;
   distance?: number;
 }
 
@@ -32,23 +33,29 @@ interface PartnerDiscoveryMapProps {
   onSelectCorner: (corner: Corner) => void;
 }
 
-const createCornerIcon = (status?: string) => {
-  let bgColor = "#f59e0b"; // amber - default
-  let borderColor = "#d97706";
+const createCornerIcon = (inviteStatus?: string, cornerStatus?: string) => {
+  let bgColor = "#10b981"; // green - approved default
+  let borderColor = "#059669";
   let icon = "🏪";
 
-  if (status === "partner") {
+  // First check invite status
+  if (inviteStatus === "partner") {
     bgColor = "#10b981";
     borderColor = "#059669";
     icon = "✓";
-  } else if (status === "pending") {
-    bgColor = "#f59e0b";
-    borderColor = "#d97706";
+  } else if (inviteStatus === "pending") {
+    bgColor = "#3b82f6";
+    borderColor = "#1d4ed8";
     icon = "⏳";
-  } else if (status === "declined") {
+  } else if (inviteStatus === "declined") {
     bgColor = "#ef4444";
     borderColor = "#dc2626";
     icon = "✗";
+  } else if (cornerStatus === "pending") {
+    // Corner not yet approved on platform
+    bgColor = "#f59e0b";
+    borderColor = "#d97706";
+    icon = "⭐";
   }
 
   return L.divIcon({
@@ -161,12 +168,25 @@ export function PartnerDiscoveryMap({
     corners.forEach((corner) => {
       if (!corner.latitude || !corner.longitude) return;
 
-      const status = inviteStatuses[corner.id];
+      const inviteStatus = inviteStatuses[corner.id];
       const marker = L.marker([corner.latitude, corner.longitude], {
-        icon: createCornerIcon(status),
+        icon: createCornerIcon(inviteStatus, corner.status),
       }).addTo(mapRef.current!);
 
-      const statusBadge = status
+      const cornerPendingBadge = corner.status === "pending" 
+        ? `<span style="
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            background: #fef3c7;
+            color: #92400e;
+          ">⭐ Non ancora attivo sulla piattaforma</span><br/>`
+        : "";
+
+      const statusBadge = inviteStatus
         ? `<span style="
             display: inline-block;
             padding: 2px 8px;
@@ -174,9 +194,9 @@ export function PartnerDiscoveryMap({
             font-size: 11px;
             font-weight: 600;
             margin-top: 8px;
-            background: ${status === "partner" ? "#dcfce7" : status === "pending" ? "#fef3c7" : status === "declined" ? "#fee2e2" : "#e0e7ff"};
-            color: ${status === "partner" ? "#166534" : status === "pending" ? "#92400e" : status === "declined" ? "#dc2626" : "#3730a3"};
-          ">${status === "partner" ? "✓ Partner" : status === "pending" ? "⏳ In attesa" : status === "declined" ? "✗ Rifiutato" : "Disponibile"}</span>`
+            background: ${inviteStatus === "partner" ? "#dcfce7" : inviteStatus === "pending" ? "#dbeafe" : inviteStatus === "declined" ? "#fee2e2" : "#e0e7ff"};
+            color: ${inviteStatus === "partner" ? "#166534" : inviteStatus === "pending" ? "#1d4ed8" : inviteStatus === "declined" ? "#dc2626" : "#3730a3"};
+          ">${inviteStatus === "partner" ? "✓ Partner" : inviteStatus === "pending" ? "⏳ Richiesta inviata" : inviteStatus === "declined" ? "✗ Rifiutato" : "Disponibile"}</span>`
         : `<button 
             id="invite-${corner.id}"
             style="
@@ -195,6 +215,7 @@ export function PartnerDiscoveryMap({
 
       marker.bindPopup(`
         <div style="min-width: 200px; padding: 4px;">
+          ${cornerPendingBadge}
           <div style="font-size: 16px; font-weight: 700; color: #1f2937; margin-bottom: 4px;">
             ${corner.business_name}
           </div>
@@ -248,12 +269,12 @@ export function PartnerDiscoveryMap({
             <span>Tu (Centro)</span>
           </div>
           <div className="flex items-center gap-2 text-xs">
-            <div className="w-4 h-4 rounded-full bg-amber-500" />
-            <span>Corner disponibili</span>
+            <div className="w-4 h-4 rounded-full bg-green-500" />
+            <span>Corner attivi</span>
           </div>
           <div className="flex items-center gap-2 text-xs">
-            <div className="w-4 h-4 rounded-full bg-green-500" />
-            <span>Partner attivi</span>
+            <div className="w-4 h-4 rounded-full bg-amber-500" />
+            <span>Corner in attesa approvazione</span>
           </div>
         </div>
       </div>
