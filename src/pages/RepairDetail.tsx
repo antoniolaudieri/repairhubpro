@@ -1458,7 +1458,9 @@ export default function RepairDetail() {
           intake_signature: repair.intake_signature,
           intake_signature_date: repair.intake_signature_date,
           estimated_cost: repair.estimated_cost,
-          diagnostic_fee: repair.diagnostic_fee || 15,
+          diagnostic_fee: repair.diagnostic_fee ?? 15,
+          diagnostic_fee_paid: repair.diagnostic_fee_paid ?? false,
+          acconto: repair.acconto,
           device: {
             brand: repair.device.brand,
             model: repair.device.model,

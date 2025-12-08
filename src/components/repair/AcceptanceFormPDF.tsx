@@ -176,8 +176,8 @@ Il Team TechRepair
   const acconto = repairData.acconto ?? 0;
   const estimatedCost = repairData.estimated_cost ?? 0;
   
-  // Check if diagnostic fee is waived (free for high-value repairs >= €100)
-  const isDiagnosticFeeWaived = diagnosticFee === 0 || (estimatedCost >= 100 && diagnosticFee === 0);
+  // Check if diagnostic fee is waived (at Centro's discretion)
+  const isDiagnosticFeeWaived = diagnosticFee === 0;
   const isDiagnosticFeePaid = repairData.diagnostic_fee_paid ?? false;
   
   // Calculate remaining balance
@@ -248,11 +248,10 @@ Il Team TechRepair
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>Gestione Diagnosi:</span>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                {isDiagnosticFeeWaived || diagnosticFee === 0 ? (
+              {isDiagnosticFeeWaived ? (
                   <>
                     <span style={{ textDecoration: "line-through", color: "#999" }}>€ 15.00</span>
                     <strong style={{ color: "#16a34a" }}>OMAGGIO</strong>
-                    <span style={{ fontSize: "10px", color: "#666" }}>(preventivo ≥ €100)</span>
                   </>
                 ) : (
                   <>
@@ -315,11 +314,11 @@ Il Team TechRepair
               <div>
                 <p><strong>4. PAGAMENTO</strong></p>
                 <p>
-                  {isDiagnosticFeeWaived || diagnosticFee === 0 
-                    ? "Gestione diagnosi OMAGGIO per preventivo ≥ €100. " 
+                  {isDiagnosticFeeWaived 
+                    ? "Gestione diagnosi OMAGGIO. " 
                     : `Pagamento anticipato di € ${diagnosticFee.toFixed(2)} per gestione diagnosi${isDiagnosticFeePaid ? " (SALDATO)" : ""}. `}
                   {acconto > 0 && `Acconto versato: € ${acconto.toFixed(2)}. `}
-                  {remainingBalance > 0 
+                  {remainingBalance > 0
                     ? `Saldo residuo di € ${remainingBalance.toFixed(2)} da corrispondere al ritiro del dispositivo.`
                     : estimatedCost > 0 ? "Nessun saldo residuo da corrispondere." : "Saldo finale al ritiro del dispositivo."}
                 </p>
