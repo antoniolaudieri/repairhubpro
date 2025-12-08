@@ -1,8 +1,10 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Smartphone, Tablet, Laptop, Monitor, HelpCircle, KeyRound, FileText, AlertCircle } from "lucide-react";
+import { Smartphone, Tablet, Laptop, Monitor, HelpCircle, KeyRound, FileText, AlertCircle, Info, ImageOff } from "lucide-react";
+import { useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface DeviceData {
   device_type: string;
@@ -15,9 +17,26 @@ interface DeviceData {
   initial_condition: string;
 }
 
+interface DetectedDeviceInfo {
+  type?: string;
+  brand?: string;
+  model?: string;
+  fullName?: string;
+  year?: string;
+  imageUrl?: string;
+  specs?: {
+    ram?: string;
+    storage?: string;
+    display?: string;
+    processor?: string;
+    camera?: string;
+  };
+}
+
 interface DeviceFormStepProps {
   deviceData: DeviceData;
   onChange: (data: DeviceData) => void;
+  detectedDevice?: DetectedDeviceInfo | null;
 }
 
 const deviceTypes = [
@@ -28,9 +47,86 @@ const deviceTypes = [
   { value: "other", label: "Altro", icon: HelpCircle },
 ];
 
-export const DeviceFormStep = ({ deviceData, onChange }: DeviceFormStepProps) => {
+export const DeviceFormStep = ({ deviceData, onChange, detectedDevice }: DeviceFormStepProps) => {
+  const [imageError, setImageError] = useState(false);
+  
+  const hasDeviceInfo = detectedDevice && (detectedDevice.imageUrl || detectedDevice.specs || detectedDevice.year);
+  
   return (
     <div className="space-y-4">
+      {/* Device Image and Specs from AI - Show only if we have detected info */}
+      {hasDeviceInfo && (
+        <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <div className="flex gap-4">
+            {/* Device Image */}
+            <div className="flex-shrink-0">
+              {detectedDevice.imageUrl && !imageError ? (
+                <div className="relative">
+                  <img
+                    src={detectedDevice.imageUrl}
+                    alt={`${deviceData.brand} ${deviceData.model}`}
+                    className="h-24 w-24 object-contain rounded-lg bg-white p-1"
+                    onError={() => setImageError(true)}
+                  />
+                  <Badge 
+                    variant="secondary" 
+                    className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5 bg-primary text-primary-foreground"
+                  >
+                    AI
+                  </Badge>
+                </div>
+              ) : (
+                <div className="h-24 w-24 rounded-lg bg-muted flex items-center justify-center">
+                  <ImageOff className="h-8 w-8 text-muted-foreground" />
+                </div>
+              )}
+            </div>
+            
+            {/* Device Details */}
+            <div className="flex-1 min-w-0 space-y-2">
+              <div>
+                <h3 className="font-semibold text-sm truncate">
+                  {detectedDevice.fullName || `${deviceData.brand} ${deviceData.model}`}
+                </h3>
+                {detectedDevice.year && detectedDevice.year !== "N/A" && (
+                  <p className="text-xs text-muted-foreground">Anno: {detectedDevice.year}</p>
+                )}
+              </div>
+              
+              {/* Specs Grid */}
+              {detectedDevice.specs && (
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                  {detectedDevice.specs.ram && detectedDevice.specs.ram !== "N/A" && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground">RAM:</span>
+                      <span className="text-[10px] font-medium truncate">{detectedDevice.specs.ram}</span>
+                    </div>
+                  )}
+                  {detectedDevice.specs.storage && detectedDevice.specs.storage !== "N/A" && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground">Storage:</span>
+                      <span className="text-[10px] font-medium truncate">{detectedDevice.specs.storage}</span>
+                    </div>
+                  )}
+                  {detectedDevice.specs.display && detectedDevice.specs.display !== "N/A" && (
+                    <div className="flex items-center gap-1 col-span-2">
+                      <span className="text-[10px] text-muted-foreground">Display:</span>
+                      <span className="text-[10px] font-medium truncate">{detectedDevice.specs.display}</span>
+                    </div>
+                  )}
+                  {detectedDevice.specs.processor && detectedDevice.specs.processor !== "N/A" && (
+                    <div className="flex items-center gap-1 col-span-2">
+                      <span className="text-[10px] text-muted-foreground">CPU:</span>
+                      <span className="text-[10px] font-medium truncate">{detectedDevice.specs.processor}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Device Type Selection */}
       <div className="space-y-2">
         <Label className="text-sm font-medium flex items-center gap-1.5">
