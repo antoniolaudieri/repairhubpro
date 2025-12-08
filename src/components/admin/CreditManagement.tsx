@@ -524,7 +524,7 @@ export function CreditManagement() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col md:flex-row items-end md:items-center gap-2">
                           <div className="text-right">
                             <p className={`font-bold text-lg ${entity.credit_balance < 0 ? "text-destructive" : ""}`}>
                               {entity.credit_balance < 0 ? "Debito: " : ""}€{Math.abs(entity.credit_balance).toFixed(2)}
@@ -533,45 +533,47 @@ export function CreditManagement() {
                               {statusLabels[entity.payment_status]}
                             </Badge>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => {
-                              setSelectedEntity(entity);
-                              setNewCommissionRate(entity.commission_rate.toString());
-                              setShowEditCommission(true);
-                            }}
-                            title="Modifica commissione"
-                          >
-                            <Settings className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedEntity(entity);
-                              setManualAmount("");
-                              setShowManualTopup(true);
-                            }}
-                            className="text-success border-success/30 hover:bg-success/10"
-                          >
-                            <Plus className="h-4 w-4 mr-1" />
-                            Aggiungi
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setSelectedEntity(entity);
-                              setManualAmount("");
-                              setDeductReason("");
-                              setShowManualDeduct(true);
-                            }}
-                            className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                          >
-                            <Minus className="h-4 w-4 mr-1" />
-                            Togli
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setSelectedEntity(entity);
+                                setNewCommissionRate(entity.commission_rate.toString());
+                                setShowEditCommission(true);
+                              }}
+                              title="Modifica commissione"
+                            >
+                              <Settings className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedEntity(entity);
+                                setManualAmount("");
+                                setShowManualTopup(true);
+                              }}
+                              className="text-success border-success/30 hover:bg-success/10"
+                            >
+                              <Plus className="h-4 w-4 mr-1" />
+                              Aggiungi
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedEntity(entity);
+                                setManualAmount("");
+                                setDeductReason("");
+                                setShowManualDeduct(true);
+                              }}
+                              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                            >
+                              <Minus className="h-4 w-4 mr-1" />
+                              Togli
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     </CardContent>
