@@ -33,7 +33,7 @@ export function InAppNotifications() {
   const handleNotificationClick = (notification: any) => {
     markAsRead(notification.id);
     if (notification.repairId) {
-      navigate(`/customer-repair/${notification.repairId}`);
+      navigate(`/customer-repairs/${notification.repairId}`);
     }
   };
 
