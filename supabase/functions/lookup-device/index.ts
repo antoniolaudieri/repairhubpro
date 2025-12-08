@@ -5,6 +5,107 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Test if an image URL is actually accessible
+async function isImageAccessible(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, { 
+      method: "HEAD",
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      }
+    });
+    const contentType = response.headers.get("content-type") || "";
+    return response.ok && contentType.startsWith("image/");
+  } catch {
+    return false;
+  }
+}
+
+// Generate multiple possible image URLs for a device
+function generateImageUrls(brand: string, model: string): string[] {
+  const brandLower = brand.toLowerCase().trim();
+  const modelLower = model.toLowerCase().trim();
+  const fullName = `${brandLower}-${modelLower}`.replace(/\s+/g, '-').replace(/[()]/g, '');
+  const modelSlug = modelLower.replace(/\s+/g, '-').replace(/[()]/g, '');
+  
+  const urls: string[] = [];
+  
+  // GSMArena patterns (most reliable for phones)
+  urls.push(`https://fdn2.gsmarena.com/vv/bigpic/${fullName}.jpg`);
+  urls.push(`https://fdn2.gsmarena.com/vv/bigpic/${brandLower}-${modelSlug}.jpg`);
+  
+  // PhoneArena patterns
+  urls.push(`https://i-cdn.phonearena.com/images/phones/${encodeURIComponent(brand)}-${encodeURIComponent(model)}.jpg`);
+  
+  // Device-specific patterns for common brands
+  if (brandLower === 'apple' || brandLower === 'iphone') {
+    const iphoneModel = modelLower.replace('iphone', '').trim().replace(/\s+/g, '-');
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneModel}.jpg`);
+    urls.push(`https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-${iphoneModel.replace(/-/g, '')}-select?wid=470&hei=556&fmt=png-alpha`);
+  }
+  
+  if (brandLower === 'samsung') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-${modelSlug}.jpg`);
+    urls.push(`https://images.samsung.com/is/image/samsung/${modelSlug}`);
+  }
+  
+  if (brandLower === 'xiaomi') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/xiaomi-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'huawei') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/huawei-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'lg') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/lg-${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/lg-${modelSlug}-new.jpg`);
+  }
+  
+  if (brandLower === 'sony') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'oneplus') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oneplus-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'google' || brandLower === 'pixel') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/google-pixel-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'motorola') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/motorola-${modelSlug}.jpg`);
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/motorola-moto-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'oppo') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oppo-${modelSlug}.jpg`);
+  }
+  
+  if (brandLower === 'realme') {
+    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/realme-${modelSlug}.jpg`);
+  }
+  
+  return urls;
+}
+
+// Find first working image URL
+async function findWorkingImageUrl(brand: string, model: string): Promise<string> {
+  const urls = generateImageUrls(brand, model);
+  
+  // Check URLs in parallel, but limit concurrency
+  const results = await Promise.all(
+    urls.slice(0, 6).map(async (url) => {
+      const accessible = await isImageAccessible(url);
+      return { url, accessible };
+    })
+  );
+  
+  const working = results.find(r => r.accessible);
+  return working?.url || "";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,6 +126,9 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
+    // Start image search in parallel with AI call
+    const imagePromise = findWorkingImageUrl(brand, model);
+
     // Call Lovable AI to get device information
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -37,7 +141,19 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "Sei un esperto di dispositivi elettronici. Dato marca e modello, fornisci informazioni dettagliate. Rispondi SOLO in formato JSON con i campi: fullName (nome commerciale completo), year (anno di uscita), specs (oggetto con ram, storage, display, processor, camera se applicabile), imageUrl (URL dell'immagine da GSMArena costruito come: https://fdn2.gsmarena.com/vv/bigpic/[slug].jpg dove [slug] è il nome del dispositivo in lowercase con trattini, es: apple-iphone-14-pro-max). Se non trovi info, usa valori ragionevoli basati su conoscenza generale."
+            content: `Sei un esperto di dispositivi elettronici. Dato marca e modello, fornisci informazioni dettagliate. Rispondi SOLO in formato JSON con i campi: 
+- fullName (nome commerciale completo)
+- year (anno di uscita, es: "2023")
+- specs (oggetto con ram, storage, display, processor, camera se applicabile)
+- gsmarenaSlug (slug esatto usato su GSMArena per questo dispositivo, es: "apple-iphone-15-pro-max", "samsung-galaxy-s24-ultra", "lg-g7-thinq")
+
+IMPORTANTE: Per il gsmarenaSlug, usa il formato esatto di GSMArena che è: marca-modello-completo in lowercase con trattini. Ad esempio:
+- iPhone 15 Pro Max -> apple-iphone-15-pro-max
+- Galaxy Z Fold 3 -> samsung-galaxy-z-fold3-5g
+- LG G7 -> lg-g7-thinq
+- Pixel 8 Pro -> google-pixel-8-pro
+
+Se non trovi info, usa valori ragionevoli basati su conoscenza generale.`
           },
           {
             role: "user",
@@ -94,9 +210,23 @@ serve(async (req) => {
           storage: "N/A",
           display: "N/A"
         },
-        imageUrl: ""
+        gsmarenaSlug: ""
       };
     }
+
+    // Wait for image search result
+    let imageUrl = await imagePromise;
+
+    // If parallel search didn't find image, try with AI-provided slug
+    if (!imageUrl && deviceInfo.gsmarenaSlug) {
+      const slugUrl = `https://fdn2.gsmarena.com/vv/bigpic/${deviceInfo.gsmarenaSlug}.jpg`;
+      if (await isImageAccessible(slugUrl)) {
+        imageUrl = slugUrl;
+      }
+    }
+
+    // Set the imageUrl in the response
+    deviceInfo.imageUrl = imageUrl;
 
     return new Response(
       JSON.stringify({ device_info: deviceInfo }),
