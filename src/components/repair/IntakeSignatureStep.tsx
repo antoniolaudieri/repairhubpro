@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { QRCodeSVG } from "qrcode.react";
 
 interface IntakeSignatureStepProps {
   onSignatureComplete: (signatureData: string) => void;
@@ -558,12 +559,31 @@ export function IntakeSignatureStep({
               </div>
             </div>
 
-            {/* Link Display */}
+            {/* QR Code and Link Display */}
             {remoteSignUrl && (
-              <div className="space-y-3">
+              <div className="space-y-4">
+                {/* QR Code */}
+                <div className="flex justify-center">
+                  <div className="p-4 bg-white rounded-xl border-2 border-primary/20 shadow-lg">
+                    <QRCodeSVG 
+                      value={remoteSignUrl} 
+                      size={180}
+                      level="H"
+                      includeMargin={true}
+                      bgColor="#ffffff"
+                      fgColor="#000000"
+                    />
+                  </div>
+                </div>
+                
+                <p className="text-xs text-center text-muted-foreground">
+                  Scansiona il QR code con il dispositivo del cliente
+                </p>
+
+                {/* Link Display */}
                 <div className="p-3 bg-muted rounded-lg">
-                  <p className="text-xs text-muted-foreground mb-1">Link per la firma:</p>
-                  <p className="text-sm font-mono break-all text-foreground">
+                  <p className="text-xs text-muted-foreground mb-1">Oppure usa il link:</p>
+                  <p className="text-xs font-mono break-all text-foreground">
                     {remoteSignUrl}
                   </p>
                 </div>
@@ -573,26 +593,31 @@ export function IntakeSignatureStep({
                     onClick={copyToClipboard}
                     variant="outline"
                     className="flex-1"
+                    size="sm"
                   >
                     <Copy className="mr-2 h-4 w-4" />
-                    Copia Link
+                    Copia
                   </Button>
                   <Button
                     onClick={openInNewTab}
                     variant="default"
                     className="flex-1"
+                    size="sm"
                   >
                     <ExternalLink className="mr-2 h-4 w-4" />
                     Apri
                   </Button>
                 </div>
 
-                <Alert className="border-amber-500/30 bg-amber-500/5">
-                  <QrCode className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-xs text-amber-700">
-                    Apri questo link sul dispositivo del cliente per la firma. La firma verrà sincronizzata automaticamente.
-                  </AlertDescription>
-                </Alert>
+                {/* Waiting indicator */}
+                {isWaitingForRemoteSign && (
+                  <Alert className="border-green-500/30 bg-green-500/5">
+                    <Wifi className="h-4 w-4 text-green-600 animate-pulse" />
+                    <AlertDescription className="text-xs text-green-700">
+                      In attesa della firma... La firma verrà sincronizzata automaticamente.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
             )}
           </div>
