@@ -111,6 +111,7 @@ interface CentroInfo {
   phone: string;
   email: string;
   vat_number: string | null;
+  logo_url: string | null;
 }
 
 interface RepairDetail {
@@ -254,7 +255,7 @@ export default function RepairDetail() {
       if (data.device?.customer?.centro_id) {
         const { data: centro } = await supabase
           .from("centri_assistenza")
-          .select("business_name, address, phone, email, vat_number")
+          .select("business_name, address, phone, email, vat_number, logo_url")
           .eq("id", data.device.customer.centro_id)
           .single();
         
