@@ -3,12 +3,14 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileSignature, X, CheckCircle2, Tablet, Shield, Loader2 } from "lucide-react";
+import { FileSignature, X, CheckCircle2, Tablet, Shield, Loader2, Scale } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 export default function RemoteSignature() {
   const { sessionId } = useParams();
@@ -18,6 +20,7 @@ export default function RemoteSignature() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [alreadySigned, setAlreadySigned] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(false);
 
   const amount = searchParams.get("amount") || "0.00";
   const total = searchParams.get("total") || "0.00";
@@ -255,6 +258,43 @@ export default function RemoteSignature() {
           </Card>
         </motion.div>
 
+        {/* Privacy Consent GDPR */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <Card className="p-4 border border-blue-500/30 bg-blue-500/5">
+            <div className="flex items-center gap-2 mb-3">
+              <Scale className="h-4 w-4 text-blue-500 flex-shrink-0" />
+              <h4 className="text-sm font-semibold text-foreground">Informativa Privacy (GDPR)</h4>
+            </div>
+            
+            <p className="text-xs text-muted-foreground mb-3">
+              I tuoi dati personali saranno trattati per la gestione della riparazione ai sensi 
+              dell'Art. 13 Reg. UE 2016/679. Hai diritto di accesso, rettifica e cancellazione 
+              contattando il Titolare del trattamento.
+            </p>
+            
+            <div className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+              privacyConsent 
+                ? "border-green-500/50 bg-green-500/5" 
+                : "border-primary/30 bg-primary/5"
+            }`}>
+              <Checkbox 
+                id="privacy-consent-remote"
+                checked={privacyConsent}
+                onCheckedChange={(checked) => setPrivacyConsent(checked === true)}
+                className="mt-0.5"
+              />
+              <Label htmlFor="privacy-consent-remote" className="text-xs leading-relaxed cursor-pointer">
+                Accetto l'informativa privacy e acconsento al trattamento dei miei dati personali 
+                per le finalità indicate. <span className="text-destructive">*</span>
+              </Label>
+            </div>
+          </Card>
+        </motion.div>
+
         {/* Signature Canvas */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
@@ -304,7 +344,7 @@ export default function RemoteSignature() {
         >
           <Button
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !privacyConsent}
             className="w-full h-14 text-lg font-bold bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
           >
             {isSubmitting ? (
@@ -319,6 +359,11 @@ export default function RemoteSignature() {
               </>
             )}
           </Button>
+          {!privacyConsent && (
+            <p className="text-xs text-center text-destructive mt-2">
+              Devi accettare l'informativa privacy per procedere
+            </p>
+          )}
         </motion.div>
 
         {/* Footer */}

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet, Tablet, Smartphone, QrCode, Copy, ExternalLink, Loader2, Wifi } from "lucide-react";
+import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet, Tablet, Smartphone, QrCode, Copy, ExternalLink, Loader2, Wifi, Scale } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import SignatureCanvas from "react-signature-canvas";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
@@ -59,6 +60,7 @@ export function IntakeSignatureStep({
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isWaitingForRemoteSign, setIsWaitingForRemoteSign] = useState(false);
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   
   // Suggerimento sconto diagnosi per preventivi sopra €100
   const suggestDiscount = estimatedCost >= 100;
@@ -439,6 +441,31 @@ export function IntakeSignatureStep({
                 </p>
               </div>
 
+              {/* Informativa Privacy GDPR */}
+              <div className="pt-2 border-t border-blue-200">
+                <p className="text-blue-700 font-semibold flex items-center gap-1 mb-1">
+                  <Scale className="w-3.5 h-3.5" />
+                  Informativa Privacy (Art. 13 Reg. UE 2016/679)
+                </p>
+                <p className="text-blue-600/80 text-[10px] mb-2">
+                  I dati personali raccolti (nome, cognome, telefono, email, indirizzo, dati del dispositivo) 
+                  saranno trattati dal Titolare per le seguenti finalità:
+                </p>
+                <ul className="text-[10px] text-blue-600/80 list-disc list-inside space-y-0.5 mb-2">
+                  <li>Gestione della pratica di riparazione e comunicazioni sullo stato del dispositivo</li>
+                  <li>Adempimenti fiscali, contabili e obblighi di legge (conservazione 10 anni)</li>
+                  <li>Contatto per feedback sulla qualità del servizio (legittimo interesse)</li>
+                </ul>
+                <p className="text-[10px] text-blue-600/80">
+                  <strong>Base giuridica:</strong> Esecuzione del contratto (Art. 6.1.b GDPR). 
+                  I dati potranno essere comunicati a fornitori di ricambi, corrieri e piattaforma gestionale.
+                </p>
+                <p className="text-[10px] text-blue-600/80 mt-1">
+                  <strong>Diritti dell'interessato:</strong> Accesso, rettifica, cancellazione, portabilità, 
+                  opposizione e limitazione (Artt. 15-22 GDPR). Per esercitarli contattare il Titolare.
+                </p>
+              </div>
+
               {/* Firma */}
               <p className="pt-2 border-t text-foreground font-medium">
                 Firmando digitalmente, il cliente autorizza gli interventi, conferma il pagamento 
@@ -449,6 +476,36 @@ export function IntakeSignatureStep({
             </div>
           </ScrollArea>
         </Card>
+      </motion.div>
+
+      {/* Privacy Consent Checkbox */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.15 }}
+      >
+        <div className={`flex items-start gap-3 p-3 rounded-lg border-2 transition-colors ${
+          privacyConsent 
+            ? "border-green-500/50 bg-green-500/5" 
+            : "border-primary/30 bg-primary/5"
+        }`}>
+          <Checkbox 
+            id="privacy-consent"
+            checked={privacyConsent}
+            onCheckedChange={(checked) => setPrivacyConsent(checked === true)}
+            className="mt-0.5"
+          />
+          <Label htmlFor="privacy-consent" className="text-xs leading-relaxed cursor-pointer">
+            Dichiaro di aver letto e compreso l'<strong>informativa sulla privacy</strong> ai sensi dell'Art. 13 
+            del Reg. UE 2016/679 (GDPR) e acconsento al trattamento dei miei dati personali per le finalità 
+            sopra indicate. <span className="text-destructive">*</span>
+          </Label>
+        </div>
+        {!privacyConsent && (
+          <p className="text-[10px] text-destructive mt-1 ml-1">
+            Il consenso privacy è obbligatorio per procedere
+          </p>
+        )}
       </motion.div>
 
       {/* Signature Section */}
@@ -546,7 +603,7 @@ export function IntakeSignatureStep({
               variant="outline"
               onClick={generateRemoteSignUrl}
               className="w-full h-10 text-sm font-semibold border-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5"
-              disabled={isGeneratingLink}
+              disabled={isGeneratingLink || !privacyConsent}
             >
               {isGeneratingLink ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -560,6 +617,7 @@ export function IntakeSignatureStep({
               type="button"
               onClick={handleSave}
               className="w-full h-10 text-sm font-semibold bg-primary hover:bg-primary/90"
+              disabled={!privacyConsent}
             >
               <FileSignature className="mr-2 h-4 w-4" />
               Salva Firma

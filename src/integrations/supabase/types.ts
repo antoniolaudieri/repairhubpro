@@ -1422,6 +1422,7 @@ export type Database = {
           intake_signature: string | null
           intake_signature_date: string | null
           priority: string
+          privacy_consent_at: string | null
           repair_notes: string | null
           started_at: string | null
           status: string
@@ -1451,6 +1452,7 @@ export type Database = {
           intake_signature?: string | null
           intake_signature_date?: string | null
           priority?: string
+          privacy_consent_at?: string | null
           repair_notes?: string | null
           started_at?: string | null
           status?: string
@@ -1480,6 +1482,7 @@ export type Database = {
           intake_signature?: string | null
           intake_signature_date?: string | null
           priority?: string
+          privacy_consent_at?: string | null
           repair_notes?: string | null
           started_at?: string | null
           status?: string

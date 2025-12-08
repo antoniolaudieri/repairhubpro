@@ -25,8 +25,10 @@ import {
   Minimize,
   Euro,
   Sparkles,
-  ClipboardCheck
+  ClipboardCheck,
+  Scale
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import SignatureCanvas from "react-signature-canvas";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -156,6 +158,7 @@ export default function CustomerDisplay() {
   const [slideInterval, setSlideInterval] = useState(5000);
   const [centroLogo, setCentroLogo] = useState<string | null>(null);
   const [centroName, setCentroName] = useState<string>("");
+  const [privacyConsent, setPrivacyConsent] = useState(false);
   const sigCanvas = useRef<SignatureCanvas>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -273,6 +276,7 @@ export default function CustomerDisplay() {
     setSession(null);
     setPassword("");
     setDataConfirmed(false);
+    setPrivacyConsent(false);
     sigCanvas.current?.clear();
   };
 
@@ -980,13 +984,43 @@ export default function CustomerDisplay() {
                 </Card>
               </motion.div>
 
-              {/* Disclaimer + Button - Premium */}
+              {/* Privacy Consent + Disclaimer + Button - Premium */}
               <motion.div
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.25 }}
                 className="space-y-3 sm:space-y-4 relative z-10"
               >
+                {/* Privacy Info */}
+                <div className="px-4 py-3 bg-blue-500/10 backdrop-blur-sm rounded-2xl border border-blue-500/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Scale className="h-4 w-4 text-blue-400" />
+                    <span className="text-xs sm:text-sm font-semibold text-blue-200">Informativa Privacy (GDPR)</span>
+                  </div>
+                  <p className="text-xs text-blue-200/80 leading-relaxed">
+                    I tuoi dati saranno trattati per la gestione della riparazione (Art. 13 GDPR). 
+                    Hai diritto di accesso, rettifica e cancellazione.
+                  </p>
+                </div>
+
+                {/* Privacy Checkbox */}
+                <div className={`flex items-center gap-3 px-4 py-3 backdrop-blur-sm rounded-2xl border transition-colors ${
+                  privacyConsent 
+                    ? "bg-green-500/10 border-green-500/30" 
+                    : "bg-white/10 border-white/20"
+                }`}>
+                  <Checkbox 
+                    id="privacy-consent-display"
+                    checked={privacyConsent}
+                    onCheckedChange={(checked) => setPrivacyConsent(checked === true)}
+                    className="h-6 w-6 border-2 border-white/50 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
+                  />
+                  <Label htmlFor="privacy-consent-display" className="text-sm text-white/90 cursor-pointer leading-relaxed">
+                    Accetto l'informativa privacy e il trattamento dei dati <span className="text-red-400">*</span>
+                  </Label>
+                </div>
+
+                {/* Disclaimer */}
                 <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/10 backdrop-blur-sm rounded-2xl border border-amber-500/30">
                   <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
                     <AlertTriangle className="h-5 w-5 text-amber-400" />
@@ -997,13 +1031,13 @@ export default function CustomerDisplay() {
                 </div>
 
                 <motion.div
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                  whileHover={{ scale: privacyConsent ? 1.02 : 1 }}
+                  whileTap={{ scale: privacyConsent ? 0.98 : 1 }}
                 >
                   <Button
                     onClick={handleSubmitSignature}
-                    disabled={isSubmitting}
-                    className="w-full h-16 sm:h-20 text-xl sm:text-2xl font-bold rounded-2xl shadow-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-400 hover:via-green-400 hover:to-teal-400 border-0 relative overflow-hidden group"
+                    disabled={isSubmitting || !privacyConsent}
+                    className="w-full h-16 sm:h-20 text-xl sm:text-2xl font-bold rounded-2xl shadow-2xl bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-400 hover:via-green-400 hover:to-teal-400 border-0 relative overflow-hidden group disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                     {isSubmitting ? (
@@ -1016,6 +1050,11 @@ export default function CustomerDisplay() {
                       </>
                     )}
                   </Button>
+                  {!privacyConsent && (
+                    <p className="text-xs text-center text-red-400 mt-2">
+                      Devi accettare l'informativa privacy per procedere
+                    </p>
+                  )}
                 </motion.div>
               </motion.div>
             </motion.div>
