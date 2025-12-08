@@ -1558,6 +1558,68 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_external_shops: {
+        Row: {
+          address: string
+          centro_id: string
+          contact_status: string
+          created_at: string
+          email: string | null
+          external_id: string
+          id: string
+          last_contacted_at: string | null
+          latitude: number
+          longitude: number
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address: string
+          centro_id: string
+          contact_status?: string
+          created_at?: string
+          email?: string | null
+          external_id: string
+          id?: string
+          last_contacted_at?: string | null
+          latitude: number
+          longitude: number
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string
+          centro_id?: string
+          contact_status?: string
+          created_at?: string
+          email?: string | null
+          external_id?: string
+          id?: string
+          last_contacted_at?: string | null
+          latitude?: number
+          longitude?: number
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_external_shops_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spare_parts: {
         Row: {
           brand: string | null
