@@ -962,7 +962,7 @@ export default function CentroNuovoRitiro() {
         );
 
       case 2:
-        return <DeviceFormStep deviceData={deviceData} onChange={setDeviceData} />;
+        return <DeviceFormStep deviceData={deviceData} onChange={setDeviceData} detectedDevice={detectedDevice} />;
 
       case 3:
         return (
