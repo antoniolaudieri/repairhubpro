@@ -39,11 +39,17 @@ import {
   Tablet,
   GripVertical,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Play,
+  Pause,
+  ChevronLeft,
+  ChevronRight,
+  Eye
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface CentroSettings {
   disable_diagnostic_fee?: boolean;
@@ -80,6 +86,34 @@ const getIconComponent = (iconName: string) => {
   return icons[iconName] || Smartphone;
 };
 
+// Default advertisements for preview
+const defaultAdvertisements: DisplayAd[] = [
+  {
+    id: "default-1",
+    title: "Riparazione Express",
+    description: "Riparazioni smartphone in meno di 1 ora",
+    icon: "wrench",
+    gradient: "from-blue-500 to-cyan-500",
+    type: "gradient"
+  },
+  {
+    id: "default-2",
+    title: "Garanzia 12 Mesi",
+    description: "Su tutti i ricambi originali",
+    icon: "shield",
+    gradient: "from-green-500 to-emerald-500",
+    type: "gradient"
+  },
+  {
+    id: "default-3",
+    title: "Diagnosi Gratuita",
+    description: "Per preventivi superiori a €100",
+    icon: "cpu",
+    gradient: "from-purple-500 to-pink-500",
+    type: "gradient"
+  }
+];
+
 export default function CentroImpostazioni() {
   const { user } = useAuth();
   const [centro, setCentro] = useState<Centro | null>(null);
@@ -93,8 +127,23 @@ export default function CentroImpostazioni() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [geoLoading, setGeoLoading] = useState(false);
   const [isGeocoding, setIsGeocoding] = useState(false);
+  const [previewAdIndex, setPreviewAdIndex] = useState(0);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const geocodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Preview ads rotation
+  const previewAds = displayAds.length > 0 ? displayAds : defaultAdvertisements;
+  
+  useEffect(() => {
+    if (!isPreviewPlaying || previewAds.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setPreviewAdIndex((prev) => (prev + 1) % previewAds.length);
+    }, 3000);
+    
+    return () => clearInterval(interval);
+  }, [isPreviewPlaying, previewAds.length]);
 
   // Geocode address to coordinates
   const geocodeAddress = useCallback(async (address: string) => {
@@ -670,6 +719,121 @@ export default function CentroImpostazioni() {
             </CardContent>
           </Card>
 
+          {/* Live Preview */}
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                Anteprima Live Display
+              </CardTitle>
+              <CardDescription>
+                Ecco come appare il display cliente con le tue pubblicità
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {/* Preview Container - simulates display aspect ratio */}
+              <div className="relative bg-slate-900 aspect-video max-h-[300px] overflow-hidden">
+                <AnimatePresence mode="wait">
+                  {previewAds.length > 0 && (
+                    <motion.div
+                      key={previewAdIndex}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0"
+                    >
+                      {(() => {
+                        const currentAd = previewAds[previewAdIndex];
+                        const IconComponent = getIconComponent(currentAd.icon);
+                        
+                        if (currentAd.type === 'image' && currentAd.imageUrl) {
+                          return (
+                            <div className="relative h-full">
+                              <img 
+                                src={currentAd.imageUrl} 
+                                alt={currentAd.title}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                                <h3 className="text-2xl font-bold">{currentAd.title || "Titolo"}</h3>
+                                <p className="text-sm text-white/80 mt-1">{currentAd.description || "Descrizione"}</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <div className={`h-full bg-gradient-to-br ${currentAd.gradient} flex flex-col items-center justify-center text-white p-6`}>
+                            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-4">
+                              <IconComponent className="h-8 w-8 text-white" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-center">{currentAd.title || "Titolo"}</h3>
+                            <p className="text-sm text-white/80 text-center mt-2">{currentAd.description || "Descrizione"}</p>
+                          </div>
+                        );
+                      })()}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                {/* Preview Controls Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                  <div className="flex items-center justify-between">
+                    {/* Slide indicators */}
+                    <div className="flex gap-1.5">
+                      {previewAds.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setPreviewAdIndex(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            idx === previewAdIndex ? "bg-white scale-125" : "bg-white/40 hover:bg-white/60"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Playback controls */}
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white hover:bg-white/20"
+                        onClick={() => setPreviewAdIndex(prev => (prev - 1 + previewAds.length) % previewAds.length)}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white hover:bg-white/20"
+                        onClick={() => setIsPreviewPlaying(!isPreviewPlaying)}
+                      >
+                        {isPreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white hover:bg-white/20"
+                        onClick={() => setPreviewAdIndex(prev => (prev + 1) % previewAds.length)}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Badge */}
+                <div className="absolute top-3 left-3">
+                  <span className={`text-xs px-2 py-1 rounded-full backdrop-blur ${displayAds.length > 0 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                    {displayAds.length > 0 ? `${displayAds.length} slide personalizzate` : 'Slide predefinite'}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Display Ads Management */}
           <Card>
             <CardHeader>
@@ -678,7 +842,7 @@ export default function CentroImpostazioni() {
                 Pubblicità Display
               </CardTitle>
               <CardDescription>
-                Personalizza le pubblicità mostrate in modalità standby sul display cliente. Trascina le slide per riordinarle.
+                Personalizza le pubblicità mostrate in modalità standby sul display cliente. Usa le frecce per riordinarle.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
