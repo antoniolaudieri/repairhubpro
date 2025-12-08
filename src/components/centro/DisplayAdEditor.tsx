@@ -22,7 +22,11 @@ import {
   Zap,
   Star,
   Type,
-  Palette
+  Palette,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Move
 } from "lucide-react";
 
 export interface DisplayAd {
@@ -33,6 +37,12 @@ export interface DisplayAd {
   icon: string;
   imageUrl?: string;
   type: 'gradient' | 'image';
+  // New styling options
+  imagePosition?: 'center' | 'top' | 'bottom';
+  textAlign?: 'left' | 'center' | 'right';
+  textPosition?: 'bottom' | 'center' | 'top';
+  titleFont?: string;
+  descriptionFont?: string;
 }
 
 interface DisplayAdEditorProps {
@@ -65,13 +75,26 @@ const iconOptions = [
   { label: "Stella", value: "star", icon: Star },
 ];
 
+const fontOptions = [
+  { label: "Sans (Default)", value: "font-sans" },
+  { label: "Serif (Elegante)", value: "font-serif" },
+  { label: "Mono (Tecnico)", value: "font-mono" },
+];
+
 const getIconComponent = (iconName: string) => {
   const found = iconOptions.find(i => i.value === iconName);
   return found?.icon || Smartphone;
 };
 
 export function DisplayAdEditor({ ad, open, onClose, onSave, centroId }: DisplayAdEditorProps) {
-  const [editedAd, setEditedAd] = useState<DisplayAd>(ad);
+  const [editedAd, setEditedAd] = useState<DisplayAd>({
+    ...ad,
+    imagePosition: ad.imagePosition || 'center',
+    textAlign: ad.textAlign || 'center',
+    textPosition: ad.textPosition || 'bottom',
+    titleFont: ad.titleFont || 'font-sans',
+    descriptionFont: ad.descriptionFont || 'font-sans',
+  });
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,13 +115,17 @@ export function DisplayAdEditor({ ad, open, onClose, onSave, centroId }: Display
     setIsUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `display-ads/${centroId}/${editedAd.id}.${fileExt}`;
+      const timestamp = Date.now();
+      const fileName = `display-ads/${centroId}/${editedAd.id}-${timestamp}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('centro-logos')
         .upload(fileName, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('centro-logos')
@@ -108,7 +135,7 @@ export function DisplayAdEditor({ ad, open, onClose, onSave, centroId }: Display
       toast.success("Immagine caricata!");
     } catch (error: any) {
       console.error("Error uploading image:", error);
-      toast.error("Errore nel caricamento dell'immagine");
+      toast.error(`Errore: ${error.message || 'Impossibile caricare l\'immagine'}`);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
@@ -119,15 +146,8 @@ export function DisplayAdEditor({ ad, open, onClose, onSave, centroId }: Display
 
   const handleRemoveImage = async () => {
     if (!editedAd.imageUrl) return;
-
-    try {
-      const fileName = `display-ads/${centroId}/${editedAd.id}`;
-      await supabase.storage.from('centro-logos').remove([fileName]);
-    } catch (error) {
-      console.error("Error removing image:", error);
-    }
-
     setEditedAd(prev => ({ ...prev, imageUrl: undefined, type: 'gradient' }));
+    toast.success("Immagine rimossa");
   };
 
   const handleSave = () => {
@@ -140,6 +160,31 @@ export function DisplayAdEditor({ ad, open, onClose, onSave, centroId }: Display
   };
 
   const IconComponent = getIconComponent(editedAd.icon);
+
+  // Dynamic classes for text positioning
+  const getTextPositionClasses = () => {
+    const alignClass = {
+      left: 'text-left items-start',
+      center: 'text-center items-center',
+      right: 'text-right items-end'
+    }[editedAd.textAlign || 'center'];
+    
+    const positionClass = {
+      bottom: 'justify-end pb-6',
+      center: 'justify-center',
+      top: 'justify-start pt-6'
+    }[editedAd.textPosition || 'bottom'];
+    
+    return `${alignClass} ${positionClass}`;
+  };
+
+  const getImagePositionClass = () => {
+    return {
+      center: 'object-center',
+      top: 'object-top',
+      bottom: 'object-bottom'
+    }[editedAd.imagePosition || 'center'];
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -161,21 +206,29 @@ export function DisplayAdEditor({ ad, open, onClose, onSave, centroId }: Display
                   <img 
                     src={editedAd.imageUrl} 
                     alt="Preview" 
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full object-cover ${getImagePositionClass()}`}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                    <h3 className="text-2xl font-bold">{editedAd.title || "Titolo"}</h3>
-                    <p className="text-white/80">{editedAd.description || "Descrizione"}</p>
+                  <div className={`absolute inset-0 flex flex-col px-6 ${getTextPositionClasses()}`}>
+                    <h3 className={`text-2xl font-bold text-white ${editedAd.titleFont}`}>
+                      {editedAd.title || "Titolo"}
+                    </h3>
+                    <p className={`text-white/80 ${editedAd.descriptionFont}`}>
+                      {editedAd.description || "Descrizione"}
+                    </p>
                   </div>
                 </div>
               ) : (
-                <div className={`h-full bg-gradient-to-br ${editedAd.gradient} flex flex-col items-center justify-center text-white p-6`}>
+                <div className={`h-full bg-gradient-to-br ${editedAd.gradient} flex flex-col text-white p-6 ${getTextPositionClasses()}`}>
                   <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-4">
                     <IconComponent className="h-8 w-8 text-white" />
                   </div>
-                  <h3 className="text-2xl font-bold text-center">{editedAd.title || "Titolo"}</h3>
-                  <p className="text-white/80 text-center">{editedAd.description || "Descrizione"}</p>
+                  <h3 className={`text-2xl font-bold ${editedAd.titleFont}`}>
+                    {editedAd.title || "Titolo"}
+                  </h3>
+                  <p className={`text-white/80 ${editedAd.descriptionFont}`}>
+                    {editedAd.description || "Descrizione"}
+                  </p>
                 </div>
               )}
             </div>
@@ -310,11 +363,133 @@ export function DisplayAdEditor({ ad, open, onClose, onSave, centroId }: Display
                   className="hidden"
                 />
               </div>
+              
+              {/* Image Position */}
+              {editedAd.imageUrl && (
+                <div>
+                  <Label className="text-xs flex items-center gap-2">
+                    <Move className="h-3 w-3" />
+                    Posizione Immagine
+                  </Label>
+                  <div className="flex gap-2 mt-1">
+                    {(['top', 'center', 'bottom'] as const).map((pos) => (
+                      <Button
+                        key={pos}
+                        variant={editedAd.imagePosition === pos ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setEditedAd(prev => ({ ...prev, imagePosition: pos }))}
+                        className="flex-1"
+                      >
+                        {pos === 'top' ? 'Alto' : pos === 'center' ? 'Centro' : 'Basso'}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
               <p className="text-xs text-muted-foreground">
                 Consigliato: immagini 1920x1080px per la migliore qualità
               </p>
             </TabsContent>
           </Tabs>
+
+          {/* Text Styling */}
+          <div className="space-y-4 p-4 rounded-lg bg-muted/50">
+            <Label className="text-sm font-medium flex items-center gap-2">
+              <Type className="h-4 w-4" />
+              Stile Testo
+            </Label>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {/* Text Align */}
+              <div>
+                <Label className="text-xs">Allineamento</Label>
+                <div className="flex gap-1 mt-1">
+                  <Button
+                    variant={editedAd.textAlign === 'left' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEditedAd(prev => ({ ...prev, textAlign: 'left' }))}
+                  >
+                    <AlignLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={editedAd.textAlign === 'center' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEditedAd(prev => ({ ...prev, textAlign: 'center' }))}
+                  >
+                    <AlignCenter className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={editedAd.textAlign === 'right' ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setEditedAd(prev => ({ ...prev, textAlign: 'right' }))}
+                  >
+                    <AlignRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Text Position */}
+              <div>
+                <Label className="text-xs">Posizione Testo</Label>
+                <div className="flex gap-1 mt-1">
+                  {(['top', 'center', 'bottom'] as const).map((pos) => (
+                    <Button
+                      key={pos}
+                      variant={editedAd.textPosition === pos ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setEditedAd(prev => ({ ...prev, textPosition: pos }))}
+                      className="flex-1 text-xs"
+                    >
+                      {pos === 'top' ? 'Alto' : pos === 'center' ? 'Centro' : 'Basso'}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              {/* Title Font */}
+              <div>
+                <Label className="text-xs">Font Titolo</Label>
+                <Select
+                  value={editedAd.titleFont}
+                  onValueChange={(value) => setEditedAd(prev => ({ ...prev, titleFont: value }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fontOptions.map((font) => (
+                      <SelectItem key={font.value} value={font.value}>
+                        <span className={font.value}>{font.label}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Description Font */}
+              <div>
+                <Label className="text-xs">Font Descrizione</Label>
+                <Select
+                  value={editedAd.descriptionFont}
+                  onValueChange={(value) => setEditedAd(prev => ({ ...prev, descriptionFont: value }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fontOptions.map((font) => (
+                      <SelectItem key={font.value} value={font.value}>
+                        <span className={font.value}>{font.label}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
 
           {/* Testo */}
           <div className="space-y-4">

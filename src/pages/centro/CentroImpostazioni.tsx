@@ -743,37 +743,63 @@ export default function CentroImpostazioni() {
                       transition={{ duration: 0.4 }}
                       className="absolute inset-0"
                     >
-                      {(() => {
-                        const currentAd = previewAds[previewAdIndex];
-                        const IconComponent = getIconComponent(currentAd.icon);
-                        
-                        if (currentAd.type === 'image' && currentAd.imageUrl) {
-                          return (
-                            <div className="relative h-full">
-                              <img 
-                                src={currentAd.imageUrl} 
-                                alt={currentAd.title}
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                                <h3 className="text-2xl font-bold">{currentAd.title || "Titolo"}</h3>
-                                <p className="text-sm text-white/80 mt-1">{currentAd.description || "Descrizione"}</p>
-                              </div>
-                            </div>
-                          );
-                        }
-                        
+                    {(() => {
+                      const currentAd = previewAds[previewAdIndex];
+                      const IconComponent = getIconComponent(currentAd.icon);
+                      
+                      const imagePositionClass = {
+                        center: 'object-center',
+                        top: 'object-top',
+                        bottom: 'object-bottom'
+                      }[currentAd.imagePosition || 'center'];
+                      
+                      const textAlignClass = {
+                        left: 'text-left items-start',
+                        center: 'text-center items-center',
+                        right: 'text-right items-end'
+                      }[currentAd.textAlign || 'center'];
+                      
+                      const textPositionClass = {
+                        bottom: 'justify-end pb-6',
+                        center: 'justify-center',
+                        top: 'justify-start pt-6'
+                      }[currentAd.textPosition || 'bottom'];
+                      
+                      if (currentAd.type === 'image' && currentAd.imageUrl) {
                         return (
-                          <div className={`h-full bg-gradient-to-br ${currentAd.gradient} flex flex-col items-center justify-center text-white p-6`}>
-                            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-4">
-                              <IconComponent className="h-8 w-8 text-white" />
+                          <div className="relative h-full">
+                            <img 
+                              src={currentAd.imageUrl} 
+                              alt={currentAd.title}
+                              className={`w-full h-full object-cover ${imagePositionClass}`}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                            <div className={`absolute inset-0 flex flex-col px-6 ${textAlignClass} ${textPositionClass}`}>
+                              <h3 className={`text-2xl font-bold text-white ${currentAd.titleFont || 'font-sans'}`}>
+                                {currentAd.title || "Titolo"}
+                              </h3>
+                              <p className={`text-sm text-white/80 mt-1 ${currentAd.descriptionFont || 'font-sans'}`}>
+                                {currentAd.description || "Descrizione"}
+                              </p>
                             </div>
-                            <h3 className="text-2xl font-bold text-center">{currentAd.title || "Titolo"}</h3>
-                            <p className="text-sm text-white/80 text-center mt-2">{currentAd.description || "Descrizione"}</p>
                           </div>
                         );
-                      })()}
+                      }
+                      
+                      return (
+                        <div className={`h-full bg-gradient-to-br ${currentAd.gradient} flex flex-col text-white p-6 ${textAlignClass} ${textPositionClass}`}>
+                          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-4">
+                            <IconComponent className="h-8 w-8 text-white" />
+                          </div>
+                          <h3 className={`text-2xl font-bold ${currentAd.titleFont || 'font-sans'}`}>
+                            {currentAd.title || "Titolo"}
+                          </h3>
+                          <p className={`text-sm text-white/80 mt-2 ${currentAd.descriptionFont || 'font-sans'}`}>
+                            {currentAd.description || "Descrizione"}
+                          </p>
+                        </div>
+                      );
+                    })()}
                     </motion.div>
                   )}
                 </AnimatePresence>
