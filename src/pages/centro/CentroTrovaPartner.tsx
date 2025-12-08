@@ -33,6 +33,7 @@ interface Corner {
   email: string;
   latitude: number | null;
   longitude: number | null;
+  status: string;
   distance?: number;
 }
 
@@ -74,11 +75,11 @@ export default function CentroTrovaPartner() {
           setCentroLocation({ lat: centro.latitude, lng: centro.longitude });
         }
 
-        // Load all approved corners
+        // Load all corners (approved + pending) to expand network opportunities
         const { data: cornersData, error: cornersError } = await supabase
           .from("corners")
-          .select("id, business_name, address, phone, email, latitude, longitude")
-          .eq("status", "approved");
+          .select("id, business_name, address, phone, email, latitude, longitude, status")
+          .in("status", ["approved", "pending"]);
 
         if (cornersError) throw cornersError;
 
@@ -220,7 +221,11 @@ export default function CentroTrovaPartner() {
           <div className="flex items-center gap-4">
             <Badge variant="outline" className="text-lg px-4 py-2">
               <Store className="h-4 w-4 mr-2" />
-              {corners.length} Corner disponibili
+              {corners.filter(c => c.status === 'approved').length} Attivi
+            </Badge>
+            <Badge variant="outline" className="text-lg px-4 py-2 border-amber-500/50 text-amber-600">
+              <Clock className="h-4 w-4 mr-2" />
+              {corners.filter(c => c.status === 'pending').length} In attesa
             </Badge>
           </div>
         </div>
@@ -235,8 +240,8 @@ export default function CentroTrovaPartner() {
               <div>
                 <h3 className="font-semibold">Espandi la tua rete</h3>
                 <p className="text-sm text-muted-foreground">
-                  I Corner possono inviarti riparazioni dai loro clienti. Tu guadagni nuovi lavori, 
-                  loro guadagnano una commissione. Cerca Corner nella tua zona e invia una richiesta di collaborazione!
+                  I Corner possono inviarti riparazioni dai loro clienti. Sono mostrati sia i Corner già attivi 
+                  che quelli in attesa di approvazione - contattali per far conoscere questa opportunità!
                 </p>
               </div>
             </div>
@@ -299,12 +304,18 @@ export default function CentroTrovaPartner() {
                     <CardContent className="p-4">
                       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div className="flex items-start gap-4">
-                          <div className="p-3 bg-amber-500/10 rounded-xl">
-                            <Store className="h-6 w-6 text-amber-600" />
+                          <div className={`p-3 rounded-xl ${corner.status === 'approved' ? 'bg-green-500/10' : 'bg-amber-500/10'}`}>
+                            <Store className={`h-6 w-6 ${corner.status === 'approved' ? 'text-green-600' : 'text-amber-600'}`} />
                           </div>
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-semibold text-lg">{corner.business_name}</h3>
+                              {corner.status === 'pending' && (
+                                <Badge variant="outline" className="border-amber-500/50 text-amber-600 text-xs">
+                                  <Clock className="h-3 w-3 mr-1" />
+                                  Non ancora attivo
+                                </Badge>
+                              )}
                               {getStatusBadge(corner.id)}
                             </div>
                             <div className="text-sm text-muted-foreground space-y-1 mt-1">
