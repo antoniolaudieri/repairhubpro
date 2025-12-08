@@ -5,144 +5,85 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Test if an image URL is actually accessible
-async function isImageAccessible(url: string): Promise<boolean> {
-  try {
-    const response = await fetch(url, { 
-      method: "HEAD",
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-      }
-    });
-    const contentType = response.headers.get("content-type") || "";
-    return response.ok && contentType.startsWith("image/");
-  } catch {
-    return false;
-  }
-}
-
-// Generate multiple possible image URLs for a device
-function generateImageUrls(brand: string, model: string): string[] {
+// Generate the most likely GSMArena image URL for a device
+function generateGsmarenaUrl(brand: string, model: string): string {
   const brandLower = brand.toLowerCase().trim();
   const modelLower = model.toLowerCase().trim();
-  const fullName = `${brandLower}-${modelLower}`.replace(/\s+/g, '-').replace(/[()]/g, '');
   const modelSlug = modelLower.replace(/\s+/g, '-').replace(/[()]/g, '');
-  const modelNoSpaces = modelLower.replace(/\s+/g, '');
   
-  const urls: string[] = [];
-  
-  // GSMArena patterns (most reliable for phones)
-  urls.push(`https://fdn2.gsmarena.com/vv/bigpic/${fullName}.jpg`);
-  urls.push(`https://fdn2.gsmarena.com/vv/bigpic/${brandLower}-${modelSlug}.jpg`);
-  
-  // Device-specific patterns for common brands
-  if (brandLower === 'apple' || brandLower === 'iphone' || modelLower.includes('iphone')) {
-    const iphoneModel = modelLower.replace('iphone', '').trim().replace(/\s+/g, '-');
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneModel}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${modelNoSpaces}.jpg`);
-    // iPhone specific - try different naming conventions
-    const iphoneNumbers = modelLower.match(/\d+/);
-    if (iphoneNumbers) {
-      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneNumbers[0]}.jpg`);
-      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneNumbers[0]}-pro.jpg`);
-      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneNumbers[0]}-pro-max.jpg`);
-    }
+  // Brand-specific URL patterns based on GSMArena naming conventions
+  if (brandLower === 'apple' || brandLower.includes('iphone') || modelLower.includes('iphone')) {
+    // iPhone: apple-iphone-15-pro-max
+    let iphoneModel = modelLower.replace('iphone', '').trim().replace(/\s+/g, '-');
+    if (!iphoneModel.startsWith('-')) iphoneModel = iphoneModel;
+    return `https://fdn2.gsmarena.com/vv/bigpic/apple-iphone-${iphoneModel}.jpg`;
   }
   
   if (brandLower === 'samsung') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/samsung-${modelSlug}.jpg`);
-    // Galaxy specific patterns
-    if (modelLower.includes('s2') && modelLower.includes('ultra')) {
-      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-s24-ultra.jpg`);
+    // Samsung Galaxy: samsung-galaxy-s24-ultra
+    if (modelLower.includes('galaxy')) {
+      const galaxyModel = modelLower.replace('galaxy', '').trim().replace(/\s+/g, '-');
+      return `https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-${galaxyModel}.jpg`;
     }
-    if (modelLower.includes('fold')) {
-      urls.push(`https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-z-${modelSlug}.jpg`);
-    }
+    return `https://fdn2.gsmarena.com/vv/bigpic/samsung-galaxy-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'xiaomi') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/xiaomi-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/xiaomi-${modelNoSpaces}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/xiaomi-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'huawei') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/huawei-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/huawei-p${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/huawei-mate-${modelSlug}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/huawei-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'lg') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/lg-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/lg-${modelSlug}-new.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/lg-g${modelSlug}.jpg`);
+    // LG G7 -> lg-g7-thinq
+    return `https://fdn2.gsmarena.com/vv/bigpic/lg-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'sony') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/sony-${modelSlug}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/sony-xperia-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'oneplus') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oneplus-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oneplus-${modelNoSpaces}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/oneplus-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'google' || brandLower === 'pixel') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/google-pixel-${modelSlug}.jpg`);
-    const pixelNum = modelLower.replace('pixel', '').trim();
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/google-pixel-${pixelNum}.jpg`);
+    const pixelModel = modelLower.replace('pixel', '').trim().replace(/\s+/g, '-');
+    return `https://fdn2.gsmarena.com/vv/bigpic/google-pixel-${pixelModel}.jpg`;
   }
   
   if (brandLower === 'motorola') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/motorola-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/motorola-moto-${modelSlug}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/motorola-moto-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'oppo') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oppo-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oppo-find-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/oppo-reno-${modelSlug}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/oppo-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'realme') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/realme-${modelSlug}.jpg`);
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/realme-${modelNoSpaces}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/realme-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'vivo') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/vivo-${modelSlug}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/vivo-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'poco') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/xiaomi-poco-${modelSlug}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/xiaomi-poco-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'nothing') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-${modelSlug}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/nothing-phone-${modelSlug}.jpg`;
   }
   
   if (brandLower === 'honor') {
-    urls.push(`https://fdn2.gsmarena.com/vv/bigpic/honor-${modelSlug}.jpg`);
+    return `https://fdn2.gsmarena.com/vv/bigpic/honor-${modelSlug}.jpg`;
   }
   
-  return urls;
-}
-
-// Find first working image URL - check more URLs in parallel
-async function findWorkingImageUrl(brand: string, model: string): Promise<string> {
-  const urls = generateImageUrls(brand, model);
-  
-  // Check more URLs in parallel for better chances
-  const results = await Promise.all(
-    urls.slice(0, 12).map(async (url) => {
-      const accessible = await isImageAccessible(url);
-      return { url, accessible };
-    })
-  );
-  
-  const working = results.find(r => r.accessible);
-  return working?.url || "";
+  // Default pattern
+  return `https://fdn2.gsmarena.com/vv/bigpic/${brandLower}-${modelSlug}.jpg`;
 }
 
 serve(async (req) => {
@@ -165,8 +106,8 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Start image search in parallel with AI call
-    const imagePromise = findWorkingImageUrl(brand, model);
+    // Generate base image URL from brand/model
+    const baseImageUrl = generateGsmarenaUrl(brand, model);
 
     // Call Lovable AI to get device information
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -191,6 +132,8 @@ IMPORTANTE: Per il gsmarenaSlug, usa il formato esatto di GSMArena che è: marca
 - Galaxy Z Fold 3 -> samsung-galaxy-z-fold3-5g
 - LG G7 -> lg-g7-thinq
 - Pixel 8 Pro -> google-pixel-8-pro
+- Samsung Galaxy A15 -> samsung-galaxy-a15
+- iPhone 14 -> apple-iphone-14
 
 Se non trovi info, usa valori ragionevoli basati su conoscenza generale.`
           },
@@ -253,19 +196,18 @@ Se non trovi info, usa valori ragionevoli basati su conoscenza generale.`
       };
     }
 
-    // Wait for image search result
-    let imageUrl = await imagePromise;
-
-    // If parallel search didn't find image, try with AI-provided slug
-    if (!imageUrl && deviceInfo.gsmarenaSlug) {
-      const slugUrl = `https://fdn2.gsmarena.com/vv/bigpic/${deviceInfo.gsmarenaSlug}.jpg`;
-      if (await isImageAccessible(slugUrl)) {
-        imageUrl = slugUrl;
-      }
+    // Use AI-provided slug if available, otherwise use our generated URL
+    let imageUrl = "";
+    if (deviceInfo.gsmarenaSlug) {
+      imageUrl = `https://fdn2.gsmarena.com/vv/bigpic/${deviceInfo.gsmarenaSlug}.jpg`;
+    } else {
+      imageUrl = baseImageUrl;
     }
 
     // Set the imageUrl in the response
     deviceInfo.imageUrl = imageUrl;
+    
+    console.log("Device info with image:", { brand, model, imageUrl, gsmarenaSlug: deviceInfo.gsmarenaSlug });
 
     return new Response(
       JSON.stringify({ device_info: deviceInfo }),

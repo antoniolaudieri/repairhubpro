@@ -138,8 +138,6 @@ export const DeviceFormStep = ({ deviceData, onChange, detectedDevice }: DeviceF
                     alt={`${deviceData.brand} ${deviceData.model}`}
                     className="h-24 w-24 object-contain rounded-lg bg-white p-2"
                     onError={handleImageError}
-                    crossOrigin="anonymous"
-                    referrerPolicy="no-referrer"
                   />
                   <Badge 
                     variant="secondary" 
