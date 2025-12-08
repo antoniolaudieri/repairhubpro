@@ -1,10 +1,10 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet, Tablet, Smartphone, QrCode, Copy, ExternalLink, Loader2 } from "lucide-react";
+import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet, Tablet, Smartphone, QrCode, Copy, ExternalLink, Loader2, Wifi } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface IntakeSignatureStepProps {
   onSignatureComplete: (signatureData: string) => void;
@@ -45,15 +46,51 @@ export function IntakeSignatureStep({
   const [showRemoteSignDialog, setShowRemoteSignDialog] = useState(false);
   const [remoteSignUrl, setRemoteSignUrl] = useState<string | null>(null);
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isWaitingForRemoteSign, setIsWaitingForRemoteSign] = useState(false);
   
   // Suggerimento sconto diagnosi per preventivi sopra €100
   const suggestDiscount = estimatedCost >= 100;
   const isDiscounted = diagnosticFee === 0;
 
+  const totalWithDiagnostic = Math.ceil(estimatedCost + diagnosticFee);
+  
+  // Calculate what customer pays now based on payment mode
+  const amountDueNow = paymentMode === "full" ? totalWithDiagnostic : (acconto || diagnosticFee);
+  const remainingBalance = paymentMode === "full" ? 0 : (totalWithDiagnostic - amountDueNow);
+
+  // Listen for remote signature via Supabase Realtime
+  useEffect(() => {
+    if (!currentSessionId) return;
+
+    const channel = supabase.channel(`signature-${currentSessionId}`);
+    
+    channel
+      .on('broadcast', { event: 'signature_completed' }, (payload) => {
+        console.log('Remote signature received:', payload);
+        const { signatureData } = payload.payload;
+        
+        if (signatureData) {
+          // Close dialog and apply signature
+          setShowRemoteSignDialog(false);
+          setIsWaitingForRemoteSign(false);
+          onSignatureComplete(signatureData);
+          toast.success("Firma ricevuta dal dispositivo remoto!");
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentSessionId, onSignatureComplete]);
+
   const generateRemoteSignUrl = () => {
     setIsGeneratingLink(true);
     // Generate a unique session ID for this signature request
     const sessionId = crypto.randomUUID();
+    setCurrentSessionId(sessionId);
+    
     // Create a URL that can be opened on another device
     const baseUrl = window.location.origin;
     const signUrl = `${baseUrl}/firma-remota/${sessionId}?amount=${amountDueNow.toFixed(2)}&total=${totalWithDiagnostic.toFixed(2)}`;
@@ -70,6 +107,7 @@ export function IntakeSignatureStep({
       setRemoteSignUrl(signUrl);
       setIsGeneratingLink(false);
       setShowRemoteSignDialog(true);
+      setIsWaitingForRemoteSign(true);
     }, 500);
   };
 
@@ -103,11 +141,6 @@ export function IntakeSignatureStep({
     }
   };
 
-  const totalWithDiagnostic = Math.ceil(estimatedCost + diagnosticFee);
-  
-  // Calculate what customer pays now based on payment mode
-  const amountDueNow = paymentMode === "full" ? totalWithDiagnostic : (acconto || diagnosticFee);
-  const remainingBalance = paymentMode === "full" ? 0 : (totalWithDiagnostic - amountDueNow);
 
   const handlePaymentModeChange = (mode: "full" | "partial") => {
     setPaymentMode(mode);
