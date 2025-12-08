@@ -79,6 +79,11 @@ interface DisplayAd {
   icon: string;
   imageUrl?: string;
   type?: 'gradient' | 'image';
+  imagePosition?: 'center' | 'top' | 'bottom';
+  textAlign?: 'left' | 'center' | 'right';
+  textPosition?: 'bottom' | 'center' | 'top';
+  titleFont?: string;
+  descriptionFont?: string;
 }
 
 // Default advertisements for standby mode
@@ -89,7 +94,9 @@ const defaultAdvertisements: DisplayAd[] = [
     description: "Riparazioni smartphone in meno di 1 ora",
     icon: "wrench",
     gradient: "from-blue-500 to-cyan-500",
-    type: "gradient"
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center"
   },
   {
     id: "default-2",
@@ -97,7 +104,9 @@ const defaultAdvertisements: DisplayAd[] = [
     description: "Su tutti i ricambi originali",
     icon: "shield",
     gradient: "from-green-500 to-emerald-500",
-    type: "gradient"
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center"
   },
   {
     id: "default-3",
@@ -105,7 +114,9 @@ const defaultAdvertisements: DisplayAd[] = [
     description: "Per preventivi superiori a €100",
     icon: "cpu",
     gradient: "from-purple-500 to-pink-500",
-    type: "gradient"
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center"
   },
   {
     id: "default-4",
@@ -113,7 +124,9 @@ const defaultAdvertisements: DisplayAd[] = [
     description: "Servizio professionale di recupero dati",
     icon: "smartphone",
     gradient: "from-orange-500 to-red-500",
-    type: "gradient"
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center"
   }
 ];
 
@@ -378,6 +391,25 @@ export default function CustomerDisplay() {
     const currentAd = advertisements[currentAdIndex];
     const isImageAd = currentAd.type === 'image' && currentAd.imageUrl;
     
+    // Dynamic positioning classes
+    const imagePositionClass = {
+      center: 'object-center',
+      top: 'object-top',
+      bottom: 'object-bottom'
+    }[currentAd.imagePosition || 'center'];
+    
+    const textAlignClass = {
+      left: 'text-left items-start',
+      center: 'text-center items-center',
+      right: 'text-right items-end'
+    }[currentAd.textAlign || 'center'];
+    
+    const textPositionClass = {
+      bottom: 'justify-end pb-8',
+      center: 'justify-center',
+      top: 'justify-start pt-8'
+    }[currentAd.textPosition || 'bottom'];
+    
     return (
       <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-8">
         <FullscreenButton />
@@ -396,15 +428,15 @@ export default function CustomerDisplay() {
                   <img 
                     src={currentAd.imageUrl} 
                     alt={currentAd.title}
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full object-cover ${imagePositionClass}`}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-8 text-white">
+                  <div className={`absolute inset-0 flex flex-col px-8 ${textAlignClass} ${textPositionClass}`}>
                     <motion.h1 
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.2 }}
-                      className="text-4xl md:text-5xl font-bold"
+                      className={`text-4xl md:text-5xl font-bold text-white ${currentAd.titleFont || 'font-sans'}`}
                     >
                       {currentAd.title}
                     </motion.h1>
@@ -412,7 +444,7 @@ export default function CustomerDisplay() {
                       initial={{ y: 20, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.3 }}
-                      className="text-xl md:text-2xl text-white/80 mt-2"
+                      className={`text-xl md:text-2xl text-white/80 mt-2 ${currentAd.descriptionFont || 'font-sans'}`}
                     >
                       {currentAd.description}
                     </motion.p>
@@ -421,22 +453,22 @@ export default function CustomerDisplay() {
               </Card>
             ) : (
               <Card className={`p-12 bg-gradient-to-br ${currentAd.gradient} border-0 shadow-2xl`}>
-                <div className="text-center text-white space-y-6">
+                <div className={`text-white space-y-6 flex flex-col ${textAlignClass}`}>
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
                     transition={{ delay: 0.2, type: "spring" }}
-                    className="w-24 h-24 mx-auto rounded-3xl bg-white/20 backdrop-blur flex items-center justify-center"
+                    className="w-24 h-24 rounded-3xl bg-white/20 backdrop-blur flex items-center justify-center"
                   >
                     {(() => {
                       const IconComponent = getIconComponent(currentAd.icon);
                       return <IconComponent className="h-12 w-12 text-white" />;
                     })()}
                   </motion.div>
-                  <h1 className="text-4xl md:text-5xl font-bold">
+                  <h1 className={`text-4xl md:text-5xl font-bold ${currentAd.titleFont || 'font-sans'}`}>
                     {currentAd.title}
                   </h1>
-                  <p className="text-xl md:text-2xl text-white/80">
+                  <p className={`text-xl md:text-2xl text-white/80 ${currentAd.descriptionFont || 'font-sans'}`}>
                     {currentAd.description}
                   </p>
                 </div>
