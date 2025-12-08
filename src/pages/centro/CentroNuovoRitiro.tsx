@@ -146,6 +146,31 @@ export default function CentroNuovoRitiro() {
       + selectedServices.reduce((sum, s) => sum + s.price, 0) 
       + laborCost;
     
+    // Build quote items array for display
+    const quoteItems = [
+      ...selectedSpareParts.map(part => ({
+        name: part.name,
+        quantity: part.quantity,
+        unitPrice: part.unit_cost,
+        total: part.unit_cost * part.quantity,
+        type: 'part' as const
+      })),
+      ...selectedServices.map(service => ({
+        name: service.name,
+        quantity: 1,
+        unitPrice: service.price,
+        total: service.price,
+        type: 'service' as const
+      })),
+      ...(laborCost > 0 ? [{
+        name: 'Manodopera',
+        quantity: 1,
+        unitPrice: laborCost,
+        total: laborCost,
+        type: 'labor' as const
+      }] : [])
+    ];
+    
     const sessionData = {
       sessionId: sessionIdRef.current,
       customer: {
@@ -164,7 +189,9 @@ export default function CentroNuovoRitiro() {
       },
       estimatedCost: estimatedTotal,
       diagnosticFee: diagnosticFee,
-      amountDueNow: diagnosticFee + (acconto > 0 ? acconto : 0)
+      amountDueNow: diagnosticFee + (acconto > 0 ? acconto : 0),
+      quoteItems: quoteItems,
+      laborCost: laborCost
     };
     
     // Start session when customer data is available

@@ -49,6 +49,14 @@ interface DeviceData {
   serial_number?: string;
 }
 
+interface QuoteItem {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  type: 'part' | 'service' | 'labor';
+}
+
 interface IntakeSession {
   sessionId: string;
   mode: DisplayMode;
@@ -57,6 +65,8 @@ interface IntakeSession {
   estimatedCost: number;
   diagnosticFee: number;
   amountDueNow: number;
+  quoteItems?: QuoteItem[];
+  laborCost?: number;
 }
 
 // Default advertisements for standby mode
@@ -183,7 +193,8 @@ export default function CustomerDisplay() {
       .on('broadcast', { event: 'intake_completed' }, () => {
         console.log('Intake completed');
         setMode("completed");
-        setTimeout(() => resetToStandby(), 5000);
+        // Only go back to standby after completion, with longer delay
+        setTimeout(() => resetToStandby(), 10000);
       })
       .subscribe();
 
@@ -296,8 +307,7 @@ export default function CustomerDisplay() {
       setMode("completed");
       toast.success("Firma registrata con successo!");
       
-      // Return to standby after 5 seconds
-      setTimeout(() => resetToStandby(), 5000);
+      // Don't auto-return to standby - wait for intake_completed event from main app
     } catch (error) {
       console.error("Error submitting signature:", error);
       toast.error("Errore durante l'invio della firma");
@@ -621,12 +631,65 @@ export default function CustomerDisplay() {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-6"
               >
-                {/* Amount to pay */}
+                {/* Quote Details */}
+                {session.quoteItems && session.quoteItems.length > 0 && (
+                  <Card className="p-6 border-2 border-accent/20">
+                    <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                      <Wrench className="h-5 w-5 text-accent" />
+                      Dettaglio Preventivo
+                    </h2>
+                    <div className="space-y-3 max-h-48 overflow-y-auto">
+                      {session.quoteItems.map((item, index) => (
+                        <div key={index} className="flex justify-between items-center p-3 bg-muted/50 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                              item.type === 'part' ? 'bg-blue-500/20 text-blue-600' :
+                              item.type === 'service' ? 'bg-purple-500/20 text-purple-600' :
+                              'bg-green-500/20 text-green-600'
+                            }`}>
+                              {item.type === 'part' ? 'Ricambio' : item.type === 'service' ? 'Servizio' : 'Manodopera'}
+                            </span>
+                            <span className="font-medium">{item.name}</span>
+                            {item.quantity > 1 && (
+                              <span className="text-muted-foreground text-sm">x{item.quantity}</span>
+                            )}
+                          </div>
+                          <span className="font-semibold">€{item.total.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Totals breakdown */}
+                    <div className="mt-4 pt-4 border-t border-border space-y-2">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Subtotale lavori</span>
+                        <span>€{session.estimatedCost.toFixed(2)}</span>
+                      </div>
+                      {session.diagnosticFee > 0 && (
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Gestione diagnosi</span>
+                          <span>€{session.diagnosticFee.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-xl font-bold text-primary pt-2 border-t border-border">
+                        <span>Totale Preventivo</span>
+                        <span>€{(session.estimatedCost + session.diagnosticFee).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+
+                {/* Amount to pay now */}
                 <Card className="p-6 border-2 border-primary bg-gradient-to-br from-primary/10 to-primary/5">
                   <div className="text-center space-y-2">
                     <p className="text-sm text-muted-foreground">Importo da Pagare Ora</p>
                     <p className="text-5xl font-bold text-primary">
                       €{session.amountDueNow.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {session.amountDueNow < (session.estimatedCost + session.diagnosticFee) 
+                        ? `Saldo rimanente: €${((session.estimatedCost + session.diagnosticFee) - session.amountDueNow).toFixed(2)} al ritiro`
+                        : "Pagamento completo"}
                     </p>
                   </div>
                 </Card>
