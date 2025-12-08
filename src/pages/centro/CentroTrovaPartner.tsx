@@ -24,12 +24,16 @@ import {
   Globe,
   ExternalLink,
   Smartphone,
-  MessageCircle
+  MessageCircle,
+  Bookmark,
+  BookmarkCheck,
+  Star
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "sonner";
 import { PartnerDiscoveryMap } from "@/components/centro/PartnerDiscoveryMap";
 import { PartnershipInviteDialog } from "@/components/centro/PartnershipInviteDialog";
+import { SavedShopsList } from "@/components/centro/SavedShopsList";
 
 interface Corner {
   id: string;
@@ -57,6 +61,9 @@ interface ExternalShop {
   latitude: number;
   longitude: number;
   distance?: number;
+  isSaved?: boolean;
+  savedId?: string;
+  contactStatus?: string;
 }
 
 export default function CentroTrovaPartner() {
@@ -73,6 +80,8 @@ export default function CentroTrovaPartner() {
   const [radiusKm, setRadiusKm] = useState(20);
   const [externalShops, setExternalShops] = useState<ExternalShop[]>([]);
   const [loadingExternal, setLoadingExternal] = useState(false);
+  const [savedShops, setSavedShops] = useState<Map<string, { id: string; contactStatus: string }>>(new Map());
+  const [savingShop, setSavingShop] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -124,6 +133,9 @@ export default function CentroTrovaPartner() {
 
         // Load existing partnerships and invites
         await loadInviteStatuses(centro.id);
+        
+        // Load saved external shops
+        await loadSavedShops(centro.id);
       }
     } catch (error) {
       console.error("Error loading data:", error);
@@ -165,6 +177,113 @@ export default function CentroTrovaPartner() {
       setInviteStatuses(statuses);
     } catch (error) {
       console.error("Error loading invite statuses:", error);
+    }
+  };
+
+  const loadSavedShops = async (centroId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("saved_external_shops")
+        .select("id, external_id, contact_status")
+        .eq("centro_id", centroId);
+
+      if (error) throw error;
+
+      const savedMap = new Map<string, { id: string; contactStatus: string }>();
+      data?.forEach(shop => {
+        savedMap.set(shop.external_id, { id: shop.id, contactStatus: shop.contact_status });
+      });
+      setSavedShops(savedMap);
+    } catch (error) {
+      console.error("Error loading saved shops:", error);
+    }
+  };
+
+  const handleSaveShop = async (shop: ExternalShop) => {
+    if (!centroId) return;
+    
+    setSavingShop(shop.id);
+    try {
+      const { data, error } = await supabase
+        .from("saved_external_shops")
+        .insert({
+          centro_id: centroId,
+          external_id: shop.id,
+          name: shop.name,
+          address: shop.address,
+          phone: shop.phone,
+          email: shop.email,
+          website: shop.website,
+          latitude: shop.latitude,
+          longitude: shop.longitude,
+          contact_status: 'pending'
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      
+      setSavedShops(prev => new Map(prev).set(shop.id, { id: data.id, contactStatus: 'pending' }));
+      toast.success("Negozio salvato nella lista da seguire");
+    } catch (error: any) {
+      console.error("Error saving shop:", error);
+      if (error.code === '23505') {
+        toast.error("Negozio già salvato");
+      } else {
+        toast.error("Errore nel salvataggio");
+      }
+    } finally {
+      setSavingShop(null);
+    }
+  };
+
+  const handleRemoveSavedShop = async (shop: ExternalShop) => {
+    const saved = savedShops.get(shop.id);
+    if (!saved) return;
+    
+    setSavingShop(shop.id);
+    try {
+      const { error } = await supabase
+        .from("saved_external_shops")
+        .delete()
+        .eq("id", saved.id);
+
+      if (error) throw error;
+      
+      setSavedShops(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(shop.id);
+        return newMap;
+      });
+      toast.success("Negozio rimosso dalla lista");
+    } catch (error) {
+      console.error("Error removing saved shop:", error);
+      toast.error("Errore nella rimozione");
+    } finally {
+      setSavingShop(null);
+    }
+  };
+
+  const handleUpdateContactStatus = async (shop: ExternalShop, status: string) => {
+    const saved = savedShops.get(shop.id);
+    if (!saved) return;
+    
+    try {
+      const { error } = await supabase
+        .from("saved_external_shops")
+        .update({ 
+          contact_status: status,
+          last_contacted_at: status === 'contacted' ? new Date().toISOString() : null
+        })
+        .eq("id", saved.id);
+
+      if (error) throw error;
+      
+      setSavedShops(prev => new Map(prev).set(shop.id, { ...saved, contactStatus: status }));
+      toast.success("Stato aggiornato");
+    } catch (error) {
+      console.error("Error updating contact status:", error);
+      toast.error("Errore nell'aggiornamento");
     }
   };
 
@@ -356,14 +475,23 @@ export default function CentroTrovaPartner() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsList className="grid w-full grid-cols-3 max-w-lg">
             <TabsTrigger value="registered" className="gap-2">
               <Store className="h-4 w-4" />
-              Corner Registrati
+              Corner
             </TabsTrigger>
             <TabsTrigger value="discover" className="gap-2">
               <Globe className="h-4 w-4" />
-              Scopri Negozi
+              Scopri
+            </TabsTrigger>
+            <TabsTrigger value="saved" className="gap-2">
+              <BookmarkCheck className="h-4 w-4" />
+              Salvati
+              {savedShops.size > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {savedShops.size}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
@@ -546,118 +674,238 @@ export default function CentroTrovaPartner() {
                   </CardContent>
                 </Card>
               ) : (
-                filteredExternalShops.map((shop) => (
-                  <Card key={shop.id} className="transition-all hover:shadow-md border-blue-500/10">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div className="flex items-start gap-4">
-                          <div className="p-3 rounded-xl bg-blue-500/10">
-                            <Smartphone className="h-6 w-6 text-blue-600" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <h3 className="font-semibold text-lg">{shop.name}</h3>
-                              <Badge variant="outline" className="border-blue-500/30 text-blue-600 text-xs">
-                                <Globe className="h-3 w-3 mr-1" />
-                                OpenStreetMap
-                              </Badge>
+                filteredExternalShops.map((shop) => {
+                  const isSaved = savedShops.has(shop.id);
+                  const savedInfo = savedShops.get(shop.id);
+                  
+                  return (
+                    <Card 
+                      key={shop.id} 
+                      className={`transition-all hover:shadow-md ${
+                        isSaved ? 'border-amber-500/30 bg-amber-500/5' : 'border-blue-500/10'
+                      }`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                          <div className="flex items-start gap-4">
+                            <div className={`p-3 rounded-xl ${isSaved ? 'bg-amber-500/10' : 'bg-blue-500/10'}`}>
+                              {isSaved ? (
+                                <Star className="h-6 w-6 text-amber-600" />
+                              ) : (
+                                <Smartphone className="h-6 w-6 text-blue-600" />
+                              )}
                             </div>
-                            <div className="text-sm text-muted-foreground space-y-1 mt-1">
-                              <div className="flex items-center gap-1">
-                                <MapPin className="h-3 w-3" />
-                                {shop.address}
-                                {shop.distance !== undefined && (
-                                  <span className="ml-2 text-primary font-medium">
-                                    ({shop.distance} km)
-                                  </span>
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-semibold text-lg">{shop.name}</h3>
+                                {isSaved && (
+                                  <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                    <BookmarkCheck className="h-3 w-3 mr-1" />
+                                    Salvato
+                                  </Badge>
                                 )}
+                                {savedInfo?.contactStatus === 'contacted' && (
+                                  <Badge className="bg-green-500/10 text-green-600 border-green-500/30">
+                                    <Check className="h-3 w-3 mr-1" />
+                                    Contattato
+                                  </Badge>
+                                )}
+                                <Badge variant="outline" className="border-blue-500/30 text-blue-600 text-xs">
+                                  <Globe className="h-3 w-3 mr-1" />
+                                  OpenStreetMap
+                                </Badge>
                               </div>
-                              <div className="flex items-center gap-4 flex-wrap">
-                                {shop.phone && (
-                                  <a href={`tel:${shop.phone}`} className="flex items-center gap-1 text-primary hover:underline">
-                                    <Phone className="h-3 w-3" />
-                                    {shop.phone}
-                                  </a>
-                                )}
-                                {shop.email && (
-                                  <a href={`mailto:${shop.email}`} className="flex items-center gap-1 text-primary hover:underline">
-                                    <Mail className="h-3 w-3" />
-                                    {shop.email}
-                                  </a>
-                                )}
-                                {shop.website && (
-                                  <a href={shop.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
-                                    <ExternalLink className="h-3 w-3" />
-                                    Sito web
-                                  </a>
-                                )}
+                              <div className="text-sm text-muted-foreground space-y-1 mt-1">
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  {shop.address}
+                                  {shop.distance !== undefined && (
+                                    <span className="ml-2 text-primary font-medium">
+                                      ({shop.distance} km)
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-4 flex-wrap">
+                                  {shop.phone && (
+                                    <a href={`tel:${shop.phone}`} className="flex items-center gap-1 text-primary hover:underline">
+                                      <Phone className="h-3 w-3" />
+                                      {shop.phone}
+                                    </a>
+                                  )}
+                                  {shop.email && (
+                                    <a href={`mailto:${shop.email}`} className="flex items-center gap-1 text-primary hover:underline">
+                                      <Mail className="h-3 w-3" />
+                                      {shop.email}
+                                    </a>
+                                  )}
+                                  {shop.website && (
+                                    <a href={shop.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-primary hover:underline">
+                                      <ExternalLink className="h-3 w-3" />
+                                      Sito web
+                                    </a>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
 
-                        <div className="flex gap-2 flex-wrap">
-                          {shop.phone && (
-                            <>
+                          <div className="flex gap-2 flex-wrap">
+                            {/* Save/Unsave button */}
+                            {isSaved ? (
+                              <>
+                                {savedInfo?.contactStatus !== 'contacted' && (
+                                  <Button 
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleUpdateContactStatus(shop, 'contacted')}
+                                    className="border-green-500/50 text-green-600 hover:bg-green-500/10"
+                                  >
+                                    <Check className="h-4 w-4 mr-1" />
+                                    Contattato
+                                  </Button>
+                                )}
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleRemoveSavedShop(shop)}
+                                  disabled={savingShop === shop.id}
+                                  className="border-red-500/50 text-red-600 hover:bg-red-500/10"
+                                >
+                                  {savingShop === shop.id ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <X className="h-4 w-4 mr-1" />
+                                      Rimuovi
+                                    </>
+                                  )}
+                                </Button>
+                              </>
+                            ) : (
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSaveShop(shop)}
+                                disabled={savingShop === shop.id}
+                                className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10"
+                              >
+                                {savingShop === shop.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <Bookmark className="h-4 w-4 mr-1" />
+                                    Salva
+                                  </>
+                                )}
+                              </Button>
+                            )}
+                            
+                            {shop.phone && (
+                              <>
+                                <Button 
+                                  variant="outline"
+                                  size="sm"
+                                  asChild
+                                >
+                                  <a href={`tel:${shop.phone}`}>
+                                    <Phone className="h-4 w-4 mr-1" />
+                                    Chiama
+                                  </a>
+                                </Button>
+                                <Button 
+                                  size="sm"
+                                  className="bg-green-600 hover:bg-green-700 text-white"
+                                  asChild
+                                >
+                                  <a 
+                                    href={`https://wa.me/${shop.phone.replace(/[^0-9]/g, '')}`} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                  >
+                                    <MessageCircle className="h-4 w-4 mr-1" />
+                                    WhatsApp
+                                  </a>
+                                </Button>
+                              </>
+                            )}
+                            {shop.email && (
                               <Button 
                                 variant="outline"
                                 size="sm"
                                 asChild
                               >
-                                <a href={`tel:${shop.phone}`}>
-                                  <Phone className="h-4 w-4 mr-1" />
-                                  Chiama
+                                <a href={`mailto:${shop.email}?subject=Proposta di Partnership RepairHubPro&body=Buongiorno,%0A%0ASiamo un Centro di Assistenza e vorremmo proporvi una collaborazione sulla piattaforma RepairHubPro.%0A%0ACordiali saluti`}>
+                                  <Mail className="h-4 w-4 mr-1" />
+                                  Email
                                 </a>
                               </Button>
-                              <Button 
-                                size="sm"
-                                className="bg-green-600 hover:bg-green-700 text-white"
-                                asChild
-                              >
-                                <a 
-                                  href={`https://wa.me/${shop.phone.replace(/[^0-9]/g, '')}`} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                >
-                                  <MessageCircle className="h-4 w-4 mr-1" />
-                                  WhatsApp
-                                </a>
-                              </Button>
-                            </>
-                          )}
-                          {shop.email && (
+                            )}
                             <Button 
                               variant="outline"
                               size="sm"
                               asChild
                             >
-                              <a href={`mailto:${shop.email}?subject=Proposta di Partnership RepairHubPro&body=Buongiorno,%0A%0ASiamo un Centro di Assistenza e vorremmo proporvi una collaborazione sulla piattaforma RepairHubPro.%0A%0ACordiali saluti`}>
-                                <Mail className="h-4 w-4 mr-1" />
-                                Email
+                              <a 
+                                href={`https://www.google.com/maps/search/?api=1&query=${shop.latitude},${shop.longitude}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                              >
+                                <MapPin className="h-4 w-4 mr-1" />
+                                Mappa
                               </a>
                             </Button>
-                          )}
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            asChild
-                          >
-                            <a 
-                              href={`https://www.google.com/maps/search/?api=1&query=${shop.latitude},${shop.longitude}`} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                            >
-                              <MapPin className="h-4 w-4 mr-1" />
-                              Mappa
-                            </a>
-                          </Button>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                      </CardContent>
+                    </Card>
+                  );
+                })
               )}
             </div>
+          </TabsContent>
+
+          {/* Saved Shops Tab */}
+          <TabsContent value="saved" className="mt-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Negozi salvati da seguire e contattare
+              </p>
+              <Badge variant="outline" className="border-amber-500/50 text-amber-600">
+                <BookmarkCheck className="h-3 w-3 mr-1" />
+                {savedShops.size} salvati
+              </Badge>
+            </div>
+
+            {savedShops.size === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center text-muted-foreground">
+                  <Bookmark className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>Nessun negozio salvato</p>
+                  <p className="text-xs mt-2">Vai su "Scopri" per cercare e salvare negozi di telefonia</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <SavedShopsList 
+                centroId={centroId!}
+                savedShops={savedShops}
+                onRemove={(externalId) => {
+                  setSavedShops(prev => {
+                    const newMap = new Map(prev);
+                    newMap.delete(externalId);
+                    return newMap;
+                  });
+                }}
+                onStatusUpdate={(externalId, status) => {
+                  setSavedShops(prev => {
+                    const current = prev.get(externalId);
+                    if (current) {
+                      return new Map(prev).set(externalId, { ...current, contactStatus: status });
+                    }
+                    return prev;
+                  });
+                }}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>
