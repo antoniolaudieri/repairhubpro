@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet } from "lucide-react";
+import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet, Tablet, Smartphone, QrCode, Copy, ExternalLink, Loader2 } from "lucide-react";
 import SignatureCanvas from "react-signature-canvas";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 interface IntakeSignatureStepProps {
   onSignatureComplete: (signatureData: string) => void;
@@ -40,10 +42,49 @@ export function IntakeSignatureStep({
 }: IntakeSignatureStepProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [paymentMode, setPaymentMode] = useState<"full" | "partial">("full");
+  const [showRemoteSignDialog, setShowRemoteSignDialog] = useState(false);
+  const [remoteSignUrl, setRemoteSignUrl] = useState<string | null>(null);
+  const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   
   // Suggerimento sconto diagnosi per preventivi sopra €100
   const suggestDiscount = estimatedCost >= 100;
   const isDiscounted = diagnosticFee === 0;
+
+  const generateRemoteSignUrl = () => {
+    setIsGeneratingLink(true);
+    // Generate a unique session ID for this signature request
+    const sessionId = crypto.randomUUID();
+    // Create a URL that can be opened on another device
+    const baseUrl = window.location.origin;
+    const signUrl = `${baseUrl}/firma-remota/${sessionId}?amount=${amountDueNow.toFixed(2)}&total=${totalWithDiagnostic.toFixed(2)}`;
+    
+    // Store session info in localStorage for cross-device sync
+    localStorage.setItem(`remote-sign-${sessionId}`, JSON.stringify({
+      timestamp: Date.now(),
+      amount: amountDueNow,
+      total: totalWithDiagnostic,
+      status: 'pending'
+    }));
+    
+    setTimeout(() => {
+      setRemoteSignUrl(signUrl);
+      setIsGeneratingLink(false);
+      setShowRemoteSignDialog(true);
+    }, 500);
+  };
+
+  const copyToClipboard = async () => {
+    if (remoteSignUrl) {
+      await navigator.clipboard.writeText(remoteSignUrl);
+      toast.success("Link copiato negli appunti!");
+    }
+  };
+
+  const openInNewTab = () => {
+    if (remoteSignUrl) {
+      window.open(remoteSignUrl, '_blank');
+    }
+  };
 
   const handleClear = () => {
     sigCanvas.current?.clear();
@@ -422,6 +463,22 @@ export function IntakeSignatureStep({
           </motion.div>
         )}
 
+        {/* Remote Signature Button */}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={generateRemoteSignUrl}
+          className="w-full h-10 text-sm font-semibold border-2 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5"
+          disabled={isGeneratingLink}
+        >
+          {isGeneratingLink ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Tablet className="mr-2 h-4 w-4" />
+          )}
+          Invia a Dispositivo Esterno
+        </Button>
+
         <Button
           type="button"
           onClick={handleSave}
@@ -431,6 +488,83 @@ export function IntakeSignatureStep({
           Salva Firma
         </Button>
       </motion.div>
+
+      {/* Remote Signature Dialog */}
+      <Dialog open={showRemoteSignDialog} onOpenChange={setShowRemoteSignDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tablet className="h-5 w-5 text-primary" />
+              Firma su Dispositivo Esterno
+            </DialogTitle>
+            <DialogDescription>
+              Invia il link al tablet, smartphone o tavoletta Wacom del cliente per raccogliere la firma
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Device Icons */}
+            <div className="flex justify-center gap-6">
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Tablet className="h-6 w-6 text-primary" />
+                </div>
+                <span className="text-xs text-muted-foreground">Tablet</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Smartphone className="h-6 w-6 text-primary" />
+                </div>
+                <span className="text-xs text-muted-foreground">Smartphone</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <FileSignature className="h-6 w-6 text-primary" />
+                </div>
+                <span className="text-xs text-muted-foreground">Wacom</span>
+              </div>
+            </div>
+
+            {/* Link Display */}
+            {remoteSignUrl && (
+              <div className="space-y-3">
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">Link per la firma:</p>
+                  <p className="text-sm font-mono break-all text-foreground">
+                    {remoteSignUrl}
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <Button
+                    onClick={copyToClipboard}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copia Link
+                  </Button>
+                  <Button
+                    onClick={openInNewTab}
+                    variant="default"
+                    className="flex-1"
+                  >
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    Apri
+                  </Button>
+                </div>
+
+                <Alert className="border-amber-500/30 bg-amber-500/5">
+                  <QrCode className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-xs text-amber-700">
+                    Apri questo link sul dispositivo del cliente per la firma. La firma verrà sincronizzata automaticamente.
+                  </AlertDescription>
+                </Alert>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
