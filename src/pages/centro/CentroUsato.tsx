@@ -258,6 +258,7 @@ export default function CentroUsato() {
         source: formData.source as "riparazione_alienata" | "permuta" | "acquisto" | "ricondizionato",
         status: "draft" as const,
         photos: photosArray.length > 0 ? photosArray : null,
+        specifications: detectedDevice?.specs ? detectedDevice.specs : null,
       };
 
       if (editingDevice) {
