@@ -271,34 +271,34 @@ const getStatusInfo = (status: string) => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-background/80 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary rounded-lg">
-              <Wrench className="h-5 w-5 text-primary-foreground" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="p-1.5 sm:p-2 bg-primary rounded-lg">
+              <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-xl text-foreground">TechRepair</span>
+            <span className="font-bold text-lg sm:text-xl text-foreground">TechRepair</span>
           </div>
 
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/customer-dashboard")}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Dashboard
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/customer-dashboard")} className="px-2 sm:px-3">
+              <ArrowLeft className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Dashboard</span>
             </Button>
 
-            <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="hidden sm:flex">
               <Home className="h-4 w-4 mr-2" />
               Home
             </Button>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary text-primary-foreground">
+                <Button variant="ghost" size="sm" className="gap-2 px-2">
+                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs sm:text-sm">
                       {getInitials()}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:inline">{user?.email}</span>
+                  <span className="hidden md:inline text-sm">{user?.email}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -307,6 +307,10 @@ const getStatusInfo = (status: string) => {
                 <DropdownMenuItem onClick={() => navigate("/customer-dashboard")}>
                   <User className="mr-2 h-4 w-4" />
                   Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/")} className="sm:hidden">
+                  <Home className="mr-2 h-4 w-4" />
+                  Home
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
@@ -320,11 +324,11 @@ const getStatusInfo = (status: string) => {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="space-y-8"
+          className="space-y-6 sm:space-y-8"
         >
           {/* Forfeiture Countdown Banner */}
           {repair.status === "completed" && !repair.delivered_at && repair.completed_at && (
@@ -338,19 +342,19 @@ const getStatusInfo = (status: string) => {
                 const isUrgent = daysLeft <= 7;
                 const isCritical = daysLeft <= 3;
                 return (
-                  <div className={`p-4 rounded-lg mb-6 ${
+                  <div className={`p-3 sm:p-4 rounded-lg mb-6 ${
                     isCritical 
                       ? 'bg-red-500/20 border border-red-500/50' 
                       : isUrgent 
                         ? 'bg-rose-500/10 border border-rose-500/30'
                         : 'bg-amber-500/10 border border-amber-500/30'
                   }`}>
-                    <div className="flex items-start gap-3">
-                      <Clock className={`h-6 w-6 flex-shrink-0 mt-0.5 ${
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <Clock className={`h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 mt-0.5 ${
                         isCritical ? 'text-red-600' : isUrgent ? 'text-rose-600' : 'text-amber-600'
                       }`} />
-                      <div className="space-y-2">
-                        <p className={`font-bold ${
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <p className={`font-bold text-sm sm:text-base ${
                           isCritical ? 'text-red-700' : isUrgent ? 'text-rose-700' : 'text-amber-700'
                         }`}>
                           {isCritical ? '⚠️ ' : ''}{daysLeft} giorni rimanenti per il ritiro
@@ -383,12 +387,12 @@ const getStatusInfo = (status: string) => {
 
           {/* Forfeited Banner */}
           {repair.status === "forfeited" && (
-            <div className="p-4 rounded-lg bg-rose-900/10 border border-rose-900/30 mb-6">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="h-6 w-6 text-rose-900 flex-shrink-0" />
+            <div className="p-3 sm:p-4 rounded-lg bg-rose-900/10 border border-rose-900/30 mb-6">
+              <div className="flex items-start gap-2 sm:gap-3">
+                <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-rose-900 flex-shrink-0" />
                 <div>
-                  <p className="font-bold text-rose-900">Dispositivo Alienato</p>
-                  <p className="text-sm text-rose-700">
+                  <p className="font-bold text-rose-900 text-sm sm:text-base">Dispositivo Alienato</p>
+                  <p className="text-xs sm:text-sm text-rose-700">
                     Il dispositivo non è stato ritirato entro 30 giorni dalla comunicazione di completamento 
                     ed è diventato proprietà del laboratorio come da clausola firmata.
                   </p>
@@ -453,9 +457,9 @@ const getStatusInfo = (status: string) => {
             {/* Left Column - Device & Timeline */}
             <div className="lg:col-span-2 space-y-6">
               {/* Device Info */}
-              <Card className="p-6">
-                <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
+              <Card className="p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                  <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Informazioni Dispositivo
                 </h2>
                 <div className="space-y-4">
@@ -508,24 +512,24 @@ const getStatusInfo = (status: string) => {
               </Card>
 
               {/* Timeline */}
-              <Card className="p-6">
-                <h2 className="text-xl font-bold text-foreground mb-6 flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-primary" />
+              <Card className="p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 sm:mb-6 flex items-center gap-2">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                   Timeline Riparazione
                 </h2>
                 <div className="space-y-6">
                   {/* Created */}
-                  <div className="flex gap-4">
+                  <div className="flex gap-3 sm:gap-4">
                     <div className="flex flex-col items-center">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                        <CheckCircle2 className="h-5 w-5 text-primary" />
+                      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       </div>
                       <div className="w-0.5 flex-1 bg-border mt-2" />
                     </div>
-                    <div className="flex-1 pb-6">
-                      <p className="font-semibold text-foreground">Riparazione Creata</p>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(repair.created_at), "dd MMMM yyyy 'alle' HH:mm", { locale: it })}
+                    <div className="flex-1 pb-4 sm:pb-6">
+                      <p className="font-semibold text-foreground text-sm sm:text-base">Riparazione Creata</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">
+                        {format(new Date(repair.created_at), "dd MMM yyyy 'alle' HH:mm", { locale: it })}
                       </p>
                     </div>
                   </div>
@@ -667,9 +671,9 @@ const getStatusInfo = (status: string) => {
 
               {/* Diagnosis & Notes */}
               {(repair.diagnosis || repair.repair_notes) && (
-                <Card className="p-6">
-                  <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 text-primary" />
+                <Card className="p-4 sm:p-6">
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     Diagnosi e Note
                   </h2>
                   <div className="space-y-4">
@@ -691,31 +695,31 @@ const getStatusInfo = (status: string) => {
 
               {/* Spare Parts Used */}
               {repair.repair_parts && Array.isArray(repair.repair_parts) && repair.repair_parts.length > 0 && (
-                <Card className="p-6">
-                  <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-                    <Package className="h-5 w-5 text-primary" />
+                <Card className="p-4 sm:p-6">
+                  <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4 flex items-center gap-2">
+                    <Package className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     Ricambi Utilizzati
                   </h2>
                   <div className="space-y-3">
                     {repair.repair_parts.map((part, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+                      <div key={index} className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-muted/30 border border-border">
                         {part.spare_parts?.image_url ? (
                           <img 
                             src={part.spare_parts.image_url} 
                             alt={part.spare_parts.name}
-                            className="h-12 w-12 object-contain rounded border bg-background"
+                            className="h-10 w-10 sm:h-12 sm:w-12 object-contain rounded border bg-background"
                             onError={(e) => {
                               e.currentTarget.style.display = 'none';
                             }}
                           />
                         ) : (
-                          <div className="h-12 w-12 rounded bg-muted flex items-center justify-center">
-                            <Package className="h-6 w-6 text-muted-foreground" />
+                          <div className="h-10 w-10 sm:h-12 sm:w-12 rounded bg-muted flex items-center justify-center">
+                            <Package className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
                           </div>
                         )}
-                        <div className="flex-1">
-                          <p className="font-medium text-foreground">{part.spare_parts?.name || "Ricambio"}</p>
-                          <p className="text-sm text-muted-foreground">Quantità: {part.quantity}</p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-foreground text-sm sm:text-base truncate">{part.spare_parts?.name || "Ricambio"}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground">Quantità: {part.quantity}</p>
                         </div>
                       </div>
                     ))}
@@ -727,29 +731,29 @@ const getStatusInfo = (status: string) => {
             {/* Right Column - Costs & Signature */}
             <div className="space-y-6">
               {/* Costs */}
-              <Card className="p-6">
-                <h2 className="text-xl font-bold text-foreground mb-4">Costi</h2>
-                <div className="space-y-4">
+              <Card className="p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-bold text-foreground mb-4">Costi</h2>
+                <div className="space-y-3 sm:space-y-4">
                   {repair.estimated_cost !== null && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">Costo Stimato</p>
-                      <p className="text-2xl font-bold text-primary">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">Costo Stimato</p>
+                      <p className="text-xl sm:text-2xl font-bold text-primary">
                         €{repair.estimated_cost.toFixed(2)}
                       </p>
                     </div>
                   )}
                   {repair.acconto !== null && repair.acconto > 0 && (
-                    <div className="border-t pt-4">
-                      <p className="text-sm text-muted-foreground mb-1">Acconto Versato</p>
-                      <p className="text-xl font-bold text-emerald-600">
+                    <div className="border-t pt-3 sm:pt-4">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">Acconto Versato</p>
+                      <p className="text-lg sm:text-xl font-bold text-emerald-600">
                         €{repair.acconto.toFixed(2)}
                       </p>
                     </div>
                   )}
                   {repair.final_cost !== null && (
-                    <div className="border-t pt-4">
-                      <p className="text-sm text-muted-foreground mb-1">Costo Finale</p>
-                      <p className="text-3xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
+                    <div className="border-t pt-3 sm:pt-4">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-1">Costo Finale</p>
+                      <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
                         €{repair.final_cost.toFixed(2)}
                       </p>
                       {repair.acconto !== null && repair.acconto > 0 && (
@@ -772,19 +776,20 @@ const getStatusInfo = (status: string) => {
 
               {/* Signature */}
               {repair.final_cost_signature && (
-                <Card className="p-6">
+                <Card className="p-4 sm:p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-                      <FileSignature className="h-5 w-5 text-primary" />
+                    <h2 className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
+                      <FileSignature className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                       Firma
                     </h2>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => setSignatureDialogOpen(true)}
+                      className="px-2 sm:px-3"
                     >
-                      <Edit className="h-4 w-4 mr-2" />
-                      Modifica
+                      <Edit className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Modifica</span>
                     </Button>
                   </div>
                   <Card className="p-4 bg-gradient-to-br from-background to-muted/20 border-2 border-primary/20">
@@ -804,11 +809,11 @@ const getStatusInfo = (status: string) => {
 
               {/* Accept Final Cost Button */}
               {repair.final_cost && !repair.final_cost_accepted_at && (
-                <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/30">
-                  <div className="text-center space-y-4">
+                <Card className="p-4 sm:p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/30">
+                  <div className="text-center space-y-3 sm:space-y-4">
                     <div>
-                      <p className="text-sm text-muted-foreground mb-2">Costo Finale da Accettare</p>
-                      <p className="text-4xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-2">Costo Finale da Accettare</p>
+                      <p className="text-3xl sm:text-4xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
                         €{repair.final_cost.toFixed(2)}
                       </p>
                     </div>
