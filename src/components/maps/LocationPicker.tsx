@@ -124,7 +124,8 @@ export function LocationPicker({
       {/* Map Container */}
       <div 
         ref={mapContainerRef}
-        className="h-64 rounded-xl overflow-hidden border border-border/50 shadow-inner"
+        className="h-64 rounded-xl overflow-hidden border border-border/50 shadow-inner relative z-0"
+        style={{ zIndex: 0 }}
       />
 
       {/* Coordinates display */}
