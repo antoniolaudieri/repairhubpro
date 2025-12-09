@@ -35,6 +35,7 @@ import { FinalCostSignatureDialog } from "@/components/customer/FinalCostSignatu
 import { NotificationBanner } from "@/components/customer/NotificationBanner";
 import { InAppNotifications } from "@/components/customer/InAppNotifications";
 import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
+import PromotionPreferences from "@/components/customer/PromotionPreferences";
 
 interface Repair {
   id: string;
@@ -593,6 +594,11 @@ export default function CustomerDashboard() {
               </div>
             )}
           </div>
+
+          {/* Promotion Preferences */}
+          {user?.email && (
+            <PromotionPreferences userEmail={user.email} />
+          )}
 
           {/* Used Devices Section */}
           <UsedDevicesCarousel />
