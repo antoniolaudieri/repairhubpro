@@ -141,13 +141,16 @@ export default function UsatoDetail() {
         .single();
 
       if (error) throw error;
-      setDevice(data);
 
-      // Increment views
+      // Increment views count
+      const newViewsCount = (data.views_count || 0) + 1;
       await supabase
         .from("used_devices")
-        .update({ views_count: (data.views_count || 0) + 1 })
+        .update({ views_count: newViewsCount })
         .eq("id", id);
+
+      // Set device with updated views count
+      setDevice({ ...data, views_count: newViewsCount });
     } catch (error) {
       console.error("Error fetching device:", error);
       toast({
