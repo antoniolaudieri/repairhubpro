@@ -311,8 +311,6 @@ export default function UsatoDetail() {
                     alt={`${device.brand} ${device.model}`}
                     className={`w-full h-full ${hasPhotos ? 'object-cover' : 'object-contain p-8'}`}
                     onError={handleImageError}
-                    referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
                   />
                   {hasPhotos && photos.length > 1 && (
                     <>

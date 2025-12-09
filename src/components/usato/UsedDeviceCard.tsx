@@ -154,8 +154,6 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
               alt={`${device.brand} ${device.model}`}
               className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
               onError={handleImageError}
-              referrerPolicy="no-referrer"
-              crossOrigin="anonymous"
             />
           ) : isLookingUp ? (
             <div className="w-full h-full flex flex-col items-center justify-center gap-2">
