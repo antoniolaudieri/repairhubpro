@@ -34,6 +34,7 @@ import { it } from "date-fns/locale";
 import { FinalCostSignatureDialog } from "@/components/customer/FinalCostSignatureDialog";
 import { NotificationBanner } from "@/components/customer/NotificationBanner";
 import { InAppNotifications } from "@/components/customer/InAppNotifications";
+import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
 
 interface Repair {
   id: string;
@@ -592,6 +593,9 @@ export default function CustomerDashboard() {
               </div>
             )}
           </div>
+
+          {/* Used Devices Section */}
+          <UsedDevicesCarousel />
         </div>
       </main>
 
