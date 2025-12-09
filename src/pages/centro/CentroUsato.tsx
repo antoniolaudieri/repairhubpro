@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CentroLayout } from "@/layouts/CentroLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,7 +21,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -44,15 +43,74 @@ import {
   CheckCircle2,
   Clock,
   ShoppingCart,
-  Upload,
   Smartphone,
-  AlertCircle,
+  Tablet,
+  Laptop,
+  Monitor,
+  Watch,
+  HelpCircle,
   X,
   Image as ImageIcon,
   Loader2,
+  Search,
+  Sparkles,
+  AlertCircle,
+  Euro,
+  Tag,
+  Info,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+
+// Device types with icons
+const deviceTypesWithIcons = [
+  { value: "Smartphone", label: "Smartphone", icon: Smartphone },
+  { value: "Tablet", label: "Tablet", icon: Tablet },
+  { value: "Laptop", label: "Laptop", icon: Laptop },
+  { value: "PC", label: "PC", icon: Monitor },
+  { value: "Smartwatch", label: "Smartwatch", icon: Watch },
+  { value: "Altro", label: "Altro", icon: HelpCircle },
+];
+
+// Detected device info interface
+interface DetectedDeviceInfo {
+  fullName?: string;
+  year?: string;
+  imageUrl?: string;
+  specs?: {
+    ram?: string;
+    storage?: string;
+    display?: string;
+    processor?: string;
+    camera?: string;
+  };
+}
+
+// Generate fallback image URLs based on brand
+const getFallbackImageUrls = (brand: string): string[] => {
+  const normalizedBrand = brand.toLowerCase().trim();
+  const urls: string[] = [];
+  
+  if (normalizedBrand.includes('apple') || normalizedBrand.includes('iphone') || normalizedBrand.includes('ipad')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg');
+  } else if (normalizedBrand.includes('samsung')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg');
+  } else if (normalizedBrand.includes('huawei')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/e/e8/Huawei_Logo.svg');
+  } else if (normalizedBrand.includes('xiaomi')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/a/ae/Xiaomi_logo_%282021-%29.svg');
+  } else if (normalizedBrand.includes('oppo')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/0/0a/OPPO_LOGO_2019.svg');
+  } else if (normalizedBrand.includes('oneplus')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/d/d6/OnePlus_logo.svg');
+  } else if (normalizedBrand.includes('google') || normalizedBrand.includes('pixel')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg');
+  } else if (normalizedBrand.includes('sony')) {
+    urls.push('https://upload.wikimedia.org/wikipedia/commons/c/ca/Sony_logo.svg');
+  }
+  
+  return urls;
+};
 
 const conditionOptions = [
   { value: "ricondizionato", label: "Ricondizionato" },
@@ -83,6 +141,13 @@ export default function CentroUsato() {
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Device lookup state
+  const [detectedDevice, setDetectedDevice] = useState<DetectedDeviceInfo | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [fallbackIndex, setFallbackIndex] = useState(0);
+  const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     device_type: "Smartphone",
@@ -211,6 +276,74 @@ export default function CentroUsato() {
     }
   };
 
+  // Auto-lookup device info when brand and model change
+  const lookupDevice = useCallback(async () => {
+    if (!formData.brand.trim() || !formData.model.trim()) {
+      setDetectedDevice(null);
+      return;
+    }
+    
+    setIsLookingUp(true);
+    setImageError(false);
+    setFallbackIndex(0);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('lookup-device', {
+        body: { brand: formData.brand, model: formData.model }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.device_info) {
+        const deviceInfo = data.device_info;
+        setDetectedDevice({
+          fullName: deviceInfo.fullName,
+          year: deviceInfo.year,
+          imageUrl: deviceInfo.imageUrl,
+          specs: deviceInfo.specs
+        });
+        setCurrentImageUrl(deviceInfo.imageUrl || null);
+        
+        // Auto-fill storage capacity if detected and not already set
+        if (deviceInfo.specs?.storage && !formData.storage_capacity) {
+          setFormData(prev => ({ ...prev, storage_capacity: deviceInfo.specs.storage }));
+        }
+      }
+    } catch (error) {
+      console.error('Lookup error:', error);
+    } finally {
+      setIsLookingUp(false);
+    }
+  }, [formData.brand, formData.model, formData.storage_capacity]);
+
+  // Debounced device lookup
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.brand && formData.model && !editingDevice) {
+        lookupDevice();
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [formData.brand, formData.model, lookupDevice, editingDevice]);
+
+  // Image error handling with fallbacks
+  const handleImageError = () => {
+    const fallbacks = getFallbackImageUrls(formData.brand);
+    if (fallbackIndex < fallbacks.length) {
+      setCurrentImageUrl(fallbacks[fallbackIndex]);
+      setFallbackIndex(prev => prev + 1);
+    } else {
+      setImageError(true);
+    }
+  };
+
+  // Get device icon for fallback
+  const getDeviceIcon = () => {
+    const deviceType = deviceTypesWithIcons.find(t => t.value === formData.device_type);
+    const Icon = deviceType?.icon || Smartphone;
+    return <Icon className="h-10 w-10 text-muted-foreground" />;
+  };
+
   const resetForm = () => {
     setFormData({
       device_type: "Smartphone",
@@ -227,6 +360,10 @@ export default function CentroUsato() {
     });
     setEditingDevice(null);
     setUploadedPhotos([]);
+    setDetectedDevice(null);
+    setCurrentImageUrl(null);
+    setImageError(false);
+    setFallbackIndex(0);
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -386,88 +523,283 @@ export default function CentroUsato() {
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>{editingDevice ? "Modifica" : "Nuovo"} Dispositivo</DialogTitle>
-                <DialogDescription>
-                  Compila i dettagli del dispositivo da mettere in vendita
-                </DialogDescription>
+                <DialogTitle className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  {editingDevice ? "Modifica" : "Nuovo"} Dispositivo Usato
+                </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Tipo Dispositivo *</Label>
-                    <Select value={formData.device_type} onValueChange={v => setFormData(prev => ({ ...prev, device_type: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {deviceTypes.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+              
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Device Type Selection - Visual Grid */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Smartphone className="h-3.5 w-3.5 text-primary" />
+                    Tipo Dispositivo *
+                  </Label>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                    {deviceTypesWithIcons.map((type) => {
+                      const Icon = type.icon;
+                      const isSelected = formData.device_type === type.value;
+                      return (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, device_type: type.value }))}
+                          className={`
+                            flex flex-col items-center justify-center p-2.5 rounded-lg border-2 transition-all
+                            ${isSelected 
+                              ? "border-primary bg-primary/10 text-primary" 
+                              : "border-border bg-card hover:border-primary/50 hover:bg-muted/50 text-muted-foreground"
+                            }
+                          `}
+                        >
+                          <Icon className={`h-5 w-5 mb-1 ${isSelected ? "text-primary" : ""}`} />
+                          <span className="text-[10px] font-medium">{type.label}</span>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div className="space-y-2">
-                    <Label>Condizione *</Label>
+                </div>
+
+                {/* Brand & Model with AI Lookup */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="brand" className="text-xs font-medium">Marca *</Label>
+                    <div className="relative">
+                      <Input
+                        id="brand"
+                        value={formData.brand}
+                        onChange={e => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                        className="h-10 pr-8"
+                        placeholder="es. Apple"
+                        required
+                      />
+                      {isLookingUp && (
+                        <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="model" className="text-xs font-medium">Modello *</Label>
+                    <div className="relative">
+                      <Input
+                        id="model"
+                        value={formData.model}
+                        onChange={e => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                        className="h-10 pr-8"
+                        placeholder="es. iPhone 15 Pro"
+                        required
+                      />
+                      {detectedDevice && !isLookingUp && (
+                        <Sparkles className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* AI Detected Device Card */}
+                <AnimatePresence>
+                  {(detectedDevice || isLookingUp) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                        {isLookingUp ? (
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-20 w-20 rounded-lg" />
+                            <div className="flex-1 space-y-2">
+                              <Skeleton className="h-4 w-3/4" />
+                              <Skeleton className="h-3 w-1/2" />
+                              <Skeleton className="h-3 w-2/3" />
+                            </div>
+                          </div>
+                        ) : detectedDevice && (
+                          <div className="flex gap-4">
+                            {/* Device Image */}
+                            <div className="flex-shrink-0">
+                              {currentImageUrl && !imageError ? (
+                                <div className="relative">
+                                  <img
+                                    src={currentImageUrl}
+                                    alt={`${formData.brand} ${formData.model}`}
+                                    className="h-20 w-20 object-contain rounded-lg bg-white p-2"
+                                    onError={handleImageError}
+                                  />
+                                  <Badge 
+                                    variant="secondary" 
+                                    className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5 bg-primary text-primary-foreground"
+                                  >
+                                    AI
+                                  </Badge>
+                                </div>
+                              ) : (
+                                <div className="h-20 w-20 rounded-lg bg-muted flex flex-col items-center justify-center gap-1">
+                                  {getDeviceIcon()}
+                                  <span className="text-[8px] text-muted-foreground uppercase font-medium">
+                                    {formData.brand || 'Device'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Device Details */}
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div>
+                                <h3 className="font-semibold text-sm truncate">
+                                  {detectedDevice.fullName || `${formData.brand} ${formData.model}`}
+                                </h3>
+                                {detectedDevice.year && detectedDevice.year !== "N/A" && (
+                                  <p className="text-xs text-muted-foreground">Anno: {detectedDevice.year}</p>
+                                )}
+                              </div>
+                              
+                              {/* Specs Grid */}
+                              {detectedDevice.specs && (
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                  {detectedDevice.specs.storage && detectedDevice.specs.storage !== "N/A" && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px] text-muted-foreground">Storage:</span>
+                                      <span className="text-[10px] font-medium truncate">{detectedDevice.specs.storage}</span>
+                                    </div>
+                                  )}
+                                  {detectedDevice.specs.ram && detectedDevice.specs.ram !== "N/A" && (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-[10px] text-muted-foreground">RAM:</span>
+                                      <span className="text-[10px] font-medium truncate">{detectedDevice.specs.ram}</span>
+                                    </div>
+                                  )}
+                                  {detectedDevice.specs.display && detectedDevice.specs.display !== "N/A" && (
+                                    <div className="flex items-center gap-1 col-span-2">
+                                      <span className="text-[10px] text-muted-foreground">Display:</span>
+                                      <span className="text-[10px] font-medium truncate">{detectedDevice.specs.display}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </Card>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Device Details Row */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="color" className="text-xs font-medium text-muted-foreground">Colore</Label>
+                    <Input
+                      id="color"
+                      value={formData.color}
+                      onChange={e => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                      className="h-9 text-sm"
+                      placeholder="es. Nero"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="storage" className="text-xs font-medium text-muted-foreground">Capacità</Label>
+                    <Input
+                      id="storage"
+                      value={formData.storage_capacity}
+                      onChange={e => setFormData(prev => ({ ...prev, storage_capacity: e.target.value }))}
+                      className="h-9 text-sm"
+                      placeholder="128GB"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="warranty" className="text-xs font-medium text-muted-foreground">Garanzia (mesi)</Label>
+                    <Input
+                      id="warranty"
+                      type="number"
+                      value={formData.warranty_months}
+                      onChange={e => setFormData(prev => ({ ...prev, warranty_months: e.target.value }))}
+                      className="h-9 text-sm"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                {/* Condition & Source Row */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium flex items-center gap-1">
+                      <Tag className="h-3 w-3 text-primary" />
+                      Condizione *
+                    </Label>
                     <Select value={formData.condition} onValueChange={v => setFormData(prev => ({ ...prev, condition: v }))}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {conditionOptions.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Marca *</Label>
-                    <Input value={formData.brand} onChange={e => setFormData(prev => ({ ...prev, brand: e.target.value }))} required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Modello *</Label>
-                    <Input value={formData.model} onChange={e => setFormData(prev => ({ ...prev, model: e.target.value }))} required />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Colore</Label>
-                    <Input value={formData.color} onChange={e => setFormData(prev => ({ ...prev, color: e.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Capacità</Label>
-                    <Input value={formData.storage_capacity} onChange={e => setFormData(prev => ({ ...prev, storage_capacity: e.target.value }))} placeholder="128GB" />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium flex items-center gap-1 text-muted-foreground">
+                      <Info className="h-3 w-3" />
+                      Provenienza
+                    </Label>
+                    <Select value={formData.source} onValueChange={v => setFormData(prev => ({ ...prev, source: v }))}>
+                      <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {sourceOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Prezzo €*</Label>
-                    <Input type="number" step="0.01" value={formData.price} onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))} required />
+                {/* Price Section */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="price" className="text-sm font-medium flex items-center gap-1">
+                      <Euro className="h-3.5 w-3.5 text-primary" />
+                      Prezzo di Vendita *
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      step="0.01"
+                      value={formData.price}
+                      onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                      className="h-10"
+                      placeholder="299.00"
+                      required
+                    />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Prezzo Originale €</Label>
-                    <Input type="number" step="0.01" value={formData.original_price} onChange={e => setFormData(prev => ({ ...prev, original_price: e.target.value }))} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Garanzia (mesi)</Label>
-                    <Input type="number" value={formData.warranty_months} onChange={e => setFormData(prev => ({ ...prev, warranty_months: e.target.value }))} />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="original_price" className="text-xs font-medium text-muted-foreground">Prezzo Originale €</Label>
+                    <Input
+                      id="original_price"
+                      type="number"
+                      step="0.01"
+                      value={formData.original_price}
+                      onChange={e => setFormData(prev => ({ ...prev, original_price: e.target.value }))}
+                      className="h-9 text-sm"
+                      placeholder="es. 999.00"
+                    />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Provenienza</Label>
-                  <Select value={formData.source} onValueChange={v => setFormData(prev => ({ ...prev, source: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {sourceOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Descrizione</Label>
-                  <Textarea value={formData.description} onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))} rows={3} />
+                {/* Description */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="description" className="text-xs font-medium text-muted-foreground">Descrizione</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    rows={2}
+                    className="resize-none text-sm"
+                    placeholder="Descrivi lo stato del dispositivo, accessori inclusi, ecc."
+                  />
                 </div>
 
                 {/* Photo Upload Section */}
                 <div className="space-y-3">
-                  <Label>Foto Dispositivo</Label>
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <ImageIcon className="h-3.5 w-3.5 text-primary" />
+                    Foto Dispositivo
+                  </Label>
                   <div className="flex flex-wrap gap-3">
                     {uploadedPhotos.map((photo, index) => (
                       <div key={index} className="relative group">
@@ -483,6 +815,11 @@ export default function CentroUsato() {
                         >
                           <X className="h-3 w-3" />
                         </button>
+                        {index === 0 && (
+                          <Badge className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-[8px] px-1.5 py-0 bg-primary">
+                            Principale
+                          </Badge>
+                        )}
                       </div>
                     ))}
                     
@@ -510,17 +847,24 @@ export default function CentroUsato() {
                     onChange={handlePhotoUpload}
                     className="hidden"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Carica fino a 5 foto del dispositivo. La prima sarà l'immagine principale.
+                  <p className="text-[10px] text-muted-foreground">
+                    La prima foto sarà l'immagine principale del catalogo
                   </p>
                 </div>
 
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 pt-2">
                   <Button type="button" variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>
                     Annulla
                   </Button>
-                  <Button type="submit" disabled={formLoading}>
-                    {formLoading ? "Salvataggio..." : editingDevice ? "Aggiorna" : "Salva Bozza"}
+                  <Button type="submit" disabled={formLoading} className="gap-2">
+                    {formLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Salvataggio...
+                      </>
+                    ) : (
+                      editingDevice ? "Aggiorna" : "Salva Bozza"
+                    )}
                   </Button>
                 </div>
               </form>
