@@ -54,8 +54,15 @@ Rispondi SOLO in formato JSON con questa struttura:
     "AA": numero,
     "AAA": numero
   },
+  "trend": "alto" | "stabile" | "basso",
+  "trendReason": "breve spiegazione del trend (max 15 parole)",
   "notes": "breve nota opzionale sul mercato attuale per questo dispositivo"
 }
+
+Il campo "trend" indica la tendenza del mercato per questo dispositivo:
+- "alto": domanda superiore all'offerta, prezzi in crescita, device molto ricercato
+- "stabile": domanda e offerta equilibrate, prezzi stabili
+- "basso": offerta superiore alla domanda, prezzi in calo, device meno richiesto
 
 Considera: anno di uscita, domanda di mercato, disponibilità ricambi, supporto software attuale.
 Se non conosci il dispositivo esatto, fai stime ragionevoli basate su dispositivi simili della stessa fascia.`

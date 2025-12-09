@@ -58,6 +58,9 @@ import {
   Euro,
   Tag,
   Info,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -95,6 +98,8 @@ interface SinglePriceEstimate {
     AA: number;
     AAA: number;
   };
+  trend?: 'alto' | 'stabile' | 'basso';
+  trendReason?: string;
   notes?: string;
 }
 
@@ -911,6 +916,31 @@ export default function CentroUsato() {
                                   {priceEstimate.originalPrice && (
                                     <p className="text-[10px] text-muted-foreground text-center">
                                       Prezzo nuovo: €{priceEstimate.originalPrice}
+                                    </p>
+                                  )}
+                                  
+                                  {/* Market Trend Indicator */}
+                                  {priceEstimate.trend && (
+                                    <div className={`
+                                      flex items-center justify-center gap-2 px-3 py-2 rounded-lg mt-2
+                                      ${priceEstimate.trend === 'alto' 
+                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                                        : priceEstimate.trend === 'basso'
+                                        ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}
+                                    `}>
+                                      {priceEstimate.trend === 'alto' && <TrendingUp className="h-4 w-4" />}
+                                      {priceEstimate.trend === 'stabile' && <Minus className="h-4 w-4" />}
+                                      {priceEstimate.trend === 'basso' && <TrendingDown className="h-4 w-4" />}
+                                      <span className="text-xs font-medium">
+                                        Trend: {priceEstimate.trend === 'alto' ? 'In crescita' : priceEstimate.trend === 'basso' ? 'In calo' : 'Stabile'}
+                                      </span>
+                                    </div>
+                                  )}
+                                  
+                                  {priceEstimate.trendReason && (
+                                    <p className="text-[10px] text-muted-foreground italic text-center">
+                                      {priceEstimate.trendReason}
                                     </p>
                                   )}
                                   
