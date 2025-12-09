@@ -45,7 +45,11 @@ Fornisci SEMPRE i prezzi in EUR per le seguenti condizioni usando la scala stand
 - AA (Ottime Condizioni): Quasi perfetto, segni minimi visibili solo controluce, batteria >85%. Circa 70-80% del valore.
 - AAA (Come Nuovo/Ricondizionato): Perfetto o ricondizionato certificato, nessun segno visibile, batteria >90% o sostituita. Circa 80-90% del valore.
 
-Rispondi SOLO in formato JSON con questa struttura:
+IMPORTANTE: Rispondi SEMPRE e SOLO in formato JSON, anche se non sei sicuro del dispositivo. NON rispondere MAI con testo normale.
+
+Se il nome del dispositivo è ambiguo (es. "Apple 15" potrebbe essere iPhone 15), interpreta il modello più probabile e fornisci comunque una stima.
+
+Struttura JSON richiesta:
 {
   "originalPrice": numero (prezzo originale di listino del nuovo),
   "grades": {
@@ -69,7 +73,7 @@ Se non conosci il dispositivo esatto, fai stime ragionevoli basate su dispositiv
           },
           {
             role: "user",
-            content: `Valuta il prezzo usato per: ${brand} ${model}${storage ? ` ${storage}` : ''}`
+            content: `Valuta il prezzo usato per: ${brand} ${model}${storage ? ` ${storage}` : ''}. Rispondi SOLO con JSON valido.`
           }
         ],
         temperature: 0.3,
@@ -102,7 +106,7 @@ Se non conosci il dispositivo esatto, fai stime ragionevoli basate su dispositiv
 
     console.log("Price Estimate Response:", aiResponse);
 
-    // Parse JSON from AI response - handle markdown code blocks
+    // Parse JSON from AI response - handle markdown code blocks and non-JSON responses
     let priceEstimate;
     try {
       // Remove markdown code blocks if present
@@ -111,19 +115,43 @@ Se non conosci il dispositivo esatto, fai stime ragionevoli basate su dispositiv
         .replace(/```\n?/g, '')
         .trim();
       
-      // Try to extract just the first JSON object
-      const jsonMatch = cleanedResponse.match(/\{[\s\S]*?\}(?=\s*$|\s*\{)/);
-      if (jsonMatch) {
-        priceEstimate = JSON.parse(jsonMatch[0]);
+      // Check if response starts with non-JSON text (common when AI doesn't recognize device)
+      if (!cleanedResponse.startsWith('{') && !cleanedResponse.startsWith('[')) {
+        // Try to find JSON within the response
+        const jsonStart = cleanedResponse.indexOf('{');
+        if (jsonStart !== -1) {
+          cleanedResponse = cleanedResponse.substring(jsonStart);
+        } else {
+          console.error("AI responded with text instead of JSON:", aiResponse);
+          return new Response(
+            JSON.stringify({ error: "Dispositivo non riconosciuto. Prova con marca e modello completi (es. 'iPhone 15' invece di '15')." }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+          );
+        }
+      }
+      
+      // Find the complete JSON object
+      let braceCount = 0;
+      let jsonEnd = -1;
+      for (let i = 0; i < cleanedResponse.length; i++) {
+        if (cleanedResponse[i] === '{') braceCount++;
+        if (cleanedResponse[i] === '}') braceCount--;
+        if (braceCount === 0 && cleanedResponse[i] === '}') {
+          jsonEnd = i + 1;
+          break;
+        }
+      }
+      
+      if (jsonEnd > 0) {
+        priceEstimate = JSON.parse(cleanedResponse.substring(0, jsonEnd));
       } else {
-        // Try the whole cleaned response
         priceEstimate = JSON.parse(cleanedResponse);
       }
     } catch (parseError) {
       console.error("Failed to parse AI response as JSON:", parseError);
       console.error("Raw response:", aiResponse);
       return new Response(
-        JSON.stringify({ error: "Impossibile elaborare la risposta AI" }),
+        JSON.stringify({ error: "Errore nella valutazione. Riprova con marca e modello più specifici." }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
       );
     }
