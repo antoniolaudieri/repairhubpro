@@ -82,6 +82,12 @@ interface WeeklyData {
   completate: number;
 }
 
+interface DailyData {
+  hour: string;
+  riparazioni: number;
+  completate: number;
+}
+
 export default function CentroDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -100,6 +106,7 @@ export default function CentroDashboard() {
   const [recentRepairs, setRecentRepairs] = useState<RecentRepair[]>([]);
   const [forfeitureWarnings, setForfeitureWarnings] = useState<ForfeitureWarning[]>([]);
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
+  const [dailyData, setDailyData] = useState<DailyData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -126,6 +133,7 @@ export default function CentroDashboard() {
           loadRecentRepairs(centroData.id),
           loadForfeitureWarnings(centroData.id),
           loadWeeklyData(centroData.id),
+          loadDailyData(centroData.id),
         ]);
       }
     } catch (error: any) {
@@ -230,6 +238,42 @@ export default function CentroDashboard() {
       });
     }
     setWeeklyData(weekData);
+  };
+
+  const loadDailyData = async (centroId: string) => {
+    const today = new Date();
+    const startOfDay = new Date(today);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const { data: repairs } = await supabase
+      .from("repairs")
+      .select("created_at, status, completed_at, device:devices!inner(customer:customers!inner(centro_id))")
+      .eq("device.customer.centro_id", centroId)
+      .gte("created_at", startOfDay.toISOString());
+
+    const hourlyData: DailyData[] = [];
+    for (let h = 0; h <= 23; h++) {
+      const hourStr = h.toString().padStart(2, '0');
+      const hourLabel = `${hourStr}:00`;
+      
+      const created = repairs?.filter(r => {
+        const createdHour = new Date(r.created_at).getHours();
+        return createdHour === h;
+      }).length || 0;
+      
+      const completed = repairs?.filter(r => {
+        if (!r.completed_at) return false;
+        const completedHour = new Date(r.completed_at).getHours();
+        return completedHour === h;
+      }).length || 0;
+      
+      hourlyData.push({
+        hour: hourLabel,
+        riparazioni: created,
+        completate: completed
+      });
+    }
+    setDailyData(hourlyData);
   };
 
   const loadForfeitureWarnings = async (centroId: string) => {
@@ -337,6 +381,7 @@ export default function CentroDashboard() {
             loadStats(centro.id);
             loadRecentRepairs(centro.id);
             loadForfeitureWarnings(centro.id);
+            loadDailyData(centro.id);
           }
         }
       )
@@ -686,90 +731,179 @@ export default function CentroDashboard() {
             </motion.div>
 
 
-            {/* Weekly Chart */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <Card className="border-border/50">
-                <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                    <h2 className="font-medium text-foreground">Andamento Settimanale</h2>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-2 w-2 rounded-full bg-primary" />
-                      <span className="text-muted-foreground">Nuove</span>
+            {/* Charts Grid - Daily and Weekly */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Daily Chart */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <Card className="border-border/50 h-full">
+                  <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                      <h2 className="font-medium text-foreground">Andamento Giornaliero</h2>
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                      <span className="text-muted-foreground">Completate</span>
+                    <div className="flex items-center gap-4 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                        <span className="text-muted-foreground">Nuove</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="text-muted-foreground">Completate</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="p-3 md:p-4">
-                  <div className="h-[180px] md:h-[220px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={weeklyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorRiparazioniCentro" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorCompletateCentro" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
-                        <XAxis 
-                          dataKey="day" 
-                          stroke="hsl(var(--muted-foreground))" 
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis 
-                          stroke="hsl(var(--muted-foreground))" 
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={false}
-                          allowDecimals={false}
-                        />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                            fontSize: '12px'
-                          }}
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="riparazioni" 
-                          stroke="hsl(var(--primary))" 
-                          strokeWidth={2}
-                          fillOpacity={1} 
-                          fill="url(#colorRiparazioniCentro)" 
-                          name="Nuove"
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="completate" 
-                          stroke="#10b981" 
-                          strokeWidth={2}
-                          fillOpacity={1} 
-                          fill="url(#colorCompletateCentro)" 
-                          name="Completate"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                  <div className="p-3 md:p-4">
+                    <div className="h-[180px] md:h-[220px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={dailyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorRiparazioniDaily" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorCompletateDaily" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
+                          <XAxis 
+                            dataKey="hour" 
+                            stroke="hsl(var(--muted-foreground))" 
+                            fontSize={10}
+                            tickLine={false}
+                            axisLine={false}
+                            interval={2}
+                          />
+                          <YAxis 
+                            stroke="hsl(var(--muted-foreground))" 
+                            fontSize={11}
+                            tickLine={false}
+                            axisLine={false}
+                            allowDecimals={false}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--card))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px',
+                              fontSize: '12px'
+                            }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="riparazioni" 
+                            stroke="hsl(var(--primary))" 
+                            strokeWidth={2}
+                            fillOpacity={1} 
+                            fill="url(#colorRiparazioniDaily)" 
+                            name="Nuove"
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="completate" 
+                            stroke="#10b981" 
+                            strokeWidth={2}
+                            fillOpacity={1} 
+                            fill="url(#colorCompletateDaily)" 
+                            name="Completate"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            </motion.div>
+                </Card>
+              </motion.div>
+
+              {/* Weekly Chart */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+              >
+                <Card className="border-border/50 h-full">
+                  <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                      <h2 className="font-medium text-foreground">Andamento Settimanale</h2>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 rounded-full bg-primary" />
+                        <span className="text-muted-foreground">Nuove</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="text-muted-foreground">Completate</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-3 md:p-4">
+                    <div className="h-[180px] md:h-[220px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={weeklyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorRiparazioniCentro" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                            </linearGradient>
+                            <linearGradient id="colorCompletateCentro" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
+                          <XAxis 
+                            dataKey="day" 
+                            stroke="hsl(var(--muted-foreground))" 
+                            fontSize={11}
+                            tickLine={false}
+                            axisLine={false}
+                          />
+                          <YAxis 
+                            stroke="hsl(var(--muted-foreground))" 
+                            fontSize={11}
+                            tickLine={false}
+                            axisLine={false}
+                            allowDecimals={false}
+                          />
+                          <Tooltip 
+                            contentStyle={{ 
+                              backgroundColor: 'hsl(var(--card))', 
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '8px',
+                              fontSize: '12px'
+                            }}
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="riparazioni" 
+                            stroke="hsl(var(--primary))" 
+                            strokeWidth={2}
+                            fillOpacity={1} 
+                            fill="url(#colorRiparazioniCentro)" 
+                            name="Nuove"
+                          />
+                          <Area 
+                            type="monotone" 
+                            dataKey="completate" 
+                            stroke="#10b981" 
+                            strokeWidth={2}
+                            fillOpacity={1} 
+                            fill="url(#colorCompletateCentro)" 
+                            name="Completate"
+                          />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            </div>
 
             {/* Prepaid Commissions History */}
             {centro && (
