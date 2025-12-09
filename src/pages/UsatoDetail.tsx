@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -153,17 +154,53 @@ const formatSpecLabel = (key: string): string => {
 export default function UsatoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [device, setDevice] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const [reservationOpen, setReservationOpen] = useState(false);
   const [reservationLoading, setReservationLoading] = useState(false);
+  const [reservationSuccess, setReservationSuccess] = useState(false);
+  const [customerData, setCustomerData] = useState<any>(null);
   const [formData, setFormData] = useState({
     customer_name: "",
     customer_email: "",
     customer_phone: "",
     message: "",
   });
+
+  // Fetch customer data for logged-in user
+  useEffect(() => {
+    const fetchCustomerData = async () => {
+      if (!user?.email) return;
+      
+      const { data } = await supabase
+        .from("customers")
+        .select("name, email, phone")
+        .eq("email", user.email)
+        .maybeSingle();
+      
+      if (data) {
+        setCustomerData(data);
+        setFormData(prev => ({
+          ...prev,
+          customer_name: data.name || "",
+          customer_email: data.email || "",
+          customer_phone: data.phone || "",
+        }));
+      } else if (user.email) {
+        // Use auth user data as fallback
+        setFormData(prev => ({
+          ...prev,
+          customer_email: user.email || "",
+          customer_name: user.user_metadata?.full_name || "",
+          customer_phone: user.user_metadata?.phone || "",
+        }));
+      }
+    };
+    
+    fetchCustomerData();
+  }, [user]);
 
   // Device lookup state
   const [lookupImage, setLookupImage] = useState<string | null>(null);
@@ -265,17 +302,7 @@ export default function UsatoDetail() {
 
       if (error) throw error;
 
-      toast({
-        title: "Richiesta Inviata!",
-        description: "Ti contatteremo presto per confermare la prenotazione.",
-      });
-      setReservationOpen(false);
-      setFormData({
-        customer_name: "",
-        customer_email: "",
-        customer_phone: "",
-        message: "",
-      });
+      setReservationSuccess(true);
     } catch (error: any) {
       toast({
         title: "Errore",
@@ -285,6 +312,11 @@ export default function UsatoDetail() {
     } finally {
       setReservationLoading(false);
     }
+  };
+
+  const handleCloseReservation = () => {
+    setReservationOpen(false);
+    setReservationSuccess(false);
   };
 
   if (loading) {
@@ -692,70 +724,154 @@ export default function UsatoDetail() {
 
             {/* Actions */}
             <div className="flex flex-col gap-3">
-              <Dialog open={reservationOpen} onOpenChange={setReservationOpen}>
+              <Dialog open={reservationOpen} onOpenChange={handleCloseReservation}>
                 <DialogTrigger asChild>
                   <Button size="lg" variant="glow" className="w-full gap-2">
                     <ShoppingCart className="h-5 w-5" />
                     Prenota Ora
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Prenota {device.brand} {device.model}</DialogTitle>
-                    <DialogDescription>
-                      Compila il form per richiedere la prenotazione di questo dispositivo
-                    </DialogDescription>
-                  </DialogHeader>
-                  <form onSubmit={handleReservation} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nome *</Label>
-                      <Input
-                        id="name"
-                        value={formData.customer_name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, customer_name: e.target.value }))}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.customer_email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, customer_email: e.target.value }))}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Telefono *</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.customer_phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, customer_phone: e.target.value }))}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="message">Messaggio (opzionale)</Label>
-                      <Textarea
-                        id="message"
-                        value={formData.message}
-                        onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
-                        placeholder="Domande o richieste particolari..."
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={reservationLoading}>
-                      {reservationLoading ? "Invio..." : "Invia Richiesta"}
-                    </Button>
-                  </form>
+                <DialogContent className="sm:max-w-md">
+                  {reservationSuccess ? (
+                    <>
+                      <DialogHeader>
+                        <div className="flex flex-col items-center text-center py-4">
+                          <div className="p-4 bg-success/10 rounded-full mb-4">
+                            <CheckCircle2 className="h-12 w-12 text-success" />
+                          </div>
+                          <DialogTitle className="text-2xl">Prenotazione Confermata!</DialogTitle>
+                          <DialogDescription className="mt-2">
+                            La tua richiesta è stata inviata con successo
+                          </DialogDescription>
+                        </div>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        {/* Device Summary */}
+                        <Card className="border-primary/20 bg-primary/5">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <DeviceIcon className="h-8 w-8 text-primary" />
+                              <div>
+                                <p className="font-semibold">{device.brand} {device.model}</p>
+                                <p className="text-lg font-bold text-primary">€{device.price.toLocaleString()}</p>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Store Info */}
+                        {device.centro && (
+                          <Card className="border-border/50">
+                            <CardContent className="p-4 space-y-3">
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-muted rounded-lg">
+                                  <Package className="h-5 w-5 text-muted-foreground" />
+                                </div>
+                                <div>
+                                  <p className="text-sm text-muted-foreground">Ritira presso</p>
+                                  <p className="font-semibold">{device.centro.business_name}</p>
+                                </div>
+                              </div>
+                              
+                              <Separator />
+                              
+                              <div className="space-y-2 text-sm">
+                                <div className="flex items-start gap-2">
+                                  <Calendar className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                  <span>Ti contatteremo entro 24h per fissare l'appuntamento</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <ShoppingCart className="h-4 w-4 text-muted-foreground mt-0.5" />
+                                  <span>Pagamento al ritiro dopo verifica del dispositivo</span>
+                                </div>
+                                <div className="flex items-start gap-2">
+                                  <Shield className="h-4 w-4 text-success mt-0.5" />
+                                  <span className="text-success">Garanzia inclusa {device.warranty_months ? `(${device.warranty_months} mesi)` : ""}</span>
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
+
+                        <Button 
+                          onClick={handleCloseReservation} 
+                          className="w-full"
+                        >
+                          Chiudi
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <DialogHeader>
+                        <DialogTitle>Prenota {device.brand} {device.model}</DialogTitle>
+                        <DialogDescription>
+                          {customerData 
+                            ? "Conferma i tuoi dati per prenotare questo dispositivo"
+                            : "Compila il form per richiedere la prenotazione di questo dispositivo"
+                          }
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      {/* Pre-filled data notice */}
+                      {customerData && (
+                        <Card className="border-success/20 bg-success/5">
+                          <CardContent className="p-3">
+                            <div className="flex items-center gap-2 text-success text-sm">
+                              <CheckCircle2 className="h-4 w-4" />
+                              <span>Dati compilati automaticamente dal tuo profilo</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      <form onSubmit={handleReservation} className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Nome *</Label>
+                          <Input
+                            id="name"
+                            value={formData.customer_name}
+                            onChange={(e) => setFormData(prev => ({ ...prev, customer_name: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="email">Email *</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.customer_email}
+                            onChange={(e) => setFormData(prev => ({ ...prev, customer_email: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="phone">Telefono *</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            value={formData.customer_phone}
+                            onChange={(e) => setFormData(prev => ({ ...prev, customer_phone: e.target.value }))}
+                            required
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="message">Note aggiuntive (opzionale)</Label>
+                          <Textarea
+                            id="message"
+                            value={formData.message}
+                            onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
+                            placeholder="Domande o richieste particolari..."
+                          />
+                        </div>
+                        <Button type="submit" className="w-full" disabled={reservationLoading}>
+                          {reservationLoading ? "Invio..." : "Conferma Prenotazione"}
+                        </Button>
+                      </form>
+                    </>
+                  )}
                 </DialogContent>
               </Dialog>
-
-              <Button variant="outline" size="lg" className="w-full gap-2 border-border/50 hover:bg-muted/50">
-                <MessageCircle className="h-5 w-5" />
-                Richiedi Informazioni
-              </Button>
             </div>
 
             {/* Views & Stats */}
