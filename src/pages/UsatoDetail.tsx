@@ -136,7 +136,7 @@ export default function UsatoDetail() {
     try {
       const { data, error } = await supabase
         .from("used_devices")
-        .select("*")
+        .select("*, centro:centri_assistenza(business_name, logo_url)")
         .eq("id", id)
         .single();
 
@@ -438,6 +438,33 @@ export default function UsatoDetail() {
             animate={{ opacity: 1, x: 0 }}
             className="space-y-6"
           >
+            {/* Centro Venditore */}
+            {device.centro && (
+              <Card className="border-border/50 bg-muted/30">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    {device.centro.logo_url ? (
+                      <img 
+                        src={device.centro.logo_url} 
+                        alt={device.centro.business_name}
+                        className="h-12 w-12 rounded-lg object-contain bg-background p-1 border"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <span className="text-lg font-bold text-primary">
+                          {device.centro.business_name.charAt(0)}
+                        </span>
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-muted-foreground">Venduto da</p>
+                      <p className="font-semibold">{device.centro.business_name}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Title & Brand */}
             <div>
               <p className="text-sm text-primary uppercase tracking-wide font-medium">
