@@ -80,18 +80,26 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("notify-device-interest: Found", interests?.length || 0, "potential interests");
 
-    // Filter matching interests
+    // Filter matching interests (case-insensitive comparison)
     const matchingInterests = (interests || []).filter((interest: DeviceInterest) => {
-      // Check device type match (if specified)
+      // Check device type match (if specified) - case insensitive
       if (interest.device_types && interest.device_types.length > 0) {
-        if (!interest.device_types.includes(device.device_type)) {
+        const deviceTypeLower = device.device_type.toLowerCase();
+        const matchesType = interest.device_types.some(
+          (type: string) => type.toLowerCase() === deviceTypeLower
+        );
+        if (!matchesType) {
           return false;
         }
       }
 
-      // Check brand match (if specified)
+      // Check brand match (if specified) - case insensitive
       if (interest.brands && interest.brands.length > 0) {
-        if (!interest.brands.includes(device.brand)) {
+        const brandLower = device.brand.toLowerCase();
+        const matchesBrand = interest.brands.some(
+          (brand: string) => brand.toLowerCase() === brandLower
+        );
+        if (!matchesBrand) {
           return false;
         }
       }
