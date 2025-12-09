@@ -1,3 +1,4 @@
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,9 +10,11 @@ import {
   Monitor, 
   Shield, 
   Eye,
-  ArrowRight
+  ArrowRight,
+  Sparkles
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UsedDevice {
   id: string;
@@ -51,6 +54,31 @@ const getDeviceIcon = (type: string) => {
   }
 };
 
+// Brand logo fallback URLs
+const brandLogos: Record<string, string> = {
+  apple: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg",
+  samsung: "https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg",
+  huawei: "https://upload.wikimedia.org/wikipedia/en/0/04/Huawei_Standard_logo.svg",
+  xiaomi: "https://upload.wikimedia.org/wikipedia/commons/a/ae/Xiaomi_logo_%282021-%29.svg",
+  oppo: "https://upload.wikimedia.org/wikipedia/commons/0/0a/OPPO_LOGO_2019.svg",
+  google: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg",
+  oneplus: "https://upload.wikimedia.org/wikipedia/commons/d/d8/OnePlus_logo.svg",
+  motorola: "https://upload.wikimedia.org/wikipedia/commons/4/45/Motorola_logo.svg",
+  sony: "https://upload.wikimedia.org/wikipedia/commons/c/c5/Sony_logo.svg",
+  lg: "https://upload.wikimedia.org/wikipedia/commons/b/bf/LG_logo_%282015%29.svg",
+};
+
+const getFallbackImageUrls = (brand: string, deviceType: string): string[] => {
+  const urls: string[] = [];
+  const brandLower = brand.toLowerCase();
+  
+  if (brandLogos[brandLower]) {
+    urls.push(brandLogos[brandLower]);
+  }
+  
+  return urls;
+};
+
 export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps) {
   const navigate = useNavigate();
   const DeviceIcon = getDeviceIcon(device.device_type);
@@ -58,6 +86,56 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
   const discountPercent = device.original_price 
     ? Math.round((1 - device.price / device.original_price) * 100) 
     : 0;
+
+  const [lookupImage, setLookupImage] = useState<string | null>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [fallbackIndex, setFallbackIndex] = useState(0);
+  const [hasLookedUp, setHasLookedUp] = useState(false);
+
+  const hasPhotos = device.photos && device.photos.length > 0;
+
+  // Lookup device image if no photos
+  const lookupDeviceImage = useCallback(async () => {
+    if (hasPhotos || hasLookedUp || !device.brand || !device.model) return;
+    
+    setIsLookingUp(true);
+    setHasLookedUp(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('lookup-device', {
+        body: { brand: device.brand, model: device.model }
+      });
+      
+      if (!error && data?.imageUrl) {
+        setLookupImage(data.imageUrl);
+      }
+    } catch (err) {
+      console.error("Device lookup error:", err);
+    } finally {
+      setIsLookingUp(false);
+    }
+  }, [device.brand, device.model, hasPhotos, hasLookedUp]);
+
+  useEffect(() => {
+    if (!hasPhotos) {
+      lookupDeviceImage();
+    }
+  }, [hasPhotos, lookupDeviceImage]);
+
+  const handleImageError = () => {
+    const fallbacks = getFallbackImageUrls(device.brand, device.device_type);
+    if (fallbackIndex < fallbacks.length) {
+      setLookupImage(fallbacks[fallbackIndex]);
+      setFallbackIndex(prev => prev + 1);
+    } else {
+      setImageError(true);
+    }
+  };
+
+  // Determine which image to show
+  const displayImage = hasPhotos ? device.photos[0] : lookupImage;
+  const showAiBadge = !hasPhotos && lookupImage && !imageError;
 
   return (
     <motion.div
@@ -70,15 +148,36 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
       >
         {/* Image Section */}
         <div className="relative aspect-square bg-gradient-to-br from-muted/50 to-muted overflow-hidden">
-          {device.photos && device.photos.length > 0 ? (
+          {displayImage && !imageError ? (
             <img 
-              src={device.photos[0]} 
+              src={displayImage} 
               alt={`${device.brand} ${device.model}`}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
+              onError={handleImageError}
+              referrerPolicy="no-referrer"
+              crossOrigin="anonymous"
             />
+          ) : isLookingUp ? (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+              <div className="animate-pulse">
+                <DeviceIcon className="h-12 w-12 text-muted-foreground/50" />
+              </div>
+              <span className="text-xs text-muted-foreground">Caricamento...</span>
+            </div>
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
+            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
               <DeviceIcon className="h-16 w-16 text-muted-foreground/50" />
+              <span className="text-xs text-muted-foreground font-medium">{device.brand}</span>
+            </div>
+          )}
+          
+          {/* AI Badge */}
+          {showAiBadge && (
+            <div className="absolute bottom-2 left-2">
+              <Badge variant="secondary" className="gap-1 text-xs bg-primary/10 text-primary border-primary/20">
+                <Sparkles className="h-3 w-3" />
+                AI
+              </Badge>
             </div>
           )}
           
