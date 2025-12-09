@@ -240,40 +240,52 @@ export default function CustomerDisplay() {
   useEffect(() => {
     if (!centroId) return;
 
+    console.log('[CustomerDisplay] Setting up channel listener for centro:', centroId);
+    
     const channel = supabase.channel(`display-${centroId}`);
     
     channel
       .on('broadcast', { event: 'intake_started' }, (payload) => {
-        console.log('Intake started:', payload);
-        setSession(payload.payload as IntakeSession);
-        setMode("confirm_data");
-        setDataConfirmed(false);
-        setPassword("");
+        console.log('[CustomerDisplay] Intake started - raw payload:', payload);
+        const sessionData = payload.payload as IntakeSession;
+        console.log('[CustomerDisplay] Session data:', sessionData);
+        if (sessionData) {
+          setSession(sessionData);
+          setMode("confirm_data");
+          setDataConfirmed(false);
+          setPassword("");
+        }
       })
       .on('broadcast', { event: 'intake_update' }, (payload) => {
-        console.log('Intake update:', payload);
-        setSession(prev => prev ? { ...prev, ...payload.payload } : null);
+        console.log('[CustomerDisplay] Intake update:', payload);
+        const updateData = payload.payload;
+        if (updateData) {
+          setSession(prev => prev ? { ...prev, ...updateData } : null);
+        }
       })
       .on('broadcast', { event: 'request_password' }, () => {
-        console.log('Password requested');
+        console.log('[CustomerDisplay] Password requested');
         setMode("enter_password");
       })
       .on('broadcast', { event: 'request_signature' }, () => {
-        console.log('Signature requested');
+        console.log('[CustomerDisplay] Signature requested');
         setMode("signature");
       })
       .on('broadcast', { event: 'intake_cancelled' }, () => {
-        console.log('Intake cancelled');
+        console.log('[CustomerDisplay] Intake cancelled');
         resetToStandby();
       })
       .on('broadcast', { event: 'intake_completed' }, () => {
-        console.log('Intake completed');
+        console.log('[CustomerDisplay] Intake completed');
         setMode("completed");
         setTimeout(() => resetToStandby(), 10000);
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[CustomerDisplay] Subscription status:', status);
+      });
 
     return () => {
+      console.log('[CustomerDisplay] Removing channel');
       supabase.removeChannel(channel);
     };
   }, [centroId]);
