@@ -192,6 +192,9 @@ export default function CentroUsato() {
   const [selectedStorageOption, setSelectedStorageOption] = useState<string | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
 
+  // Platform commission rate (dynamic from settings)
+  const [platformCommissionRate, setPlatformCommissionRate] = useState(20);
+
   // Customer search for consignment
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
@@ -217,6 +220,7 @@ export default function CentroUsato() {
 
   useEffect(() => {
     fetchCentroId();
+    fetchPlatformCommissionRate();
   }, [user]);
 
   useEffect(() => {
@@ -225,6 +229,21 @@ export default function CentroUsato() {
       fetchReservations();
     }
   }, [centroId]);
+
+  const fetchPlatformCommissionRate = async () => {
+    try {
+      const { data } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "platform_commission_rate")
+        .single();
+      if (data?.value) {
+        setPlatformCommissionRate(data.value);
+      }
+    } catch (error) {
+      console.error("Error fetching platform commission rate:", error);
+    }
+  };
 
   const fetchCentroId = async () => {
     if (!user) return;
@@ -517,25 +536,23 @@ export default function CentroUsato() {
     return () => clearTimeout(timer);
   }, [customerSearch, searchCustomers]);
 
-  // Calculate split preview
+  // Calculate split preview using dynamic platform rate
   const calculateSplitPreview = useCallback(() => {
     const price = parseFloat(formData.price) || 0;
     if (price <= 0) return null;
     
-    const platformRate = 20; // Platform takes 20%
-    
     if (formData.sale_type === "conto_vendita") {
       const ownerPayout = price * (formData.owner_split_percentage / 100);
       const centroGross = price * (formData.centro_split_percentage / 100);
-      const platformCommission = centroGross * (platformRate / 100);
+      const platformCommission = centroGross * (platformCommissionRate / 100);
       const centroNet = centroGross - platformCommission;
-      return { ownerPayout, centroGross, platformCommission, centroNet };
+      return { ownerPayout, centroGross, platformCommission, centroNet, platformRate: platformCommissionRate };
     } else {
-      const platformCommission = price * (platformRate / 100);
+      const platformCommission = price * (platformCommissionRate / 100);
       const centroNet = price - platformCommission;
-      return { ownerPayout: 0, centroGross: price, platformCommission, centroNet };
+      return { ownerPayout: 0, centroGross: price, platformCommission, centroNet, platformRate: platformCommissionRate };
     }
-  }, [formData.price, formData.sale_type, formData.owner_split_percentage, formData.centro_split_percentage]);
+  }, [formData.price, formData.sale_type, formData.owner_split_percentage, formData.centro_split_percentage, platformCommissionRate]);
 
   const resetForm = () => {
     setFormData({
@@ -1307,7 +1324,7 @@ export default function CentroUsato() {
                                   <span className="font-medium">€{preview.centroGross.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between p-2 bg-background/50 rounded">
-                                  <span className="text-muted-foreground">Comm. Piattaforma:</span>
+                                  <span className="text-muted-foreground">Comm. Piattaforma ({preview.platformRate}%):</span>
                                   <span className="font-medium text-destructive">-€{preview.platformCommission.toFixed(2)}</span>
                                 </div>
                                 <div className="flex justify-between p-2 bg-success/10 rounded border border-success/20">
@@ -1346,7 +1363,7 @@ export default function CentroUsato() {
                                 <span className="font-medium">€{parseFloat(formData.price).toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between p-2 bg-background/50 rounded">
-                                <span className="text-muted-foreground">Comm. Piattaforma (20%):</span>
+                                <span className="text-muted-foreground">Comm. Piattaforma ({preview.platformRate}%):</span>
                                 <span className="font-medium text-destructive">-€{preview.platformCommission.toFixed(2)}</span>
                               </div>
                               <div className="col-span-2 flex justify-between p-2 bg-success/10 rounded border border-success/20">
