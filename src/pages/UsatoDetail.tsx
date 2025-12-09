@@ -724,7 +724,13 @@ export default function UsatoDetail() {
 
             {/* Actions */}
             <div className="flex flex-col gap-3">
-              <Dialog open={reservationOpen} onOpenChange={handleCloseReservation}>
+              <Dialog open={reservationOpen} onOpenChange={(open) => {
+                if (!open) {
+                  handleCloseReservation();
+                } else {
+                  setReservationOpen(true);
+                }
+              }}>
                 <DialogTrigger asChild>
                   <Button size="lg" variant="glow" className="w-full gap-2">
                     <ShoppingCart className="h-5 w-5" />
