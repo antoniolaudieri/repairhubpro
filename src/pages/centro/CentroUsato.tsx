@@ -61,7 +61,13 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Handshake,
+  User,
+  Percent,
+  Calculator,
+  DollarSign,
 } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -152,6 +158,12 @@ const sourceOptions = [
   { value: "ricondizionato", label: "Ricondizionato" },
 ];
 
+const saleTypeOptions = [
+  { value: "acquistato", label: "Acquistato", description: "100% Centro", icon: ShoppingCart },
+  { value: "alienato", label: "Alienato", description: "100% Centro", icon: Clock },
+  { value: "conto_vendita", label: "Conto Vendita", description: "Split con cliente", icon: Handshake },
+];
+
 const deviceTypes = ["Smartphone", "Tablet", "Laptop", "PC", "Smartwatch", "Altro"];
 
 export default function CentroUsato() {
@@ -180,6 +192,12 @@ export default function CentroUsato() {
   const [selectedStorageOption, setSelectedStorageOption] = useState<string | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
 
+  // Customer search for consignment
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
+  const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
+  const [searchingCustomers, setSearchingCustomers] = useState(false);
+
   const [formData, setFormData] = useState({
     device_type: "Smartphone",
     brand: "",
@@ -192,6 +210,9 @@ export default function CentroUsato() {
     description: "",
     warranty_months: "0",
     source: "acquisto",
+    sale_type: "acquistato",
+    owner_split_percentage: 60,
+    centro_split_percentage: 40,
   });
 
   useEffect(() => {
@@ -276,7 +297,7 @@ export default function CentroUsato() {
       
       const deviceData = {
         centro_id: centroId,
-        device_type: formData.device_type.toLowerCase(), // Normalize to lowercase
+        device_type: formData.device_type.toLowerCase(),
         brand: formData.brand,
         model: formData.model,
         color: formData.color || null,
@@ -290,6 +311,10 @@ export default function CentroUsato() {
         status: "draft" as const,
         photos: photosArray.length > 0 ? photosArray : null,
         specifications: detectedDevice?.specs ? detectedDevice.specs : null,
+        sale_type: formData.sale_type as "alienato" | "conto_vendita" | "acquistato",
+        owner_customer_id: formData.sale_type === "conto_vendita" ? selectedCustomer?.id : null,
+        owner_split_percentage: formData.owner_split_percentage,
+        centro_split_percentage: formData.centro_split_percentage,
       };
 
       if (editingDevice) {
@@ -460,6 +485,58 @@ export default function CentroUsato() {
     return <Icon className="h-10 w-10 text-muted-foreground" />;
   };
 
+  // Search customers for consignment
+  const searchCustomers = useCallback(async (term: string) => {
+    if (!term.trim() || !centroId) {
+      setCustomerSearchResults([]);
+      return;
+    }
+    setSearchingCustomers(true);
+    try {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, name, phone, email")
+        .eq("centro_id", centroId)
+        .or(`name.ilike.%${term}%,phone.ilike.%${term}%,email.ilike.%${term}%`)
+        .limit(5);
+      setCustomerSearchResults(data || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setSearchingCustomers(false);
+    }
+  }, [centroId]);
+
+  // Debounce customer search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (customerSearch) {
+        searchCustomers(customerSearch);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [customerSearch, searchCustomers]);
+
+  // Calculate split preview
+  const calculateSplitPreview = useCallback(() => {
+    const price = parseFloat(formData.price) || 0;
+    if (price <= 0) return null;
+    
+    const platformRate = 20; // Platform takes 20%
+    
+    if (formData.sale_type === "conto_vendita") {
+      const ownerPayout = price * (formData.owner_split_percentage / 100);
+      const centroGross = price * (formData.centro_split_percentage / 100);
+      const platformCommission = centroGross * (platformRate / 100);
+      const centroNet = centroGross - platformCommission;
+      return { ownerPayout, centroGross, platformCommission, centroNet };
+    } else {
+      const platformCommission = price * (platformRate / 100);
+      const centroNet = price - platformCommission;
+      return { ownerPayout: 0, centroGross: price, platformCommission, centroNet };
+    }
+  }, [formData.price, formData.sale_type, formData.owner_split_percentage, formData.centro_split_percentage]);
+
   const resetForm = () => {
     setFormData({
       device_type: "Smartphone",
@@ -473,6 +550,9 @@ export default function CentroUsato() {
       description: "",
       warranty_months: "0",
       source: "acquisto",
+      sale_type: "acquistato",
+      owner_split_percentage: 60,
+      centro_split_percentage: 40,
     });
     setEditingDevice(null);
     setUploadedPhotos([]);
@@ -483,6 +563,25 @@ export default function CentroUsato() {
     setPriceEstimate(null);
     setAllStorageEstimates(null);
     setSelectedStorageOption(null);
+    setSelectedCustomer(null);
+    setCustomerSearch("");
+    setCustomerSearchResults([]);
+  };
+
+  // Mark device as sold
+  const handleMarkAsSold = async (deviceId: string) => {
+    if (!confirm("Confermare la vendita di questo dispositivo?")) return;
+    try {
+      const { error } = await supabase
+        .from("used_devices")
+        .update({ status: "sold" })
+        .eq("id", deviceId);
+      if (error) throw error;
+      toast({ title: "Dispositivo venduto!", description: "I margini sono stati calcolati automaticamente." });
+      fetchDevices();
+    } catch (error: any) {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    }
   };
   
   // Apply price from grade selection
@@ -559,6 +658,9 @@ export default function CentroUsato() {
       description: device.description || "",
       warranty_months: device.warranty_months?.toString() || "0",
       source: device.source,
+      sale_type: device.sale_type || "acquistato",
+      owner_split_percentage: device.owner_split_percentage || 60,
+      centro_split_percentage: device.centro_split_percentage || 40,
     });
     setUploadedPhotos(device.photos || []);
     setEditingDevice(device);
@@ -1058,6 +1160,207 @@ export default function CentroUsato() {
                   </div>
                 </div>
 
+                {/* Sale Type Section */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium flex items-center gap-1.5">
+                    <Handshake className="h-3.5 w-3.5 text-primary" />
+                    Tipo Vendita
+                  </Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {saleTypeOptions.map((type) => {
+                      const Icon = type.icon;
+                      const isSelected = formData.sale_type === type.value;
+                      return (
+                        <button
+                          key={type.value}
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, sale_type: type.value }))}
+                          className={`
+                            flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                            ${isSelected 
+                              ? "border-primary bg-primary/10 text-primary" 
+                              : "border-border bg-card hover:border-primary/50 hover:bg-muted/50 text-muted-foreground"
+                            }
+                          `}
+                        >
+                          <Icon className={`h-5 w-5 mb-1 ${isSelected ? "text-primary" : ""}`} />
+                          <span className="text-xs font-medium">{type.label}</span>
+                          <span className="text-[9px] text-muted-foreground">{type.description}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Consignment Customer Selection */}
+                <AnimatePresence>
+                  {formData.sale_type === "conto_vendita" && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="space-y-4"
+                    >
+                      {/* Customer Search */}
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium flex items-center gap-1">
+                          <User className="h-3 w-3 text-primary" />
+                          Cliente Proprietario *
+                        </Label>
+                        {selectedCustomer ? (
+                          <Card className="p-3 bg-muted/50">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-medium text-sm">{selectedCustomer.name}</p>
+                                <p className="text-xs text-muted-foreground">{selectedCustomer.phone} • {selectedCustomer.email}</p>
+                              </div>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => { setSelectedCustomer(null); setCustomerSearch(""); }}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </Card>
+                        ) : (
+                          <div className="relative">
+                            <Input
+                              value={customerSearch}
+                              onChange={e => setCustomerSearch(e.target.value)}
+                              placeholder="Cerca cliente per nome, telefono o email..."
+                              className="h-10"
+                            />
+                            {searchingCustomers && (
+                              <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                            )}
+                            {customerSearchResults.length > 0 && (
+                              <div className="absolute z-10 w-full mt-1 bg-popover border rounded-md shadow-lg">
+                                {customerSearchResults.map((customer) => (
+                                  <button
+                                    key={customer.id}
+                                    type="button"
+                                    onClick={() => { setSelectedCustomer(customer); setCustomerSearch(""); setCustomerSearchResults([]); }}
+                                    className="w-full px-3 py-2 text-left hover:bg-muted transition-colors first:rounded-t-md last:rounded-b-md"
+                                  >
+                                    <p className="font-medium text-sm">{customer.name}</p>
+                                    <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Split Percentage Slider */}
+                      <div className="space-y-3">
+                        <Label className="text-xs font-medium flex items-center gap-1">
+                          <Percent className="h-3 w-3 text-primary" />
+                          Divisione Ricavo
+                        </Label>
+                        <div className="space-y-4">
+                          <Slider
+                            value={[formData.owner_split_percentage]}
+                            onValueChange={([value]) => setFormData(prev => ({ 
+                              ...prev, 
+                              owner_split_percentage: value,
+                              centro_split_percentage: 100 - value
+                            }))}
+                            min={10}
+                            max={90}
+                            step={5}
+                            className="w-full"
+                          />
+                          <div className="flex justify-between text-sm">
+                            <div className="text-center">
+                              <p className="font-bold text-lg text-primary">{formData.owner_split_percentage}%</p>
+                              <p className="text-xs text-muted-foreground">Cliente</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="font-bold text-lg text-success">{formData.centro_split_percentage}%</p>
+                              <p className="text-xs text-muted-foreground">Centro</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Margin Preview */}
+                      {formData.price && (
+                        <Card className="p-3 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Calculator className="h-4 w-4 text-success" />
+                            <span className="text-sm font-medium">Anteprima Vendita</span>
+                          </div>
+                          {(() => {
+                            const preview = calculateSplitPreview();
+                            if (!preview) return null;
+                            return (
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="flex justify-between p-2 bg-background/50 rounded">
+                                  <span className="text-muted-foreground">Cliente riceve:</span>
+                                  <span className="font-bold text-primary">€{preview.ownerPayout.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between p-2 bg-background/50 rounded">
+                                  <span className="text-muted-foreground">Quota Centro:</span>
+                                  <span className="font-medium">€{preview.centroGross.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between p-2 bg-background/50 rounded">
+                                  <span className="text-muted-foreground">Comm. Piattaforma:</span>
+                                  <span className="font-medium text-destructive">-€{preview.platformCommission.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between p-2 bg-success/10 rounded border border-success/20">
+                                  <span className="text-muted-foreground">Tuo Netto:</span>
+                                  <span className="font-bold text-success">€{preview.centroNet.toFixed(2)}</span>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </Card>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Non-consignment margin preview */}
+                <AnimatePresence>
+                  {formData.sale_type !== "conto_vendita" && formData.price && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      <Card className="p-3 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Calculator className="h-4 w-4 text-success" />
+                          <span className="text-sm font-medium">Anteprima Margine</span>
+                        </div>
+                        {(() => {
+                          const preview = calculateSplitPreview();
+                          if (!preview) return null;
+                          return (
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div className="flex justify-between p-2 bg-background/50 rounded">
+                                <span className="text-muted-foreground">Prezzo vendita:</span>
+                                <span className="font-medium">€{parseFloat(formData.price).toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between p-2 bg-background/50 rounded">
+                                <span className="text-muted-foreground">Comm. Piattaforma (20%):</span>
+                                <span className="font-medium text-destructive">-€{preview.platformCommission.toFixed(2)}</span>
+                              </div>
+                              <div className="col-span-2 flex justify-between p-2 bg-success/10 rounded border border-success/20">
+                                <span className="text-muted-foreground">Tuo Netto:</span>
+                                <span className="font-bold text-success">€{preview.centroNet.toFixed(2)}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </Card>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Description */}
                 <div className="space-y-1.5">
                   <Label htmlFor="description" className="text-xs font-medium text-muted-foreground">Descrizione</Label>
@@ -1244,10 +1547,10 @@ export default function CentroUsato() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Dispositivo</TableHead>
+                    <TableHead>Tipo Vendita</TableHead>
                     <TableHead>Condizione</TableHead>
                     <TableHead>Prezzo</TableHead>
                     <TableHead>Stato</TableHead>
-                    <TableHead>Visite</TableHead>
                     <TableHead className="text-right">Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -1263,13 +1566,34 @@ export default function CentroUsato() {
                         </div>
                       </TableCell>
                       <TableCell>
+                        <Badge 
+                          variant={device.sale_type === "conto_vendita" ? "default" : "secondary"}
+                          className={device.sale_type === "conto_vendita" ? "bg-primary/20 text-primary border-primary/30" : ""}
+                        >
+                          {saleTypeOptions.find(s => s.value === device.sale_type)?.label || "Acquistato"}
+                        </Badge>
+                        {device.sale_type === "conto_vendita" && device.status === "sold" && device.owner_payout > 0 && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            Cliente: €{device.owner_payout?.toFixed(2)}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <Badge variant="outline">
                           {conditionOptions.find(c => c.value === device.condition)?.label}
                         </Badge>
                       </TableCell>
-                      <TableCell>€{device.price.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">€{device.price.toLocaleString()}</p>
+                          {device.status === "sold" && device.centro_net_margin > 0 && (
+                            <p className="text-[10px] text-success font-medium">
+                              Netto: €{device.centro_net_margin?.toFixed(2)}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{getStatusBadge(device.status)}</TableCell>
-                      <TableCell>{device.views_count || 0}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
                           {device.status === "draft" && (
@@ -1278,12 +1602,20 @@ export default function CentroUsato() {
                               Pubblica
                             </Button>
                           )}
+                          {(device.status === "published" || device.status === "reserved") && (
+                            <Button size="sm" variant="default" onClick={() => handleMarkAsSold(device.id)} className="gap-1 bg-success hover:bg-success/90">
+                              <DollarSign className="h-3 w-3" />
+                              Venduto
+                            </Button>
+                          )}
                           <Button size="icon" variant="ghost" onClick={() => handleEdit(device)}>
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(device.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {device.status !== "sold" && (
+                            <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(device.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
