@@ -86,6 +86,18 @@ interface DetectedDeviceInfo {
   };
 }
 
+// Price estimate interface
+interface PriceEstimate {
+  originalPrice: number;
+  grades: {
+    B: number;
+    A: number;
+    AA: number;
+    AAA: number;
+  };
+  notes?: string;
+}
+
 // Generate fallback image URLs based on brand
 const getFallbackImageUrls = (brand: string): string[] => {
   const normalizedBrand = brand.toLowerCase().trim();
@@ -148,6 +160,10 @@ export default function CentroUsato() {
   const [imageError, setImageError] = useState(false);
   const [fallbackIndex, setFallbackIndex] = useState(0);
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
+  
+  // Price estimate state
+  const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
+  const [isEstimating, setIsEstimating] = useState(false);
 
   const [formData, setFormData] = useState({
     device_type: "Smartphone",
@@ -290,6 +306,7 @@ export default function CentroUsato() {
   const lookupDevice = useCallback(async () => {
     if (!formData.brand.trim() || !formData.model.trim()) {
       setDetectedDevice(null);
+      setPriceEstimate(null);
       return;
     }
     
@@ -325,16 +342,47 @@ export default function CentroUsato() {
       setIsLookingUp(false);
     }
   }, [formData.brand, formData.model, formData.storage_capacity]);
+  
+  // Auto-estimate price when brand and model change
+  const estimatePrice = useCallback(async () => {
+    if (!formData.brand.trim() || !formData.model.trim()) {
+      setPriceEstimate(null);
+      return;
+    }
+    
+    setIsEstimating(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('estimate-used-price', {
+        body: { 
+          brand: formData.brand, 
+          model: formData.model,
+          storage: formData.storage_capacity || undefined
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.estimate) {
+        setPriceEstimate(data.estimate);
+      }
+    } catch (error) {
+      console.error('Price estimate error:', error);
+    } finally {
+      setIsEstimating(false);
+    }
+  }, [formData.brand, formData.model, formData.storage_capacity]);
 
-  // Debounced device lookup
+  // Debounced device lookup and price estimate
   useEffect(() => {
     const timer = setTimeout(() => {
       if (formData.brand && formData.model && !editingDevice) {
         lookupDevice();
+        estimatePrice();
       }
     }, 800);
     return () => clearTimeout(timer);
-  }, [formData.brand, formData.model, lookupDevice, editingDevice]);
+  }, [formData.brand, formData.model, lookupDevice, estimatePrice, editingDevice]);
 
   // Image error handling with fallbacks
   const handleImageError = () => {
@@ -374,6 +422,27 @@ export default function CentroUsato() {
     setCurrentImageUrl(null);
     setImageError(false);
     setFallbackIndex(0);
+    setPriceEstimate(null);
+  };
+  
+  // Apply price from grade selection
+  const applyGradePrice = (grade: 'B' | 'A' | 'AA' | 'AAA') => {
+    if (!priceEstimate) return;
+    const price = priceEstimate.grades[grade];
+    setFormData(prev => ({ 
+      ...prev, 
+      price: price.toString(),
+      original_price: priceEstimate.originalPrice?.toString() || prev.original_price
+    }));
+    
+    // Also update condition based on grade
+    const conditionMap: Record<string, string> = {
+      'B': 'usato_discreto',
+      'A': 'usato_buono',
+      'AA': 'usato_ottimo',
+      'AAA': 'ricondizionato'
+    };
+    setFormData(prev => ({ ...prev, condition: conditionMap[grade] }));
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -691,6 +760,87 @@ export default function CentroUsato() {
                             </div>
                           </div>
                         )}
+                      </Card>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* AI Price Estimate Card */}
+                <AnimatePresence>
+                  {(priceEstimate || isEstimating) && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                    >
+                      <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Euro className="h-4 w-4 text-success" />
+                            <span className="text-sm font-medium">Valutazione AI</span>
+                            {isEstimating && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                          </div>
+                          
+                          {isEstimating ? (
+                            <div className="grid grid-cols-4 gap-2">
+                              {['B', 'A', 'AA', 'AAA'].map((g) => (
+                                <Skeleton key={g} className="h-16 rounded-lg" />
+                              ))}
+                            </div>
+                          ) : priceEstimate && (
+                            <>
+                              <div className="grid grid-cols-4 gap-2">
+                                {(['B', 'A', 'AA', 'AAA'] as const).map((grade) => {
+                                  const gradeColors = {
+                                    B: 'from-orange-500/10 to-orange-500/20 border-orange-500/30 hover:border-orange-500',
+                                    A: 'from-yellow-500/10 to-yellow-500/20 border-yellow-500/30 hover:border-yellow-500',
+                                    AA: 'from-emerald-500/10 to-emerald-500/20 border-emerald-500/30 hover:border-emerald-500',
+                                    AAA: 'from-primary/10 to-primary/20 border-primary/30 hover:border-primary'
+                                  };
+                                  const gradeLabels = {
+                                    B: 'Discreto',
+                                    A: 'Buono',
+                                    AA: 'Ottimo',
+                                    AAA: 'Come Nuovo'
+                                  };
+                                  return (
+                                    <button
+                                      key={grade}
+                                      type="button"
+                                      onClick={() => applyGradePrice(grade)}
+                                      className={`
+                                        flex flex-col items-center justify-center p-2 rounded-lg border-2 
+                                        bg-gradient-to-br ${gradeColors[grade]} transition-all cursor-pointer
+                                      `}
+                                    >
+                                      <span className="text-xs font-bold">{grade}</span>
+                                      <span className="text-lg font-bold text-foreground">
+                                        €{priceEstimate.grades[grade]}
+                                      </span>
+                                      <span className="text-[9px] text-muted-foreground">{gradeLabels[grade]}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              
+                              {priceEstimate.originalPrice && (
+                                <p className="text-[10px] text-muted-foreground text-center">
+                                  Prezzo nuovo: €{priceEstimate.originalPrice}
+                                </p>
+                              )}
+                              
+                              {priceEstimate.notes && (
+                                <p className="text-[10px] text-muted-foreground italic text-center border-t pt-2 mt-2">
+                                  {priceEstimate.notes}
+                                </p>
+                              )}
+                              
+                              <p className="text-[9px] text-muted-foreground/70 text-center">
+                                Clicca su un grado per applicare il prezzo suggerito
+                              </p>
+                            </>
+                          )}
+                        </div>
                       </Card>
                     </motion.div>
                   )}
