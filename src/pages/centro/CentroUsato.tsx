@@ -86,8 +86,8 @@ interface DetectedDeviceInfo {
   };
 }
 
-// Price estimate interface
-interface PriceEstimate {
+// Price estimate interface for single storage
+interface SinglePriceEstimate {
   originalPrice: number;
   grades: {
     B: number;
@@ -97,6 +97,14 @@ interface PriceEstimate {
   };
   notes?: string;
 }
+
+// Multi-storage price estimates
+interface MultiStoragePriceEstimate {
+  [storageKey: string]: SinglePriceEstimate;
+}
+
+// Combined type
+type PriceEstimateData = SinglePriceEstimate | MultiStoragePriceEstimate;
 
 // Generate fallback image URLs based on brand
 const getFallbackImageUrls = (brand: string): string[] => {
@@ -162,7 +170,9 @@ export default function CentroUsato() {
   const [currentImageUrl, setCurrentImageUrl] = useState<string | null>(null);
   
   // Price estimate state
-  const [priceEstimate, setPriceEstimate] = useState<PriceEstimate | null>(null);
+  const [priceEstimate, setPriceEstimate] = useState<SinglePriceEstimate | null>(null);
+  const [allStorageEstimates, setAllStorageEstimates] = useState<MultiStoragePriceEstimate | null>(null);
+  const [selectedStorageOption, setSelectedStorageOption] = useState<string | null>(null);
   const [isEstimating, setIsEstimating] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -347,6 +357,8 @@ export default function CentroUsato() {
   const estimatePrice = useCallback(async () => {
     if (!formData.brand.trim() || !formData.model.trim()) {
       setPriceEstimate(null);
+      setAllStorageEstimates(null);
+      setSelectedStorageOption(null);
       return;
     }
     
@@ -357,31 +369,44 @@ export default function CentroUsato() {
         body: { 
           brand: formData.brand, 
           model: formData.model,
-          storage: formData.storage_capacity || undefined
+          storage: undefined // Don't pass storage to get all options
         }
       });
       
       if (error) throw error;
       
       if (data?.estimate) {
-        let estimate = data.estimate;
+        const estimate = data.estimate;
         
-        // Handle nested structure by storage (AI sometimes returns per-storage estimates)
+        // Check if it's a multi-storage structure
         if (!estimate.grades && typeof estimate === 'object') {
-          // Check if it's a nested structure with storage keys
           const keys = Object.keys(estimate);
-          const storageKey = formData.storage_capacity || keys[0];
-          if (storageKey && estimate[storageKey]?.grades) {
-            estimate = estimate[storageKey];
+          const hasValidStorageKeys = keys.some(key => estimate[key]?.grades);
+          
+          if (hasValidStorageKeys) {
+            // Multi-storage response
+            setAllStorageEstimates(estimate as MultiStoragePriceEstimate);
+            
+            // Select the matching storage or first available
+            const matchingKey = formData.storage_capacity 
+              ? keys.find(k => k.toLowerCase().includes(formData.storage_capacity.toLowerCase()))
+              : null;
+            const selectedKey = matchingKey || keys[0];
+            setSelectedStorageOption(selectedKey);
+            setPriceEstimate(estimate[selectedKey]);
+            return;
           }
         }
         
-        // Only set if valid structure with grades
+        // Single storage response
         if (estimate?.grades?.B !== undefined) {
+          setAllStorageEstimates(null);
+          setSelectedStorageOption(null);
           setPriceEstimate(estimate);
         } else {
           console.warn('Invalid price estimate structure:', estimate);
           setPriceEstimate(null);
+          setAllStorageEstimates(null);
         }
       }
     } catch (error) {
@@ -390,6 +415,16 @@ export default function CentroUsato() {
       setIsEstimating(false);
     }
   }, [formData.brand, formData.model, formData.storage_capacity]);
+  
+  // Handle storage option selection
+  const selectStorageOption = (storageKey: string) => {
+    setSelectedStorageOption(storageKey);
+    if (allStorageEstimates?.[storageKey]) {
+      setPriceEstimate(allStorageEstimates[storageKey]);
+      // Also update the form storage capacity
+      setFormData(prev => ({ ...prev, storage_capacity: storageKey }));
+    }
+  };
 
   // Debounced device lookup and price estimate
   useEffect(() => {
@@ -441,6 +476,8 @@ export default function CentroUsato() {
     setImageError(false);
     setFallbackIndex(0);
     setPriceEstimate(null);
+    setAllStorageEstimates(null);
+    setSelectedStorageOption(null);
   };
   
   // Apply price from grade selection
@@ -800,62 +837,94 @@ export default function CentroUsato() {
                           </div>
                           
                           {isEstimating ? (
-                            <div className="grid grid-cols-4 gap-2">
-                              {['B', 'A', 'AA', 'AAA'].map((g) => (
-                                <Skeleton key={g} className="h-16 rounded-lg" />
-                              ))}
-                            </div>
-                          ) : priceEstimate?.grades && (
-                            <>
+                            <div className="space-y-3">
+                              <div className="flex gap-2">
+                                {[1, 2, 3].map((i) => (
+                                  <Skeleton key={i} className="h-8 w-16 rounded-full" />
+                                ))}
+                              </div>
                               <div className="grid grid-cols-4 gap-2">
-                                {(['B', 'A', 'AA', 'AAA'] as const).map((grade) => {
-                                  const gradeColors = {
-                                    B: 'from-orange-500/10 to-orange-500/20 border-orange-500/30 hover:border-orange-500',
-                                    A: 'from-yellow-500/10 to-yellow-500/20 border-yellow-500/30 hover:border-yellow-500',
-                                    AA: 'from-emerald-500/10 to-emerald-500/20 border-emerald-500/30 hover:border-emerald-500',
-                                    AAA: 'from-primary/10 to-primary/20 border-primary/30 hover:border-primary'
-                                  };
-                                  const gradeLabels = {
-                                    B: 'Discreto',
-                                    A: 'Buono',
-                                    AA: 'Ottimo',
-                                    AAA: 'Come Nuovo'
-                                  };
-                                  return (
+                                {['B', 'A', 'AA', 'AAA'].map((g) => (
+                                  <Skeleton key={g} className="h-16 rounded-lg" />
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              {/* Storage Options Tabs */}
+                              {allStorageEstimates && Object.keys(allStorageEstimates).length > 1 && (
+                                <div className="flex flex-wrap gap-1.5 mb-3">
+                                  {Object.keys(allStorageEstimates).map((storageKey) => (
                                     <button
-                                      key={grade}
+                                      key={storageKey}
                                       type="button"
-                                      onClick={() => applyGradePrice(grade)}
+                                      onClick={() => selectStorageOption(storageKey)}
                                       className={`
-                                        flex flex-col items-center justify-center p-2 rounded-lg border-2 
-                                        bg-gradient-to-br ${gradeColors[grade]} transition-all cursor-pointer
+                                        px-3 py-1.5 rounded-full text-xs font-medium transition-all
+                                        ${selectedStorageOption === storageKey 
+                                          ? 'bg-primary text-primary-foreground shadow-sm' 
+                                          : 'bg-muted hover:bg-muted/80 text-muted-foreground'}
                                       `}
                                     >
-                                      <span className="text-xs font-bold">{grade}</span>
-                                      <span className="text-lg font-bold text-foreground">
-                                        €{priceEstimate.grades[grade]}
-                                      </span>
-                                      <span className="text-[9px] text-muted-foreground">{gradeLabels[grade]}</span>
+                                      {storageKey}
                                     </button>
-                                  );
-                                })}
-                              </div>
-                              
-                              {priceEstimate.originalPrice && (
-                                <p className="text-[10px] text-muted-foreground text-center">
-                                  Prezzo nuovo: €{priceEstimate.originalPrice}
-                                </p>
+                                  ))}
+                                </div>
                               )}
                               
-                              {priceEstimate.notes && (
-                                <p className="text-[10px] text-muted-foreground italic text-center border-t pt-2 mt-2">
-                                  {priceEstimate.notes}
-                                </p>
+                              {priceEstimate?.grades && (
+                                <>
+                                  <div className="grid grid-cols-4 gap-2">
+                                    {(['B', 'A', 'AA', 'AAA'] as const).map((grade) => {
+                                      const gradeColors = {
+                                        B: 'from-orange-500/10 to-orange-500/20 border-orange-500/30 hover:border-orange-500',
+                                        A: 'from-yellow-500/10 to-yellow-500/20 border-yellow-500/30 hover:border-yellow-500',
+                                        AA: 'from-emerald-500/10 to-emerald-500/20 border-emerald-500/30 hover:border-emerald-500',
+                                        AAA: 'from-primary/10 to-primary/20 border-primary/30 hover:border-primary'
+                                      };
+                                      const gradeLabels = {
+                                        B: 'Discreto',
+                                        A: 'Buono',
+                                        AA: 'Ottimo',
+                                        AAA: 'Come Nuovo'
+                                      };
+                                      return (
+                                        <button
+                                          key={grade}
+                                          type="button"
+                                          onClick={() => applyGradePrice(grade)}
+                                          className={`
+                                            flex flex-col items-center justify-center p-2 rounded-lg border-2 
+                                            bg-gradient-to-br ${gradeColors[grade]} transition-all cursor-pointer
+                                          `}
+                                        >
+                                          <span className="text-xs font-bold">{grade}</span>
+                                          <span className="text-lg font-bold text-foreground">
+                                            €{priceEstimate.grades[grade]}
+                                          </span>
+                                          <span className="text-[9px] text-muted-foreground">{gradeLabels[grade]}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                  
+                                  {priceEstimate.originalPrice && (
+                                    <p className="text-[10px] text-muted-foreground text-center">
+                                      Prezzo nuovo: €{priceEstimate.originalPrice}
+                                    </p>
+                                  )}
+                                  
+                                  {priceEstimate.notes && (
+                                    <p className="text-[10px] text-muted-foreground italic text-center border-t pt-2 mt-2">
+                                      {priceEstimate.notes}
+                                    </p>
+                                  )}
+                                  
+                                  <p className="text-[9px] text-muted-foreground/70 text-center">
+                                    {allStorageEstimates ? 'Seleziona storage e clicca su un grado per applicare' : 'Clicca su un grado per applicare il prezzo suggerito'}
+                                  </p>
+                                </>
                               )}
-                              
-                              <p className="text-[9px] text-muted-foreground/70 text-center">
-                                Clicca su un grado per applicare il prezzo suggerito
-                              </p>
                             </>
                           )}
                         </div>
