@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CentroLayout } from "@/layouts/CentroLayout";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +47,9 @@ import {
   Upload,
   Smartphone,
   AlertCircle,
+  X,
+  Image as ImageIcon,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -77,6 +80,9 @@ export default function CentroUsato() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDevice, setEditingDevice] = useState<any>(null);
   const [formLoading, setFormLoading] = useState(false);
+  const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     device_type: "Smartphone",
@@ -177,6 +183,7 @@ export default function CentroUsato() {
         warranty_months: parseInt(formData.warranty_months) || 0,
         source: formData.source as "riparazione_alienata" | "permuta" | "acquisto" | "ricondizionato",
         status: "draft" as const,
+        photos: uploadedPhotos.length > 0 ? uploadedPhotos : null,
       };
 
       if (editingDevice) {
@@ -219,6 +226,48 @@ export default function CentroUsato() {
       source: "acquisto",
     });
     setEditingDevice(null);
+    setUploadedPhotos([]);
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingPhoto(true);
+    try {
+      const newPhotos: string[] = [];
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `${centroId}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('used-device-photos')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('used-device-photos')
+          .getPublicUrl(filePath);
+
+        newPhotos.push(urlData.publicUrl);
+      }
+
+      setUploadedPhotos(prev => [...prev, ...newPhotos]);
+      toast({ title: `${newPhotos.length} foto caricate` });
+    } catch (error: any) {
+      toast({ title: "Errore upload", description: error.message, variant: "destructive" });
+    } finally {
+      setUploadingPhoto(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removePhoto = (photoUrl: string) => {
+    setUploadedPhotos(prev => prev.filter(p => p !== photoUrl));
   };
 
   const handleEdit = (device: any) => {
@@ -235,6 +284,7 @@ export default function CentroUsato() {
       warranty_months: device.warranty_months?.toString() || "0",
       source: device.source,
     });
+    setUploadedPhotos(device.photos || []);
     setEditingDevice(device);
     setDialogOpen(true);
   };
@@ -413,6 +463,56 @@ export default function CentroUsato() {
                 <div className="space-y-2">
                   <Label>Descrizione</Label>
                   <Textarea value={formData.description} onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))} rows={3} />
+                </div>
+
+                {/* Photo Upload Section */}
+                <div className="space-y-3">
+                  <Label>Foto Dispositivo</Label>
+                  <div className="flex flex-wrap gap-3">
+                    {uploadedPhotos.map((photo, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={photo}
+                          alt={`Foto ${index + 1}`}
+                          className="w-20 h-20 object-cover rounded-lg border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(photo)}
+                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploadingPhoto}
+                      className="w-20 h-20 border-2 border-dashed border-muted-foreground/30 rounded-lg flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-muted/50 transition-colors disabled:opacity-50"
+                    >
+                      {uploadingPhoto ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      ) : (
+                        <>
+                          <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-[10px] text-muted-foreground">Aggiungi</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handlePhotoUpload}
+                    className="hidden"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Carica fino a 5 foto del dispositivo. La prima sarà l'immagine principale.
+                  </p>
                 </div>
 
                 <div className="flex justify-end gap-2">
