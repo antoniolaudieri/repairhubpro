@@ -46,9 +46,11 @@ export function useCustomerDisplay(centroId: string | null) {
   useEffect(() => {
     if (!centroId) return;
 
+    console.log('[CustomerDisplay] Initializing channel for centro:', centroId);
+    
     const channel = supabase.channel(`display-${centroId}`, {
       config: {
-        broadcast: { self: false }
+        broadcast: { self: false, ack: true }
       }
     });
     
@@ -56,12 +58,17 @@ export function useCustomerDisplay(centroId: string | null) {
       console.log('[CustomerDisplay] Channel status:', status);
       if (status === 'SUBSCRIBED') {
         isSubscribedRef.current = true;
+        console.log('[CustomerDisplay] Channel subscribed successfully');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error('[CustomerDisplay] Channel error');
+        isSubscribedRef.current = false;
       }
     });
 
     channelRef.current = channel;
 
     return () => {
+      console.log('[CustomerDisplay] Cleaning up channel');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -73,28 +80,38 @@ export function useCustomerDisplay(centroId: string | null) {
   // Helper to send broadcast with retry
   const sendBroadcast = useCallback(async (event: string, payload: any = {}) => {
     if (!channelRef.current) {
-      console.warn('[CustomerDisplay] No channel available');
-      return;
+      console.warn('[CustomerDisplay] No channel available for event:', event);
+      return false;
     }
 
     // Wait for subscription if not ready
     let retries = 0;
-    while (!isSubscribedRef.current && retries < 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+    const maxRetries = 20;
+    while (!isSubscribedRef.current && retries < maxRetries) {
+      console.log('[CustomerDisplay] Waiting for subscription... attempt:', retries + 1);
+      await new Promise(resolve => setTimeout(resolve, 150));
       retries++;
     }
 
     if (!isSubscribedRef.current) {
-      console.warn('[CustomerDisplay] Channel not subscribed after retries');
-      return;
+      console.error('[CustomerDisplay] Channel not subscribed after', maxRetries, 'retries for event:', event);
+      return false;
     }
 
-    console.log('[CustomerDisplay] Sending event:', event, payload);
-    await channelRef.current.send({
-      type: 'broadcast',
-      event,
-      payload
-    });
+    console.log('[CustomerDisplay] Sending event:', event, 'payload:', JSON.stringify(payload).substring(0, 200));
+    
+    try {
+      const result = await channelRef.current.send({
+        type: 'broadcast',
+        event,
+        payload
+      });
+      console.log('[CustomerDisplay] Send result:', result);
+      return result === 'ok';
+    } catch (error) {
+      console.error('[CustomerDisplay] Error sending broadcast:', error);
+      return false;
+    }
   }, []);
 
   const startIntakeSession = useCallback(async (data: IntakeSessionData) => {
