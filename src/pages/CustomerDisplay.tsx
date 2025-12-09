@@ -166,6 +166,7 @@ export default function CustomerDisplay() {
   const [centroLogo, setCentroLogo] = useState<string | null>(null);
   const [centroName, setCentroName] = useState<string>("");
   const [privacyConsent, setPrivacyConsent] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const sigCanvas = useRef<SignatureCanvas>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -292,15 +293,21 @@ export default function CustomerDisplay() {
         })
         .subscribe((status) => {
           console.log('[CustomerDisplay] Subscription status:', status);
-          if (status === 'CHANNEL_ERROR' && isActive) {
+          if (status === 'SUBSCRIBED') {
+            setConnectionStatus('connected');
+          } else if (status === 'CHANNEL_ERROR' && isActive) {
+            setConnectionStatus('disconnected');
             console.log('[CustomerDisplay] Channel error, reconnecting in 2s...');
             reconnectTimeout = setTimeout(() => {
+              setConnectionStatus('connecting');
               supabase.removeChannel(channel);
               channel = supabase.channel(`display-${centroId}`, {
                 config: { broadcast: { self: false, ack: true } }
               });
               setupChannel();
             }, 2000);
+          } else if (status === 'CLOSED') {
+            setConnectionStatus('disconnected');
           }
         });
     };
@@ -431,6 +438,21 @@ export default function CustomerDisplay() {
     }
   };
 
+  const ConnectionIndicator = () => (
+    <div className="fixed top-3 left-3 z-50 flex items-center gap-2 bg-black/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+      <div className={`w-2.5 h-2.5 rounded-full ${
+        connectionStatus === 'connected' 
+          ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
+          : connectionStatus === 'connecting'
+          ? 'bg-yellow-500 animate-pulse shadow-[0_0_8px_rgba(234,179,8,0.6)]'
+          : 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+      }`} />
+      <span className="text-xs text-white/80 font-medium">
+        {connectionStatus === 'connected' ? 'Connesso' : connectionStatus === 'connecting' ? 'Connessione...' : 'Disconnesso'}
+      </span>
+    </div>
+  );
+
   const FullscreenButton = () => (
     <Button
       variant="ghost"
@@ -467,6 +489,7 @@ export default function CustomerDisplay() {
     
     return (
       <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6 overflow-hidden">
+        <ConnectionIndicator />
         <FullscreenButton />
         
         {/* Animated background elements */}
@@ -595,6 +618,7 @@ export default function CustomerDisplay() {
   if (mode === "completed") {
     return (
       <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-emerald-950 via-green-900 to-teal-950 flex items-center justify-center p-8 overflow-hidden">
+        <ConnectionIndicator />
         <FullscreenButton />
         
         {/* Animated background */}
@@ -648,6 +672,7 @@ export default function CustomerDisplay() {
   // ============ ACTIVE SESSION MODES ============
   return (
     <div ref={containerRef} className="h-screen overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      <ConnectionIndicator />
       <FullscreenButton />
       
       {session && (
