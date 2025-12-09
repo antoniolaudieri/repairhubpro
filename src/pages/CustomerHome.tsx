@@ -54,6 +54,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { BookingWizard, CustomerData } from "@/components/booking/BookingWizard";
+import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
 import { format } from "date-fns";
 
 // Floating device icons component
@@ -802,6 +803,9 @@ export default function CustomerHome() {
           </motion.div>
         </div>
       </section>
+
+      {/* Used Devices Carousel */}
+      <UsedDevicesCarousel />
 
       {/* Services Section - Bento Grid */}
       <section className="py-20 sm:py-28 relative">

@@ -16,7 +16,8 @@ import {
   Settings2,
   PlusCircle,
   Store,
-  Bell
+  Bell,
+  Smartphone
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -55,6 +56,7 @@ const menuItems = [
   { title: "Listino Prezzi", url: "/centro/listino", icon: Settings2 },
   { title: "Collaboratori", url: "/centro/collaboratori", icon: Users },
   { title: "Accessi Condivisi", url: "/centro/accessi", icon: Share2 },
+  { title: "Usato", url: "/centro/usato", icon: Smartphone },
   { title: "Commissioni", url: "/centro/commissioni", icon: DollarSign },
   { title: "Impostazioni", url: "/centro/impostazioni", icon: Settings },
 ];

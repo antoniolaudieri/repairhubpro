@@ -47,6 +47,9 @@ import CentroListino from "@/pages/centro/CentroListino";
 import CentroNuovoRitiro from "@/pages/centro/CentroNuovoRitiro";
 import CentroClienteDetail from "@/pages/centro/CentroClienteDetail";
 import CentroTrovaPartner from "@/pages/centro/CentroTrovaPartner";
+import CentroUsato from "@/pages/centro/CentroUsato";
+import UsatoCatalog from "@/pages/UsatoCatalog";
+import UsatoDetail from "@/pages/UsatoDetail";
 // Admin pages
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminCorners from "@/pages/admin/AdminCorners";
@@ -386,6 +389,17 @@ export const AnimatedRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/centro/usato"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroUsato />
+            </ProtectedRoute>
+          }
+        />
+        {/* Public Usato Routes */}
+        <Route path="/usato" element={<PageTransition><UsatoCatalog /></PageTransition>} />
+        <Route path="/usato/:id" element={<PageTransition><UsatoDetail /></PageTransition>} />
         {/* Technician Routes */}
         <Route
           path="/dashboard"
