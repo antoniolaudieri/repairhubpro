@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.search-phone-shops]
 verify_jwt = false
+
+[functions.notify-device-interest]
+verify_jwt = false
+
+[functions.estimate-used-price]
+verify_jwt = false
