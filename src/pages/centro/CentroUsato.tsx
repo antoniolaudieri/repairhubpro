@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CentroLayout } from "@/layouts/CentroLayout";
 import { supabase } from "@/integrations/supabase/client";
+import MarketPriceHistory from "@/components/centro/MarketPriceHistory";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -349,6 +350,25 @@ export default function CentroUsato() {
           .insert([deviceData]);
         if (error) throw error;
         toast({ title: "Dispositivo aggiunto" });
+        
+        // Save AI valuation to history if we have price estimates
+        if (priceEstimate?.grades && centroId) {
+          const storageToSave = selectedStorageOption || formData.storage_capacity || null;
+          await supabase.from("device_price_valuations").insert({
+            centro_id: centroId,
+            device_type: formData.device_type,
+            brand: formData.brand,
+            model: formData.model,
+            storage: storageToSave,
+            original_price: priceEstimate.originalPrice || null,
+            grade_b: priceEstimate.grades.B,
+            grade_a: priceEstimate.grades.A,
+            grade_aa: priceEstimate.grades.AA,
+            grade_aaa: priceEstimate.grades.AAA,
+            trend: priceEstimate.trend || null,
+            trend_reason: priceEstimate.trendReason || null,
+          });
+        }
       }
 
       setDialogOpen(false);
@@ -1540,6 +1560,7 @@ export default function CentroUsato() {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="market">Prezzi Mercato</TabsTrigger>
           </TabsList>
 
           <TabsContent value="devices" className="mt-4">
@@ -1701,6 +1722,10 @@ export default function CentroUsato() {
                 </TableBody>
               </Table>
             )}
+          </TabsContent>
+          
+          <TabsContent value="market" className="mt-4">
+            <MarketPriceHistory />
           </TabsContent>
         </Tabs>
       </div>

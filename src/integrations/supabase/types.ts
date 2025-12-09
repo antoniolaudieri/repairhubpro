@@ -639,6 +639,65 @@ export type Database = {
           },
         ]
       }
+      device_price_valuations: {
+        Row: {
+          brand: string
+          centro_id: string | null
+          created_at: string
+          device_type: string
+          grade_a: number | null
+          grade_aa: number | null
+          grade_aaa: number | null
+          grade_b: number | null
+          id: string
+          model: string
+          original_price: number | null
+          storage: string | null
+          trend: string | null
+          trend_reason: string | null
+        }
+        Insert: {
+          brand: string
+          centro_id?: string | null
+          created_at?: string
+          device_type?: string
+          grade_a?: number | null
+          grade_aa?: number | null
+          grade_aaa?: number | null
+          grade_b?: number | null
+          id?: string
+          model: string
+          original_price?: number | null
+          storage?: string | null
+          trend?: string | null
+          trend_reason?: string | null
+        }
+        Update: {
+          brand?: string
+          centro_id?: string | null
+          created_at?: string
+          device_type?: string
+          grade_a?: number | null
+          grade_aa?: number | null
+          grade_aaa?: number | null
+          grade_b?: number | null
+          id?: string
+          model?: string
+          original_price?: number | null
+          storage?: string | null
+          trend?: string | null
+          trend_reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_price_valuations_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       devices: {
         Row: {
           brand: string
