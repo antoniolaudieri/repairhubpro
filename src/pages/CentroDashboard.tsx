@@ -76,17 +76,14 @@ interface ForfeitureWarning {
   } | null;
 }
 
-interface WeeklyData {
-  day: string;
+interface ChartData {
+  label: string;
   riparazioni: number;
   completate: number;
+  guadagni: number;
 }
 
-interface DailyData {
-  hour: string;
-  riparazioni: number;
-  completate: number;
-}
+type ChartPeriod = 'today' | 'yesterday' | 'thisWeek' | 'lastWeek';
 
 export default function CentroDashboard() {
   const { user } = useAuth();
@@ -105,8 +102,9 @@ export default function CentroDashboard() {
   });
   const [recentRepairs, setRecentRepairs] = useState<RecentRepair[]>([]);
   const [forfeitureWarnings, setForfeitureWarnings] = useState<ForfeitureWarning[]>([]);
-  const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
-  const [dailyData, setDailyData] = useState<DailyData[]>([]);
+  const [weeklyData, setWeeklyData] = useState<ChartData[]>([]);
+  const [dailyData, setDailyData] = useState<ChartData[]>([]);
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('today');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -209,49 +207,91 @@ export default function CentroDashboard() {
     });
   };
 
-  const loadWeeklyData = async (centroId: string) => {
+  const loadWeeklyData = async (centroId: string, period: ChartPeriod = 'thisWeek') => {
     const days = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
     const today = new Date();
-    const weekAgo = new Date(today);
-    weekAgo.setDate(today.getDate() - 6);
+    let startDate: Date;
+    let endDate: Date = new Date(today);
+    
+    if (period === 'thisWeek') {
+      startDate = new Date(today);
+      startDate.setDate(today.getDate() - 6);
+    } else {
+      // lastWeek
+      endDate = new Date(today);
+      endDate.setDate(today.getDate() - 7);
+      startDate = new Date(endDate);
+      startDate.setDate(endDate.getDate() - 6);
+    }
 
     const { data: repairs } = await supabase
       .from("repairs")
-      .select("created_at, status, completed_at, device:devices!inner(customer:customers!inner(centro_id))")
+      .select("created_at, status, completed_at, final_cost, estimated_cost, device:devices!inner(customer:customers!inner(centro_id))")
       .eq("device.customer.centro_id", centroId)
-      .gte("created_at", weekAgo.toISOString());
+      .gte("created_at", startDate.toISOString())
+      .lte("created_at", endDate.toISOString());
 
-    const weekData: WeeklyData[] = [];
+    const { data: commissions } = await supabase
+      .from("commission_ledger")
+      .select("created_at, centro_commission")
+      .eq("centro_id", centroId)
+      .gte("created_at", startDate.toISOString())
+      .lte("created_at", endDate.toISOString());
+
+    const weekData: ChartData[] = [];
     for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
+      const date = new Date(period === 'thisWeek' ? today : endDate);
+      date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       const dayName = days[date.getDay()];
       
       const created = repairs?.filter(r => r.created_at.startsWith(dateStr)).length || 0;
       const completed = repairs?.filter(r => r.completed_at?.startsWith(dateStr)).length || 0;
+      const earnings = commissions?.filter(c => c.created_at.startsWith(dateStr))
+        .reduce((sum, c) => sum + (c.centro_commission || 0), 0) || 0;
       
       weekData.push({
-        day: dayName,
+        label: dayName,
         riparazioni: created,
-        completate: completed
+        completate: completed,
+        guadagni: Math.round(earnings * 100) / 100
       });
     }
     setWeeklyData(weekData);
   };
 
-  const loadDailyData = async (centroId: string) => {
+  const loadDailyData = async (centroId: string, period: ChartPeriod = 'today') => {
     const today = new Date();
-    const startOfDay = new Date(today);
+    let targetDate: Date;
+    
+    if (period === 'today') {
+      targetDate = new Date(today);
+    } else {
+      // yesterday
+      targetDate = new Date(today);
+      targetDate.setDate(today.getDate() - 1);
+    }
+    
+    const startOfDay = new Date(targetDate);
     startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
 
     const { data: repairs } = await supabase
       .from("repairs")
-      .select("created_at, status, completed_at, device:devices!inner(customer:customers!inner(centro_id))")
+      .select("created_at, status, completed_at, final_cost, estimated_cost, device:devices!inner(customer:customers!inner(centro_id))")
       .eq("device.customer.centro_id", centroId)
-      .gte("created_at", startOfDay.toISOString());
+      .gte("created_at", startOfDay.toISOString())
+      .lte("created_at", endOfDay.toISOString());
 
-    const hourlyData: DailyData[] = [];
+    const { data: commissions } = await supabase
+      .from("commission_ledger")
+      .select("created_at, centro_commission")
+      .eq("centro_id", centroId)
+      .gte("created_at", startOfDay.toISOString())
+      .lte("created_at", endOfDay.toISOString());
+
+    const hourlyData: ChartData[] = [];
     for (let h = 0; h <= 23; h++) {
       const hourStr = h.toString().padStart(2, '0');
       const hourLabel = `${hourStr}:00`;
@@ -266,11 +306,17 @@ export default function CentroDashboard() {
         const completedHour = new Date(r.completed_at).getHours();
         return completedHour === h;
       }).length || 0;
+
+      const earnings = commissions?.filter(c => {
+        const commissionHour = new Date(c.created_at).getHours();
+        return commissionHour === h;
+      }).reduce((sum, c) => sum + (c.centro_commission || 0), 0) || 0;
       
       hourlyData.push({
-        hour: hourLabel,
+        label: hourLabel,
         riparazioni: created,
-        completate: completed
+        completate: completed,
+        guadagni: Math.round(earnings * 100) / 100
       });
     }
     setDailyData(hourlyData);
@@ -391,6 +437,17 @@ export default function CentroDashboard() {
       supabase.removeChannel(repairChannel);
     };
   }, [centro]);
+
+  // Reload chart data when period changes
+  useEffect(() => {
+    if (!centro?.id) return;
+    
+    const dailyPeriod = chartPeriod === 'today' || chartPeriod === 'yesterday' ? chartPeriod : 'today';
+    const weeklyPeriod = chartPeriod === 'thisWeek' || chartPeriod === 'lastWeek' ? chartPeriod : 'thisWeek';
+    
+    loadDailyData(centro.id, dailyPeriod);
+    loadWeeklyData(centro.id, weeklyPeriod);
+  }, [chartPeriod, centro?.id]);
 
   const statusConfig: Record<string, { label: string; bg: string; text: string; icon: typeof Clock }> = {
     pending: { label: "In attesa", bg: "bg-amber-100", text: "text-amber-700", icon: Clock },
@@ -732,178 +789,218 @@ export default function CentroDashboard() {
 
 
             {/* Charts Grid - Daily and Weekly */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {/* Daily Chart */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Card className="border-border/50 h-full">
-                  <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                      <h2 className="font-medium text-foreground">Andamento Giornaliero</h2>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                        <span className="text-muted-foreground">Nuove</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-muted-foreground">Completate</span>
-                      </div>
-                    </div>
+            <Card className="border-border/50">
+              {/* Period Selector Header */}
+              <div className="px-4 py-3 border-b border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-medium text-foreground">Andamento Attività</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
+                    {[
+                      { value: 'today', label: 'Oggi' },
+                      { value: 'yesterday', label: 'Ieri' },
+                      { value: 'thisWeek', label: 'Settimana' },
+                      { value: 'lastWeek', label: 'Sett. Scorsa' },
+                    ].map((period) => (
+                      <button
+                        key={period.value}
+                        onClick={() => setChartPeriod(period.value as ChartPeriod)}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                          chartPeriod === period.value
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {period.label}
+                      </button>
+                    ))}
                   </div>
-                  <div className="p-3 md:p-4">
-                    <div className="h-[180px] md:h-[220px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={dailyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="colorRiparazioniDaily" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="colorCompletateDaily" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
-                          <XAxis 
-                            dataKey="hour" 
-                            stroke="hsl(var(--muted-foreground))" 
-                            fontSize={10}
-                            tickLine={false}
-                            axisLine={false}
-                            interval={2}
-                          />
-                          <YAxis 
-                            stroke="hsl(var(--muted-foreground))" 
-                            fontSize={11}
-                            tickLine={false}
-                            axisLine={false}
-                            allowDecimals={false}
-                          />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--card))', 
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: '8px',
-                              fontSize: '12px'
-                            }}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="riparazioni" 
-                            stroke="hsl(var(--primary))" 
-                            strokeWidth={2}
-                            fillOpacity={1} 
-                            fill="url(#colorRiparazioniDaily)" 
-                            name="Nuove"
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="completate" 
-                            stroke="#10b981" 
-                            strokeWidth={2}
-                            fillOpacity={1} 
-                            fill="url(#colorCompletateDaily)" 
-                            name="Completate"
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
+                </div>
+              </div>
+              
+              {/* Legend */}
+              <div className="px-4 py-2 flex items-center gap-4 text-xs border-b border-border/30">
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                  <span className="text-muted-foreground">Nuove</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                  <span className="text-muted-foreground">Completate</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 rounded-full bg-amber-500" />
+                  <span className="text-muted-foreground">Guadagni (€)</span>
+                </div>
+              </div>
 
-              {/* Weekly Chart */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-              >
-                <Card className="border-border/50 h-full">
-                  <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                      <h2 className="font-medium text-foreground">Andamento Settimanale</h2>
-                    </div>
-                    <div className="flex items-center gap-4 text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-primary" />
-                        <span className="text-muted-foreground">Nuove</span>
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                        <span className="text-muted-foreground">Completate</span>
-                      </div>
-                    </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-3 md:p-4">
+                {/* Daily/Hourly Chart */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">
+                    {chartPeriod === 'yesterday' ? 'Ieri (per ora)' : 'Oggi (per ora)'}
+                  </p>
+                  <div className="h-[180px] md:h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={dailyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorRiparazioniDaily" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorCompletateDaily" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorGuadagniDaily" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
+                        <XAxis 
+                          dataKey="label" 
+                          stroke="hsl(var(--muted-foreground))" 
+                          fontSize={10}
+                          tickLine={false}
+                          axisLine={false}
+                          interval={3}
+                        />
+                        <YAxis 
+                          stroke="hsl(var(--muted-foreground))" 
+                          fontSize={11}
+                          tickLine={false}
+                          axisLine={false}
+                          allowDecimals={false}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '12px'
+                          }}
+                          formatter={(value: number, name: string) => [
+                            name === 'Guadagni' ? `€${value.toFixed(2)}` : value,
+                            name
+                          ]}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="riparazioni" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2}
+                          fillOpacity={1} 
+                          fill="url(#colorRiparazioniDaily)" 
+                          name="Nuove"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="completate" 
+                          stroke="#10b981" 
+                          strokeWidth={2}
+                          fillOpacity={1} 
+                          fill="url(#colorCompletateDaily)" 
+                          name="Completate"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="guadagni" 
+                          stroke="#f59e0b" 
+                          strokeWidth={2}
+                          fillOpacity={1} 
+                          fill="url(#colorGuadagniDaily)" 
+                          name="Guadagni"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
-                  <div className="p-3 md:p-4">
-                    <div className="h-[180px] md:h-[220px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={weeklyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="colorRiparazioniCentro" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                            </linearGradient>
-                            <linearGradient id="colorCompletateCentro" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                              <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
-                          <XAxis 
-                            dataKey="day" 
-                            stroke="hsl(var(--muted-foreground))" 
-                            fontSize={11}
-                            tickLine={false}
-                            axisLine={false}
-                          />
-                          <YAxis 
-                            stroke="hsl(var(--muted-foreground))" 
-                            fontSize={11}
-                            tickLine={false}
-                            axisLine={false}
-                            allowDecimals={false}
-                          />
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--card))', 
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: '8px',
-                              fontSize: '12px'
-                            }}
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="riparazioni" 
-                            stroke="hsl(var(--primary))" 
-                            strokeWidth={2}
-                            fillOpacity={1} 
-                            fill="url(#colorRiparazioniCentro)" 
-                            name="Nuove"
-                          />
-                          <Area 
-                            type="monotone" 
-                            dataKey="completate" 
-                            stroke="#10b981" 
-                            strokeWidth={2}
-                            fillOpacity={1} 
-                            fill="url(#colorCompletateCentro)" 
-                            name="Completate"
-                          />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    </div>
+                </div>
+
+                {/* Weekly Chart */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">
+                    {chartPeriod === 'lastWeek' ? 'Settimana Scorsa' : 'Questa Settimana'}
+                  </p>
+                  <div className="h-[180px] md:h-[200px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={weeklyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorRiparazioniCentro" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorCompletateCentro" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
+                          <linearGradient id="colorGuadagniCentro" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
+                        <XAxis 
+                          dataKey="label" 
+                          stroke="hsl(var(--muted-foreground))" 
+                          fontSize={11}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis 
+                          stroke="hsl(var(--muted-foreground))" 
+                          fontSize={11}
+                          tickLine={false}
+                          axisLine={false}
+                          allowDecimals={false}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--card))', 
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                            fontSize: '12px'
+                          }}
+                          formatter={(value: number, name: string) => [
+                            name === 'Guadagni' ? `€${value.toFixed(2)}` : value,
+                            name
+                          ]}
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="riparazioni" 
+                          stroke="hsl(var(--primary))" 
+                          strokeWidth={2}
+                          fillOpacity={1} 
+                          fill="url(#colorRiparazioniCentro)" 
+                          name="Nuove"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="completate" 
+                          stroke="#10b981" 
+                          strokeWidth={2}
+                          fillOpacity={1} 
+                          fill="url(#colorCompletateCentro)" 
+                          name="Completate"
+                        />
+                        <Area 
+                          type="monotone" 
+                          dataKey="guadagni" 
+                          stroke="#f59e0b" 
+                          strokeWidth={2}
+                          fillOpacity={1} 
+                          fill="url(#colorGuadagniCentro)" 
+                          name="Guadagni"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
                   </div>
-                </Card>
-              </motion.div>
-            </div>
+                </div>
+              </div>
+            </Card>
 
             {/* Prepaid Commissions History */}
             {centro && (
