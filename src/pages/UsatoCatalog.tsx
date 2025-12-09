@@ -74,7 +74,7 @@ export default function UsatoCatalog() {
     try {
       let query = supabase
         .from("used_devices")
-        .select("*")
+        .select("*, centro:centri_assistenza(business_name, logo_url)")
         .eq("status", "published");
 
       if (deviceType !== "all") {

@@ -29,6 +29,10 @@ interface UsedDevice {
   photos: string[];
   warranty_months: number;
   views_count: number;
+  centro?: {
+    business_name: string;
+    logo_url: string | null;
+  };
 }
 
 interface UsedDeviceCardProps {
@@ -211,6 +215,28 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
         </div>
 
         <CardContent className={compact ? "p-3" : "p-4"}>
+          {/* Centro Badge */}
+          {device.centro && (
+            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/50">
+              {device.centro.logo_url ? (
+                <img 
+                  src={device.centro.logo_url} 
+                  alt={device.centro.business_name}
+                  className="h-5 w-5 rounded object-contain"
+                />
+              ) : (
+                <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-primary">
+                    {device.centro.business_name.charAt(0)}
+                  </span>
+                </div>
+              )}
+              <span className="text-[10px] text-muted-foreground truncate">
+                {device.centro.business_name}
+              </span>
+            </div>
+          )}
+          
           {/* Brand & Model */}
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground uppercase tracking-wide">
