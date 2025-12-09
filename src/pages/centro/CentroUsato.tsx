@@ -364,7 +364,25 @@ export default function CentroUsato() {
       if (error) throw error;
       
       if (data?.estimate) {
-        setPriceEstimate(data.estimate);
+        let estimate = data.estimate;
+        
+        // Handle nested structure by storage (AI sometimes returns per-storage estimates)
+        if (!estimate.grades && typeof estimate === 'object') {
+          // Check if it's a nested structure with storage keys
+          const keys = Object.keys(estimate);
+          const storageKey = formData.storage_capacity || keys[0];
+          if (storageKey && estimate[storageKey]?.grades) {
+            estimate = estimate[storageKey];
+          }
+        }
+        
+        // Only set if valid structure with grades
+        if (estimate?.grades?.B !== undefined) {
+          setPriceEstimate(estimate);
+        } else {
+          console.warn('Invalid price estimate structure:', estimate);
+          setPriceEstimate(null);
+        }
       }
     } catch (error) {
       console.error('Price estimate error:', error);
@@ -427,7 +445,7 @@ export default function CentroUsato() {
   
   // Apply price from grade selection
   const applyGradePrice = (grade: 'B' | 'A' | 'AA' | 'AAA') => {
-    if (!priceEstimate) return;
+    if (!priceEstimate?.grades?.[grade]) return;
     const price = priceEstimate.grades[grade];
     setFormData(prev => ({ 
       ...prev, 
@@ -787,7 +805,7 @@ export default function CentroUsato() {
                                 <Skeleton key={g} className="h-16 rounded-lg" />
                               ))}
                             </div>
-                          ) : priceEstimate && (
+                          ) : priceEstimate?.grades && (
                             <>
                               <div className="grid grid-cols-4 gap-2">
                                 {(['B', 'A', 'AA', 'AAA'] as const).map((grade) => {
