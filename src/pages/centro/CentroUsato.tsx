@@ -234,9 +234,18 @@ export default function CentroUsato() {
 
     setFormLoading(true);
     try {
+      // Build photos array - include uploaded photos and detected device image
+      let photosArray: string[] = [...uploadedPhotos];
+      if (detectedDevice?.imageUrl && currentImageUrl && !imageError) {
+        // Add AI-detected image as first photo if no uploaded photos
+        if (photosArray.length === 0) {
+          photosArray.push(currentImageUrl);
+        }
+      }
+      
       const deviceData = {
         centro_id: centroId,
-        device_type: formData.device_type,
+        device_type: formData.device_type.toLowerCase(), // Normalize to lowercase
         brand: formData.brand,
         model: formData.model,
         color: formData.color || null,
@@ -248,7 +257,7 @@ export default function CentroUsato() {
         warranty_months: parseInt(formData.warranty_months) || 0,
         source: formData.source as "riparazione_alienata" | "permuta" | "acquisto" | "ricondizionato",
         status: "draft" as const,
-        photos: uploadedPhotos.length > 0 ? uploadedPhotos : null,
+        photos: photosArray.length > 0 ? photosArray : null,
       };
 
       if (editingDevice) {
