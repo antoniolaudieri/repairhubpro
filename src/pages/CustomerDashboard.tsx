@@ -232,22 +232,22 @@ export default function CustomerDashboard() {
             <span className="font-bold text-xl text-foreground">TechRepair</span>
           </div>
 
-          <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
             <InAppNotifications />
             
             {(isCentroAdmin || isCentroTech) && (
-              <Button variant="default" size="sm" onClick={() => navigate("/centro")}>
-                <Building2 className="h-4 w-4 mr-2" />
+              <Button variant="default" size="sm" onClick={() => navigate("/centro")} className="px-2 sm:px-3">
+                <Building2 className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Centro</span>
               </Button>
             )}
             
-            <Button variant="ghost" size="sm" onClick={() => navigate("/signature-history")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/signature-history")} className="hidden sm:flex">
               <FileSignature className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Storico Firme</span>
             </Button>
 
-            <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="hidden sm:flex">
               <Home className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Home</span>
             </Button>
@@ -264,11 +264,19 @@ export default function CustomerDashboard() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Il Mio Account</DropdownMenuLabel>
+              <DropdownMenuLabel>Il Mio Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/customer-dashboard")}>
                   <User className="mr-2 h-4 w-4" />
                   Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/signature-history")} className="sm:hidden">
+                  <FileSignature className="mr-2 h-4 w-4" />
+                  Storico Firme
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/")} className="sm:hidden">
+                  <Home className="mr-2 h-4 w-4" />
+                  Home
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout} className="text-destructive">
@@ -282,14 +290,14 @@ export default function CustomerDashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <div className="space-y-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <div className="space-y-6 sm:space-y-8">
           {/* Welcome Section */}
           <div>
-            <h1 className="text-3xl font-bold text-foreground mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-1 sm:mb-2">
               Benvenuto, {user?.email?.split("@")[0]}!
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Gestisci le tue riparazioni e monitora lo stato dei tuoi dispositivi
             </p>
           </div>
@@ -317,44 +325,52 @@ export default function CustomerDashboard() {
           </Card>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="p-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="p-4 sm:p-6 bg-gradient-to-br from-card to-muted/30 border-border/50 hover:shadow-lg transition-all duration-300 group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Totale</p>
-                  <p className="text-3xl font-bold text-foreground">{stats.total}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Totale</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{stats.total}</p>
                 </div>
-                <Package className="h-8 w-8 text-muted-foreground" />
+                <div className="p-2 sm:p-3 rounded-xl bg-muted/50 group-hover:bg-muted transition-colors">
+                  <Package className="h-5 w-5 sm:h-8 sm:w-8 text-muted-foreground" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6 bg-gradient-to-br from-card to-warning/5 border-warning/20 hover:shadow-lg hover:shadow-warning/10 transition-all duration-300 group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">In Attesa</p>
-                  <p className="text-3xl font-bold text-warning">{stats.pending}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">In Attesa</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-warning">{stats.pending}</p>
                 </div>
-                <Clock className="h-8 w-8 text-warning" />
+                <div className="p-2 sm:p-3 rounded-xl bg-warning/10 group-hover:bg-warning/20 transition-colors">
+                  <Clock className="h-5 w-5 sm:h-8 sm:w-8 text-warning" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6 bg-gradient-to-br from-card to-primary/5 border-primary/20 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300 group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">In Corso</p>
-                  <p className="text-3xl font-bold text-primary">{stats.inProgress}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">In Corso</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-primary">{stats.inProgress}</p>
                 </div>
-                <Wrench className="h-8 w-8 text-primary" />
+                <div className="p-2 sm:p-3 rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                  <Wrench className="h-5 w-5 sm:h-8 sm:w-8 text-primary" />
+                </div>
               </div>
             </Card>
 
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6 bg-gradient-to-br from-card to-success/5 border-success/20 hover:shadow-lg hover:shadow-success/10 transition-all duration-300 group">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Completate</p>
-                  <p className="text-3xl font-bold text-success">{stats.completed}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Completate</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-success">{stats.completed}</p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-success" />
+                <div className="p-2 sm:p-3 rounded-xl bg-success/10 group-hover:bg-success/20 transition-colors">
+                  <CheckCircle2 className="h-5 w-5 sm:h-8 sm:w-8 text-success" />
+                </div>
               </div>
             </Card>
           </div>
