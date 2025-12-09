@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { 
   Smartphone, 
   Tablet, 
@@ -12,7 +11,8 @@ import {
   Eye,
   ArrowRight,
   Sparkles,
-  Users
+  Users,
+  Flame
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,12 +42,32 @@ interface UsedDeviceCardProps {
   compact?: boolean;
 }
 
-const conditionLabels: Record<string, { label: string; color: string }> = {
-  ricondizionato: { label: "Ricondizionato", color: "bg-success text-success-foreground" },
-  usato_ottimo: { label: "Usato Ottimo", color: "bg-primary text-primary-foreground" },
-  usato_buono: { label: "Usato Buono", color: "bg-info text-info-foreground" },
-  usato_discreto: { label: "Usato Discreto", color: "bg-warning text-warning-foreground" },
-  alienato: { label: "Alienato", color: "bg-muted text-muted-foreground" },
+const conditionConfig: Record<string, { label: string; bgClass: string; textClass: string }> = {
+  ricondizionato: { 
+    label: "Ricondizionato", 
+    bgClass: "bg-success/15",
+    textClass: "text-success"
+  },
+  usato_ottimo: { 
+    label: "Ottimo", 
+    bgClass: "bg-primary/15",
+    textClass: "text-primary"
+  },
+  usato_buono: { 
+    label: "Buono", 
+    bgClass: "bg-info/15",
+    textClass: "text-info"
+  },
+  usato_discreto: { 
+    label: "Discreto", 
+    bgClass: "bg-warning/15",
+    textClass: "text-warning"
+  },
+  alienato: { 
+    label: "Alienato", 
+    bgClass: "bg-muted",
+    textClass: "text-muted-foreground"
+  },
 };
 
 const getDeviceIcon = (type: string) => {
@@ -74,7 +94,7 @@ const brandLogos: Record<string, string> = {
   lg: "https://upload.wikimedia.org/wikipedia/commons/b/bf/LG_logo_%282015%29.svg",
 };
 
-const getFallbackImageUrls = (brand: string, deviceType: string): string[] => {
+const getFallbackImageUrls = (brand: string): string[] => {
   const urls: string[] = [];
   const brandLower = brand.toLowerCase();
   
@@ -88,7 +108,7 @@ const getFallbackImageUrls = (brand: string, deviceType: string): string[] => {
 export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps) {
   const navigate = useNavigate();
   const DeviceIcon = getDeviceIcon(device.device_type);
-  const conditionInfo = conditionLabels[device.condition] || conditionLabels.usato_buono;
+  const conditionInfo = conditionConfig[device.condition] || conditionConfig.usato_buono;
   const discountPercent = device.original_price 
     ? Math.round((1 - device.price / device.original_price) * 100) 
     : 0;
@@ -130,7 +150,7 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
   }, [hasPhotos, lookupDeviceImage]);
 
   const handleImageError = () => {
-    const fallbacks = getFallbackImageUrls(device.brand, device.device_type);
+    const fallbacks = getFallbackImageUrls(device.brand);
     if (fallbackIndex < fallbacks.length) {
       setLookupImage(fallbacks[fallbackIndex]);
       setFallbackIndex(prev => prev + 1);
@@ -142,115 +162,125 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
   // Determine which image to show
   const displayImage = hasPhotos ? device.photos[0] : lookupImage;
   const showAiBadge = !hasPhotos && lookupImage && !imageError;
+  const hasInterest = device.reservation_count && device.reservation_count > 0;
 
   return (
     <motion.div
-      whileHover={{ y: -4, scale: 1.01 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
+      whileHover={{ y: -6 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className="h-full"
     >
       <Card 
-        className="group overflow-hidden cursor-pointer border-border/50 hover:border-primary/50 hover:shadow-elegant transition-all duration-300"
+        className="group h-full overflow-hidden cursor-pointer border-border/40 hover:border-primary/40 bg-card hover:shadow-card-hover transition-all duration-300 rounded-2xl"
         onClick={() => navigate(`/usato/${device.id}`)}
       >
         {/* Image Section */}
-        <div className="relative aspect-square bg-gradient-to-br from-muted/50 to-muted overflow-hidden">
+        <div className="relative aspect-square bg-gradient-to-br from-muted/30 via-muted/50 to-muted/30 overflow-hidden">
+          {/* Decorative gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10" />
+          
           {displayImage && !imageError ? (
             <img 
               src={displayImage} 
               alt={`${device.brand} ${device.model}`}
-              className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-500"
+              className="w-full h-full object-contain p-6 group-hover:scale-110 transition-transform duration-500"
               onError={handleImageError}
             />
           ) : isLookingUp ? (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-              <div className="animate-pulse">
-                <DeviceIcon className="h-12 w-12 text-muted-foreground/50" />
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
+                <DeviceIcon className="relative h-12 w-12 text-muted-foreground/50 animate-pulse" />
               </div>
               <span className="text-xs text-muted-foreground">Caricamento...</span>
             </div>
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-              <DeviceIcon className="h-16 w-16 text-muted-foreground/50" />
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+              <div className="p-4 rounded-2xl bg-muted/50">
+                <DeviceIcon className="h-12 w-12 text-muted-foreground/40" />
+              </div>
               <span className="text-xs text-muted-foreground font-medium">{device.brand}</span>
             </div>
           )}
           
-          {/* AI Badge */}
-          {showAiBadge && (
-            <div className="absolute bottom-2 left-2">
-              <Badge variant="secondary" className="gap-1 text-xs bg-primary/10 text-primary border-primary/20">
-                <Sparkles className="h-3 w-3" />
-                AI
+          {/* Top Badges Row */}
+          <div className="absolute top-3 left-3 right-3 flex items-start justify-between z-20">
+            {/* Left: Condition + Discount */}
+            <div className="flex flex-col gap-1.5">
+              <Badge className={`${conditionInfo.bgClass} ${conditionInfo.textClass} border-0 font-medium text-xs`}>
+                {conditionInfo.label}
               </Badge>
+              {discountPercent > 0 && (
+                <Badge className="bg-destructive/90 text-destructive-foreground border-0 font-bold text-xs">
+                  -{discountPercent}%
+                </Badge>
+              )}
             </div>
-          )}
-          
-          {/* Badges Overlay */}
-          <div className="absolute top-2 left-2 flex flex-col gap-1">
-            <Badge className={conditionInfo.color}>
-              {conditionInfo.label}
-            </Badge>
-            {discountPercent > 0 && (
-              <Badge className="bg-destructive text-destructive-foreground">
-                -{discountPercent}%
+
+            {/* Right: Warranty */}
+            {device.warranty_months > 0 && (
+              <Badge className="bg-card/90 backdrop-blur-sm text-foreground border border-border/50 gap-1 font-medium text-xs">
+                <Shield className="h-3 w-3 text-success" />
+                {device.warranty_months}m
               </Badge>
             )}
           </div>
-
-          {/* Warranty Badge */}
-          {device.warranty_months > 0 && (
-            <div className="absolute top-2 right-2">
-              <Badge variant="secondary" className="gap-1">
-                <Shield className="h-3 w-3" />
-                {device.warranty_months}m
-              </Badge>
-            </div>
-          )}
-
-          {/* Views & Reservations */}
-          <div className="absolute bottom-2 right-2 flex flex-col gap-1 items-end">
-            {device.reservation_count && device.reservation_count > 0 && (
-              <Badge className="gap-1 text-xs bg-orange-500 text-white animate-pulse">
-                <Users className="h-3 w-3" />
-                {device.reservation_count} {device.reservation_count === 1 ? 'interessato' : 'interessati'}
+          
+          {/* Bottom Badges Row */}
+          <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between z-20">
+            {/* AI Badge */}
+            {showAiBadge && (
+              <Badge className="bg-primary/90 text-primary-foreground border-0 gap-1 text-xs">
+                <Sparkles className="h-3 w-3" />
+                AI
               </Badge>
             )}
-            <Badge variant="secondary" className="gap-1 text-xs opacity-80">
-              <Eye className="h-3 w-3" />
-              {device.views_count}
-            </Badge>
+            
+            {/* Interest + Views */}
+            <div className="flex flex-col gap-1.5 items-end ml-auto">
+              {hasInterest && (
+                <Badge className="bg-orange-500/90 text-white border-0 gap-1 text-xs animate-pulse">
+                  <Flame className="h-3 w-3" />
+                  {device.reservation_count} {device.reservation_count === 1 ? 'richiesta' : 'richieste'}
+                </Badge>
+              )}
+              <Badge className="bg-card/80 backdrop-blur-sm text-muted-foreground border border-border/50 gap-1 text-xs">
+                <Eye className="h-3 w-3" />
+                {device.views_count}
+              </Badge>
+            </div>
           </div>
         </div>
 
         <CardContent className={compact ? "p-3" : "p-4"}>
           {/* Centro Badge */}
           {device.centro && (
-            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border/50">
+            <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border/30">
               {device.centro.logo_url ? (
                 <img 
                   src={device.centro.logo_url} 
                   alt={device.centro.business_name}
-                  className="h-5 w-5 rounded object-contain"
+                  className="h-5 w-5 rounded-md object-contain"
                 />
               ) : (
-                <div className="h-5 w-5 rounded bg-primary/10 flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-primary">
+                <div className="h-5 w-5 rounded-md bg-gradient-primary flex items-center justify-center">
+                  <span className="text-[9px] font-bold text-primary-foreground">
                     {device.centro.business_name.charAt(0)}
                   </span>
                 </div>
               )}
-              <span className="text-[10px] text-muted-foreground truncate">
+              <span className="text-[11px] text-muted-foreground truncate font-medium">
                 {device.centro.business_name}
               </span>
             </div>
           )}
           
           {/* Brand & Model */}
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+          <div className="space-y-1.5 mb-4">
+            <p className="text-[10px] text-primary uppercase tracking-wider font-semibold">
               {device.brand}
             </p>
-            <h3 className={`font-semibold text-foreground line-clamp-1 ${compact ? "text-sm" : "text-base"}`}>
+            <h3 className={`font-bold text-foreground line-clamp-1 ${compact ? "text-sm" : "text-base"}`}>
               {device.model}
             </h3>
             {device.storage_capacity && (
@@ -260,10 +290,10 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
             )}
           </div>
 
-          {/* Price */}
-          <div className="mt-3 flex items-end justify-between">
+          {/* Price & CTA */}
+          <div className="flex items-end justify-between">
             <div>
-              <p className={`font-bold text-primary ${compact ? "text-lg" : "text-xl"}`}>
+              <p className={`font-bold text-gradient ${compact ? "text-xl" : "text-2xl"}`}>
                 €{device.price.toLocaleString()}
               </p>
               {device.original_price && device.original_price > device.price && (
@@ -272,10 +302,10 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
                 </p>
               )}
             </div>
-            <Button size="sm" variant="ghost" className="gap-1 group-hover:text-primary">
-              <span className="text-xs">Dettagli</span>
-              <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-            </Button>
+            <div className="flex items-center gap-1 text-primary opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-xs font-medium">Scopri</span>
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </div>
           </div>
         </CardContent>
       </Card>
