@@ -84,6 +84,7 @@ interface ChartData {
 }
 
 type ChartPeriod = 'today' | 'yesterday' | 'thisWeek' | 'lastWeek';
+type FinancePeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export default function CentroDashboard() {
   const { user } = useAuth();
@@ -105,6 +106,12 @@ export default function CentroDashboard() {
   const [weeklyData, setWeeklyData] = useState<ChartData[]>([]);
   const [dailyData, setDailyData] = useState<ChartData[]>([]);
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>('today');
+  const [financePeriod, setFinancePeriod] = useState<FinancePeriod>('monthly');
+  const [financeStats, setFinanceStats] = useState({
+    totalRevenue: 0,
+    centroEarnings: 0,
+    platformCommission: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -132,6 +139,7 @@ export default function CentroDashboard() {
           loadForfeitureWarnings(centroData.id),
           loadWeeklyData(centroData.id),
           loadDailyData(centroData.id),
+          loadFinanceStats(centroData.id, financePeriod),
         ]);
       }
     } catch (error: any) {
@@ -158,12 +166,6 @@ export default function CentroDashboard() {
       .select("*", { count: "exact", head: true })
       .eq("centro_id", centroId);
 
-    // Fetch commission data from commission_ledger
-    const { data: commissions } = await supabase
-      .from("commission_ledger")
-      .select("gross_revenue, gross_margin, platform_commission, centro_commission")
-      .eq("centro_id", centroId);
-
     const pending = repairs?.filter((r) => r.status === "pending").length || 0;
     const inProgress = repairs?.filter((r) => r.status === "in_progress").length || 0;
     
@@ -175,16 +177,6 @@ export default function CentroDashboard() {
     const lowStock = spareParts?.filter(
       (sp) => sp.stock_quantity <= (sp.minimum_stock || 5)
     ).length || 0;
-
-    // Calculate revenue from commissions or fallback to repairs
-    const totalRevenue = commissions?.reduce((sum, c) => sum + (c.gross_revenue || 0), 0) || 
-      repairs?.reduce((sum, r: any) => sum + (r.final_cost || r.estimated_cost || 0), 0) || 0;
-    
-    // Calculate platform commission owed
-    const platformCommission = commissions?.reduce((sum, c) => sum + (c.platform_commission || 0), 0) || 0;
-    
-    // Calculate centro earnings
-    const centroEarnings = commissions?.reduce((sum, c) => sum + (c.centro_commission || 0), 0) || 0;
 
     const now = new Date();
     const forfeitureCount = repairs?.filter((r) => {
@@ -200,8 +192,48 @@ export default function CentroDashboard() {
       completedToday,
       lowStockItems: lowStock,
       totalCustomers: customerCount || 0,
-      totalRevenue,
+      totalRevenue: 0,
       forfeitureWarnings: forfeitureCount,
+      platformCommission: 0,
+      centroEarnings: 0,
+    });
+  };
+
+  const loadFinanceStats = async (centroId: string, period: FinancePeriod) => {
+    const now = new Date();
+    let startDate: Date;
+
+    switch (period) {
+      case 'daily':
+        startDate = new Date(now);
+        startDate.setHours(0, 0, 0, 0);
+        break;
+      case 'weekly':
+        startDate = new Date(now);
+        startDate.setDate(now.getDate() - 7);
+        break;
+      case 'monthly':
+        startDate = new Date(now);
+        startDate.setMonth(now.getMonth() - 1);
+        break;
+      case 'yearly':
+        startDate = new Date(now);
+        startDate.setFullYear(now.getFullYear() - 1);
+        break;
+    }
+
+    const { data: commissions } = await supabase
+      .from("commission_ledger")
+      .select("gross_revenue, platform_commission, centro_commission")
+      .eq("centro_id", centroId)
+      .gte("created_at", startDate.toISOString());
+
+    const totalRevenue = commissions?.reduce((sum, c) => sum + (c.gross_revenue || 0), 0) || 0;
+    const platformCommission = commissions?.reduce((sum, c) => sum + (c.platform_commission || 0), 0) || 0;
+    const centroEarnings = commissions?.reduce((sum, c) => sum + (c.centro_commission || 0), 0) || 0;
+
+    setFinanceStats({
+      totalRevenue,
       platformCommission,
       centroEarnings,
     });
@@ -449,6 +481,12 @@ export default function CentroDashboard() {
     loadWeeklyData(centro.id, weeklyPeriod);
   }, [chartPeriod, centro?.id]);
 
+  // Reload finance stats when period changes
+  useEffect(() => {
+    if (!centro?.id) return;
+    loadFinanceStats(centro.id, financePeriod);
+  }, [financePeriod, centro?.id]);
+
   const statusConfig: Record<string, { label: string; bg: string; text: string; icon: typeof Clock }> = {
     pending: { label: "In attesa", bg: "bg-amber-100", text: "text-amber-700", icon: Clock },
     in_progress: { label: "In corso", bg: "bg-blue-100", text: "text-blue-700", icon: Wrench },
@@ -518,10 +556,17 @@ export default function CentroDashboard() {
     },
   ];
 
+  const financePeriodLabels: Record<FinancePeriod, string> = {
+    daily: 'Oggi',
+    weekly: 'Settimana',
+    monthly: 'Mese',
+    yearly: 'Anno',
+  };
+
   const financeCards = [
     {
       title: "Fatturato Totale",
-      value: `€${stats.totalRevenue.toFixed(2)}`,
+      value: `€${financeStats.totalRevenue.toFixed(2)}`,
       icon: TrendingUp,
       gradient: "from-primary to-primary/80",
       bgLight: "bg-gradient-to-br from-primary/15 to-primary/5",
@@ -530,7 +575,7 @@ export default function CentroDashboard() {
     },
     {
       title: "Tuo Guadagno",
-      value: `€${stats.centroEarnings.toFixed(2)}`,
+      value: `€${financeStats.centroEarnings.toFixed(2)}`,
       icon: Euro,
       gradient: "from-emerald-500 to-green-500",
       bgLight: "bg-gradient-to-br from-emerald-500/15 to-green-500/10",
@@ -539,7 +584,7 @@ export default function CentroDashboard() {
     },
     {
       title: "Commissione Piattaforma",
-      value: `€${stats.platformCommission.toFixed(2)}`,
+      value: `€${financeStats.platformCommission.toFixed(2)}`,
       icon: Activity,
       gradient: "from-violet-500 to-purple-500",
       bgLight: "bg-gradient-to-br from-violet-500/15 to-purple-500/10",
@@ -766,26 +811,60 @@ export default function CentroDashboard() {
                   </div>
                 </Card>
               </motion.div>
-
-              {financeCards.map((card) => (
-                <motion.div key={card.title} variants={itemVariants}>
-                  <Card 
-                    className="p-3 md:p-4 border-border/50 hover:border-border transition-colors cursor-pointer h-full"
-                    onClick={card.onClick}
-                  >
-                    <div className="flex items-center gap-2 md:gap-3">
-                      <div className={`h-8 w-8 md:h-9 md:w-9 rounded-lg ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
-                        <card.icon className="h-4 w-4 text-white" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-base md:text-lg font-semibold text-foreground">{card.value}</p>
-                        <p className="text-[10px] md:text-xs text-muted-foreground leading-tight">{card.title}</p>
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
             </motion.div>
+
+            {/* Finance Stats with Period Selector */}
+            <div className="space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Euro className="h-4 w-4 text-muted-foreground" />
+                  <h2 className="font-medium text-foreground text-sm">Statistiche Finanziarie</h2>
+                </div>
+                <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
+                  {(['daily', 'weekly', 'monthly', 'yearly'] as FinancePeriod[]).map((period) => (
+                    <Button
+                      key={period}
+                      variant="ghost"
+                      size="sm"
+                      className={`h-7 px-2.5 text-xs rounded-md ${
+                        financePeriod === period 
+                          ? 'bg-background shadow-sm text-foreground' 
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                      onClick={() => setFinancePeriod(period)}
+                    >
+                      {financePeriodLabels[period]}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              
+              <motion.div 
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4"
+              >
+                {financeCards.map((card) => (
+                  <motion.div key={card.title} variants={itemVariants}>
+                    <Card 
+                      className="p-3 md:p-4 border-border/50 hover:border-border transition-colors cursor-pointer h-full"
+                      onClick={card.onClick}
+                    >
+                      <div className="flex items-center gap-2 md:gap-3">
+                        <div className={`h-8 w-8 md:h-9 md:w-9 rounded-lg ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
+                          <card.icon className="h-4 w-4 text-white" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-base md:text-lg font-semibold text-foreground">{card.value}</p>
+                          <p className="text-[10px] md:text-xs text-muted-foreground leading-tight">{card.title}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
 
 
             {/* Charts Grid - Daily and Weekly */}
