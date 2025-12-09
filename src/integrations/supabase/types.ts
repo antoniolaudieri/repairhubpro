@@ -595,6 +595,39 @@ export type Database = {
           },
         ]
       }
+      customer_notifications: {
+        Row: {
+          created_at: string
+          customer_email: string
+          data: Json | null
+          id: string
+          message: string
+          read: boolean
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          customer_email: string
+          data?: Json | null
+          id?: string
+          message: string
+          read?: boolean
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          customer_email?: string
+          data?: Json | null
+          id?: string
+          message?: string
+          read?: boolean
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           address: string | null

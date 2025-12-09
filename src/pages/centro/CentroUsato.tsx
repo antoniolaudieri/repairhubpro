@@ -711,7 +711,18 @@ export default function CentroUsato() {
         .update({ status: "published", published_at: new Date().toISOString() })
         .eq("id", deviceId);
       if (error) throw error;
-      toast({ title: "Dispositivo pubblicato" });
+      
+      // Notify interested customers
+      try {
+        await supabase.functions.invoke('notify-device-interest', {
+          body: { device_id: deviceId }
+        });
+        console.log("Notifiche inviate ai clienti interessati");
+      } catch (notifyError) {
+        console.error("Errore invio notifiche:", notifyError);
+      }
+      
+      toast({ title: "Dispositivo pubblicato", description: "I clienti interessati sono stati notificati" });
       fetchDevices();
     } catch (error: any) {
       toast({ title: "Errore", description: error.message, variant: "destructive" });

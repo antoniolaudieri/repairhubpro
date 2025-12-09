@@ -1,4 +1,4 @@
-import { Bell, Package, Wrench, X } from "lucide-react";
+import { Bell, Package, Wrench, X, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -25,6 +25,8 @@ export function InAppNotifications() {
         return <Wrench className="h-5 w-5 text-primary" />;
       case "parts_received":
         return <Package className="h-5 w-5 text-success" />;
+      case "new_device":
+        return <Smartphone className="h-5 w-5 text-primary" />;
       default:
         return <Bell className="h-5 w-5 text-muted-foreground" />;
     }
@@ -34,6 +36,8 @@ export function InAppNotifications() {
     markAsRead(notification.id);
     if (notification.repairId) {
       navigate(`/customer-repairs/${notification.repairId}`);
+    } else if (notification.data?.device_id) {
+      navigate(`/usato/${notification.data.device_id}`);
     }
   };
 
