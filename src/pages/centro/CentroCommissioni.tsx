@@ -575,15 +575,15 @@ export default function CentroCommissioni() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {filteredCommissions.map((commission) => (
                     <Card
                       key={commission.id}
                       className="p-3 border-border/50 hover:border-border transition-colors"
                     >
-                      <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-start justify-between gap-3">
                         <div 
-                          className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                          className="flex items-start gap-3 min-w-0 flex-1 cursor-pointer"
                           onClick={() => {
                             if (commission.repair_info?.source === 'corner') {
                               navigate(`/centro/lavori-corner`);
@@ -592,7 +592,7 @@ export default function CentroCommissioni() {
                             }
                           }}
                         >
-                          <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+                          <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0 mt-0.5">
                             <Smartphone className="h-4 w-4 text-muted-foreground" />
                           </div>
                           <div className="min-w-0 flex-1">
@@ -616,17 +616,53 @@ export default function CentroCommissioni() {
                                   </Badge>
                                 ) : (
                                   <Badge variant="outline" className="text-[10px] h-5 bg-amber-500/10 text-amber-600 border-amber-200">
-                                    Da Pagare €{(commission.corner_commission || 0).toFixed(2)}
+                                    Corner: €{(commission.corner_commission || 0).toFixed(2)}
                                   </Badge>
                                 )
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground mb-2">
                               {commission.repair_info?.customer_name} • {format(new Date(commission.created_at), "dd MMM", { locale: it })}
                             </p>
+                            
+                            {/* Commission breakdown */}
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 p-2 rounded-lg bg-muted/30">
+                              <div>
+                                <p className="text-[10px] text-muted-foreground">Totale Cliente</p>
+                                <p className="text-xs font-semibold">€{commission.gross_revenue.toFixed(2)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-muted-foreground">Costo Ricambi</p>
+                                <p className="text-xs font-medium text-red-500">-€{commission.parts_cost.toFixed(2)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-muted-foreground">Margine</p>
+                                <p className="text-xs font-medium">€{commission.gross_margin.toFixed(2)}</p>
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-muted-foreground">Comm. Piattaforma</p>
+                                <p className="text-xs font-medium text-amber-600">
+                                  -€{commission.platform_commission.toFixed(2)} 
+                                  <span className="text-[9px] text-muted-foreground ml-0.5">({commission.platform_rate}%)</span>
+                                </p>
+                              </div>
+                              {commission.corner_id && commission.corner_commission && commission.corner_commission > 0 && (
+                                <div>
+                                  <p className="text-[10px] text-muted-foreground">Comm. Corner</p>
+                                  <p className="text-xs font-medium text-blue-600">
+                                    -€{commission.corner_commission.toFixed(2)}
+                                    <span className="text-[9px] text-muted-foreground ml-0.5">({commission.corner_rate}%)</span>
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                          <div className="text-right">
+                            <p className="text-[10px] text-muted-foreground">Tuo Guadagno</p>
+                            <p className="text-lg font-bold text-green-600">€{(commission.centro_commission || 0).toFixed(2)}</p>
+                          </div>
                           {commission.corner_id && commission.payment_collection_method !== 'via_corner' && !commission.corner_paid && (
                             <button
                               onClick={(e) => {
@@ -638,10 +674,6 @@ export default function CentroCommissioni() {
                               Segna Pagato
                             </button>
                           )}
-                          <div className="text-right">
-                            <p className="text-sm font-bold text-green-600">€{(commission.centro_commission || 0).toFixed(2)}</p>
-                            <p className="text-[10px] text-muted-foreground">su €{commission.gross_revenue.toFixed(0)}</p>
-                          </div>
                         </div>
                       </div>
                     </Card>
