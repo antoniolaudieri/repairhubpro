@@ -219,7 +219,7 @@ export default function UsatoDetail() {
     try {
       const { data, error } = await supabase
         .from("used_devices")
-        .select("*, centro:centri_assistenza(business_name, logo_url)")
+        .select("*, centro:centri_assistenza(business_name, logo_url, address, phone, email)")
         .eq("id", id)
         .single();
 
@@ -826,6 +826,27 @@ export default function UsatoDetail() {
                             <div className="flex items-center gap-2 text-success text-sm">
                               <CheckCircle2 className="h-4 w-4" />
                               <span>Dati compilati automaticamente dal tuo profilo</span>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Pickup Location Info */}
+                      {device.centro && (
+                        <Card className="border-primary/20 bg-primary/5">
+                          <CardContent className="p-4 space-y-2">
+                            <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                              <Package className="h-4 w-4" />
+                              <span>Dove ritirare il dispositivo</span>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              <p className="font-semibold">{device.centro.business_name}</p>
+                              {device.centro.address && (
+                                <p className="text-muted-foreground">{device.centro.address}</p>
+                              )}
+                              {device.centro.phone && (
+                                <p className="text-muted-foreground">Tel: {device.centro.phone}</p>
+                              )}
                             </div>
                           </CardContent>
                         </Card>
