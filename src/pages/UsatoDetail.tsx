@@ -55,6 +55,7 @@ import {
   Fingerprint,
   Droplets,
   Star,
+  Users,
 } from "lucide-react";
 
 const conditionLabels: Record<string, { label: string; color: string; description: string }> = {
@@ -225,6 +226,12 @@ export default function UsatoDetail() {
 
       if (error) throw error;
 
+      // Fetch reservation count
+      const { count: reservationCount } = await supabase
+        .from("used_device_reservations")
+        .select("id", { count: 'exact', head: true })
+        .eq("device_id", id);
+
       // Increment views count
       const newViewsCount = (data.views_count || 0) + 1;
       await supabase
@@ -232,8 +239,8 @@ export default function UsatoDetail() {
         .update({ views_count: newViewsCount })
         .eq("id", id);
 
-      // Set device with updated views count
-      setDevice({ ...data, views_count: newViewsCount });
+      // Set device with updated views count and reservation count
+      setDevice({ ...data, views_count: newViewsCount, reservation_count: reservationCount || 0 });
     } catch (error) {
       console.error("Error fetching device:", error);
       toast({
@@ -560,6 +567,25 @@ export default function UsatoDetail() {
                 </p>
               )}
             </div>
+
+            {/* Popularity/Interest Banner */}
+            {device.reservation_count > 0 && (
+              <Card className="border-orange-500/30 bg-gradient-to-r from-orange-500/10 to-amber-500/10 overflow-hidden">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <div className="p-2 bg-orange-500/20 rounded-full animate-pulse">
+                    <Users className="h-5 w-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-orange-600 dark:text-orange-400">
+                      🔥 {device.reservation_count} {device.reservation_count === 1 ? 'persona interessata' : 'persone interessate'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Questo dispositivo sta attirando molta attenzione!
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Price Card */}
             <Card className="border-border/50 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 overflow-hidden">
