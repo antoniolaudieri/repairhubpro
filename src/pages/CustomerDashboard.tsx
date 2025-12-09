@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -524,15 +525,24 @@ export default function CustomerDashboard() {
               </Card>
             ) : (
               <div className="space-y-4">
-                {repairs.map((repair) => {
+                {repairs.map((repair, index) => {
                   const statusInfo = getStatusBadge(repair.status);
                   const daysLeft = getDaysUntilForfeiture(repair);
                     const isUrgent = daysLeft !== null && daysLeft <= 7;
                     const isCritical = daysLeft !== null && daysLeft <= 3;
                     return (
+                      <motion.div
+                        key={repair.id}
+                        initial={{ opacity: 0, y: 20, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ 
+                          duration: 0.4,
+                          delay: index * 0.08,
+                          ease: [0.25, 0.46, 0.45, 0.94]
+                        }}
+                      >
                       <Card 
-                        key={repair.id} 
-                        className={`p-6 cursor-pointer hover:shadow-lg transition-shadow ${isCritical ? 'border-red-500' : isUrgent ? 'border-rose-500/50' : ''}`}
+                        className={`p-4 sm:p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ${isCritical ? 'border-red-500' : isUrgent ? 'border-rose-500/50' : 'hover:border-primary/30'}`}
                         onClick={() => navigate(`/customer-repairs/${repair.id}`)}
                       >
                         <div className="flex items-start justify-between">
@@ -605,7 +615,8 @@ export default function CustomerDashboard() {
                         </div>
                       </div>
                     </Card>
-                  );
+                      </motion.div>
+                    );
                 })}
               </div>
             )}
