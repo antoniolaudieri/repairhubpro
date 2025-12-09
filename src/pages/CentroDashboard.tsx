@@ -867,7 +867,7 @@ export default function CentroDashboard() {
             </div>
 
 
-            {/* Charts Grid - Daily and Weekly */}
+            {/* Activity Chart */}
             <Card className="border-border/50">
               {/* Period Selector Header */}
               <div className="px-4 py-3 border-b border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -915,168 +915,90 @@ export default function CentroDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-3 md:p-4">
-                {/* Daily/Hourly Chart */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2 font-medium">
-                    {chartPeriod === 'yesterday' ? 'Ieri (per ora)' : 'Oggi (per ora)'}
-                  </p>
-                  <div className="h-[180px] md:h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={dailyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorRiparazioniDaily" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorCompletateDaily" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorGuadagniDaily" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
-                        <XAxis 
-                          dataKey="label" 
-                          stroke="hsl(var(--muted-foreground))" 
-                          fontSize={10}
-                          tickLine={false}
-                          axisLine={false}
-                          interval={3}
-                        />
-                        <YAxis 
-                          stroke="hsl(var(--muted-foreground))" 
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={false}
-                          allowDecimals={false}
-                        />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                            fontSize: '12px'
-                          }}
-                          formatter={(value: number, name: string) => [
-                            name === 'Guadagni' ? `€${value.toFixed(2)}` : value,
-                            name
-                          ]}
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="riparazioni" 
-                          stroke="hsl(var(--primary))" 
-                          strokeWidth={2}
-                          fillOpacity={1} 
-                          fill="url(#colorRiparazioniDaily)" 
-                          name="Nuove"
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="completate" 
-                          stroke="#10b981" 
-                          strokeWidth={2}
-                          fillOpacity={1} 
-                          fill="url(#colorCompletateDaily)" 
-                          name="Completate"
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="guadagni" 
-                          stroke="#f59e0b" 
-                          strokeWidth={2}
-                          fillOpacity={1} 
-                          fill="url(#colorGuadagniDaily)" 
-                          name="Guadagni"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-
-                {/* Weekly Chart */}
-                <div>
-                  <p className="text-xs text-muted-foreground mb-2 font-medium">
-                    {chartPeriod === 'lastWeek' ? 'Settimana Scorsa' : 'Questa Settimana'}
-                  </p>
-                  <div className="h-[180px] md:h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={weeklyData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="colorRiparazioniCentro" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorCompletateCentro" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                          </linearGradient>
-                          <linearGradient id="colorGuadagniCentro" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
-                        <XAxis 
-                          dataKey="label" 
-                          stroke="hsl(var(--muted-foreground))" 
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis 
-                          stroke="hsl(var(--muted-foreground))" 
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={false}
-                          allowDecimals={false}
-                        />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                            fontSize: '12px'
-                          }}
-                          formatter={(value: number, name: string) => [
-                            name === 'Guadagni' ? `€${value.toFixed(2)}` : value,
-                            name
-                          ]}
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="riparazioni" 
-                          stroke="hsl(var(--primary))" 
-                          strokeWidth={2}
-                          fillOpacity={1} 
-                          fill="url(#colorRiparazioniCentro)" 
-                          name="Nuove"
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="completate" 
-                          stroke="#10b981" 
-                          strokeWidth={2}
-                          fillOpacity={1} 
-                          fill="url(#colorCompletateCentro)" 
-                          name="Completate"
-                        />
-                        <Area 
-                          type="monotone" 
-                          dataKey="guadagni" 
-                          stroke="#f59e0b" 
-                          strokeWidth={2}
-                          fillOpacity={1} 
-                          fill="url(#colorGuadagniCentro)" 
-                          name="Guadagni"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
+              <div className="p-3 md:p-4">
+                <p className="text-xs text-muted-foreground mb-2 font-medium">
+                  {chartPeriod === 'today' && 'Oggi (per ora)'}
+                  {chartPeriod === 'yesterday' && 'Ieri (per ora)'}
+                  {chartPeriod === 'thisWeek' && 'Questa Settimana'}
+                  {chartPeriod === 'lastWeek' && 'Settimana Scorsa'}
+                </p>
+                <div className="h-[200px] md:h-[240px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart 
+                      data={chartPeriod === 'today' || chartPeriod === 'yesterday' ? dailyData : weeklyData} 
+                      margin={{ top: 5, right: 5, left: -20, bottom: 0 }}
+                    >
+                      <defs>
+                        <linearGradient id="colorRiparazioni" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorCompletate" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorGuadagni" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.4} vertical={false} />
+                      <XAxis 
+                        dataKey="label" 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        interval={chartPeriod === 'today' || chartPeriod === 'yesterday' ? 3 : 0}
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        allowDecimals={false}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--card))', 
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }}
+                        formatter={(value: number, name: string) => [
+                          name === 'Guadagni' ? `€${value.toFixed(2)}` : value,
+                          name
+                        ]}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="riparazioni" 
+                        stroke="hsl(var(--primary))" 
+                        strokeWidth={2}
+                        fillOpacity={1} 
+                        fill="url(#colorRiparazioni)" 
+                        name="Nuove"
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="completate" 
+                        stroke="#10b981" 
+                        strokeWidth={2}
+                        fillOpacity={1} 
+                        fill="url(#colorCompletate)" 
+                        name="Completate"
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="guadagni" 
+                        stroke="#f59e0b" 
+                        strokeWidth={2}
+                        fillOpacity={1} 
+                        fill="url(#colorGuadagni)" 
+                        name="Guadagni"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </Card>
