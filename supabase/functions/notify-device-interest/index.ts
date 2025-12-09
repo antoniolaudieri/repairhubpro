@@ -10,7 +10,16 @@ const corsHeaders = {
 };
 
 interface NotifyRequest {
-  device_id: string;
+  device_id?: string;
+  record?: {
+    id: string;
+    device_type: string;
+    brand: string;
+    model: string;
+    price: number;
+    status: string;
+    centro_id: string;
+  };
 }
 
 interface UsedDevice {
@@ -47,7 +56,9 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { device_id }: NotifyRequest = await req.json();
+    const body: NotifyRequest = await req.json();
+    // Support both direct device_id and trigger record format
+    const device_id = body.device_id || body.record?.id;
     console.log("notify-device-interest: Processing device", device_id);
 
     // Fetch the published device
