@@ -77,8 +77,10 @@ export function useCustomerDisplay(centroId: string | null) {
     };
   }, [centroId]);
 
-  // Helper to send broadcast with retry
-  const sendBroadcast = useCallback(async (event: string, payload: any = {}) => {
+  // Helper to send broadcast with retry and reconnect
+  const sendBroadcast = useCallback(async (event: string, payload: any = {}, attempt = 1): Promise<boolean> => {
+    const maxAttempts = 3;
+    
     if (!channelRef.current) {
       console.warn('[CustomerDisplay] No channel available for event:', event);
       return false;
@@ -86,10 +88,10 @@ export function useCustomerDisplay(centroId: string | null) {
 
     // Wait for subscription if not ready
     let retries = 0;
-    const maxRetries = 20;
+    const maxRetries = 30;
     while (!isSubscribedRef.current && retries < maxRetries) {
       console.log('[CustomerDisplay] Waiting for subscription... attempt:', retries + 1);
-      await new Promise(resolve => setTimeout(resolve, 150));
+      await new Promise(resolve => setTimeout(resolve, 100));
       retries++;
     }
 
@@ -98,7 +100,7 @@ export function useCustomerDisplay(centroId: string | null) {
       return false;
     }
 
-    console.log('[CustomerDisplay] Sending event:', event, 'payload:', JSON.stringify(payload).substring(0, 200));
+    console.log('[CustomerDisplay] Sending event:', event, 'attempt:', attempt);
     
     try {
       const result = await channelRef.current.send({
@@ -107,9 +109,29 @@ export function useCustomerDisplay(centroId: string | null) {
         payload
       });
       console.log('[CustomerDisplay] Send result:', result);
-      return result === 'ok';
+      
+      if (result === 'ok') {
+        return true;
+      }
+      
+      // Retry on failure
+      if (attempt < maxAttempts) {
+        console.log('[CustomerDisplay] Retrying broadcast in 500ms...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return sendBroadcast(event, payload, attempt + 1);
+      }
+      
+      return false;
     } catch (error) {
       console.error('[CustomerDisplay] Error sending broadcast:', error);
+      
+      // Retry on error
+      if (attempt < maxAttempts) {
+        console.log('[CustomerDisplay] Retrying after error in 500ms...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return sendBroadcast(event, payload, attempt + 1);
+      }
+      
       return false;
     }
   }, []);

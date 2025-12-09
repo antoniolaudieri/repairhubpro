@@ -242,50 +242,75 @@ export default function CustomerDisplay() {
 
     console.log('[CustomerDisplay] Setting up channel listener for centro:', centroId);
     
-    const channel = supabase.channel(`display-${centroId}`);
+    let channel = supabase.channel(`display-${centroId}`, {
+      config: {
+        broadcast: { self: false, ack: true }
+      }
+    });
     
-    channel
-      .on('broadcast', { event: 'intake_started' }, (payload) => {
-        console.log('[CustomerDisplay] Intake started - raw payload:', payload);
-        const sessionData = payload.payload as IntakeSession;
-        console.log('[CustomerDisplay] Session data:', sessionData);
-        if (sessionData) {
-          setSession(sessionData);
-          setMode("confirm_data");
-          setDataConfirmed(false);
-          setPassword("");
-        }
-      })
-      .on('broadcast', { event: 'intake_update' }, (payload) => {
-        console.log('[CustomerDisplay] Intake update:', payload);
-        const updateData = payload.payload;
-        if (updateData) {
-          setSession(prev => prev ? { ...prev, ...updateData } : null);
-        }
-      })
-      .on('broadcast', { event: 'request_password' }, () => {
-        console.log('[CustomerDisplay] Password requested');
-        setMode("enter_password");
-      })
-      .on('broadcast', { event: 'request_signature' }, () => {
-        console.log('[CustomerDisplay] Signature requested');
-        setMode("signature");
-      })
-      .on('broadcast', { event: 'intake_cancelled' }, () => {
-        console.log('[CustomerDisplay] Intake cancelled');
-        resetToStandby();
-      })
-      .on('broadcast', { event: 'intake_completed' }, () => {
-        console.log('[CustomerDisplay] Intake completed');
-        setMode("completed");
-        setTimeout(() => resetToStandby(), 10000);
-      })
-      .subscribe((status) => {
-        console.log('[CustomerDisplay] Subscription status:', status);
-      });
+    let isActive = true;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+
+    const setupChannel = () => {
+      if (!isActive) return;
+      
+      channel
+        .on('broadcast', { event: 'intake_started' }, (payload) => {
+          console.log('[CustomerDisplay] Intake started - raw payload:', payload);
+          const sessionData = payload.payload as IntakeSession;
+          console.log('[CustomerDisplay] Session data:', sessionData);
+          if (sessionData) {
+            setSession(sessionData);
+            setMode("confirm_data");
+            setDataConfirmed(false);
+            setPassword("");
+          }
+        })
+        .on('broadcast', { event: 'intake_update' }, (payload) => {
+          console.log('[CustomerDisplay] Intake update:', payload);
+          const updateData = payload.payload;
+          if (updateData) {
+            setSession(prev => prev ? { ...prev, ...updateData } : null);
+          }
+        })
+        .on('broadcast', { event: 'request_password' }, () => {
+          console.log('[CustomerDisplay] Password requested');
+          setMode("enter_password");
+        })
+        .on('broadcast', { event: 'request_signature' }, () => {
+          console.log('[CustomerDisplay] Signature requested');
+          setMode("signature");
+        })
+        .on('broadcast', { event: 'intake_cancelled' }, () => {
+          console.log('[CustomerDisplay] Intake cancelled');
+          resetToStandby();
+        })
+        .on('broadcast', { event: 'intake_completed' }, () => {
+          console.log('[CustomerDisplay] Intake completed');
+          setMode("completed");
+          setTimeout(() => resetToStandby(), 10000);
+        })
+        .subscribe((status) => {
+          console.log('[CustomerDisplay] Subscription status:', status);
+          if (status === 'CHANNEL_ERROR' && isActive) {
+            console.log('[CustomerDisplay] Channel error, reconnecting in 2s...');
+            reconnectTimeout = setTimeout(() => {
+              supabase.removeChannel(channel);
+              channel = supabase.channel(`display-${centroId}`, {
+                config: { broadcast: { self: false, ack: true } }
+              });
+              setupChannel();
+            }, 2000);
+          }
+        });
+    };
+
+    setupChannel();
 
     return () => {
       console.log('[CustomerDisplay] Removing channel');
+      isActive = false;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
       supabase.removeChannel(channel);
     };
   }, [centroId]);
