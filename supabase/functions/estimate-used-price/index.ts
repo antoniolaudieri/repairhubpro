@@ -25,7 +25,24 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    // Call Lovable AI to get price estimates
+    // Build device query - if model looks like just a number, prepend common prefixes
+    let deviceQuery = `${brand} ${model}`;
+    if (/^\d+$/.test(model.trim())) {
+      // If model is just a number, it's likely iPhone/iPad/etc
+      const lowerBrand = brand.toLowerCase();
+      if (lowerBrand.includes('apple') || lowerBrand === 'iphone' || lowerBrand === 'ipad') {
+        deviceQuery = `Apple iPhone ${model}`;
+      } else if (lowerBrand.includes('samsung')) {
+        deviceQuery = `Samsung Galaxy S${model}`;
+      }
+    }
+    if (storage) {
+      deviceQuery += ` ${storage}`;
+    }
+
+    console.log("Querying device:", deviceQuery);
+
+    // Call Lovable AI using tool calling to force JSON response
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -37,45 +54,65 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Sei un esperto valutatore di dispositivi usati per il mercato italiano. Devi fornire stime di prezzo realistiche per dispositivi usati basandoti sul mercato attuale (eBay, Subito.it, Amazon Renewed, Swappie, etc).
+            content: `Sei un esperto valutatore di dispositivi usati per il mercato italiano. Valuta i prezzi basandoti su eBay, Subito.it, Amazon Renewed, Swappie.
 
-Fornisci SEMPRE i prezzi in EUR per le seguenti condizioni usando la scala standard italiana di grading:
-- B (Condizione Discreta): Segni evidenti di usura, graffi visibili, funzionante ma estetica compromessa. Circa 50-60% del valore da nuovo.
-- A (Buone Condizioni): Lievi segni di usura normali, piccoli graffi, batteria >80%. Circa 60-70% del valore.
-- AA (Ottime Condizioni): Quasi perfetto, segni minimi visibili solo controluce, batteria >85%. Circa 70-80% del valore.
-- AAA (Come Nuovo/Ricondizionato): Perfetto o ricondizionato certificato, nessun segno visibile, batteria >90% o sostituita. Circa 80-90% del valore.
+Scala grading italiana:
+- B (Discreto): 50-60% del nuovo
+- A (Buono): 60-70% del nuovo  
+- AA (Ottimo): 70-80% del nuovo
+- AAA (Come Nuovo): 80-90% del nuovo
 
-IMPORTANTE: Rispondi SEMPRE e SOLO in formato JSON, anche se non sei sicuro del dispositivo. NON rispondere MAI con testo normale.
-
-Se il nome del dispositivo è ambiguo (es. "Apple 15" potrebbe essere iPhone 15), interpreta il modello più probabile e fornisci comunque una stima.
-
-Struttura JSON richiesta:
-{
-  "originalPrice": numero (prezzo originale di listino del nuovo),
-  "grades": {
-    "B": numero,
-    "A": numero,
-    "AA": numero,
-    "AAA": numero
-  },
-  "trend": "alto" | "stabile" | "basso",
-  "trendReason": "breve spiegazione del trend (max 15 parole)",
-  "notes": "breve nota opzionale sul mercato attuale per questo dispositivo"
-}
-
-Il campo "trend" indica la tendenza del mercato per questo dispositivo:
-- "alto": domanda superiore all'offerta, prezzi in crescita, device molto ricercato
-- "stabile": domanda e offerta equilibrate, prezzi stabili
-- "basso": offerta superiore alla domanda, prezzi in calo, device meno richiesto
-
-Considera: anno di uscita, domanda di mercato, disponibilità ricambi, supporto software attuale.
-Se non conosci il dispositivo esatto, fai stime ragionevoli basate su dispositivi simili della stessa fascia.`
+Se il nome è ambiguo (es. "Apple 15"), interpreta come iPhone 15.
+Fornisci sempre una stima, anche approssimativa.`
           },
           {
             role: "user",
-            content: `Valuta il prezzo usato per: ${brand} ${model}${storage ? ` ${storage}` : ''}. Rispondi SOLO con JSON valido.`
+            content: `Valuta: ${deviceQuery}`
           }
         ],
+        tools: [
+          {
+            type: "function",
+            function: {
+              name: "provide_price_estimate",
+              description: "Fornisce la stima dei prezzi per un dispositivo usato",
+              parameters: {
+                type: "object",
+                properties: {
+                  originalPrice: {
+                    type: "number",
+                    description: "Prezzo originale di listino del nuovo in EUR"
+                  },
+                  grades: {
+                    type: "object",
+                    properties: {
+                      B: { type: "number", description: "Prezzo condizione B (Discreto)" },
+                      A: { type: "number", description: "Prezzo condizione A (Buono)" },
+                      AA: { type: "number", description: "Prezzo condizione AA (Ottimo)" },
+                      AAA: { type: "number", description: "Prezzo condizione AAA (Come Nuovo)" }
+                    },
+                    required: ["B", "A", "AA", "AAA"]
+                  },
+                  trend: {
+                    type: "string",
+                    enum: ["alto", "stabile", "basso"],
+                    description: "Tendenza del mercato"
+                  },
+                  trendReason: {
+                    type: "string",
+                    description: "Breve spiegazione del trend (max 15 parole)"
+                  },
+                  notes: {
+                    type: "string",
+                    description: "Nota opzionale sul mercato per questo dispositivo"
+                  }
+                },
+                required: ["originalPrice", "grades", "trend", "trendReason"]
+              }
+            }
+          }
+        ],
+        tool_choice: { type: "function", function: { name: "provide_price_estimate" } },
         temperature: 0.3,
       }),
     });
@@ -102,57 +139,43 @@ Se non conosci il dispositivo esatto, fai stime ragionevoli basate su dispositiv
     }
 
     const data = await response.json();
-    const aiResponse = data.choices[0].message.content;
+    console.log("AI Response:", JSON.stringify(data, null, 2));
 
-    console.log("Price Estimate Response:", aiResponse);
-
-    // Parse JSON from AI response - handle markdown code blocks and non-JSON responses
+    // Extract the tool call arguments
     let priceEstimate;
     try {
-      // Remove markdown code blocks if present
-      let cleanedResponse = aiResponse
-        .replace(/```json\n?/gi, '')
-        .replace(/```\n?/g, '')
-        .trim();
-      
-      // Check if response starts with non-JSON text (common when AI doesn't recognize device)
-      if (!cleanedResponse.startsWith('{') && !cleanedResponse.startsWith('[')) {
-        // Try to find JSON within the response
-        const jsonStart = cleanedResponse.indexOf('{');
-        if (jsonStart !== -1) {
-          cleanedResponse = cleanedResponse.substring(jsonStart);
-        } else {
-          console.error("AI responded with text instead of JSON:", aiResponse);
-          return new Response(
-            JSON.stringify({ error: "Dispositivo non riconosciuto. Prova con marca e modello completi (es. 'iPhone 15' invece di '15')." }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
-          );
-        }
-      }
-      
-      // Find the complete JSON object
-      let braceCount = 0;
-      let jsonEnd = -1;
-      for (let i = 0; i < cleanedResponse.length; i++) {
-        if (cleanedResponse[i] === '{') braceCount++;
-        if (cleanedResponse[i] === '}') braceCount--;
-        if (braceCount === 0 && cleanedResponse[i] === '}') {
-          jsonEnd = i + 1;
-          break;
-        }
-      }
-      
-      if (jsonEnd > 0) {
-        priceEstimate = JSON.parse(cleanedResponse.substring(0, jsonEnd));
+      const toolCall = data.choices[0]?.message?.tool_calls?.[0];
+      if (toolCall && toolCall.function?.arguments) {
+        priceEstimate = JSON.parse(toolCall.function.arguments);
       } else {
-        priceEstimate = JSON.parse(cleanedResponse);
+        // Fallback to content parsing if no tool call
+        const content = data.choices[0]?.message?.content || "";
+        console.log("No tool call, trying content:", content);
+        
+        // Try to extract JSON from content
+        let cleanedContent = content
+          .replace(/```json\n?/gi, '')
+          .replace(/```\n?/g, '')
+          .trim();
+        
+        const jsonStart = cleanedContent.indexOf('{');
+        if (jsonStart !== -1) {
+          const jsonEnd = cleanedContent.lastIndexOf('}');
+          if (jsonEnd !== -1) {
+            priceEstimate = JSON.parse(cleanedContent.substring(jsonStart, jsonEnd + 1));
+          }
+        }
+        
+        if (!priceEstimate) {
+          throw new Error("No valid response from AI");
+        }
       }
     } catch (parseError) {
-      console.error("Failed to parse AI response as JSON:", parseError);
-      console.error("Raw response:", aiResponse);
+      console.error("Failed to parse AI response:", parseError);
+      console.error("Raw data:", JSON.stringify(data));
       return new Response(
-        JSON.stringify({ error: "Errore nella valutazione. Riprova con marca e modello più specifici." }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+        JSON.stringify({ error: "Errore nella valutazione. Riprova con marca e modello più specifici (es. 'iPhone 15')." }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
