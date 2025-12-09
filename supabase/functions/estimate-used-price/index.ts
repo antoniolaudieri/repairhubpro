@@ -95,17 +95,26 @@ Se non conosci il dispositivo esatto, fai stime ragionevoli basate su dispositiv
 
     console.log("Price Estimate Response:", aiResponse);
 
-    // Parse JSON from AI response
+    // Parse JSON from AI response - handle markdown code blocks
     let priceEstimate;
     try {
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      // Remove markdown code blocks if present
+      let cleanedResponse = aiResponse
+        .replace(/```json\n?/gi, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      
+      // Try to extract just the first JSON object
+      const jsonMatch = cleanedResponse.match(/\{[\s\S]*?\}(?=\s*$|\s*\{)/);
       if (jsonMatch) {
         priceEstimate = JSON.parse(jsonMatch[0]);
       } else {
-        priceEstimate = JSON.parse(aiResponse);
+        // Try the whole cleaned response
+        priceEstimate = JSON.parse(cleanedResponse);
       }
     } catch (parseError) {
       console.error("Failed to parse AI response as JSON:", parseError);
+      console.error("Raw response:", aiResponse);
       return new Response(
         JSON.stringify({ error: "Impossibile elaborare la risposta AI" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
