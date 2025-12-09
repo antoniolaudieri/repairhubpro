@@ -513,17 +513,19 @@ export default function CentroCommissioni() {
                   {commissions.map((commission) => (
                     <Card
                       key={commission.id}
-                      className="p-3 border-border/50 hover:border-border transition-colors cursor-pointer"
-                      onClick={() => {
-                        if (commission.repair_info?.source === 'corner') {
-                          navigate(`/centro/lavori-corner`);
-                        } else if (commission.repair_info?.id) {
-                          navigate(`/centro/lavori/${commission.repair_info.id}`);
-                        }
-                      }}
+                      className="p-3 border-border/50 hover:border-border transition-colors"
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div 
+                          className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                          onClick={() => {
+                            if (commission.repair_info?.source === 'corner') {
+                              navigate(`/centro/lavori-corner`);
+                            } else if (commission.repair_info?.id) {
+                              navigate(`/centro/lavori/${commission.repair_info.id}`);
+                            }
+                          }}
+                        >
                           <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
                             <Smartphone className="h-4 w-4 text-muted-foreground" />
                           </div>
@@ -541,15 +543,39 @@ export default function CentroCommissioni() {
                                   Diretto
                                 </Badge>
                               )}
+                              {commission.corner_id && commission.payment_collection_method !== 'via_corner' && (
+                                commission.corner_paid ? (
+                                  <Badge variant="outline" className="text-[10px] h-5 bg-green-500/10 text-green-600 border-green-200">
+                                    Corner Pagato
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-[10px] h-5 bg-amber-500/10 text-amber-600 border-amber-200">
+                                    Da Pagare €{(commission.corner_commission || 0).toFixed(2)}
+                                  </Badge>
+                                )
+                              )}
                             </div>
                             <p className="text-xs text-muted-foreground">
                               {commission.repair_info?.customer_name} • {format(new Date(commission.created_at), "dd MMM", { locale: it })}
                             </p>
                           </div>
                         </div>
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-sm font-bold text-green-600">€{(commission.centro_commission || 0).toFixed(2)}</p>
-                          <p className="text-[10px] text-muted-foreground">su €{commission.gross_revenue.toFixed(0)}</p>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          {commission.corner_id && commission.payment_collection_method !== 'via_corner' && !commission.corner_paid && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMarkCornerPaid(commission.id);
+                              }}
+                              className="px-2 py-1 text-[10px] font-medium rounded-md bg-green-500/10 text-green-600 hover:bg-green-500/20 transition-colors"
+                            >
+                              Segna Pagato
+                            </button>
+                          )}
+                          <div className="text-right">
+                            <p className="text-sm font-bold text-green-600">€{(commission.centro_commission || 0).toFixed(2)}</p>
+                            <p className="text-[10px] text-muted-foreground">su €{commission.gross_revenue.toFixed(0)}</p>
+                          </div>
                         </div>
                       </div>
                     </Card>
