@@ -5,17 +5,47 @@ import { toast } from "@/hooks/use-toast";
 
 export interface Notification {
   id: string;
-  type: "repair_status" | "parts_received" | "forfeiture_warning" | "forfeited";
+  type: "repair_status" | "parts_received" | "forfeiture_warning" | "forfeited" | "new_device" | "general";
   title: string;
   message: string;
   timestamp: Date;
   read: boolean;
   repairId?: string;
+  data?: any;
 }
 
 export function useRealtimeNotifications() {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // Load existing notifications from database
+  useEffect(() => {
+    if (!user?.email) return;
+
+    const loadNotifications = async () => {
+      const { data, error } = await supabase
+        .from("customer_notifications")
+        .select("*")
+        .eq("customer_email", user.email)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      if (!error && data) {
+        const dbNotifications: Notification[] = data.map((n: any) => ({
+          id: n.id,
+          type: n.type as Notification["type"],
+          title: n.title,
+          message: n.message,
+          timestamp: new Date(n.created_at),
+          read: n.read,
+          data: n.data,
+        }));
+        setNotifications(dbNotifications);
+      }
+    };
+
+    loadNotifications();
+  }, [user?.email]);
 
   useEffect(() => {
     if (!user?.email) return;
@@ -171,18 +201,61 @@ export function useRealtimeNotifications() {
       )
       .subscribe();
 
+    // Listen for new customer_notifications
+    const customerNotifChannel = supabase
+      .channel("customer-notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "customer_notifications",
+        },
+        (payload) => {
+          if ((payload.new as any).customer_email === user.email) {
+            const n = payload.new as any;
+            const notification: Notification = {
+              id: n.id,
+              type: n.type as Notification["type"],
+              title: n.title,
+              message: n.message,
+              timestamp: new Date(n.created_at),
+              read: false,
+              data: n.data,
+            };
+
+            setNotifications((prev) => [notification, ...prev]);
+
+            toast({
+              title: notification.title,
+              description: notification.message,
+            });
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(repairsChannel);
       supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(customerNotifChannel);
     };
   }, [user?.email]);
 
-  const markAsRead = (notificationId: string) => {
+  const markAsRead = async (notificationId: string) => {
     setNotifications((prev) =>
       prev.map((n) =>
         n.id === notificationId ? { ...n, read: true } : n
       )
     );
+    
+    // Update in database if it's a DB notification (UUID format)
+    if (notificationId.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      await supabase
+        .from("customer_notifications")
+        .update({ read: true })
+        .eq("id", notificationId);
+    }
   };
 
   const clearAll = () => {
