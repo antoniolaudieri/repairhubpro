@@ -28,7 +28,6 @@ serve(async (req) => {
     // Build device query - if model looks like just a number, prepend common prefixes
     let deviceQuery = `${brand} ${model}`;
     if (/^\d+$/.test(model.trim())) {
-      // If model is just a number, it's likely iPhone/iPad/etc
       const lowerBrand = brand.toLowerCase();
       if (lowerBrand.includes('apple') || lowerBrand === 'iphone' || lowerBrand === 'ipad') {
         deviceQuery = `Apple iPhone ${model}`;
@@ -36,11 +35,11 @@ serve(async (req) => {
         deviceQuery = `Samsung Galaxy S${model}`;
       }
     }
-    if (storage) {
-      deviceQuery += ` ${storage}`;
-    }
 
-    console.log("Querying device:", deviceQuery);
+    console.log("Querying device:", deviceQuery, "storage:", storage || "all");
+
+    // Determine if we should return multiple storage options or single
+    const wantsMultipleStorage = !storage;
 
     // Call Lovable AI using tool calling to force JSON response
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -63,56 +62,117 @@ Scala grading italiana:
 - AAA (Come Nuovo): 80-90% del nuovo
 
 Se il nome è ambiguo (es. "Apple 15"), interpreta come iPhone 15.
-Fornisci sempre una stima, anche approssimativa.`
+Fornisci sempre una stima, anche approssimativa.
+${wantsMultipleStorage ? 'IMPORTANTE: Fornisci stime per TUTTE le capacità di storage disponibili per questo dispositivo (es. 64GB, 128GB, 256GB, 512GB, 1TB se applicabili). Ogni storage avrà prezzi diversi.' : ''}`
           },
           {
             role: "user",
-            content: `Valuta: ${deviceQuery}`
+            content: storage 
+              ? `Valuta: ${deviceQuery} ${storage}` 
+              : `Valuta: ${deviceQuery} - Fornisci i prezzi per TUTTE le capacità di storage disponibili per questo modello.`
           }
         ],
         tools: [
-          {
-            type: "function",
-            function: {
-              name: "provide_price_estimate",
-              description: "Fornisce la stima dei prezzi per un dispositivo usato",
-              parameters: {
-                type: "object",
-                properties: {
-                  originalPrice: {
-                    type: "number",
-                    description: "Prezzo originale di listino del nuovo in EUR"
-                  },
-                  grades: {
+          wantsMultipleStorage 
+            ? {
+                type: "function",
+                function: {
+                  name: "provide_multi_storage_estimate",
+                  description: "Fornisce stime di prezzo per tutte le capacità di storage di un dispositivo",
+                  parameters: {
                     type: "object",
                     properties: {
-                      B: { type: "number", description: "Prezzo condizione B (Discreto)" },
-                      A: { type: "number", description: "Prezzo condizione A (Buono)" },
-                      AA: { type: "number", description: "Prezzo condizione AA (Ottimo)" },
-                      AAA: { type: "number", description: "Prezzo condizione AAA (Come Nuovo)" }
+                      storageOptions: {
+                        type: "array",
+                        description: "Array delle stime per ogni capacità di storage disponibile",
+                        items: {
+                          type: "object",
+                          properties: {
+                            storage: {
+                              type: "string",
+                              description: "Capacità storage (es. 64GB, 128GB, 256GB, 512GB, 1TB)"
+                            },
+                            originalPrice: {
+                              type: "number",
+                              description: "Prezzo originale di listino del nuovo in EUR per questo storage"
+                            },
+                            grades: {
+                              type: "object",
+                              properties: {
+                                B: { type: "number", description: "Prezzo condizione B (Discreto)" },
+                                A: { type: "number", description: "Prezzo condizione A (Buono)" },
+                                AA: { type: "number", description: "Prezzo condizione AA (Ottimo)" },
+                                AAA: { type: "number", description: "Prezzo condizione AAA (Come Nuovo)" }
+                              },
+                              required: ["B", "A", "AA", "AAA"]
+                            }
+                          },
+                          required: ["storage", "originalPrice", "grades"]
+                        }
+                      },
+                      trend: {
+                        type: "string",
+                        enum: ["alto", "stabile", "basso"],
+                        description: "Tendenza del mercato per questo dispositivo"
+                      },
+                      trendReason: {
+                        type: "string",
+                        description: "Breve spiegazione del trend (max 15 parole)"
+                      },
+                      notes: {
+                        type: "string",
+                        description: "Nota opzionale sul mercato per questo dispositivo"
+                      }
                     },
-                    required: ["B", "A", "AA", "AAA"]
-                  },
-                  trend: {
-                    type: "string",
-                    enum: ["alto", "stabile", "basso"],
-                    description: "Tendenza del mercato"
-                  },
-                  trendReason: {
-                    type: "string",
-                    description: "Breve spiegazione del trend (max 15 parole)"
-                  },
-                  notes: {
-                    type: "string",
-                    description: "Nota opzionale sul mercato per questo dispositivo"
+                    required: ["storageOptions", "trend", "trendReason"]
                   }
-                },
-                required: ["originalPrice", "grades", "trend", "trendReason"]
+                }
               }
-            }
-          }
+            : {
+                type: "function",
+                function: {
+                  name: "provide_price_estimate",
+                  description: "Fornisce la stima dei prezzi per un dispositivo usato",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      originalPrice: {
+                        type: "number",
+                        description: "Prezzo originale di listino del nuovo in EUR"
+                      },
+                      grades: {
+                        type: "object",
+                        properties: {
+                          B: { type: "number", description: "Prezzo condizione B (Discreto)" },
+                          A: { type: "number", description: "Prezzo condizione A (Buono)" },
+                          AA: { type: "number", description: "Prezzo condizione AA (Ottimo)" },
+                          AAA: { type: "number", description: "Prezzo condizione AAA (Come Nuovo)" }
+                        },
+                        required: ["B", "A", "AA", "AAA"]
+                      },
+                      trend: {
+                        type: "string",
+                        enum: ["alto", "stabile", "basso"],
+                        description: "Tendenza del mercato"
+                      },
+                      trendReason: {
+                        type: "string",
+                        description: "Breve spiegazione del trend (max 15 parole)"
+                      },
+                      notes: {
+                        type: "string",
+                        description: "Nota opzionale sul mercato per questo dispositivo"
+                      }
+                    },
+                    required: ["originalPrice", "grades", "trend", "trendReason"]
+                  }
+                }
+              }
         ],
-        tool_choice: { type: "function", function: { name: "provide_price_estimate" } },
+        tool_choice: { 
+          type: "function", 
+          function: { name: wantsMultipleStorage ? "provide_multi_storage_estimate" : "provide_price_estimate" } 
+        },
         temperature: 0.3,
       }),
     });
@@ -146,13 +206,30 @@ Fornisci sempre una stima, anche approssimativa.`
     try {
       const toolCall = data.choices[0]?.message?.tool_calls?.[0];
       if (toolCall && toolCall.function?.arguments) {
-        priceEstimate = JSON.parse(toolCall.function.arguments);
+        const parsed = JSON.parse(toolCall.function.arguments);
+        
+        // If multi-storage response, convert to keyed object
+        if (parsed.storageOptions && Array.isArray(parsed.storageOptions)) {
+          const multiEstimate: Record<string, any> = {};
+          for (const option of parsed.storageOptions) {
+            multiEstimate[option.storage] = {
+              originalPrice: option.originalPrice,
+              grades: option.grades,
+              trend: parsed.trend,
+              trendReason: parsed.trendReason,
+              notes: parsed.notes
+            };
+          }
+          priceEstimate = multiEstimate;
+        } else {
+          // Single storage response
+          priceEstimate = parsed;
+        }
       } else {
         // Fallback to content parsing if no tool call
         const content = data.choices[0]?.message?.content || "";
         console.log("No tool call, trying content:", content);
         
-        // Try to extract JSON from content
         let cleanedContent = content
           .replace(/```json\n?/gi, '')
           .replace(/```\n?/g, '')
