@@ -737,7 +737,7 @@ export default function UsatoDetail() {
                     Prenota Ora
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                   {reservationSuccess ? (
                     <>
                       <DialogHeader>
