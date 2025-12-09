@@ -4,16 +4,11 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CentroLayout } from "@/layouts/CentroLayout";
 import { PageTransition } from "@/components/PageTransition";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   DollarSign, 
   TrendingUp, 
-  Clock, 
-  CheckCircle2,
-  Calendar,
   AlertTriangle,
   Building2,
   Store,
@@ -21,10 +16,6 @@ import {
   Wallet,
   CreditCard,
   Smartphone,
-  User,
-  ExternalLink,
-  Sparkles,
-  ArrowUpRight,
   Receipt,
   PiggyBank
 } from "lucide-react";
@@ -297,14 +288,58 @@ export default function CentroCommissioni() {
   const { start } = getMonthRange(selectedMonth);
   const monthLabel = format(start, "MMMM yyyy", { locale: it });
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { staggerChildren: 0.08 },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+  };
+
+  const statsCards = [
+    {
+      title: "Fatturato",
+      value: `€${totalRevenue.toFixed(2)}`,
+      icon: TrendingUp,
+      iconBg: "bg-gradient-to-br from-primary to-primary/80",
+    },
+    {
+      title: "Margine Lordo",
+      value: `€${totalMargin.toFixed(2)}`,
+      icon: DollarSign,
+      iconBg: "bg-gradient-to-br from-blue-500 to-cyan-500",
+    },
+    {
+      title: "Tuo Guadagno",
+      value: `€${centroNetEarnings.toFixed(2)}`,
+      icon: PiggyBank,
+      iconBg: "bg-gradient-to-br from-emerald-500 to-green-500",
+    },
+    {
+      title: "Riparazioni",
+      value: commissions.length,
+      icon: Receipt,
+      iconBg: "bg-gradient-to-br from-violet-500 to-purple-500",
+    },
+  ];
+
   if (isLoading) {
     return (
       <CentroLayout>
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <div className="text-center space-y-4">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto" />
-            <p className="text-muted-foreground">Caricamento report...</p>
-          </div>
+        <div className="min-h-[60vh] flex items-center justify-center">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center"
+          >
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary/20 border-t-primary mx-auto" />
+            <p className="text-muted-foreground text-sm mt-3">Caricamento...</p>
+          </motion.div>
         </div>
       </CentroLayout>
     );
@@ -313,378 +348,216 @@ export default function CentroCommissioni() {
   return (
     <CentroLayout>
       <PageTransition>
-        <div className="space-y-4 sm:space-y-6 pb-8">
-          {/* Hero Header */}
-          <motion.div 
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-600 via-green-600 to-teal-700 p-4 sm:p-6 text-white"
-          >
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-50" />
-            <div className="relative">
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
-                    <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">Report Commissioni</h1>
-                  </div>
-                  <p className="text-white/80 text-sm sm:text-base">Riepilogo fatturazione B2B mensile</p>
-                </div>
-                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                  <SelectTrigger className="w-full sm:w-[180px] bg-white/20 border-white/30 text-white hover:bg-white/30">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Seleziona mese" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="current">Mese Corrente</SelectItem>
-                    <SelectItem value="previous">Mese Scorso</SelectItem>
-                    <SelectItem value="2months">2 Mesi Fa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Quick Stats in Hero */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 sm:mt-6">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <TrendingUp className="h-4 w-4 text-white/70" />
-                    <span className="text-xs text-white/70">Fatturato</span>
-                  </div>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">€{totalRevenue.toFixed(0)}</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className="h-4 w-4 text-white/70" />
-                    <span className="text-xs text-white/70">Margine</span>
-                  </div>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">€{totalMargin.toFixed(0)}</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <PiggyBank className="h-4 w-4 text-white/70" />
-                    <span className="text-xs text-white/70">Guadagno</span>
-                  </div>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">€{centroNetEarnings.toFixed(0)}</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Receipt className="h-4 w-4 text-white/70" />
-                    <span className="text-xs text-white/70">Riparazioni</span>
-                  </div>
-                  <p className="text-lg sm:text-xl lg:text-2xl font-bold">{commissions.length}</p>
-                </div>
-              </div>
+        <div className="p-4 md:p-6 lg:p-8 space-y-4 md:space-y-6">
+          {/* Page Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h1 className="text-xl md:text-2xl font-semibold text-foreground">Report Commissioni</h1>
+              <p className="text-xs md:text-sm text-muted-foreground">Riepilogo fatturazione B2B - {monthLabel}</p>
             </div>
+            <div className="flex items-center bg-muted/50 rounded-lg p-0.5">
+              {[
+                { value: 'current', label: 'Corrente' },
+                { value: 'previous', label: 'Scorso' },
+                { value: '2months', label: '2 Mesi Fa' },
+              ].map((period) => (
+                <button
+                  key={period.value}
+                  onClick={() => setSelectedMonth(period.value)}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                    selectedMonth === period.value
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  {period.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4"
+          >
+            {statsCards.map((card) => (
+              <motion.div key={card.title} variants={itemVariants}>
+                <Card className="p-3 md:p-4 border-border/50 hover:border-border transition-colors">
+                  <div className="flex items-center gap-2 md:gap-3">
+                    <div className={`h-8 w-8 md:h-10 md:w-10 rounded-lg ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
+                      <card.icon className="h-4 w-4 md:h-5 md:w-5 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-base md:text-xl font-bold text-foreground leading-none">{card.value}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">{card.title}</p>
+                    </div>
+                  </div>
+                </Card>
+              </motion.div>
+            ))}
           </motion.div>
 
           {/* Alert commissioni da pagare */}
           {totalDue > 0 && (
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
             >
-              <Card className="border-2 border-amber-500/50 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-500/10 overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 shadow-lg shrink-0 self-start sm:self-center">
-                      <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-amber-700 dark:text-amber-400">
-                        Commissioni da Pagare - {monthLabel}
-                      </p>
-                      <p className="text-sm text-amber-600/70 dark:text-amber-400/70">
-                        Riceverai fattura a fine mese
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl sm:text-3xl font-bold text-amber-600 dark:text-amber-400">
-                        €{totalDue.toFixed(2)}
-                      </p>
-                    </div>
+              <Card className="p-4 border-amber-200 bg-amber-50/50">
+                <div className="flex items-start gap-3">
+                  <div className="h-8 w-8 rounded-lg bg-amber-500 flex items-center justify-center flex-shrink-0">
+                    <AlertTriangle className="h-4 w-4 text-white" />
                   </div>
-                </CardContent>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-amber-800 text-sm">Commissioni da Pagare</h3>
+                    <p className="text-xs text-amber-600">Riceverai fattura a fine mese</p>
+                  </div>
+                  <p className="text-xl md:text-2xl font-bold text-amber-600">€{totalDue.toFixed(2)}</p>
+                </div>
               </Card>
             </motion.div>
           )}
 
           {/* Commissioni Breakdown */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <Card className="overflow-hidden border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30 pb-3">
-                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                  <FileText className="h-5 w-5 text-primary" />
-                  Commissioni - {monthLabel}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-                  {/* Platform Commission Card */}
-                  <div className="relative overflow-hidden rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-primary/10 p-4">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                    <div className="relative">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 rounded-lg bg-primary/20">
-                          <Building2 className="h-5 w-5 text-primary" />
-                        </div>
-                        <div>
-                          <p className="font-semibold">Piattaforma</p>
-                          <p className="text-xs text-muted-foreground">{platformSettings.platform_commission_rate}% del margine</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-background/50">
-                          <span className="text-sm text-muted-foreground">Da pagare</span>
-                          <span className="text-lg font-bold text-amber-600">€{platformCommissionDue.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-background/50">
-                          <span className="text-sm text-muted-foreground">Già pagato</span>
-                          <span className="text-lg font-medium text-green-600">€{platformCommissionPaid.toFixed(2)}</span>
-                        </div>
-                      </div>
+          <Card className="border-border/50">
+            <div className="px-4 py-3 border-b border-border/50 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              <h2 className="font-medium text-foreground">Dettaglio Commissioni</h2>
+            </div>
+            <div className="p-3 md:p-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 md:gap-4">
+                {/* Platform Commission Card */}
+                <Card className="p-3 md:p-4 border-border/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+                      <Building2 className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">Piattaforma</p>
+                      <p className="text-xs text-muted-foreground">{platformSettings.platform_commission_rate}% del margine</p>
                     </div>
                   </div>
-
-                  {/* Corner Commission Card */}
-                  <div className="relative overflow-hidden rounded-xl border border-blue-500/20 bg-gradient-to-br from-blue-500/5 to-blue-500/10 p-4">
-                    <div className="absolute top-0 right-0 w-20 h-20 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                    <div className="relative">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 rounded-lg bg-blue-500/20">
-                          <Store className="h-5 w-5 text-blue-500" />
-                        </div>
-                        <div>
-                          <p className="font-semibold">Corner</p>
-                          <p className="text-xs text-muted-foreground">{platformSettings.default_corner_commission_rate}% del margine</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        {cornerCommissionsViaCorner > 0 && (
-                          <div className="flex justify-between items-center p-2 rounded-lg bg-background/50">
-                            <span className="text-sm text-muted-foreground flex items-center gap-1">
-                              <Wallet className="h-3 w-3" />
-                              Incassato Corner
-                            </span>
-                            <span className="text-lg font-medium text-emerald-600">€{cornerCommissionsViaCorner.toFixed(2)}</span>
-                          </div>
-                        )}
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-background/50">
-                          <span className="text-sm text-muted-foreground flex items-center gap-1">
-                            <CreditCard className="h-3 w-3" />
-                            Da pagare
-                          </span>
-                          <span className="text-lg font-bold text-amber-600">€{cornerCommissionDue.toFixed(2)}</span>
-                        </div>
-                        <div className="flex justify-between items-center p-2 rounded-lg bg-background/50">
-                          <span className="text-sm text-muted-foreground">Già pagato</span>
-                          <span className="text-lg font-medium text-green-600">€{cornerCommissionPaid.toFixed(2)}</span>
-                        </div>
-                      </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-muted/30">
+                      <span className="text-xs text-muted-foreground">Da pagare</span>
+                      <span className="text-sm font-bold text-amber-600">€{platformCommissionDue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-muted/30">
+                      <span className="text-xs text-muted-foreground">Già pagato</span>
+                      <span className="text-sm font-medium text-green-600">€{platformCommissionPaid.toFixed(2)}</span>
                     </div>
                   </div>
-                </div>
+                </Card>
 
-                {/* Total */}
-                <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-muted/80 to-muted/50 border border-border">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold text-base sm:text-lg">Totale da Pagare</span>
-                    <span className="text-2xl sm:text-3xl font-bold">€{totalDue.toFixed(2)}</span>
+                {/* Corner Commission Card */}
+                <Card className="p-3 md:p-4 border-border/50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                      <Store className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">Corner</p>
+                      <p className="text-xs text-muted-foreground">{platformSettings.default_corner_commission_rate}% del margine</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+                  <div className="space-y-2">
+                    {cornerCommissionsViaCorner > 0 && (
+                      <div className="flex justify-between items-center p-2 rounded-lg bg-muted/30">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Wallet className="h-3 w-3" />
+                          Incassato Corner
+                        </span>
+                        <span className="text-sm font-medium text-emerald-600">€{cornerCommissionsViaCorner.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-muted/30">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <CreditCard className="h-3 w-3" />
+                        Da pagare
+                      </span>
+                      <span className="text-sm font-bold text-amber-600">€{cornerCommissionDue.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 rounded-lg bg-muted/30">
+                      <span className="text-xs text-muted-foreground">Già pagato</span>
+                      <span className="text-sm font-medium text-green-600">€{cornerCommissionPaid.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          </Card>
 
           {/* Dettaglio Riparazioni */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card className="overflow-hidden border-0 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30 pb-3">
-                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-                  <Receipt className="h-5 w-5 text-primary" />
-                  Dettaglio Riparazioni
-                  <Badge variant="secondary" className="ml-2">{commissions.length}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-3 sm:p-6">
-                {commissions.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="mx-auto w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                      <DollarSign className="h-8 w-8 text-muted-foreground" />
-                    </div>
-                    <p className="text-lg font-medium text-muted-foreground mb-2">Nessuna riparazione</p>
-                    <p className="text-sm text-muted-foreground">Nessuna riparazione completata in {monthLabel}</p>
+          <Card className="border-border/50">
+            <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-muted-foreground" />
+                <h2 className="font-medium text-foreground">Dettaglio Riparazioni</h2>
+              </div>
+              <Badge variant="secondary" className="text-xs">{commissions.length}</Badge>
+            </div>
+            <div className="p-3 md:p-4">
+              {commissions.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="mx-auto w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
+                    <DollarSign className="h-6 w-6 text-muted-foreground" />
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    {commissions.map((commission, index) => (
-                      <motion.div
-                        key={commission.id}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="group relative overflow-hidden rounded-xl border border-border bg-gradient-to-r from-card to-card/80 hover:shadow-md transition-all duration-300"
-                      >
-                        <div className="p-3 sm:p-4">
-                          {/* Header with badges */}
-                          <div className="flex flex-wrap items-center gap-2 mb-3">
-                            {commission.corner_id ? (
-                              <Badge className="bg-blue-500/20 text-blue-600 border-blue-500/30 text-xs">
-                                <Store className="h-3 w-3 mr-1" />
-                                Via Corner
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
-                                <Building2 className="h-3 w-3 mr-1" />
-                                Diretto
-                              </Badge>
-                            )}
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Calendar className="h-3 w-3" />
-                              {format(new Date(commission.created_at), "dd MMM yyyy", { locale: it })}
-                            </span>
+                  <p className="text-sm font-medium text-muted-foreground">Nessuna riparazione</p>
+                  <p className="text-xs text-muted-foreground">Nessuna riparazione completata in {monthLabel}</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {commissions.map((commission) => (
+                    <Card
+                      key={commission.id}
+                      className="p-3 border-border/50 hover:border-border transition-colors cursor-pointer"
+                      onClick={() => {
+                        if (commission.repair_info?.source === 'corner') {
+                          navigate(`/centro/lavori-corner`);
+                        } else if (commission.repair_info?.id) {
+                          navigate(`/centro/lavori/${commission.repair_info.id}`);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="h-8 w-8 rounded-lg bg-muted/50 flex items-center justify-center flex-shrink-0">
+                            <Smartphone className="h-4 w-4 text-muted-foreground" />
                           </div>
-
-                          {/* Device & Customer Info */}
-                          {commission.repair_info && (
-                            <div className="mb-3 p-3 rounded-lg bg-muted/30 border border-border/50">
-                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                <div className="flex-1 min-w-0 space-y-1">
-                                  <div className="flex items-center gap-2">
-                                    <div className="p-1.5 rounded-lg bg-primary/10 shrink-0">
-                                      <Smartphone className="h-4 w-4 text-primary" />
-                                    </div>
-                                    <span className="font-medium text-sm sm:text-base truncate">
-                                      {commission.repair_info.device_type}
-                                      {commission.repair_info.device_brand && ` ${commission.repair_info.device_brand}`}
-                                      {commission.repair_info.device_model && ` ${commission.repair_info.device_model}`}
-                                    </span>
-                                  </div>
-                                  {commission.repair_info.customer_name && (
-                                    <div className="flex items-center gap-2 text-sm text-muted-foreground pl-8">
-                                      <User className="h-3 w-3" />
-                                      <span className="truncate">{commission.repair_info.customer_name}</span>
-                                    </div>
-                                  )}
-                                </div>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="shrink-0 gap-1.5 group-hover:bg-primary group-hover:text-primary-foreground transition-colors"
-                                  onClick={() => {
-                                    if (commission.repair_info?.source === 'corner') {
-                                      navigate(`/centro/lavori-corner`);
-                                    } else {
-                                      navigate(`/centro/lavori/${commission.repair_info?.id}`);
-                                    }
-                                  }}
-                                >
-                                  <span className="hidden sm:inline">Vedi Lavoro</span>
-                                  <ArrowUpRight className="h-4 w-4" />
-                                </Button>
-                              </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm truncate">
+                                {commission.repair_info?.device_brand} {commission.repair_info?.device_model}
+                              </span>
+                              {commission.corner_id ? (
+                                <Badge variant="outline" className="text-[10px] h-5 bg-blue-500/10 text-blue-600 border-blue-200">
+                                  Corner
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[10px] h-5">
+                                  Diretto
+                                </Badge>
+                              )}
                             </div>
-                          )}
-
-                          {/* Financial Grid - Mobile Optimized */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 mb-3">
-                            <div className="p-2 sm:p-3 rounded-lg bg-muted/30 text-center sm:text-left">
-                              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Fatturato</p>
-                              <p className="text-sm sm:text-base font-semibold">€{commission.gross_revenue.toFixed(2)}</p>
-                            </div>
-                            <div className="p-2 sm:p-3 rounded-lg bg-muted/30 text-center sm:text-left">
-                              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Ricambi</p>
-                              <p className="text-sm sm:text-base font-semibold">€{commission.parts_cost.toFixed(2)}</p>
-                            </div>
-                            <div className="p-2 sm:p-3 rounded-lg bg-muted/30 text-center sm:text-left">
-                              <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wide">Margine</p>
-                              <p className="text-sm sm:text-base font-semibold">€{commission.gross_margin.toFixed(2)}</p>
-                            </div>
-                            <div className="p-2 sm:p-3 rounded-lg bg-green-500/10 text-center sm:text-left">
-                              <p className="text-[10px] sm:text-xs text-green-600 uppercase tracking-wide">Guadagno</p>
-                              <p className="text-sm sm:text-base font-bold text-green-600">€{(commission.centro_commission || 0).toFixed(2)}</p>
-                            </div>
-                          </div>
-
-                          {/* Payment Status - Mobile Stacked */}
-                          <div className="flex flex-col sm:flex-row gap-2 pt-3 border-t border-border/50">
-                            {/* Platform Status */}
-                            <div className="flex items-center justify-between gap-2 flex-1 p-2 sm:p-3 rounded-lg bg-muted/20">
-                              <div className="flex items-center gap-2">
-                                <Building2 className="h-4 w-4 text-primary" />
-                                <span className="text-xs sm:text-sm">Piattaforma</span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs sm:text-sm font-medium text-primary">€{commission.platform_commission.toFixed(2)}</span>
-                                {commission.platform_paid ? (
-                                  <Badge className="bg-green-500/20 text-green-600 text-[10px] sm:text-xs px-1.5 py-0.5">
-                                    <CheckCircle2 className="h-3 w-3 mr-0.5" />
-                                    Pagato
-                                  </Badge>
-                                ) : (
-                                  <Badge className="bg-amber-500/20 text-amber-600 text-[10px] sm:text-xs px-1.5 py-0.5">
-                                    <Clock className="h-3 w-3 mr-0.5" />
-                                    Pending
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Corner Status */}
-                            {commission.corner_id && (
-                              <div className="flex items-center justify-between gap-2 flex-1 p-2 sm:p-3 rounded-lg bg-muted/20">
-                                <div className="flex items-center gap-2">
-                                  <Store className="h-4 w-4 text-blue-500" />
-                                  <span className="text-xs sm:text-sm">Corner</span>
-                                </div>
-                                <div className="flex items-center gap-1 sm:gap-2 flex-wrap justify-end">
-                                  <span className="text-xs sm:text-sm font-medium text-blue-500">€{(commission.corner_commission || 0).toFixed(2)}</span>
-                                  {commission.payment_collection_method === 'via_corner' ? (
-                                    <Badge className="bg-emerald-500/20 text-emerald-600 text-[10px] sm:text-xs px-1.5 py-0.5">
-                                      <Wallet className="h-3 w-3 mr-0.5" />
-                                      <span className="hidden sm:inline">Incassato</span>
-                                    </Badge>
-                                  ) : commission.corner_paid ? (
-                                    <Badge className="bg-green-500/20 text-green-600 text-[10px] sm:text-xs px-1.5 py-0.5">
-                                      <CheckCircle2 className="h-3 w-3 mr-0.5" />
-                                      Pagato
-                                    </Badge>
-                                  ) : (
-                                    <div className="flex items-center gap-1">
-                                      <Badge className="bg-amber-500/20 text-amber-600 text-[10px] sm:text-xs px-1.5 py-0.5">
-                                        <Clock className="h-3 w-3 mr-0.5" />
-                                        Pending
-                                      </Badge>
-                                      <Button 
-                                        size="sm" 
-                                        variant="ghost" 
-                                        className="h-6 px-2 text-[10px] sm:text-xs hover:bg-green-500/20 hover:text-green-600"
-                                        onClick={() => handleMarkCornerPaid(commission.id)}
-                                      >
-                                        <CheckCircle2 className="h-3 w-3" />
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {commission.repair_info?.customer_name} • {format(new Date(commission.created_at), "dd MMM", { locale: it })}
+                            </p>
                           </div>
                         </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-green-600">€{(commission.centro_commission || 0).toFixed(2)}</p>
+                          <p className="text-[10px] text-muted-foreground">su €{commission.gross_revenue.toFixed(0)}</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
         </div>
       </PageTransition>
     </CentroLayout>
