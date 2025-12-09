@@ -6,6 +6,7 @@ import { CentroLayout } from "@/layouts/CentroLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   DollarSign, 
   TrendingUp, 
@@ -17,7 +18,9 @@ import {
   CreditCard,
   Smartphone,
   Receipt,
-  PiggyBank
+  PiggyBank,
+  Filter,
+  CheckCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -77,6 +80,7 @@ export default function CentroCommissioni() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState<string>("current");
+  const [showOnlyUnpaid, setShowOnlyUnpaid] = useState(false);
   const [platformSettings, setPlatformSettings] = useState<PlatformSettings>({ 
     platform_commission_rate: 10, 
     default_corner_commission_rate: 10 
@@ -253,6 +257,34 @@ export default function CentroCommissioni() {
     }
   };
 
+  const handleMarkAllCornerPaid = async () => {
+    const unpaidCornerCommissions = commissions.filter(
+      c => c.corner_id && c.payment_collection_method !== 'via_corner' && !c.corner_paid
+    );
+
+    if (unpaidCornerCommissions.length === 0) {
+      toast.info("Nessuna commissione Corner da pagare");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("commission_ledger")
+        .update({ 
+          corner_paid: true, 
+          corner_paid_at: new Date().toISOString() 
+        })
+        .in("id", unpaidCornerCommissions.map(c => c.id));
+
+      if (error) throw error;
+      toast.success(`${unpaidCornerCommissions.length} commissioni Corner segnate come pagate`);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error marking all corner paid:", error);
+      toast.error("Errore nell'aggiornamento");
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [user, selectedMonth]);
@@ -284,6 +316,12 @@ export default function CentroCommissioni() {
   
   const totalDue = platformCommissionDue + cornerCommissionDue;
   const centroNetEarnings = commissions.reduce((sum, c) => sum + (c.centro_commission || 0), 0);
+
+  const unpaidCornerCommissions = commissions.filter(
+    c => c.corner_id && c.payment_collection_method !== 'via_corner' && !c.corner_paid
+  );
+
+  const filteredCommissions = showOnlyUnpaid ? unpaidCornerCommissions : commissions;
 
   const { start } = getMonthRange(selectedMonth);
   const monthLabel = format(start, "MMMM yyyy", { locale: it });
@@ -492,25 +530,53 @@ export default function CentroCommissioni() {
 
           {/* Dettaglio Riparazioni */}
           <Card className="border-border/50">
-            <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Receipt className="h-4 w-4 text-muted-foreground" />
                 <h2 className="font-medium text-foreground">Dettaglio Riparazioni</h2>
+                <Badge variant="secondary" className="text-xs">{showOnlyUnpaid ? unpaidCornerCommissions.length : commissions.length}</Badge>
               </div>
-              <Badge variant="secondary" className="text-xs">{commissions.length}</Badge>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowOnlyUnpaid(!showOnlyUnpaid)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    showOnlyUnpaid
+                      ? 'bg-amber-500/10 text-amber-600 border border-amber-200'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                  }`}
+                >
+                  <Filter className="h-3 w-3" />
+                  Da Pagare
+                </button>
+                {cornerCommissionDue > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleMarkAllCornerPaid}
+                    className="h-7 text-xs gap-1.5 bg-green-500/10 text-green-600 border-green-200 hover:bg-green-500/20"
+                  >
+                    <CheckCheck className="h-3 w-3" />
+                    Paga Tutti
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="p-3 md:p-4">
-              {commissions.length === 0 ? (
+              {filteredCommissions.length === 0 ? (
                 <div className="text-center py-8">
                   <div className="mx-auto w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
                     <DollarSign className="h-6 w-6 text-muted-foreground" />
                   </div>
-                  <p className="text-sm font-medium text-muted-foreground">Nessuna riparazione</p>
-                  <p className="text-xs text-muted-foreground">Nessuna riparazione completata in {monthLabel}</p>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {showOnlyUnpaid ? "Nessuna commissione da pagare" : "Nessuna riparazione"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {showOnlyUnpaid ? "Tutte le commissioni Corner sono state pagate" : `Nessuna riparazione completata in ${monthLabel}`}
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {commissions.map((commission) => (
+                  {filteredCommissions.map((commission) => (
                     <Card
                       key={commission.id}
                       className="p-3 border-border/50 hover:border-border transition-colors"
