@@ -39,6 +39,21 @@ import {
   Cpu,
   HardDrive,
   MonitorSmartphone,
+  Battery,
+  Camera,
+  Wifi,
+  Palette,
+  Calendar,
+  Package,
+  BadgeCheck,
+  Zap,
+  MemoryStick,
+  Ruler,
+  Weight,
+  Signal,
+  Fingerprint,
+  Droplets,
+  Star,
 } from "lucide-react";
 
 const conditionLabels: Record<string, { label: string; color: string; description: string }> = {
@@ -102,6 +117,37 @@ const getFallbackImageUrls = (brand: string): string[] => {
   }
   
   return urls;
+};
+
+// Helper to get icon for specification keys
+const getSpecIcon = (key: string) => {
+  const keyLower = key.toLowerCase();
+  if (keyLower.includes('storage') || keyLower.includes('memoria') || keyLower.includes('gb') || keyLower.includes('capacità')) return HardDrive;
+  if (keyLower.includes('ram')) return MemoryStick;
+  if (keyLower.includes('display') || keyLower.includes('schermo')) return MonitorSmartphone;
+  if (keyLower.includes('battery') || keyLower.includes('batteria')) return Battery;
+  if (keyLower.includes('camera') || keyLower.includes('fotocamera')) return Camera;
+  if (keyLower.includes('cpu') || keyLower.includes('processor') || keyLower.includes('chip')) return Cpu;
+  if (keyLower.includes('wifi') || keyLower.includes('connectivity') || keyLower.includes('connettività')) return Wifi;
+  if (keyLower.includes('color') || keyLower.includes('colore')) return Palette;
+  if (keyLower.includes('year') || keyLower.includes('anno')) return Calendar;
+  if (keyLower.includes('dimension') || keyLower.includes('size')) return Ruler;
+  if (keyLower.includes('weight') || keyLower.includes('peso')) return Weight;
+  if (keyLower.includes('5g') || keyLower.includes('network') || keyLower.includes('rete')) return Signal;
+  if (keyLower.includes('fingerprint') || keyLower.includes('face') || keyLower.includes('biometric')) return Fingerprint;
+  if (keyLower.includes('water') || keyLower.includes('ip6') || keyLower.includes('ip5') || keyLower.includes('resistenza')) return Droplets;
+  return Package;
+};
+
+// Helper to format spec labels
+const formatSpecLabel = (key: string): string => {
+  return key
+    .replace(/_/g, ' ')
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 };
 
 export default function UsatoDetail() {
@@ -483,23 +529,104 @@ export default function UsatoDetail() {
               )}
             </div>
 
-            {/* Price */}
-            <div className="flex items-end gap-3">
-              <span className="text-3xl sm:text-4xl font-bold text-primary">
-                €{device.price.toLocaleString()}
-              </span>
-              {device.original_price && device.original_price > device.price && (
-                <span className="text-xl text-muted-foreground line-through">
-                  €{device.original_price.toLocaleString()}
-                </span>
+            {/* Price Card */}
+            <Card className="border-border/50 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Prezzo</p>
+                    <div className="flex items-end gap-3">
+                      <span className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+                        €{device.price.toLocaleString()}
+                      </span>
+                      {device.original_price && device.original_price > device.price && (
+                        <span className="text-lg text-muted-foreground line-through">
+                          €{device.original_price.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {discountPercent > 0 && (
+                    <Badge className="bg-destructive text-destructive-foreground text-lg px-3 py-1">
+                      -{discountPercent}%
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Features Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Storage */}
+              {device.storage_capacity && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="flex flex-col items-center p-4 bg-gradient-to-br from-muted/80 to-muted/40 rounded-xl border border-border/50"
+                >
+                  <div className="p-2 bg-primary/10 rounded-lg mb-2">
+                    <HardDrive className="h-5 w-5 text-primary" />
+                  </div>
+                  <span className="text-sm font-semibold">{device.storage_capacity}</span>
+                  <span className="text-xs text-muted-foreground">Memoria</span>
+                </motion.div>
               )}
+              
+              {/* Color */}
+              {device.color && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="flex flex-col items-center p-4 bg-gradient-to-br from-muted/80 to-muted/40 rounded-xl border border-border/50"
+                >
+                  <div className="p-2 bg-accent/10 rounded-lg mb-2">
+                    <Palette className="h-5 w-5 text-accent" />
+                  </div>
+                  <span className="text-sm font-semibold">{device.color}</span>
+                  <span className="text-xs text-muted-foreground">Colore</span>
+                </motion.div>
+              )}
+
+              {/* Warranty */}
+              {device.warranty_months > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex flex-col items-center p-4 bg-gradient-to-br from-success/10 to-success/5 rounded-xl border border-success/20"
+                >
+                  <div className="p-2 bg-success/10 rounded-lg mb-2">
+                    <Shield className="h-5 w-5 text-success" />
+                  </div>
+                  <span className="text-sm font-semibold">{device.warranty_months} mesi</span>
+                  <span className="text-xs text-muted-foreground">Garanzia</span>
+                </motion.div>
+              )}
+
+              {/* Condition */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="flex flex-col items-center p-4 bg-gradient-to-br from-muted/80 to-muted/40 rounded-xl border border-border/50"
+              >
+                <div className="p-2 bg-info/10 rounded-lg mb-2">
+                  <BadgeCheck className="h-5 w-5 text-info" />
+                </div>
+                <span className="text-sm font-semibold text-center">{conditionInfo.label}</span>
+                <span className="text-xs text-muted-foreground">Condizione</span>
+              </motion.div>
             </div>
 
-            {/* Condition Info */}
-            <Card className="border-primary/20 bg-primary/5">
+            {/* Condition Description Card */}
+            <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <CheckCircle2 className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
                     <p className="font-semibold text-foreground">{conditionInfo.label}</p>
                     <p className="text-sm text-muted-foreground">{conditionInfo.description}</p>
@@ -508,38 +635,57 @@ export default function UsatoDetail() {
               </CardContent>
             </Card>
 
-            {/* Warranty */}
-            {device.warranty_months > 0 && (
-              <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-xl">
-                <Shield className="h-6 w-6 text-success" />
-                <div>
-                  <p className="font-semibold">{device.warranty_months} mesi di garanzia</p>
-                  <p className="text-sm text-muted-foreground">Garanzia completa su difetti</p>
-                </div>
-              </div>
-            )}
-
             {/* Description */}
             {device.description && (
-              <div>
-                <h3 className="font-semibold mb-2">Descrizione</h3>
-                <p className="text-muted-foreground">{device.description}</p>
-              </div>
+              <Card className="border-border/50">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-muted rounded-lg">
+                      <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold mb-1">Descrizione</h3>
+                      <p className="text-sm text-muted-foreground">{device.description}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             {/* Specifications */}
             {Object.keys(specs).length > 0 && (
-              <div>
-                <h3 className="font-semibold mb-3">Specifiche</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  {Object.entries(specs).map(([key, value]) => (
-                    <div key={key} className="p-2 bg-muted/50 rounded-lg">
-                      <p className="text-xs text-muted-foreground capitalize">{key}</p>
-                      <p className="text-sm font-medium">{String(value)}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <Card className="border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Cpu className="h-5 w-5 text-primary" />
+                    Specifiche Tecniche
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {Object.entries(specs).map(([key, value], index) => {
+                      const SpecIcon = getSpecIcon(key);
+                      return (
+                        <motion.div 
+                          key={key}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg hover:bg-muted/80 transition-colors"
+                        >
+                          <div className="p-2 bg-background rounded-lg shadow-sm">
+                            <SpecIcon className="h-4 w-4 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground">{formatSpecLabel(key)}</p>
+                            <p className="text-sm font-medium truncate">{String(value)}</p>
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
             <Separator />
@@ -606,16 +752,26 @@ export default function UsatoDetail() {
                 </DialogContent>
               </Dialog>
 
-              <Button variant="outline" size="lg" className="w-full gap-2">
+              <Button variant="outline" size="lg" className="w-full gap-2 border-border/50 hover:bg-muted/50">
                 <MessageCircle className="h-5 w-5" />
                 Richiedi Informazioni
               </Button>
             </div>
 
-            {/* Views */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Eye className="h-4 w-4" />
-              {device.views_count} visualizzazioni
+            {/* Views & Stats */}
+            <div className="flex items-center justify-center gap-6 pt-2">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="p-1.5 bg-muted/50 rounded-md">
+                  <Eye className="h-4 w-4" />
+                </div>
+                <span>{device.views_count || 0} visualizzazioni</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="p-1.5 bg-muted/50 rounded-md">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                <span>Aggiunto {new Date(device.created_at).toLocaleDateString('it-IT')}</span>
+              </div>
             </div>
           </motion.div>
         </div>
