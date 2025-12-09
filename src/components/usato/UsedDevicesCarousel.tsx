@@ -32,14 +32,18 @@ export function UsedDevicesCarousel() {
     try {
       const { data, error } = await supabase
         .from("used_devices")
-        .select("*")
+        .select("*, used_device_reservations(id)")
         .eq("status", "published")
         .order("published_at", { ascending: false })
         .limit(8);
 
       if (error) throw error;
       
-      const devicesWithReservations = data || [];
+      // Add reservation_count to each device
+      const devicesWithReservations = (data || []).map(device => ({
+        ...device,
+        reservation_count: device.used_device_reservations?.length || 0
+      }));
       
       // Calculate stats
       const avgDiscount = devicesWithReservations.reduce((acc, d) => {
