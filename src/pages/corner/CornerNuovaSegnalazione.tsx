@@ -103,32 +103,7 @@ export default function CornerNuovaSegnalazione() {
     fetchData();
   }, [user]);
 
-  // Block if suspended
-  if (paymentStatus === "suspended") {
-    return (
-      <CornerLayout>
-        <PageTransition>
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <Card className="max-w-md w-full border-destructive/50 bg-destructive/5">
-              <CardContent className="pt-6 text-center space-y-4">
-                <div className="mx-auto w-16 h-16 bg-destructive/20 rounded-full flex items-center justify-center">
-                  <AlertTriangle className="h-8 w-8 text-destructive" />
-                </div>
-                <h2 className="text-xl font-bold text-destructive">Account Sospeso</h2>
-                <p className="text-muted-foreground">
-                  Non puoi creare nuove segnalazioni perché il tuo account è sospeso per credito esaurito.
-                </p>
-                <Button onClick={() => navigate("/corner")} variant="outline" className="mt-4">
-                  <ArrowLeft className="h-4 w-4 mr-2" />
-                  Torna alla Dashboard
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </PageTransition>
-      </CornerLayout>
-    );
-  }
+  // Corners don't have credit restrictions - they only receive commissions
 
   const wizardSteps = [
     { title: "Cliente", description: "Inserisci i dati del cliente" },
