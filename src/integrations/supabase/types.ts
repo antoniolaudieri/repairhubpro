@@ -1824,7 +1824,10 @@ export type Database = {
       used_devices: {
         Row: {
           brand: string
+          centro_gross_margin: number | null
           centro_id: string
+          centro_net_margin: number | null
+          centro_split_percentage: number
           color: string | null
           condition: Database["public"]["Enums"]["device_condition"]
           created_at: string
@@ -1833,11 +1836,16 @@ export type Database = {
           id: string
           model: string
           original_price: number | null
+          owner_customer_id: string | null
+          owner_payout: number | null
+          owner_split_percentage: number
           photos: string[] | null
           price: number
           published_at: string | null
           repair_id: string | null
           reserved_at: string | null
+          sale_platform_commission: number | null
+          sale_type: Database["public"]["Enums"]["used_device_sale_type"]
           sold_at: string | null
           source: Database["public"]["Enums"]["device_source"]
           specifications: Json | null
@@ -1849,7 +1857,10 @@ export type Database = {
         }
         Insert: {
           brand: string
+          centro_gross_margin?: number | null
           centro_id: string
+          centro_net_margin?: number | null
+          centro_split_percentage?: number
           color?: string | null
           condition?: Database["public"]["Enums"]["device_condition"]
           created_at?: string
@@ -1858,11 +1869,16 @@ export type Database = {
           id?: string
           model: string
           original_price?: number | null
+          owner_customer_id?: string | null
+          owner_payout?: number | null
+          owner_split_percentage?: number
           photos?: string[] | null
           price: number
           published_at?: string | null
           repair_id?: string | null
           reserved_at?: string | null
+          sale_platform_commission?: number | null
+          sale_type?: Database["public"]["Enums"]["used_device_sale_type"]
           sold_at?: string | null
           source?: Database["public"]["Enums"]["device_source"]
           specifications?: Json | null
@@ -1874,7 +1890,10 @@ export type Database = {
         }
         Update: {
           brand?: string
+          centro_gross_margin?: number | null
           centro_id?: string
+          centro_net_margin?: number | null
+          centro_split_percentage?: number
           color?: string | null
           condition?: Database["public"]["Enums"]["device_condition"]
           created_at?: string
@@ -1883,11 +1902,16 @@ export type Database = {
           id?: string
           model?: string
           original_price?: number | null
+          owner_customer_id?: string | null
+          owner_payout?: number | null
+          owner_split_percentage?: number
           photos?: string[] | null
           price?: number
           published_at?: string | null
           repair_id?: string | null
           reserved_at?: string | null
+          sale_platform_commission?: number | null
+          sale_type?: Database["public"]["Enums"]["used_device_sale_type"]
           sold_at?: string | null
           source?: Database["public"]["Enums"]["device_source"]
           specifications?: Json | null
@@ -1903,6 +1927,13 @@ export type Database = {
             columns: ["centro_id"]
             isOneToOne: false
             referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "used_devices_owner_customer_id_fkey"
+            columns: ["owner_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
           {
@@ -1970,6 +2001,7 @@ export type Database = {
         | "permuta"
         | "acquisto"
         | "ricondizionato"
+      used_device_sale_type: "alienato" | "conto_vendita" | "acquistato"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2120,6 +2152,7 @@ export const Constants = {
         "acquisto",
         "ricondizionato",
       ],
+      used_device_sale_type: ["alienato", "conto_vendita", "acquistato"],
     },
   },
 } as const
