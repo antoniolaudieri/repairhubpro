@@ -41,7 +41,6 @@ type FormData = z.infer<typeof formSchema>;
 interface RepairRequestFormProps {
   cornerId: string;
   onSuccess?: () => void;
-  isSuspended?: boolean;
 }
 
 const deviceTypes = [
@@ -53,26 +52,10 @@ const deviceTypes = [
   "altro",
 ];
 
-export const RepairRequestForm = ({ cornerId, onSuccess, isSuspended = false }: RepairRequestFormProps) => {
+export const RepairRequestForm = ({ cornerId, onSuccess }: RepairRequestFormProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Block submission if suspended
-  if (isSuspended) {
-    return (
-      <Card className="border-destructive/50 bg-destructive/5">
-        <CardContent className="pt-6 text-center space-y-4">
-          <div className="mx-auto w-12 h-12 bg-destructive/20 rounded-full flex items-center justify-center">
-            <Send className="h-6 w-6 text-destructive" />
-          </div>
-          <h3 className="font-semibold text-destructive">Account Sospeso</h3>
-          <p className="text-sm text-muted-foreground">
-            Non puoi inviare nuove segnalazioni perché il tuo account è sospeso per credito esaurito.
-            Ricarica il credito per riattivare l'account.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Corners don't have credit restrictions - they only receive commissions
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),

@@ -12,8 +12,6 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { PendingQuotesBanner } from "@/components/corner/PendingQuotesBanner";
-import { CreditBalanceWidget } from "@/components/credit/CreditBalanceWidget";
-import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
 import { 
   Plus, 
   FileText, 
@@ -260,14 +258,6 @@ export default function CornerDashboard() {
             </Button>
           </div>
 
-          {/* Credit Status Banner */}
-          {corner && (corner.payment_status === "warning" || corner.payment_status === "suspended") && (
-            <CreditStatusBanner
-              paymentStatus={corner.payment_status || "good_standing"}
-              creditBalance={corner.credit_balance || 0}
-            />
-          )}
-
           {/* Pending Quotes Banner */}
           <PendingQuotesBanner />
 
@@ -303,22 +293,8 @@ export default function CornerDashboard() {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4"
           >
-            {/* Credit Balance Widget */}
-            {corner && (
-              <motion.div variants={itemVariants}>
-                <CreditBalanceWidget
-                  entityType="corner"
-                  entityId={corner.id}
-                  creditBalance={corner.credit_balance || 0}
-                  warningThreshold={corner.credit_warning_threshold || 50}
-                  paymentStatus={corner.payment_status || "good_standing"}
-                  onTopupSuccess={fetchCornerData}
-                />
-              </motion.div>
-            )}
-
             {/* Pending Appointments Card */}
             <motion.div variants={itemVariants}>
               <Card 
