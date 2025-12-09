@@ -219,42 +219,29 @@ const handler = async (req: Request): Promise<Response> => {
           .update({ last_notified_at: new Date().toISOString() })
           .eq("id", interest.id);
 
-        // Create in-app notification if customer has an account
-        if (interest.customer_id) {
-          // Get customer email for notification lookup
-          const { data: customer } = await supabase
-            .from("customers")
-            .select("email")
-            .eq("id", interest.customer_id)
-            .single();
+        // Create in-app notification using interest.email directly
+        const { error: notifError } = await supabase
+          .from("customer_notifications")
+          .insert({
+            customer_email: interest.email,
+            type: "new_device",
+            title: `Nuovo ${device.brand} ${device.model} disponibile!`,
+            message: `Un dispositivo che corrisponde alle tue preferenze è ora disponibile a €${device.price.toFixed(2)}`,
+            data: {
+              device_id: device.id,
+              device_type: device.device_type,
+              brand: device.brand,
+              model: device.model,
+              price: device.price,
+            },
+            read: false,
+          });
 
-          if (customer?.email) {
-            // Insert into a customer_notifications table or similar
-            // For now, we'll use a simple approach with a dedicated table
-            const { error: notifError } = await supabase
-              .from("customer_notifications")
-              .insert({
-                customer_email: customer.email,
-                type: "new_device",
-                title: `Nuovo ${device.brand} ${device.model} disponibile!`,
-                message: `Un dispositivo che corrisponde alle tue preferenze è ora disponibile a €${device.price.toFixed(2)}`,
-                data: {
-                  device_id: device.id,
-                  device_type: device.device_type,
-                  brand: device.brand,
-                  model: device.model,
-                  price: device.price,
-                },
-                read: false,
-              });
-
-            if (!notifError) {
-              results.notifications_created++;
-              console.log("notify-device-interest: In-app notification created for", customer.email);
-            } else {
-              console.error("notify-device-interest: Notification error", notifError);
-            }
-          }
+        if (!notifError) {
+          results.notifications_created++;
+          console.log("notify-device-interest: In-app notification created for", interest.email);
+        } else {
+          console.error("notify-device-interest: Notification error", notifError);
         }
       } catch (error: any) {
         console.error("notify-device-interest: Error processing interest", interest.id, error);
