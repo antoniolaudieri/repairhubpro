@@ -78,7 +78,7 @@ export default function UsatoCatalog() {
         .eq("status", "published");
 
       if (deviceType !== "all") {
-        query = query.eq("device_type", deviceType);
+        query = query.ilike("device_type", deviceType);
       }
 
       if (condition !== "all") {
