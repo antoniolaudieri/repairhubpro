@@ -106,7 +106,26 @@ export default function UsatoCatalog() {
       const { data, error } = await query;
       if (error) throw error;
 
-      setDevices(data || []);
+      // Fetch reservation counts for all devices
+      const deviceIds = (data || []).map(d => d.id);
+      const { data: reservations } = await supabase
+        .from("used_device_reservations")
+        .select("device_id")
+        .in("device_id", deviceIds);
+
+      // Count reservations per device
+      const reservationCounts: Record<string, number> = {};
+      (reservations || []).forEach(r => {
+        reservationCounts[r.device_id] = (reservationCounts[r.device_id] || 0) + 1;
+      });
+
+      // Merge reservation counts into devices
+      const devicesWithReservations = (data || []).map(d => ({
+        ...d,
+        reservation_count: reservationCounts[d.id] || 0
+      }));
+
+      setDevices(devicesWithReservations);
 
       // Extract unique brands
       const uniqueBrands = [...new Set((data || []).map(d => d.brand))].sort();

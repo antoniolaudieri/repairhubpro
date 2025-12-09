@@ -11,7 +11,8 @@ import {
   Shield, 
   Eye,
   ArrowRight,
-  Sparkles
+  Sparkles,
+  Users
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +30,7 @@ interface UsedDevice {
   photos: string[];
   warranty_months: number;
   views_count: number;
+  reservation_count?: number;
   centro?: {
     business_name: string;
     logo_url: string | null;
@@ -205,8 +207,14 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
             </div>
           )}
 
-          {/* Views */}
-          <div className="absolute bottom-2 right-2">
+          {/* Views & Reservations */}
+          <div className="absolute bottom-2 right-2 flex flex-col gap-1 items-end">
+            {device.reservation_count && device.reservation_count > 0 && (
+              <Badge className="gap-1 text-xs bg-orange-500 text-white animate-pulse">
+                <Users className="h-3 w-3" />
+                {device.reservation_count} {device.reservation_count === 1 ? 'interessato' : 'interessati'}
+              </Badge>
+            )}
             <Badge variant="secondary" className="gap-1 text-xs opacity-80">
               <Eye className="h-3 w-3" />
               {device.views_count}
