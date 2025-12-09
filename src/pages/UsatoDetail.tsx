@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -35,6 +35,10 @@ import {
   ChevronRight,
   ShoppingCart,
   MessageCircle,
+  Sparkles,
+  Cpu,
+  HardDrive,
+  MonitorSmartphone,
 } from "lucide-react";
 
 const conditionLabels: Record<string, { label: string; color: string; description: string }> = {
@@ -75,6 +79,31 @@ const getDeviceIcon = (type: string) => {
   }
 };
 
+// Brand logo fallback URLs
+const brandLogos: Record<string, string> = {
+  apple: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg",
+  samsung: "https://upload.wikimedia.org/wikipedia/commons/2/24/Samsung_Logo.svg",
+  huawei: "https://upload.wikimedia.org/wikipedia/en/0/04/Huawei_Standard_logo.svg",
+  xiaomi: "https://upload.wikimedia.org/wikipedia/commons/a/ae/Xiaomi_logo_%282021-%29.svg",
+  oppo: "https://upload.wikimedia.org/wikipedia/commons/0/0a/OPPO_LOGO_2019.svg",
+  google: "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg",
+  oneplus: "https://upload.wikimedia.org/wikipedia/commons/d/d8/OnePlus_logo.svg",
+  motorola: "https://upload.wikimedia.org/wikipedia/commons/4/45/Motorola_logo.svg",
+  sony: "https://upload.wikimedia.org/wikipedia/commons/c/c5/Sony_logo.svg",
+  lg: "https://upload.wikimedia.org/wikipedia/commons/b/bf/LG_logo_%282015%29.svg",
+};
+
+const getFallbackImageUrls = (brand: string): string[] => {
+  const urls: string[] = [];
+  const brandLower = brand.toLowerCase();
+  
+  if (brandLogos[brandLower]) {
+    urls.push(brandLogos[brandLower]);
+  }
+  
+  return urls;
+};
+
 export default function UsatoDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -89,6 +118,13 @@ export default function UsatoDetail() {
     customer_phone: "",
     message: "",
   });
+
+  // Device lookup state
+  const [lookupImage, setLookupImage] = useState<string | null>(null);
+  const [lookupData, setLookupData] = useState<any>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [fallbackIndex, setFallbackIndex] = useState(0);
 
   useEffect(() => {
     fetchDevice();
@@ -122,6 +158,48 @@ export default function UsatoDetail() {
       navigate("/usato");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Lookup device image and details
+  const lookupDeviceInfo = useCallback(async () => {
+    if (!device || (device.photos && device.photos.length > 0)) return;
+    if (!device.brand || !device.model) return;
+    
+    setIsLookingUp(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('lookup-device', {
+        body: { brand: device.brand, model: device.model }
+      });
+      
+      if (!error && data) {
+        if (data.imageUrl) {
+          setLookupImage(data.imageUrl);
+        }
+        setLookupData(data);
+      }
+    } catch (err) {
+      console.error("Device lookup error:", err);
+    } finally {
+      setIsLookingUp(false);
+    }
+  }, [device]);
+
+  useEffect(() => {
+    if (device && (!device.photos || device.photos.length === 0)) {
+      lookupDeviceInfo();
+    }
+  }, [device, lookupDeviceInfo]);
+
+  const handleImageError = () => {
+    if (!device) return;
+    const fallbacks = getFallbackImageUrls(device.brand);
+    if (fallbackIndex < fallbacks.length) {
+      setLookupImage(fallbacks[fallbackIndex]);
+      setFallbackIndex(prev => prev + 1);
+    } else {
+      setImageError(true);
     }
   };
 
@@ -188,6 +266,9 @@ export default function UsatoDetail() {
     : 0;
   const photos = device.photos || [];
   const specs = device.specifications || {};
+  const hasPhotos = photos.length > 0;
+  const displayImage = hasPhotos ? photos[currentPhotoIndex] : lookupImage;
+  const showAiBadge = !hasPhotos && lookupImage && !imageError;
 
   return (
     <div className="min-h-screen bg-background">
@@ -223,14 +304,17 @@ export default function UsatoDetail() {
             className="space-y-4"
           >
             <div className="relative aspect-square bg-muted rounded-2xl overflow-hidden">
-              {photos.length > 0 ? (
+              {displayImage && !imageError ? (
                 <>
                   <img
-                    src={photos[currentPhotoIndex]}
+                    src={displayImage}
                     alt={`${device.brand} ${device.model}`}
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full ${hasPhotos ? 'object-cover' : 'object-contain p-8'}`}
+                    onError={handleImageError}
+                    referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
                   />
-                  {photos.length > 1 && (
+                  {hasPhotos && photos.length > 1 && (
                     <>
                       <Button
                         variant="secondary"
@@ -255,9 +339,27 @@ export default function UsatoDetail() {
                     </>
                   )}
                 </>
+              ) : isLookingUp ? (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                  <div className="animate-pulse">
+                    <DeviceIcon className="h-24 w-24 text-muted-foreground/30" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">Caricamento immagine...</span>
+                </div>
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
+                <div className="w-full h-full flex flex-col items-center justify-center gap-3">
                   <DeviceIcon className="h-32 w-32 text-muted-foreground/30" />
+                  <span className="text-lg font-medium text-muted-foreground">{device.brand}</span>
+                </div>
+              )}
+
+              {/* AI Badge */}
+              {showAiBadge && (
+                <div className="absolute bottom-4 left-4">
+                  <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary border-primary/20">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    Immagine AI
+                  </Badge>
                 </div>
               )}
 
@@ -275,7 +377,7 @@ export default function UsatoDetail() {
             </div>
 
             {/* Thumbnails */}
-            {photos.length > 1 && (
+            {hasPhotos && photos.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {photos.map((photo: string, index: number) => (
                   <button
@@ -289,6 +391,46 @@ export default function UsatoDetail() {
                   </button>
                 ))}
               </div>
+            )}
+
+            {/* AI Detected Specs Card */}
+            {lookupData && !hasPhotos && (
+              <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">Specifiche rilevate automaticamente</span>
+                  </div>
+                  {lookupData.fullName && (
+                    <p className="font-semibold text-foreground mb-2">{lookupData.fullName}</p>
+                  )}
+                  {lookupData.year && (
+                    <p className="text-sm text-muted-foreground mb-3">Anno: {lookupData.year}</p>
+                  )}
+                  {lookupData.specs && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {lookupData.specs.storage && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <HardDrive className="h-4 w-4 text-muted-foreground" />
+                          <span>{lookupData.specs.storage}</span>
+                        </div>
+                      )}
+                      {lookupData.specs.ram && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Cpu className="h-4 w-4 text-muted-foreground" />
+                          <span>{lookupData.specs.ram}</span>
+                        </div>
+                      )}
+                      {lookupData.specs.display && (
+                        <div className="flex items-center gap-2 text-sm col-span-2">
+                          <MonitorSmartphone className="h-4 w-4 text-muted-foreground" />
+                          <span>{lookupData.specs.display}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             )}
           </motion.div>
 
@@ -304,7 +446,7 @@ export default function UsatoDetail() {
                 {device.brand}
               </p>
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground mt-1">
-                {device.model}
+                {lookupData?.fullName || device.model}
               </h1>
               {device.storage_capacity && (
                 <p className="text-muted-foreground mt-1">
