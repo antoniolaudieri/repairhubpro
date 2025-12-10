@@ -190,17 +190,55 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { user_id, user_ids, payload }: RequestBody = await req.json();
+    const requestBody = await req.json();
+    
+    // Support both formats:
+    // 1. { payload: { title, body }, user_id/user_ids }
+    // 2. { title, body, userId/user_id/user_ids } (flat format from frontend)
+    let payload: PushPayload;
+    let targetUserIds: string[] = [];
+    
+    if (requestBody.payload) {
+      // Nested format
+      payload = requestBody.payload;
+      targetUserIds = requestBody.user_ids || (requestBody.user_id ? [requestBody.user_id] : []);
+    } else {
+      // Flat format from frontend
+      payload = {
+        title: requestBody.title,
+        body: requestBody.body,
+        icon: requestBody.icon,
+        badge: requestBody.badge,
+        data: requestBody.data,
+        tag: requestBody.tag,
+      };
+      // Support both userId (camelCase) and user_id (snake_case)
+      const userId = requestBody.userId || requestBody.user_id;
+      targetUserIds = requestBody.user_ids || (userId ? [userId] : []);
+    }
 
-    if (!payload || !payload.title || !payload.body) {
+    if (!payload.title || !payload.body) {
       throw new Error("Missing required payload fields (title, body)");
     }
 
-    // Determine which users to notify
-    const targetUserIds = user_ids || (user_id ? [user_id] : []);
+    // If no specific users, get all users with subscriptions
+    if (targetUserIds.length === 0) {
+      console.log("No specific user_id provided, fetching all subscribed users");
+      const { data: allSubs } = await supabase
+        .from("push_subscriptions")
+        .select("user_id")
+        .not("user_id", "is", null);
+      
+      if (allSubs && allSubs.length > 0) {
+        targetUserIds = [...new Set(allSubs.map(s => s.user_id).filter(Boolean))] as string[];
+      }
+    }
 
     if (targetUserIds.length === 0) {
-      throw new Error("No user_id or user_ids provided");
+      return new Response(
+        JSON.stringify({ success: true, sent: 0, message: "No subscriptions found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     console.log(`Sending push to ${targetUserIds.length} user(s):`, targetUserIds);
