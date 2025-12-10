@@ -1,20 +1,8 @@
-// Service Worker for Push Notifications and PWA
-// Self-contained push notification handling
+// Push notification handlers - imported by Workbox SW
+// DO NOT add install/activate handlers here - they conflict with Workbox
 
-// Skip waiting and claim clients immediately
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installing...');
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating...');
-  event.waitUntil(clients.claim());
-});
-
-// Push notification handler
 self.addEventListener('push', function(event) {
-  console.log('[SW] Push event received!');
+  console.log('[Push SW] Push event received!');
   
   let data = {
     title: 'Nuova Notifica',
@@ -27,10 +15,10 @@ self.addEventListener('push', function(event) {
   if (event.data) {
     try {
       const payload = event.data.json();
-      console.log('[SW] Push payload:', JSON.stringify(payload));
+      console.log('[Push SW] Payload:', JSON.stringify(payload));
       data = { ...data, ...payload };
     } catch (e) {
-      console.log('[SW] Push data as text:', event.data.text());
+      console.log('[Push SW] Text data:', event.data.text());
       data.body = event.data.text();
     }
   }
@@ -41,20 +29,22 @@ self.addEventListener('push', function(event) {
     badge: data.badge || '/pwa-192x192.png',
     vibrate: [200, 100, 200],
     data: data.data || {},
-    tag: data.tag || 'notification-' + Date.now(),
+    tag: data.tag || 'push-' + Date.now(),
     renotify: true,
     requireInteraction: true
   };
 
-  console.log('[SW] Showing notification:', data.title);
+  console.log('[Push SW] Showing notification:', data.title);
   
   event.waitUntil(
     self.registration.showNotification(data.title, options)
+      .then(() => console.log('[Push SW] Notification shown successfully'))
+      .catch(err => console.error('[Push SW] Failed to show notification:', err))
   );
 });
 
 self.addEventListener('notificationclick', function(event) {
-  console.log('[SW] Notification clicked');
+  console.log('[Push SW] Notification clicked');
   event.notification.close();
 
   const urlToOpen = event.notification.data?.url || '/';
@@ -75,11 +65,7 @@ self.addEventListener('notificationclick', function(event) {
 });
 
 self.addEventListener('notificationclose', function(event) {
-  console.log('[SW] Notification closed');
+  console.log('[Push SW] Notification closed');
 });
 
-// Fetch handler for basic caching (simplified)
-self.addEventListener('fetch', function(event) {
-  // Let network requests pass through normally
-  // This SW is primarily for push notifications
-});
+console.log('[Push SW] Push notification handlers loaded');
