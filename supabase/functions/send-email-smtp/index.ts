@@ -69,22 +69,27 @@ const handler = async (req: Request): Promise<Response> => {
     // Try SMTP if configured
     if (smtpConfig) {
       try {
-        console.log("send-email-smtp: Connecting to SMTP", smtpConfig.host, smtpConfig.port);
+        // Trim whitespace from SMTP config values
+        const trimmedHost = smtpConfig.host?.trim() || '';
+        const trimmedUser = smtpConfig.user?.trim() || '';
+        const trimmedFromEmail = smtpConfig.from_email?.trim() || '';
+        
+        console.log("send-email-smtp: Connecting to SMTP", trimmedHost, smtpConfig.port);
         
         const client = new SMTPClient({
           connection: {
-            hostname: smtpConfig.host,
+            hostname: trimmedHost,
             port: smtpConfig.port,
             tls: smtpConfig.secure,
             auth: {
-              username: smtpConfig.user,
+              username: trimmedUser,
               password: smtpConfig.password,
             },
           },
         });
 
         await client.send({
-          from: `${fromName} <${smtpConfig.from_email}>`,
+          from: `${fromName} <${trimmedFromEmail}>`,
           to: recipients,
           subject: subject,
           content: "auto",
@@ -98,7 +103,7 @@ const handler = async (req: Request): Promise<Response> => {
           JSON.stringify({ 
             success: true, 
             method: "smtp",
-            from: `${fromName} <${smtpConfig.from_email}>`,
+            from: `${fromName} <${trimmedFromEmail}>`,
             to: recipients 
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
