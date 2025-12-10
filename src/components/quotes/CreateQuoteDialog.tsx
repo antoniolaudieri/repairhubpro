@@ -58,6 +58,8 @@ interface CentroInfo {
   address?: string;
   phone?: string;
   email?: string;
+  vatNumber?: string;
+  logoUrl?: string;
 }
 
 interface DetectedDeviceInfo {
@@ -173,7 +175,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   const loadCentroInfo = async () => {
     const { data } = await supabase
       .from("centri_assistenza")
-      .select("business_name, address, phone, email")
+      .select("business_name, address, phone, email, vat_number, logo_url")
       .eq("id", centroId)
       .single();
     
@@ -182,7 +184,9 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
         name: data.business_name,
         address: data.address,
         phone: data.phone,
-        email: data.email
+        email: data.email,
+        vatNumber: data.vat_number || undefined,
+        logoUrl: data.logo_url || undefined,
       });
     }
   };
