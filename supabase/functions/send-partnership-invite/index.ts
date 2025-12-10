@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -200,23 +198,26 @@ serve(async (req: Request): Promise<Response> => {
 </html>
     `;
 
-    // Send email using Resend API directly
-    const emailResponse = await fetch("https://api.resend.com/emails", {
+    // Send email using send-email-smtp function (with Centro SMTP support if sender is centro)
+    const centroId = fromType === "centro" ? fromId : null;
+    
+    const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-smtp`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${supabaseServiceKey}`,
       },
       body: JSON.stringify({
-        from: "RepairHubPro <onboarding@resend.dev>",
-        to: [recipientEmail],
+        centro_id: centroId,
+        to: recipientEmail,
         subject: `🤝 Richiesta di Partnership da ${senderName}`,
         html: htmlContent,
+        from_name_override: senderName,
       }),
     });
 
     const emailResult = await emailResponse.json();
-    console.log("Email sent successfully:", emailResult);
+    console.log("Email sent:", emailResult);
 
     return new Response(
       JSON.stringify({ 

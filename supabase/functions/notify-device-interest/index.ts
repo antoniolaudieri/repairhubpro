@@ -1,8 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -198,18 +195,28 @@ const handler = async (req: Request): Promise<Response> => {
           </html>
         `;
 
-        const emailResponse = await resend.emails.send({
-          from: `${centroName} <onboarding@resend.dev>`,
-          to: [interest.email],
-          subject: `🎉 Nuovo ${device.brand} ${device.model} disponibile!`,
-          html: emailHtml,
+        // Send email via send-email-smtp function (with Centro SMTP support)
+        const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-smtp`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseServiceKey}`,
+          },
+          body: JSON.stringify({
+            centro_id: device.centro_id,
+            to: interest.email,
+            subject: `🎉 Nuovo ${device.brand} ${device.model} disponibile!`,
+            html: emailHtml,
+          }),
         });
 
-        if (emailResponse.error) {
-          console.error("notify-device-interest: Email error for", interest.email, emailResponse.error);
-          results.errors.push(`Email to ${interest.email}: ${emailResponse.error.message}`);
+        const emailResult = await emailResponse.json();
+
+        if (!emailResponse.ok || !emailResult.success) {
+          console.error("notify-device-interest: Email error for", interest.email, emailResult.error);
+          results.errors.push(`Email to ${interest.email}: ${emailResult.error || 'Unknown error'}`);
         } else {
-          console.log("notify-device-interest: Email sent to", interest.email);
+          console.log("notify-device-interest: Email sent to", interest.email, "via", emailResult.method);
           results.emails_sent++;
         }
 
