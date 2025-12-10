@@ -37,7 +37,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PatternLock } from "@/components/customer/PatternLock";
-import logoLabLinkRiparo from "@/assets/logo-lablinkriparo.png";
 
 type DisplayMode = "standby" | "confirm_data" | "enter_password" | "signature" | "completed";
 
@@ -599,17 +598,11 @@ export default function CustomerDisplay() {
           transition={{ delay: 0.5 }}
           className="fixed bottom-5 right-5 flex items-center gap-3 bg-white/5 backdrop-blur-xl rounded-2xl px-5 py-3 border border-white/10"
         >
-          {centroLogo ? (
+          {centroLogo && (
             <img 
               src={centroLogo} 
               alt={centroName} 
               className="h-10 w-10 object-contain rounded-lg"
-            />
-          ) : (
-            <img 
-              src={logoLabLinkRiparo} 
-              alt="LabLinkRiparo" 
-              className="h-10 w-auto"
             />
           )}
           <div className="text-white text-right">

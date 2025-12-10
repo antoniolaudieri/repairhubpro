@@ -7,9 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Mail, Lock, User, Phone, ArrowLeft, Sparkles } from "lucide-react";
+import { Wrench, Mail, Lock, User, Phone, ArrowLeft, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import logoLabLinkRiparo from "@/assets/logo-lablinkriparo.png";
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -174,7 +173,9 @@ const Auth = () => {
             className="relative mb-4"
             variants={logoVariants}
           >
-            <img src={logoLabLinkRiparo} alt="LabLinkRiparo" className="h-16 w-auto" />
+            <div className="bg-gradient-to-br from-primary to-primary/80 text-primary-foreground p-5 rounded-2xl shadow-lg shadow-primary/25">
+              <Wrench className="h-10 w-10" />
+            </div>
             <motion.div
               className="absolute -top-1 -right-1"
               animate={{ scale: [1, 1.2, 1] }}

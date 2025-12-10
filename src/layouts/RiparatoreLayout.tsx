@@ -13,7 +13,6 @@ import {
   Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import logoLabLinkRiparo from "@/assets/logo-lablinkriparo.png";
 
 interface RiparatoreLayoutProps {
   children: ReactNode;
@@ -42,13 +41,8 @@ export const RiparatoreLayout = ({ children }: RiparatoreLayoutProps) => {
       {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 bg-card border-r border-border flex-col">
         <div className="p-6 border-b border-border">
-          <div className="flex items-center gap-3">
-            <img src={logoLabLinkRiparo} alt="LabLinkRiparo" className="h-8 w-auto" />
-            <div>
-              <h1 className="text-xl font-bold text-primary">Riparatore</h1>
-              <p className="text-sm text-muted-foreground">Gestione Lavori</p>
-            </div>
-          </div>
+          <h1 className="text-xl font-bold text-primary">Riparatore Portal</h1>
+          <p className="text-sm text-muted-foreground">Gestione Lavori</p>
         </div>
         
         <nav className="flex-1 p-4 space-y-2">
@@ -87,10 +81,7 @@ export const RiparatoreLayout = ({ children }: RiparatoreLayoutProps) => {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-2">
-            <img src={logoLabLinkRiparo} alt="LabLinkRiparo" className="h-7 w-auto" />
-            <h1 className="text-lg font-bold text-primary">Riparatore</h1>
-          </div>
+          <h1 className="text-lg font-bold text-primary">Riparatore Portal</h1>
           <Button
             variant="ghost"
             size="icon"

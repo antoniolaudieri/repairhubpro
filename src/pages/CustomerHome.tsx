@@ -56,7 +56,6 @@ import {
 import { BookingWizard, CustomerData } from "@/components/booking/BookingWizard";
 import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
 import { format } from "date-fns";
-import logoLabLinkRiparo from "@/assets/logo-lablinkriparo.png";
 
 // Floating device icons component
 const FloatingDevices = () => (
@@ -310,7 +309,12 @@ export default function CustomerHome() {
             className="flex items-center gap-3"
             whileHover={{ scale: 1.02 }}
           >
-            <img src={logoLabLinkRiparo} alt="LabLinkRiparo" className="h-10 w-auto" />
+            <div className="relative">
+              <div className="p-2.5 bg-gradient-primary rounded-xl shadow-glow">
+                <Wrench className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div className="absolute -inset-1 bg-gradient-primary rounded-xl blur opacity-30 animate-pulse-glow" />
+            </div>
             <span className="font-bold text-xl text-foreground">LabLinkRiparo</span>
           </motion.div>
 

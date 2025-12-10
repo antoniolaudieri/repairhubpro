@@ -31,7 +31,6 @@ import {
 import { toast } from "@/components/ui/use-toast";
 import { Separator } from "@/components/ui/separator";
 import { motion, AnimatePresence } from "framer-motion";
-import logoLabLinkRiparo from "@/assets/logo-lablinkriparo.png";
 
 const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
@@ -80,11 +79,12 @@ export function AppSidebar() {
             transition={{ duration: 0.3 }}
           >
             <motion.div 
-              whileHover={{ scale: 1.05 }}
+              className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center shadow-elegant"
+              whileHover={{ scale: 1.05, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
             >
-              <img src={logoLabLinkRiparo} alt="LabLinkRiparo" className="h-9 w-auto" />
+              <Wrench className="h-5 w-5 text-primary-foreground" />
             </motion.div>
             <AnimatePresence mode="wait">
               {!isCollapsed && (
