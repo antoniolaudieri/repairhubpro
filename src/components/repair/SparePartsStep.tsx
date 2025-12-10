@@ -84,6 +84,8 @@ interface SparePartsStepProps {
   onLaborsChange?: (labors: SelectedLabor[]) => void;
   laborCost?: number;
   onLaborCostChange?: (cost: number) => void;
+  shippingEnabled?: boolean;
+  onShippingToggle?: (enabled: boolean) => void;
 }
 
 export const SparePartsStep = ({
@@ -99,6 +101,8 @@ export const SparePartsStep = ({
   onLaborsChange,
   laborCost = 0,
   onLaborCostChange,
+  shippingEnabled = false,
+  onShippingToggle,
 }: SparePartsStepProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [spareParts, setSpareParts] = useState<SparePart[]>([]);
@@ -486,10 +490,13 @@ export const SparePartsStep = ({
     return getTotalCost() + getServicesTotalCost() + getLaborsTotalCost();
   };
 
+  const UTOPYA_SHIPPING_COST = 7.50;
+
   return (
     <div className="space-y-6">
-      {/* Markup Configuration - Prominent at top */}
-      <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl border border-primary/30">
+      {/* Markup & Shipping Configuration - Prominent at top */}
+      <div className="p-4 bg-gradient-to-r from-primary/10 to-accent/10 rounded-xl border border-primary/30 space-y-4">
+        {/* Markup Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h3 className="font-semibold text-sm flex items-center gap-2">
@@ -511,6 +518,45 @@ export const SparePartsStep = ({
             <span className="text-sm font-medium">%</span>
           </div>
         </div>
+        
+        {/* Shipping Toggle Row */}
+        {onShippingToggle && (
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-primary/20">
+            <div>
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                🚚 Spedizione Utopya 24h
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Arrivo garantito in 24 ore lavorative
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`text-sm font-semibold ${shippingEnabled ? 'text-green-600' : 'text-muted-foreground'}`}>
+                €{UTOPYA_SHIPPING_COST.toFixed(2)}
+              </span>
+              <button
+                type="button"
+                onClick={() => onShippingToggle(!shippingEnabled)}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 ${
+                  shippingEnabled ? 'bg-green-500' : 'bg-muted'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    shippingEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {shippingEnabled && (
+          <div className="flex items-center gap-2 p-2 bg-green-500/10 rounded-md border border-green-500/20">
+            <span className="text-green-600 text-sm">✓</span>
+            <span className="text-xs text-green-600 font-medium">Spedizione inclusa nel preventivo</span>
+          </div>
+        )}
       </div>
 
       {/* Servizi Aggiuntivi */}
