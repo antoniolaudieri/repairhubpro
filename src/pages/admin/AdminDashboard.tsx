@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SendTestNotificationDialog } from "@/components/admin/SendTestNotificationDialog";
 import { 
   Store, 
   Wrench, 
@@ -18,7 +20,8 @@ import {
   CheckCircle,
   AlertCircle,
   Activity,
-  Zap
+  Zap,
+  Bell
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { PlatformAdminLayout } from "@/layouts/PlatformAdminLayout";
@@ -28,6 +31,7 @@ import { it } from "date-fns/locale";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [showNotificationDialog, setShowNotificationDialog] = useState(false);
 
   // Fetch counts
   const { data: stats } = useQuery({
@@ -282,7 +286,7 @@ export default function AdminDashboard() {
             <Zap className="h-5 w-5 text-amber-500" />
             <h2 className="text-lg font-semibold text-foreground">Azioni Rapide</h2>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
               return (
@@ -300,6 +304,19 @@ export default function AdminDashboard() {
                 </motion.div>
               );
             })}
+            {/* Test Notification Button */}
+            <motion.div variants={itemVariants}>
+              <Button
+                variant="outline"
+                className="w-full h-auto py-4 flex flex-col items-center gap-2 hover:bg-accent/50 hover:scale-[1.02] transition-all duration-300 border-border/50"
+                onClick={() => setShowNotificationDialog(true)}
+              >
+                <div className="p-2 rounded-lg bg-pink-500 text-white">
+                  <Bell className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-medium">Test Notifica</span>
+              </Button>
+            </motion.div>
           </div>
         </motion.div>
 
@@ -455,6 +472,12 @@ export default function AdminDashboard() {
           </motion.div>
         </motion.div>
       </div>
+
+      {/* Test Notification Dialog */}
+      <SendTestNotificationDialog 
+        open={showNotificationDialog} 
+        onOpenChange={setShowNotificationDialog} 
+      />
     </PlatformAdminLayout>
   );
 }

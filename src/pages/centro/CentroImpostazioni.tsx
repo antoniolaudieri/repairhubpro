@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LocationPicker } from "@/components/maps/LocationPicker";
 import { DisplayAdEditor, DisplayAd } from "@/components/centro/DisplayAdEditor";
+import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { 
   Settings,
   Building2,
@@ -1463,6 +1464,9 @@ export default function CentroImpostazioni() {
               }}
             />
           )}
+
+          {/* Push Notifications */}
+          <PushNotificationSettings />
 
           {/* Location Picker */}
           <Card>
