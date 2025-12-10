@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LocationPicker } from "@/components/maps/LocationPicker";
+import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -209,6 +210,9 @@ export default function CornerImpostazioni() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Push Notifications */}
+          <PushNotificationSettings />
         </div>
       </PageTransition>
     </CornerLayout>
