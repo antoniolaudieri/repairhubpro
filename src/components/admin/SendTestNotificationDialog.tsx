@@ -48,17 +48,24 @@ export function SendTestNotificationDialog({ open, onOpenChange }: SendTestNotif
       if (error) throw error;
       
       // Get unique user IDs
-      const uniqueUserIds = [...new Set(data?.map(d => d.user_id).filter(Boolean))];
+      const uniqueUserIds = [...new Set(data?.map(d => d.user_id).filter(Boolean))] as string[];
       
-      // Fetch user details
       if (uniqueUserIds.length === 0) return [];
       
+      // Fetch user details (profiles may not exist for all users)
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name")
         .in("id", uniqueUserIds);
       
-      return profiles || [];
+      // Return all subscribed users, with profile data if available
+      return uniqueUserIds.map(userId => {
+        const profile = profiles?.find(p => p.id === userId);
+        return {
+          id: userId,
+          full_name: profile?.full_name || null
+        };
+      });
     },
     enabled: open,
   });
