@@ -16,7 +16,7 @@ export interface TechNotification {
 
 export function useTechnicianNotifications() {
   const { user, userRole } = useAuth();
-  const { sendNotification, isGranted } = usePushNotifications();
+  const { sendLocalNotification, isGranted } = usePushNotifications();
   const [notifications, setNotifications] = useState<TechNotification[]>([]);
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export function useTechnicianNotifications() {
 
             // Push notification browser
             if (isGranted) {
-              sendNotification(title, {
+              sendLocalNotification(title, {
                 body: message,
                 tag: `repair-${payload.new.id}`,
                 data: { url: `/repairs/${payload.new.id}` },
@@ -108,7 +108,7 @@ export function useTechnicianNotifications() {
             toast.success(title, { description: message });
 
             if (isGranted) {
-              sendNotification(title, {
+              sendLocalNotification(title, {
                 body: message,
                 tag: `order-${payload.new.id}`,
                 data: { url: `/orders` },
@@ -150,7 +150,7 @@ export function useTechnicianNotifications() {
           toast.info(title, { description: message });
 
           if (isGranted) {
-            sendNotification(title, {
+            sendLocalNotification(title, {
               body: message,
               tag: `appointment-${payload.new.id}`,
               data: { url: `/appointments` },
@@ -165,7 +165,7 @@ export function useTechnicianNotifications() {
       supabase.removeChannel(ordersChannel);
       supabase.removeChannel(appointmentsChannel);
     };
-  }, [user, userRole, isGranted, sendNotification]);
+  }, [user, userRole, isGranted, sendLocalNotification]);
 
   const markAsRead = (notificationId: string) => {
     setNotifications((prev) =>

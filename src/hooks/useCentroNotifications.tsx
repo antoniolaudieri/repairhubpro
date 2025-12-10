@@ -17,7 +17,7 @@ export interface CentroNotification {
 
 export function useCentroNotifications() {
   const { user, isCentroAdmin } = useAuth();
-  const { sendNotification, isGranted } = usePushNotifications();
+  const { sendLocalNotification, isGranted } = usePushNotifications();
   const [notifications, setNotifications] = useState<CentroNotification[]>([]);
   const [centroId, setCentroId] = useState<string | null>(null);
 
@@ -107,7 +107,7 @@ export function useCentroNotifications() {
 
               // Push notification browser
               if (isGranted) {
-                sendNotification(title, {
+                sendLocalNotification(title, {
                   body: message,
                   tag: `job-offer-${payload.new.id}`,
                   data: { url: `/centro/lavori` },
@@ -185,7 +185,7 @@ export function useCentroNotifications() {
 
               // Push notification browser
               if (isGranted) {
-                sendNotification(title, {
+                sendLocalNotification(title, {
                   body: message,
                   tag: `corner-request-${payload.new.id}`,
                   data: { url: `/centro/lavori-corner` },
@@ -265,7 +265,7 @@ export function useCentroNotifications() {
               });
 
               if (isGranted) {
-                sendNotification(title, {
+                sendLocalNotification(title, {
                   body: message,
                   tag: `awaiting-pickup-${payload.new.id}`,
                   data: { url: detailUrl },
@@ -320,7 +320,7 @@ export function useCentroNotifications() {
               });
 
               if (isGranted) {
-                sendNotification(title, {
+                sendLocalNotification(title, {
                   body: message,
                   tag: `repair-${payload.new.id}`,
                   data: { url: `/centro/lavori-corner` },
@@ -362,7 +362,7 @@ export function useCentroNotifications() {
             toast.success(title, { description: message });
 
             if (isGranted) {
-              sendNotification(title, {
+              sendLocalNotification(title, {
                 body: message,
                 tag: `order-${payload.new.id}`,
                 data: { url: `/centro/ordini` },
@@ -379,7 +379,7 @@ export function useCentroNotifications() {
       supabase.removeChannel(repairRequestsUpdateChannel);
       supabase.removeChannel(ordersChannel);
     };
-  }, [user, isCentroAdmin, centroId, isGranted, sendNotification]);
+  }, [user, isCentroAdmin, centroId, isGranted, sendLocalNotification]);
 
   const markAsRead = (notificationId: string) => {
     setNotifications((prev) =>
