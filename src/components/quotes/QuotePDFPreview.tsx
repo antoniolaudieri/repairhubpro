@@ -155,7 +155,7 @@ export function QuotePDFPreview({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="max-w-4xl h-[90vh] sm:h-auto sm:max-h-[95vh] overflow-hidden flex flex-col p-0">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-6 border-b">
           <div className="flex items-center justify-between">
@@ -197,8 +197,8 @@ export function QuotePDFPreview({
           </div>
 
           {/* Sidebar / Main content on mobile */}
-          <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l">
-            <ScrollArea className="h-full max-h-[60vh] lg:max-h-none">
+          <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
               <div className="p-4 space-y-4">
                 {/* Device Preview Card */}
                 <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 overflow-hidden">
