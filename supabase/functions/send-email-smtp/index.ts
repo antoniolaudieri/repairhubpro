@@ -77,11 +77,12 @@ const handler = async (req: Request): Promise<Response> => {
     const fromName = from_name_override || smtpConfig?.from_name || centroName;
     const recipients = Array.isArray(to) ? to : [to];
 
-    // Prepare attachments for SMTP
+    // Prepare attachments for SMTP - use base64 encoding directly
     const smtpAttachments = attachments?.map(att => ({
       filename: att.filename,
-      content: Uint8Array.from(atob(att.content), c => c.charCodeAt(0)),
-      contentType: att.contentType,
+      content: att.content,
+      encoding: "base64" as const,
+      contentType: att.contentType || "application/pdf",
     })) || [];
 
     // Try SMTP if configured
