@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.estimate-used-price]
 verify_jwt = false
+
+[functions.send-email-smtp]
+verify_jwt = false
+
+[functions.test-smtp-config]
+verify_jwt = false
