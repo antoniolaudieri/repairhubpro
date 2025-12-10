@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.test-smtp-config]
 verify_jwt = false
+
+[functions.send-push-notification]
+verify_jwt = false

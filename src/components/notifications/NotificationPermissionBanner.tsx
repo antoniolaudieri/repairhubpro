@@ -6,7 +6,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { motion, AnimatePresence } from "framer-motion";
 
 export function NotificationPermissionBanner() {
-  const { isSupported, permission, requestPermission } = usePushNotifications();
+  const { isSupported, permission, subscribe } = usePushNotifications();
   const [dismissed, setDismissed] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +17,7 @@ export function NotificationPermissionBanner() {
 
   const handleEnable = async () => {
     setLoading(true);
-    await requestPermission();
+    await subscribe();
     setLoading(false);
   };
 
