@@ -23,6 +23,7 @@ interface IntakeSignatureStepProps {
   partsTotal?: number;
   servicesTotal?: number;
   laborTotal?: number;
+  shippingCost?: number;
   diagnosticFee?: number;
   onDiagnosticFeeChange?: (fee: number) => void;
   isFeeDisabledBySettings?: boolean;
@@ -39,6 +40,7 @@ export function IntakeSignatureStep({
   partsTotal = 0,
   servicesTotal = 0,
   laborTotal = 0,
+  shippingCost = 0,
   diagnosticFee = 15,
   onDiagnosticFeeChange,
   isFeeDisabledBySettings = false,
@@ -220,6 +222,12 @@ export function IntakeSignatureStep({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Manodopera:</span>
                 <span className="font-medium">€{laborTotal.toFixed(2)}</span>
+              </div>
+            )}
+            {shippingCost > 0 && (
+              <div className="flex justify-between text-blue-600">
+                <span>🚚 Spedizione:</span>
+                <span className="font-medium">€{shippingCost.toFixed(2)}</span>
               </div>
             )}
             <div className="flex justify-between">

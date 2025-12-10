@@ -259,6 +259,7 @@ export default function CentroNuovoRitiro() {
     diagnosticFee, 
     acconto,
     paymentMode,
+    shippingEnabled,
     startIntakeSession,
     updateIntakeSession,
     requestPassword,
@@ -1004,6 +1005,7 @@ export default function CentroNuovoRitiro() {
             partsTotal={selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0)}
             servicesTotal={selectedServices.reduce((sum, s) => sum + s.price, 0)}
             laborTotal={laborCost}
+            shippingCost={shippingCostForStep4}
             diagnosticFee={diagnosticFee}
             onDiagnosticFeeChange={isFeeDisabledBySettings ? undefined : setDiagnosticFee}
             isFeeDisabledBySettings={isFeeDisabledBySettings}
