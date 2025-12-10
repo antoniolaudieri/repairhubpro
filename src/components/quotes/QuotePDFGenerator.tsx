@@ -18,10 +18,20 @@ interface DeviceInfo {
   };
 }
 
+interface CentroInfo {
+  name: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  vatNumber?: string;
+  logoUrl?: string;
+}
+
 interface QuotePDFData {
   customerName: string;
   customerEmail?: string;
   customerPhone: string;
+  customerAddress?: string;
   deviceType: string;
   deviceBrand: string;
   deviceModel: string;
@@ -33,11 +43,7 @@ interface QuotePDFData {
   partsCost: number;
   totalCost: number;
   quoteNumber?: string;
-  centroName?: string;
-  centroAddress?: string;
-  centroPhone?: string;
-  centroEmail?: string;
-  centroLogo?: string;
+  centroInfo?: CentroInfo;
   validUntil?: string;
   deviceInfo?: DeviceInfo;
 }
@@ -46,126 +52,198 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
-  let y = 20;
+  const margin = 15;
+  let y = 0;
 
-  // Colors
-  const primaryColor: [number, number, number] = [59, 130, 246]; // Blue
-  const darkColor: [number, number, number] = [30, 41, 59];
-  const grayColor: [number, number, number] = [100, 116, 139];
+  // Color Palette - Elegant dark theme
+  const primary: [number, number, number] = [37, 99, 235]; // Blue
+  const primaryDark: [number, number, number] = [30, 64, 175];
+  const dark: [number, number, number] = [15, 23, 42];
+  const gray: [number, number, number] = [100, 116, 139];
   const lightGray: [number, number, number] = [241, 245, 249];
-  const accentColor: [number, number, number] = [245, 158, 11]; // Amber
+  const accent: [number, number, number] = [245, 158, 11]; // Amber
+  const success: [number, number, number] = [34, 197, 94];
+  const white: [number, number, number] = [255, 255, 255];
 
-  // Draw decorative header background
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 55, 'F');
+  // ==================== HEADER SECTION ====================
+  // Gradient header background
+  doc.setFillColor(...primaryDark);
+  doc.rect(0, 0, pageWidth, 52, 'F');
   
-  // Decorative circle patterns
+  // Lighter overlay strip
+  doc.setFillColor(...primary);
+  doc.rect(0, 42, pageWidth, 10, 'F');
+
+  // Decorative circles
   doc.setFillColor(255, 255, 255);
-  doc.setGState(doc.GState({ opacity: 0.1 }));
-  doc.circle(pageWidth - 25, 30, 45, 'F');
-  doc.circle(pageWidth - 55, 5, 30, 'F');
-  doc.circle(30, 50, 20, 'F');
+  doc.setGState(doc.GState({ opacity: 0.05 }));
+  doc.circle(pageWidth - 20, 25, 40, 'F');
+  doc.circle(pageWidth - 50, 0, 25, 'F');
+  doc.circle(25, 45, 15, 'F');
   doc.setGState(doc.GState({ opacity: 1 }));
 
-  // Header text
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(26);
-  doc.setFont("helvetica", "bold");
-  doc.text("PREVENTIVO", margin, 28);
-
-  // Centro name in header
-  if (data.centroName) {
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text(data.centroName.toUpperCase(), margin, 38);
+  // Centro Logo placeholder or initials
+  const logoX = margin;
+  const logoY = 8;
+  const logoSize = 32;
+  
+  if (data.centroInfo?.logoUrl) {
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((resolve) => {
+        img.onload = () => {
+          try {
+            // Draw white circle background
+            doc.setFillColor(255, 255, 255);
+            doc.circle(logoX + logoSize/2, logoY + logoSize/2, logoSize/2 + 2, 'F');
+            doc.addImage(img, "PNG", logoX, logoY, logoSize, logoSize);
+          } catch (e) {
+            drawInitialsLogo(doc, logoX, logoY, logoSize, data.centroInfo?.name || "");
+          }
+          resolve();
+        };
+        img.onerror = () => {
+          drawInitialsLogo(doc, logoX, logoY, logoSize, data.centroInfo?.name || "");
+          resolve();
+        };
+        img.src = data.centroInfo.logoUrl!;
+        setTimeout(resolve, 2000);
+      });
+    } catch {
+      drawInitialsLogo(doc, logoX, logoY, logoSize, data.centroInfo?.name || "");
+    }
+  } else {
+    drawInitialsLogo(doc, logoX, logoY, logoSize, data.centroInfo?.name || "LL");
   }
 
+  // Centro Name
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(18);
+  doc.setFont("helvetica", "bold");
+  const centroName = data.centroInfo?.name || "LabLinkRiparo";
+  doc.text(centroName.toUpperCase(), logoX + logoSize + 10, 22);
+
+  // Centro Details (smaller, below name)
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.setGState(doc.GState({ opacity: 0.9 }));
+  
+  let centroDetailY = 28;
+  if (data.centroInfo?.address) {
+    doc.text(data.centroInfo.address, logoX + logoSize + 10, centroDetailY);
+    centroDetailY += 5;
+  }
+  
+  const contactInfo = [];
+  if (data.centroInfo?.phone) contactInfo.push(`Tel: ${data.centroInfo.phone}`);
+  if (data.centroInfo?.email) contactInfo.push(data.centroInfo.email);
+  if (contactInfo.length > 0) {
+    doc.text(contactInfo.join("  •  "), logoX + logoSize + 10, centroDetailY);
+    centroDetailY += 5;
+  }
+  
+  if (data.centroInfo?.vatNumber) {
+    doc.text(`P.IVA: ${data.centroInfo.vatNumber}`, logoX + logoSize + 10, centroDetailY);
+  }
+  doc.setGState(doc.GState({ opacity: 1 }));
+
+  // PREVENTIVO title on the right
+  doc.setFontSize(24);
+  doc.setFont("helvetica", "bold");
+  doc.text("PREVENTIVO", pageWidth - margin, 22, { align: "right" });
+  
   // Quote number & date
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
   if (data.quoteNumber) {
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text(`N° ${data.quoteNumber}`, pageWidth - margin, 25, { align: "right" });
+    doc.text(`N° ${data.quoteNumber}`, pageWidth - margin, 30, { align: "right" });
   }
   const today = new Date().toLocaleDateString("it-IT", { 
     day: "numeric", 
     month: "long", 
     year: "numeric" 
   });
+  doc.text(today, pageWidth - margin, 38, { align: "right" });
+
+  y = 62;
+
+  // ==================== CUSTOMER & DEVICE SECTION ====================
+  const boxWidth = (pageWidth - margin * 2 - 10) / 2;
+  
+  // Customer Box
+  doc.setFillColor(...white);
+  doc.setDrawColor(...lightGray);
+  doc.setLineWidth(1);
+  doc.roundedRect(margin, y, boxWidth, 45, 4, 4, 'FD');
+  
+  // Customer header strip
+  doc.setFillColor(...primary);
+  doc.roundedRect(margin, y, boxWidth, 12, 4, 4, 'F');
+  doc.setFillColor(...white);
+  doc.rect(margin, y + 8, boxWidth, 4, 'F');
+  
+  doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
-  doc.text(today, pageWidth - margin, 35, { align: "right" });
-
-  y = 70;
-
-  // Customer info box (left)
-  doc.setFillColor(...lightGray);
-  doc.roundedRect(margin, y, (pageWidth - margin * 3) / 2, 40, 3, 3, 'F');
-  
-  doc.setTextColor(...primaryColor);
-  doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("CLIENTE", margin + 8, y + 10);
+  doc.text("👤  CLIENTE", margin + 8, y + 8);
   
-  doc.setTextColor(...darkColor);
-  doc.setFontSize(12);
-  doc.text(data.customerName, margin + 8, y + 20);
+  doc.setTextColor(...dark);
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(data.customerName, margin + 8, y + 22);
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(...grayColor);
-  doc.text(data.customerPhone, margin + 8, y + 28);
+  doc.setTextColor(...gray);
+  doc.text(`📞 ${data.customerPhone}`, margin + 8, y + 30);
   if (data.customerEmail) {
-    doc.text(data.customerEmail, margin + 8, y + 35);
+    doc.text(`✉️ ${data.customerEmail}`, margin + 8, y + 38);
   }
 
-  // Device info box (right) with image
-  const rightBoxX = margin + (pageWidth - margin * 3) / 2 + margin;
-  const boxWidth = (pageWidth - margin * 3) / 2;
+  // Device Box
+  const deviceBoxX = margin + boxWidth + 10;
+  doc.setFillColor(...white);
+  doc.setDrawColor(...lightGray);
+  doc.roundedRect(deviceBoxX, y, boxWidth, 45, 4, 4, 'FD');
   
-  doc.setFillColor(...primaryColor);
-  doc.setGState(doc.GState({ opacity: 0.08 }));
-  doc.roundedRect(rightBoxX, y, boxWidth, 40, 3, 3, 'F');
-  doc.setGState(doc.GState({ opacity: 1 }));
+  // Device header strip
+  doc.setFillColor(...accent);
+  doc.roundedRect(deviceBoxX, y, boxWidth, 12, 4, 4, 'F');
+  doc.setFillColor(...white);
+  doc.rect(deviceBoxX, y + 8, boxWidth, 4, 'F');
   
-  doc.setDrawColor(...primaryColor);
-  doc.setLineWidth(0.5);
-  doc.roundedRect(rightBoxX, y, boxWidth, 40, 3, 3, 'S');
-  
-  doc.setTextColor(...primaryColor);
-  doc.setFontSize(8);
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("DISPOSITIVO", rightBoxX + 8, y + 10);
+  doc.text("📱  DISPOSITIVO", deviceBoxX + 8, y + 8);
   
-  // Device name
-  const deviceName = data.deviceInfo?.fullName || `${data.deviceType} ${data.deviceBrand} ${data.deviceModel}`.trim();
-  doc.setTextColor(...darkColor);
+  const deviceName = data.deviceInfo?.fullName || `${data.deviceBrand} ${data.deviceModel}`.trim() || data.deviceType;
+  doc.setTextColor(...dark);
   doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  
-  // Truncate if too long
-  const maxDeviceWidth = boxWidth - 50;
-  const deviceLines = doc.splitTextToSize(deviceName, maxDeviceWidth);
-  doc.text(deviceLines[0], rightBoxX + 8, y + 20);
+  const deviceLines = doc.splitTextToSize(deviceName, boxWidth - 45);
+  doc.text(deviceLines[0], deviceBoxX + 8, y + 22);
   
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
-  doc.setTextColor(...grayColor);
+  doc.setTextColor(...gray);
   
-  let deviceInfoY = y + 28;
+  let deviceDetailY = y + 30;
   if (data.deviceInfo?.year && data.deviceInfo.year !== "N/A") {
-    doc.text(`Anno: ${data.deviceInfo.year}`, rightBoxX + 8, deviceInfoY);
-    deviceInfoY += 7;
+    doc.text(`📅 ${data.deviceInfo.year}`, deviceBoxX + 8, deviceDetailY);
+    deviceDetailY += 7;
   }
   if (data.deviceInfo?.specs?.storage && data.deviceInfo.specs.storage !== "N/A") {
-    doc.text(data.deviceInfo.specs.storage, rightBoxX + 8, deviceInfoY);
+    doc.text(`💾 ${data.deviceInfo.specs.storage}`, deviceBoxX + 8, deviceDetailY);
   }
 
-  // Try to add device image
+  // Device Image
   if (data.deviceInfo?.imageUrl) {
     try {
-      const imgSize = 28;
-      const imgX = rightBoxX + boxWidth - imgSize - 6;
-      const imgY = y + 6;
+      const imgSize = 32;
+      const imgX = deviceBoxX + boxWidth - imgSize - 6;
+      const imgY = y + 10;
       
       const img = new Image();
       img.crossOrigin = "anonymous";
@@ -173,6 +251,8 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
       await new Promise<void>((resolve) => {
         img.onload = () => {
           try {
+            doc.setFillColor(...lightGray);
+            doc.roundedRect(imgX - 2, imgY - 2, imgSize + 4, imgSize + 4, 4, 4, 'F');
             doc.addImage(img, "JPEG", imgX, imgY, imgSize, imgSize);
           } catch (e) {
             console.log("Could not add device image to PDF");
@@ -188,183 +268,245 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
     }
   }
 
-  y += 50;
+  y += 55;
 
-  // Issue description section
+  // ==================== ISSUE DESCRIPTION ====================
   if (data.issueDescription) {
-    doc.setFillColor(255, 251, 235);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 18, 3, 3, 'F');
-    doc.setDrawColor(...accentColor);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 18, 3, 3, 'S');
+    doc.setFillColor(254, 243, 199);
+    doc.setDrawColor(...accent);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 20, 4, 4, 'FD');
     
     doc.setTextColor(180, 83, 9);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("⚠ PROBLEMA SEGNALATO", margin + 8, y + 7);
+    doc.text("⚠️  PROBLEMA SEGNALATO", margin + 8, y + 8);
     
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(10);
+    doc.setTextColor(...dark);
     const issueLines = doc.splitTextToSize(data.issueDescription, pageWidth - margin * 2 - 16);
-    doc.text(issueLines[0], margin + 8, y + 14);
+    doc.text(issueLines[0], margin + 8, y + 16);
     
-    y += 24;
+    y += 26;
   }
 
-  // Diagnosis if present
+  // Diagnosis
   if (data.diagnosis) {
     doc.setFillColor(...lightGray);
     doc.roundedRect(margin, y, pageWidth - margin * 2, 18, 3, 3, 'F');
     
-    doc.setTextColor(...grayColor);
+    doc.setTextColor(...gray);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("DIAGNOSI TECNICA", margin + 8, y + 7);
+    doc.text("🔍 DIAGNOSI TECNICA", margin + 8, y + 7);
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
+    doc.setTextColor(...dark);
     const diagnosisLines = doc.splitTextToSize(data.diagnosis, pageWidth - margin * 2 - 16);
     doc.text(diagnosisLines[0], margin + 8, y + 14);
     
     y += 24;
   }
 
-  // Items table header
-  doc.setFillColor(...darkColor);
-  doc.roundedRect(margin, y, pageWidth - margin * 2, 10, 2, 2, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
-  doc.text("DETTAGLIO COSTI", margin + 5, y + 7);
+  // ==================== ITEMS TABLE ====================
+  // Table Header
+  doc.setFillColor(...dark);
+  doc.roundedRect(margin, y, pageWidth - margin * 2, 12, 3, 3, 'F');
   
-  y += 14;
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "bold");
+  doc.text("📋  DETTAGLIO COSTI", margin + 8, y + 8);
+  
+  y += 16;
 
-  // Table header
-  doc.setFillColor(...primaryColor);
+  // Column headers
+  doc.setFillColor(...primary);
   doc.setGState(doc.GState({ opacity: 0.1 }));
-  doc.rect(margin, y, pageWidth - margin * 2, 8, 'F');
+  doc.rect(margin, y, pageWidth - margin * 2, 10, 'F');
   doc.setGState(doc.GState({ opacity: 1 }));
   
-  doc.setTextColor(...grayColor);
+  doc.setTextColor(...gray);
   doc.setFontSize(8);
   doc.setFont("helvetica", "bold");
-  doc.text("DESCRIZIONE", margin + 5, y + 5.5);
-  doc.text("QTÀ", pageWidth - 70, y + 5.5, { align: "center" });
-  doc.text("PREZZO", pageWidth - 45, y + 5.5, { align: "center" });
-  doc.text("TOTALE", pageWidth - margin - 5, y + 5.5, { align: "right" });
+  doc.text("DESCRIZIONE", margin + 5, y + 7);
+  doc.text("QTÀ", pageWidth - 72, y + 7, { align: "center" });
+  doc.text("PREZZO", pageWidth - 48, y + 7, { align: "center" });
+  doc.text("TOTALE", pageWidth - margin - 5, y + 7, { align: "right" });
   
-  y += 10;
+  y += 12;
 
   // Items
   doc.setFont("helvetica", "normal");
-  doc.setTextColor(...darkColor);
   doc.setFontSize(9);
   
   const validItems = data.items.filter(i => i.description);
   validItems.forEach((item, index) => {
     const itemTotal = item.quantity * item.unitPrice;
-    const bgColor = index % 2 === 0 ? [255, 255, 255] : lightGray;
+    const isEven = index % 2 === 0;
     
-    doc.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
-    doc.rect(margin, y, pageWidth - margin * 2, 9, 'F');
+    if (isEven) {
+      doc.setFillColor(...lightGray);
+      doc.rect(margin, y, pageWidth - margin * 2, 10, 'F');
+    }
     
-    const descLines = doc.splitTextToSize(item.description, 85);
-    doc.text(descLines[0], margin + 5, y + 6);
-    doc.text(item.quantity.toString(), pageWidth - 70, y + 6, { align: "center" });
-    doc.text(`€${item.unitPrice.toFixed(2)}`, pageWidth - 45, y + 6, { align: "center" });
+    doc.setTextColor(...dark);
+    const descLines = doc.splitTextToSize(item.description, 90);
+    doc.text(descLines[0], margin + 5, y + 7);
+    
+    doc.setTextColor(...gray);
+    doc.text(item.quantity.toString(), pageWidth - 72, y + 7, { align: "center" });
+    doc.text(`€${item.unitPrice.toFixed(2)}`, pageWidth - 48, y + 7, { align: "center" });
+    
+    doc.setTextColor(...dark);
     doc.setFont("helvetica", "bold");
-    doc.text(`€${itemTotal.toFixed(2)}`, pageWidth - margin - 5, y + 6, { align: "right" });
+    doc.text(`€${itemTotal.toFixed(2)}`, pageWidth - margin - 5, y + 7, { align: "right" });
     doc.setFont("helvetica", "normal");
     
-    y += 9;
+    y += 10;
   });
 
   // Labor cost row
   if (data.laborCost > 0) {
     doc.setFillColor(...lightGray);
-    doc.rect(margin, y, pageWidth - margin * 2, 9, 'F');
+    doc.rect(margin, y, pageWidth - margin * 2, 10, 'F');
+    
     doc.setFont("helvetica", "italic");
-    doc.setTextColor(...grayColor);
-    doc.text("Manodopera", margin + 5, y + 6);
-    doc.text("-", pageWidth - 70, y + 6, { align: "center" });
-    doc.text("-", pageWidth - 45, y + 6, { align: "center" });
+    doc.setTextColor(...gray);
+    doc.text("🔧 Manodopera", margin + 5, y + 7);
+    doc.text("-", pageWidth - 72, y + 7, { align: "center" });
+    doc.text("-", pageWidth - 48, y + 7, { align: "center" });
+    
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(...darkColor);
-    doc.text(`€${data.laborCost.toFixed(2)}`, pageWidth - margin - 5, y + 6, { align: "right" });
+    doc.setTextColor(...dark);
+    doc.text(`€${data.laborCost.toFixed(2)}`, pageWidth - margin - 5, y + 7, { align: "right" });
     
     y += 12;
   }
 
-  // Total box
+  // ==================== TOTAL BOX ====================
   y += 5;
-  doc.setFillColor(...primaryColor);
-  doc.roundedRect(pageWidth - margin - 80, y, 80, 22, 4, 4, 'F');
+  
+  // Total background
+  doc.setFillColor(...primary);
+  doc.roundedRect(pageWidth - margin - 90, y, 90, 28, 5, 5, 'F');
+  
+  // Decorative accent
+  doc.setFillColor(...primaryDark);
+  doc.roundedRect(pageWidth - margin - 90, y, 90, 10, 5, 5, 'F');
+  doc.rect(pageWidth - margin - 90, y + 5, 90, 5, 'F');
   
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("TOTALE", pageWidth - margin - 75, y + 8);
-  doc.setFontSize(16);
+  doc.text("TOTALE PREVENTIVO", pageWidth - margin - 85, y + 8);
+  
+  doc.setFontSize(18);
   doc.setFont("helvetica", "bold");
-  doc.text(`€${data.totalCost.toFixed(2)}`, pageWidth - margin - 5, y + 17, { align: "right" });
+  doc.text(`€ ${data.totalCost.toFixed(2)}`, pageWidth - margin - 5, y + 22, { align: "right" });
 
-  y += 32;
+  y += 38;
 
-  // Notes section
+  // ==================== NOTES SECTION ====================
   if (data.notes) {
-    doc.setFillColor(...lightGray);
-    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 3, 3, 'F');
+    doc.setFillColor(240, 249, 255);
+    doc.setDrawColor(147, 197, 253);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 3, 3, 'FD');
     
-    doc.setTextColor(...grayColor);
+    doc.setTextColor(...primary);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("NOTE:", margin + 8, y + 8);
+    doc.text("📝 NOTE E CONDIZIONI", margin + 8, y + 8);
     
     doc.setFont("helvetica", "italic");
     doc.setFontSize(9);
+    doc.setTextColor(...gray);
     const noteLines = doc.splitTextToSize(data.notes, pageWidth - margin * 2 - 16);
-    doc.text(noteLines.slice(0, 2), margin + 8, y + 15);
+    doc.text(noteLines.slice(0, 2), margin + 8, y + 16);
     
     y += 28;
   }
 
-  // Validity section
+  // ==================== VALIDITY & SIGNATURE ====================
+  // Validity badge
   doc.setFillColor(254, 249, 195);
-  doc.roundedRect(margin, y, 70, 15, 2, 2, 'F');
+  doc.setDrawColor(250, 204, 21);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(margin, y, 80, 20, 3, 3, 'FD');
+  
   doc.setTextColor(161, 98, 7);
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.text("VALIDITÀ PREVENTIVO", margin + 5, y + 6);
+  doc.text("⏰ VALIDITÀ PREVENTIVO", margin + 5, y + 8);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.text("30 giorni dalla data", margin + 5, y + 12);
+  doc.setFontSize(9);
+  doc.text("30 giorni dalla data", margin + 5, y + 16);
 
   // Signature box
-  const sigBoxX = pageWidth - margin - 70;
-  doc.setDrawColor(...grayColor);
+  const sigBoxWidth = 85;
+  const sigBoxX = pageWidth - margin - sigBoxWidth;
+  doc.setFillColor(...white);
+  doc.setDrawColor(...gray);
   doc.setLineWidth(0.3);
-  doc.roundedRect(sigBoxX, y, 70, 25, 2, 2);
-  doc.setTextColor(...grayColor);
-  doc.setFontSize(7);
-  doc.text("Firma per accettazione", sigBoxX + 5, y + 22);
-
-  // Footer
-  const footerY = pageHeight - 20;
+  doc.roundedRect(sigBoxX, y, sigBoxWidth, 28, 3, 3, 'S');
   
+  // Signature line
+  doc.setDrawColor(...lightGray);
+  doc.setLineWidth(0.5);
+  doc.line(sigBoxX + 5, y + 20, sigBoxX + sigBoxWidth - 5, y + 20);
+  
+  doc.setTextColor(...gray);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.text("Firma per accettazione", sigBoxX + sigBoxWidth / 2, y + 26, { align: "center" });
+
+  // ==================== FOOTER ====================
+  const footerY = pageHeight - 18;
+  
+  // Footer line
   doc.setDrawColor(...lightGray);
   doc.setLineWidth(0.5);
   doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
   
-  doc.setTextColor(...grayColor);
+  // Footer text
+  doc.setTextColor(...gray);
   doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
-  doc.text("Documento generato da LabLinkRiparo | www.lablinkriparo.it", pageWidth / 2, footerY, { align: "center" });
+  
+  if (data.centroInfo?.name) {
+    doc.text(`${data.centroInfo.name}${data.centroInfo.vatNumber ? ` • P.IVA ${data.centroInfo.vatNumber}` : ''}`, margin, footerY);
+  }
+  
+  doc.text("Documento generato con LabLinkRiparo", pageWidth - margin, footerY, { align: "right" });
 
-  // Decorative footer line
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, pageHeight - 4, pageWidth, 4, 'F');
+  // Decorative footer bar
+  doc.setFillColor(...primary);
+  doc.rect(0, pageHeight - 5, pageWidth, 5, 'F');
 
   return doc;
+}
+
+function drawInitialsLogo(doc: jsPDF, x: number, y: number, size: number, name: string) {
+  // Draw circle background
+  doc.setFillColor(255, 255, 255);
+  doc.circle(x + size/2, y + size/2, size/2, 'F');
+  
+  // Get initials
+  const initials = name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .substring(0, 2)
+    .toUpperCase() || "LL";
+  
+  // Draw initials
+  doc.setTextColor(30, 64, 175);
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(initials, x + size/2, y + size/2 + 4, { align: "center" });
 }
 
 export function downloadQuotePDF(data: QuotePDFData, filename?: string) {

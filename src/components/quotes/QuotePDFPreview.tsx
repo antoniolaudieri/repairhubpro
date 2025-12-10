@@ -64,6 +64,8 @@ interface QuotePDFPreviewProps {
     address?: string;
     phone?: string;
     email?: string;
+    vatNumber?: string;
+    logoUrl?: string;
   };
   deviceInfo?: DeviceInfo | null;
   onSend: (method: "email" | "whatsapp") => void;
@@ -108,10 +110,14 @@ export function QuotePDFPreview({
     laborCost,
     partsCost,
     totalCost,
-    centroName: centroInfo?.name,
-    centroAddress: centroInfo?.address,
-    centroPhone: centroInfo?.phone,
-    centroEmail: centroInfo?.email,
+    centroInfo: centroInfo ? {
+      name: centroInfo.name,
+      address: centroInfo.address,
+      phone: centroInfo.phone,
+      email: centroInfo.email,
+      vatNumber: centroInfo.vatNumber,
+      logoUrl: centroInfo.logoUrl,
+    } : undefined,
     quoteNumber: `PRV-${Date.now().toString().slice(-6)}`,
     deviceInfo: deviceInfo || undefined,
   };
