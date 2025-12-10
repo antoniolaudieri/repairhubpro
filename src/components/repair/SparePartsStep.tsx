@@ -486,11 +486,12 @@ export const SparePartsStep = ({
     );
   };
 
-  const getGrandTotal = () => {
-    return getTotalCost() + getServicesTotalCost() + getLaborsTotalCost();
-  };
-
   const UTOPYA_SHIPPING_COST = 7.50;
+  
+  const getGrandTotal = () => {
+    const shippingCost = shippingEnabled ? UTOPYA_SHIPPING_COST : 0;
+    return getTotalCost() + getServicesTotalCost() + getLaborsTotalCost() + shippingCost;
+  };
 
   return (
     <div className="space-y-6">
@@ -1362,6 +1363,12 @@ export const SparePartsStep = ({
               <div className="flex justify-between">
                 <span>Manodopera:</span>
                 <span>€{getLaborsTotalCost().toFixed(2)}</span>
+              </div>
+            )}
+            {shippingEnabled && (
+              <div className="flex justify-between text-blue-600">
+                <span>🚚 Spedizione:</span>
+                <span>€7.50</span>
               </div>
             )}
           </div>
