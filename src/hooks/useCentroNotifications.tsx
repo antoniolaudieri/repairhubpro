@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { usePushNotifications } from "./usePushNotifications";
+import { sendPushNotification, getCentroUserId } from "@/services/pushNotificationService";
 
 export interface CentroNotification {
   id: string;
@@ -17,7 +17,6 @@ export interface CentroNotification {
 
 export function useCentroNotifications() {
   const { user, isCentroAdmin } = useAuth();
-  const { sendLocalNotification, isGranted } = usePushNotifications();
   const [notifications, setNotifications] = useState<CentroNotification[]>([]);
   const [centroId, setCentroId] = useState<string | null>(null);
 
@@ -105,11 +104,12 @@ export function useCentroNotifications() {
                 },
               });
 
-              // Push notification browser
-              if (isGranted) {
-                sendLocalNotification(title, {
+              // Send real push notification to Centro owner
+              const centroUserId = await getCentroUserId(centroId);
+              if (centroUserId) {
+                sendPushNotification([centroUserId], {
+                  title,
                   body: message,
-                  tag: `job-offer-${payload.new.id}`,
                   data: { url: `/centro/lavori` },
                 });
               }
@@ -183,11 +183,12 @@ export function useCentroNotifications() {
                 },
               });
 
-              // Push notification browser
-              if (isGranted) {
-                sendLocalNotification(title, {
+              // Send real push notification
+              const centroUserId = await getCentroUserId(centroId);
+              if (centroUserId) {
+                sendPushNotification([centroUserId], {
+                  title,
                   body: message,
-                  tag: `corner-request-${payload.new.id}`,
                   data: { url: `/centro/lavori-corner` },
                 });
               }
@@ -264,10 +265,12 @@ export function useCentroNotifications() {
                 },
               });
 
-              if (isGranted) {
-                sendLocalNotification(title, {
+              // Send real push notification
+              const centroUserId = await getCentroUserId(centroId);
+              if (centroUserId) {
+                sendPushNotification([centroUserId], {
+                  title,
                   body: message,
-                  tag: `awaiting-pickup-${payload.new.id}`,
                   data: { url: detailUrl },
                 });
               }
@@ -319,10 +322,12 @@ export function useCentroNotifications() {
                 duration: 8000,
               });
 
-              if (isGranted) {
-                sendLocalNotification(title, {
+              // Send real push notification
+              const centroUserId = await getCentroUserId(centroId);
+              if (centroUserId) {
+                sendPushNotification([centroUserId], {
+                  title,
                   body: message,
-                  tag: `repair-${payload.new.id}`,
                   data: { url: `/centro/lavori-corner` },
                 });
               }
@@ -361,10 +366,12 @@ export function useCentroNotifications() {
 
             toast.success(title, { description: message });
 
-            if (isGranted) {
-              sendLocalNotification(title, {
+            // Send real push notification
+            const centroUserId = await getCentroUserId(centroId);
+            if (centroUserId) {
+              sendPushNotification([centroUserId], {
+                title,
                 body: message,
-                tag: `order-${payload.new.id}`,
                 data: { url: `/centro/ordini` },
               });
             }
@@ -379,7 +386,7 @@ export function useCentroNotifications() {
       supabase.removeChannel(repairRequestsUpdateChannel);
       supabase.removeChannel(ordersChannel);
     };
-  }, [user, isCentroAdmin, centroId, isGranted, sendLocalNotification]);
+  }, [user, isCentroAdmin, centroId]);
 
   const markAsRead = (notificationId: string) => {
     setNotifications((prev) =>
