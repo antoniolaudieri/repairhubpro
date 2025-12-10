@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { sendPushNotification, getCornerUserId } from "@/services/pushNotificationService";
 
 interface CornerNotification {
   id: string;
@@ -69,7 +70,7 @@ export function useCornerNotifications() {
                 id: `quote-${quoteData.id}`,
                 type: "new_quote",
                 title: "Nuovo Preventivo Ricevuto",
-                message: `Preventivo di €${quoteData.total_cost?.toFixed(2)} per ${request.device_brand || ""} ${request.device_model || ""} - Cliente: ${request.customer?.name || "N/A"}`,
+                message: `Preventivo di €${quoteData.total_cost?.toFixed(2)} per ${request.device_brand || ""} ${request.device_model || ""} - Cliente: ${(request.customer as any)?.name || "N/A"}`,
                 timestamp: new Date(),
                 read: false,
                 data: { quoteId: quoteData.id, requestId: request.id },
@@ -90,12 +91,13 @@ export function useCornerNotifications() {
                 },
               });
 
-              // Browser push notification
-              if (Notification.permission === "granted") {
-                new Notification(notification.title, {
+              // Send real push notification to Corner user
+              const cornerUserId = await getCornerUserId(cornerId);
+              if (cornerUserId) {
+                sendPushNotification([cornerUserId], {
+                  title: notification.title,
                   body: notification.message,
-                  icon: "/favicon.ico",
-                  tag: notification.id,
+                  data: { url: "/corner/segnalazioni" },
                 });
               }
             }
@@ -142,11 +144,13 @@ export function useCornerNotifications() {
               duration: 8000,
             });
 
-            if (Notification.permission === "granted") {
-              new Notification(notification.title, {
+            // Send real push notification
+            const cornerUserId = await getCornerUserId(cornerId);
+            if (cornerUserId) {
+              sendPushNotification([cornerUserId], {
+                title: notification.title,
                 body: notification.message,
-                icon: "/favicon.ico",
-                tag: notification.id,
+                data: { url: "/corner/segnalazioni" },
               });
             }
           }
@@ -169,6 +173,16 @@ export function useCornerNotifications() {
             toast.info(notification.title, {
               description: notification.message,
             });
+
+            // Send real push notification
+            const cornerUserId = await getCornerUserId(cornerId);
+            if (cornerUserId) {
+              sendPushNotification([cornerUserId], {
+                title: notification.title,
+                body: notification.message,
+                data: { url: "/corner/segnalazioni" },
+              });
+            }
           }
         }
       )
