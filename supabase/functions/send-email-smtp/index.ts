@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
-import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
+import { decode as decodeBase64 } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -77,11 +77,10 @@ const handler = async (req: Request): Promise<Response> => {
     const fromName = from_name_override || smtpConfig?.from_name || centroName;
     const recipients = Array.isArray(to) ? to : [to];
 
-    // Prepare attachments for SMTP - use base64 encoding directly
+    // Prepare attachments for SMTP - decode base64 efficiently
     const smtpAttachments = attachments?.map(att => ({
       filename: att.filename,
-      content: att.content,
-      encoding: "base64" as const,
+      content: decodeBase64(att.content),
       contentType: att.contentType || "application/pdf",
     })) || [];
 
