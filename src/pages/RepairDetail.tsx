@@ -32,7 +32,8 @@ import {
   Shield,
   FileText,
   MessageCircle,
-  ClipboardCheck
+  ClipboardCheck,
+  Truck
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -124,6 +125,7 @@ interface RepairDetail {
   estimated_cost: number | null;
   final_cost: number | null;
   acconto: number | null;
+  shipping_cost: number | null;
   ai_suggestions: string | null;
   diagnostic_fee: number | null;
   diagnostic_fee_paid: boolean | null;
@@ -274,6 +276,7 @@ export default function RepairDetail() {
         estimated_cost: data.estimated_cost,
         final_cost: data.final_cost,
         acconto: data.acconto,
+        shipping_cost: data.shipping_cost,
         ai_suggestions: data.ai_suggestions,
         diagnostic_fee: data.diagnostic_fee,
         diagnostic_fee_paid: data.diagnostic_fee_paid,
@@ -779,6 +782,20 @@ export default function RepairDetail() {
                   €{totalPartsAmount.toFixed(2)}
                 </p>
               </motion.div>
+              {repair.shipping_cost && repair.shipping_cost > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.22 }}
+                  className="bg-blue-500/10 rounded-xl border border-blue-500/30 p-4 text-center"
+                >
+                  <Truck className="h-5 w-5 text-blue-500 mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Spedizione</p>
+                  <p className="text-lg font-bold text-blue-600">
+                    €{repair.shipping_cost.toFixed(2)}
+                  </p>
+                </motion.div>
+              )}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
