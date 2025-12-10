@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TechnicianNotificationCenter } from "@/components/notifications/TechnicianNotificationCenter";
+import logoLabLinkRiparo from "@/assets/logo-lablinkriparo.png";
 
 export default function TechnicianLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,9 +13,7 @@ export default function TechnicianLayout({ children }: { children: React.ReactNo
             <div className="flex items-center">
               <SidebarTrigger className="mr-2 sm:mr-4" />
               <div className="flex items-center gap-2 sm:gap-3">
-              <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-gradient-primary flex items-center justify-center shadow-md">
-                  <span className="text-white font-bold text-xs sm:text-sm">LL</span>
-                </div>
+                <img src={logoLabLinkRiparo} alt="LabLinkRiparo" className="h-7 sm:h-8 w-auto" />
                 <h1 className="text-base sm:text-lg font-bold text-foreground hidden sm:block">LabLinkRiparo</h1>
               </div>
             </div>

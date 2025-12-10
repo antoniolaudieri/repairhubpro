@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CornerNotificationCenter } from "@/components/corner/CornerNotificationCenter";
 import { useCornerAppointmentNotifications } from "@/hooks/useCornerAppointmentNotifications";
+import logoLabLinkRiparo from "@/assets/logo-lablinkriparo.png";
 
 interface CornerLayoutProps {
   children: ReactNode;
@@ -50,9 +51,12 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
       <aside className="hidden md:flex w-64 bg-card border-r border-border flex-col">
         <div className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-primary">LabLinkRiparo Corner</h1>
-              <p className="text-sm text-muted-foreground">Gestione Segnalazioni</p>
+            <div className="flex items-center gap-3">
+              <img src={logoLabLinkRiparo} alt="LabLinkRiparo" className="h-8 w-auto" />
+              <div>
+                <h1 className="text-xl font-bold text-primary">Corner</h1>
+                <p className="text-sm text-muted-foreground">Gestione Segnalazioni</p>
+              </div>
             </div>
             <CornerNotificationCenter />
           </div>
@@ -99,7 +103,10 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between p-4">
-          <h1 className="text-lg font-bold text-primary">LabLinkRiparo Corner</h1>
+          <div className="flex items-center gap-2">
+            <img src={logoLabLinkRiparo} alt="LabLinkRiparo" className="h-7 w-auto" />
+            <h1 className="text-lg font-bold text-primary">Corner</h1>
+          </div>
           <div className="flex items-center gap-2">
             <CornerNotificationCenter />
             <Button
