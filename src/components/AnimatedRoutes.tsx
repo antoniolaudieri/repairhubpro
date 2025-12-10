@@ -62,6 +62,7 @@ import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import NotFound from "@/pages/NotFound";
 import RemoteSignature from "@/pages/RemoteSignature";
 import CustomerDisplay from "@/pages/CustomerDisplay";
+import Install from "@/pages/Install";
 
 export const AnimatedRoutes = () => {
   const location = useLocation();
@@ -400,6 +401,9 @@ export const AnimatedRoutes = () => {
         {/* Public Usato Routes */}
         <Route path="/usato" element={<PageTransition><UsatoCatalog /></PageTransition>} />
         <Route path="/usato/:id" element={<PageTransition><UsatoDetail /></PageTransition>} />
+        
+        {/* PWA Install Page */}
+        <Route path="/install" element={<PageTransition><Install /></PageTransition>} />
         {/* Technician Routes */}
         <Route
           path="/dashboard"
