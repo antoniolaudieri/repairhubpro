@@ -563,7 +563,8 @@ export default function CentroNuovoRitiro() {
       // Verify credit balance is sufficient for commission
       const partsTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0);
       const servicesTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
-      const estimatedTotal = partsTotal + servicesTotal + laborCost;
+      const shippingCostValue = shippingEnabled ? UTOPYA_SHIPPING_COST : 0;
+      const estimatedTotal = partsTotal + servicesTotal + laborCost + shippingCostValue;
       
       // Get current credit balance and platform rate
       const { data: centroData } = await supabase
