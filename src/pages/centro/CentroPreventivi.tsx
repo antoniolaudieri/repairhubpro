@@ -124,6 +124,14 @@ export default function CentroPreventivi() {
         window.open(whatsappUrl, "_blank");
         toast.success("PDF scaricato e WhatsApp aperto");
       } else {
+        if (!centroId) {
+          toast.error("Centro non configurato");
+          return;
+        }
+        if (!selectedQuote.customers.email) {
+          toast.error("Email cliente non disponibile");
+          return;
+        }
         const base64 = await getQuotePDFBase64(pdfData);
         const { error } = await supabase.functions.invoke("send-email-smtp", {
           body: {
@@ -134,7 +142,7 @@ export default function CentroPreventivi() {
             attachments: [{
               filename: `preventivo_${selectedQuote.customers.name.replace(/\s+/g, "_")}.pdf`,
               content: base64,
-              encoding: "base64"
+              contentType: "application/pdf"
             }]
           }
         });
