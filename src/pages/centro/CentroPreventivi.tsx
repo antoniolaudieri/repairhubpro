@@ -12,13 +12,11 @@ import {
   Clock, 
   XCircle, 
   Edit, 
-  Send,
   Plus,
   Euro,
   PenLine,
   Eye,
-  Mail,
-  MessageCircle
+  Trash2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -27,6 +25,7 @@ import { toast } from "sonner";
 import { EditQuoteDialog } from "@/components/quotes/EditQuoteDialog";
 import { CreateQuoteDialog } from "@/components/quotes/CreateQuoteDialog";
 import { QuotePDFPreview } from "@/components/quotes/QuotePDFPreview";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 
 interface Quote {
@@ -68,6 +67,8 @@ export default function CentroPreventivi() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [centroInfo, setCentroInfo] = useState<any>(null);
   const [isSending, setIsSending] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
 
   // Load centro info for PDF
   useEffect(() => {
@@ -331,6 +332,27 @@ export default function CentroPreventivi() {
     toast.success("Preventivo aggiornato");
   };
 
+  const handleDeleteQuote = async () => {
+    if (!quoteToDelete) return;
+    try {
+      const { error } = await supabase
+        .from("quotes")
+        .delete()
+        .eq("id", quoteToDelete.id);
+      
+      if (error) throw error;
+      
+      toast.success("Preventivo eliminato");
+      if (centroId) loadQuotes(centroId);
+    } catch (error: any) {
+      console.error("Error deleting quote:", error);
+      toast.error("Errore nell'eliminazione: " + (error.message || "Riprova"));
+    } finally {
+      setDeleteDialogOpen(false);
+      setQuoteToDelete(null);
+    }
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -568,6 +590,18 @@ export default function CentroPreventivi() {
                                 <Edit className="h-4 w-4" />
                               </Button>
                             )}
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => {
+                                setQuoteToDelete(quote);
+                                setDeleteDialogOpen(true);
+                              }}
+                              className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                              title="Elimina"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -632,6 +666,24 @@ export default function CentroPreventivi() {
           toast.success("Preventivo creato e inviato");
         }}
       />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminare questo preventivo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Stai per eliminare il preventivo per {quoteToDelete?.customers?.name}. 
+              Questa azione non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annulla</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteQuote} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </CentroLayout>
   );
 }
