@@ -31,6 +31,8 @@ interface IntakeSignatureStepProps {
   onAccontoChange?: (acconto: number) => void;
   paymentMode?: "full" | "partial";
   onPaymentModeChange?: (mode: "full" | "partial") => void;
+  externalPrivacyConsent?: boolean;
+  onPrivacyConsentChange?: (consent: boolean) => void;
 }
 
 export function IntakeSignatureStep({ 
@@ -48,6 +50,8 @@ export function IntakeSignatureStep({
   onAccontoChange,
   paymentMode: controlledPaymentMode,
   onPaymentModeChange,
+  externalPrivacyConsent,
+  onPrivacyConsentChange,
 }: IntakeSignatureStepProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [internalPaymentMode, setInternalPaymentMode] = useState<"full" | "partial">("full");
@@ -62,7 +66,15 @@ export function IntakeSignatureStep({
   const [isGeneratingLink, setIsGeneratingLink] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isWaitingForRemoteSign, setIsWaitingForRemoteSign] = useState(false);
-  const [privacyConsent, setPrivacyConsent] = useState(false);
+  const [internalPrivacyConsent, setInternalPrivacyConsent] = useState(false);
+  
+  // Use external privacy consent if provided, otherwise use internal state
+  const privacyConsent = externalPrivacyConsent !== undefined ? externalPrivacyConsent : internalPrivacyConsent;
+  
+  const setPrivacyConsent = (value: boolean) => {
+    setInternalPrivacyConsent(value);
+    onPrivacyConsentChange?.(value);
+  };
   
   // Suggerimento sconto diagnosi per preventivi sopra €100
   const suggestDiscount = estimatedCost >= 100;

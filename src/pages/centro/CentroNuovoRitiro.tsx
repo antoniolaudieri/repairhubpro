@@ -61,6 +61,7 @@ export default function CentroNuovoRitiro() {
   const [showChecklistDialog, setShowChecklistDialog] = useState(false);
   const [createdRepairId, setCreatedRepairId] = useState<string | null>(null);
   const [shippingEnabled, setShippingEnabled] = useState(false);
+  const [externalPrivacyConsent, setExternalPrivacyConsent] = useState(false);
   
   const UTOPYA_SHIPPING_COST = 7.50;
   
@@ -144,6 +145,12 @@ export default function CentroNuovoRitiro() {
       onSignatureSubmitted: (signatureData) => {
         setIntakeSignature(signatureData);
         toast.success("Firma ricevuta dal display cliente!");
+      },
+      onPrivacyConsentChanged: (consent) => {
+        setExternalPrivacyConsent(consent);
+        if (consent) {
+          toast.success("Privacy accettata dal display cliente!");
+        }
       }
     });
 
@@ -1013,6 +1020,8 @@ export default function CentroNuovoRitiro() {
             onAccontoChange={setAcconto}
             paymentMode={paymentMode}
             onPaymentModeChange={setPaymentMode}
+            externalPrivacyConsent={externalPrivacyConsent}
+            onPrivacyConsentChange={setExternalPrivacyConsent}
           />
         );
 

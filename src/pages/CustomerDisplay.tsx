@@ -1108,7 +1108,21 @@ export default function CustomerDisplay() {
                     <Checkbox 
                       id="privacy-consent-display"
                       checked={privacyConsent}
-                      onCheckedChange={(checked) => setPrivacyConsent(checked === true)}
+                      onCheckedChange={async (checked) => {
+                        const newValue = checked === true;
+                        setPrivacyConsent(newValue);
+                        // Broadcast privacy consent change to main intake page
+                        if (centroId) {
+                          const channel = supabase.channel(`intake-${centroId}`);
+                          await channel.subscribe();
+                          await channel.send({
+                            type: 'broadcast',
+                            event: 'privacy_consent_changed',
+                            payload: { privacyConsent: newValue }
+                          });
+                          supabase.removeChannel(channel);
+                        }
+                      }}
                       className="h-5 w-5 border-2 border-white/50 data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500"
                     />
                     <Label htmlFor="privacy-consent-display" className="text-xs text-white/90 cursor-pointer leading-tight">
