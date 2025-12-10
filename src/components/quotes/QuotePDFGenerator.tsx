@@ -186,7 +186,7 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("👤  CLIENTE", margin + 8, y + 8);
+  doc.text("CLIENTE", margin + 8, y + 8);
   
   doc.setTextColor(...dark);
   doc.setFontSize(13);
@@ -196,9 +196,9 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(...gray);
-  doc.text(`📞 ${data.customerPhone}`, margin + 8, y + 30);
+  doc.text(`Tel: ${data.customerPhone}`, margin + 8, y + 30);
   if (data.customerEmail) {
-    doc.text(`✉️ ${data.customerEmail}`, margin + 8, y + 38);
+    doc.text(data.customerEmail, margin + 8, y + 38);
   }
 
   // Device Box
@@ -216,7 +216,7 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("📱  DISPOSITIVO", deviceBoxX + 8, y + 8);
+  doc.text("DISPOSITIVO", deviceBoxX + 8, y + 8);
   
   const deviceName = data.deviceInfo?.fullName || `${data.deviceBrand} ${data.deviceModel}`.trim() || data.deviceType;
   doc.setTextColor(...dark);
@@ -231,11 +231,11 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   
   let deviceDetailY = y + 30;
   if (data.deviceInfo?.year && data.deviceInfo.year !== "N/A") {
-    doc.text(`📅 ${data.deviceInfo.year}`, deviceBoxX + 8, deviceDetailY);
+    doc.text(`Anno: ${data.deviceInfo.year}`, deviceBoxX + 8, deviceDetailY);
     deviceDetailY += 7;
   }
   if (data.deviceInfo?.specs?.storage && data.deviceInfo.specs.storage !== "N/A") {
-    doc.text(`💾 ${data.deviceInfo.specs.storage}`, deviceBoxX + 8, deviceDetailY);
+    doc.text(`Storage: ${data.deviceInfo.specs.storage}`, deviceBoxX + 8, deviceDetailY);
   }
 
   // Device Image
@@ -280,7 +280,7 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
     doc.setTextColor(180, 83, 9);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("⚠️  PROBLEMA SEGNALATO", margin + 8, y + 8);
+    doc.text("PROBLEMA SEGNALATO", margin + 8, y + 8);
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
@@ -299,7 +299,7 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
     doc.setTextColor(...gray);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("🔍 DIAGNOSI TECNICA", margin + 8, y + 7);
+    doc.text("DIAGNOSI TECNICA", margin + 8, y + 7);
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
@@ -318,7 +318,7 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  doc.text("📋  DETTAGLIO COSTI", margin + 8, y + 8);
+  doc.text("DETTAGLIO COSTI", margin + 8, y + 8);
   
   y += 16;
 
@@ -375,7 +375,7 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
     
     doc.setFont("helvetica", "italic");
     doc.setTextColor(...gray);
-    doc.text("🔧 Manodopera", margin + 5, y + 7);
+    doc.text("Manodopera", margin + 5, y + 7);
     doc.text("-", pageWidth - 72, y + 7, { align: "center" });
     doc.text("-", pageWidth - 48, y + 7, { align: "center" });
     
@@ -419,7 +419,7 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
     doc.setTextColor(...primary);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("📝 NOTE E CONDIZIONI", margin + 8, y + 8);
+    doc.text("NOTE E CONDIZIONI", margin + 8, y + 8);
     
     doc.setFont("helvetica", "italic");
     doc.setFontSize(9);
@@ -440,7 +440,7 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setTextColor(161, 98, 7);
   doc.setFontSize(7);
   doc.setFont("helvetica", "bold");
-  doc.text("⏰ VALIDITÀ PREVENTIVO", margin + 5, y + 8);
+  doc.text("VALIDITA PREVENTIVO", margin + 5, y + 8);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.text("30 giorni dalla data", margin + 5, y + 16);
