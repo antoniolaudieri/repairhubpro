@@ -23,55 +23,35 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Push notification handler - CRITICAL for Safari
+// Push notification handler - CRITICAL for Safari iOS
 self.addEventListener('push', (event: PushEvent) => {
   console.log('[SW] ====== PUSH EVENT RECEIVED ======');
-  console.log('[SW] Event data exists:', !!event.data);
   
-  let notificationData = {
-    title: 'Nuova Notifica',
-    body: 'Hai ricevuto una nuova notifica',
-    icon: '/pwa-192x192.png',
-    badge: '/pwa-192x192.png',
-    data: {} as Record<string, unknown>
-  };
+  // Safari iOS requires simpler notification options
+  let title = 'Nuova Notifica';
+  let body = 'Hai ricevuto una nuova notifica';
+  let data = {};
 
   if (event.data) {
     try {
       const payload = event.data.json();
-      console.log('[SW] Parsed payload:', JSON.stringify(payload));
-      notificationData = {
-        title: payload.title || notificationData.title,
-        body: payload.body || notificationData.body,
-        icon: payload.icon || notificationData.icon,
-        badge: payload.badge || notificationData.badge,
-        data: payload.data || {}
-      };
+      console.log('[SW] Payload:', JSON.stringify(payload));
+      title = payload.title || title;
+      body = payload.body || body;
+      data = payload.data || {};
     } catch (e) {
-      console.log('[SW] Failed to parse JSON, using text:', event.data.text());
-      notificationData.body = event.data.text();
+      console.log('[SW] Text fallback:', event.data.text());
+      body = event.data.text();
     }
   }
 
-  console.log('[SW] Showing notification with title:', notificationData.title);
+  // Safari iOS needs minimal options - no badge, no tag, no icon path issues
+  const showPromise = self.registration.showNotification(title, {
+    body: body,
+    data: data
+  });
 
-  const notificationOptions: NotificationOptions = {
-    body: notificationData.body,
-    icon: notificationData.icon,
-    badge: notificationData.badge,
-    data: notificationData.data,
-    tag: 'push-' + Date.now(),
-    silent: false
-  };
-
-  const promiseChain = self.registration.showNotification(notificationData.title, notificationOptions)
-    .then(() => {
-      console.log('[SW] ✓ Notification displayed successfully');
-    }).catch((err) => {
-      console.error('[SW] ✗ Failed to show notification:', err);
-    });
-
-  event.waitUntil(promiseChain);
+  event.waitUntil(showPromise);
 });
 
 // Notification click handler
