@@ -117,30 +117,38 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
     drawInitialsLogo(doc, logoX, logoY, logoSize, data.centroInfo?.name || "LL");
   }
 
-  // Centro Name
+  // Centro Name - truncate if too long to avoid overlap with PREVENTIVO
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   const centroName = data.centroInfo?.name || "LabLinkRiparo";
-  doc.text(centroName.toUpperCase(), logoX + logoSize + 10, 22);
+  const maxNameWidth = pageWidth - logoX - logoSize - 10 - 80; // Leave space for PREVENTIVO
+  let truncatedName = centroName.toUpperCase();
+  while (doc.getTextWidth(truncatedName) > maxNameWidth && truncatedName.length > 10) {
+    truncatedName = truncatedName.slice(0, -1);
+  }
+  if (truncatedName !== centroName.toUpperCase()) {
+    truncatedName += "...";
+  }
+  doc.text(truncatedName, logoX + logoSize + 10, 18);
 
   // Centro Details (smaller, below name)
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setFont("helvetica", "normal");
   doc.setGState(doc.GState({ opacity: 0.9 }));
   
-  let centroDetailY = 28;
+  let centroDetailY = 24;
   if (data.centroInfo?.address) {
     doc.text(data.centroInfo.address, logoX + logoSize + 10, centroDetailY);
-    centroDetailY += 5;
+    centroDetailY += 4;
   }
   
   const contactInfo = [];
   if (data.centroInfo?.phone) contactInfo.push(`Tel: ${data.centroInfo.phone}`);
   if (data.centroInfo?.email) contactInfo.push(data.centroInfo.email);
   if (contactInfo.length > 0) {
-    doc.text(contactInfo.join("  •  "), logoX + logoSize + 10, centroDetailY);
-    centroDetailY += 5;
+    doc.text(contactInfo.join(" - "), logoX + logoSize + 10, centroDetailY);
+    centroDetailY += 4;
   }
   
   if (data.centroInfo?.vatNumber) {
@@ -148,23 +156,23 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   }
   doc.setGState(doc.GState({ opacity: 1 }));
 
-  // PREVENTIVO title on the right
-  doc.setFontSize(24);
+  // PREVENTIVO title on the right - separated from centro
+  doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
-  doc.text("PREVENTIVO", pageWidth - margin, 22, { align: "right" });
+  doc.text("PREVENTIVO", pageWidth - margin, 16, { align: "right" });
   
   // Quote number & date
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
   if (data.quoteNumber) {
-    doc.text(`N° ${data.quoteNumber}`, pageWidth - margin, 30, { align: "right" });
+    doc.text(`N° ${data.quoteNumber}`, pageWidth - margin, 24, { align: "right" });
   }
   const today = new Date().toLocaleDateString("it-IT", { 
     day: "numeric", 
     month: "long", 
     year: "numeric" 
   });
-  doc.text(today, pageWidth - margin, 38, { align: "right" });
+  doc.text(today, pageWidth - margin, 32, { align: "right" });
 
   y = 62;
 
@@ -218,21 +226,38 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setFont("helvetica", "bold");
   doc.text("DISPOSITIVO", deviceBoxX + 8, y + 8);
   
-  const deviceName = data.deviceInfo?.fullName || `${data.deviceBrand} ${data.deviceModel}`.trim() || data.deviceType;
+  // Device name - show full info
+  const deviceNameParts = [];
+  if (data.deviceType) deviceNameParts.push(data.deviceType);
+  if (data.deviceBrand) deviceNameParts.push(data.deviceBrand);
+  if (data.deviceModel) deviceNameParts.push(data.deviceModel);
+  const deviceDisplayName = data.deviceInfo?.fullName || deviceNameParts.join(" ") || "N/A";
+  
   doc.setTextColor(...dark);
-  doc.setFontSize(11);
+  doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
-  const deviceLines = doc.splitTextToSize(deviceName, boxWidth - 45);
+  const deviceLines = doc.splitTextToSize(deviceDisplayName, boxWidth - 50);
   doc.text(deviceLines[0], deviceBoxX + 8, y + 22);
+  if (deviceLines[1]) {
+    doc.setFontSize(9);
+    doc.text(deviceLines[1], deviceBoxX + 8, y + 29);
+  }
   
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
+  doc.setFontSize(8);
   doc.setTextColor(...gray);
   
-  let deviceDetailY = y + 30;
+  let deviceDetailY = deviceLines[1] ? y + 36 : y + 30;
+  
+  // Show device type separately if we have brand/model
+  if (data.deviceType && (data.deviceBrand || data.deviceModel)) {
+    doc.text(`Tipo: ${data.deviceType}`, deviceBoxX + 8, deviceDetailY);
+    deviceDetailY += 6;
+  }
+  
   if (data.deviceInfo?.year && data.deviceInfo.year !== "N/A") {
     doc.text(`Anno: ${data.deviceInfo.year}`, deviceBoxX + 8, deviceDetailY);
-    deviceDetailY += 7;
+    deviceDetailY += 6;
   }
   if (data.deviceInfo?.specs?.storage && data.deviceInfo.specs.storage !== "N/A") {
     doc.text(`Storage: ${data.deviceInfo.specs.storage}`, deviceBoxX + 8, deviceDetailY);
