@@ -25,7 +25,19 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const config: TestSmtpRequest = await req.json();
+    const rawConfig: TestSmtpRequest = await req.json();
+    
+    // Trim all string inputs to remove whitespace
+    const config = {
+      host: rawConfig.host?.trim() || '',
+      port: rawConfig.port,
+      secure: rawConfig.secure,
+      user: rawConfig.user?.trim() || '',
+      password: rawConfig.password || '',
+      from_name: rawConfig.from_name?.trim() || '',
+      from_email: rawConfig.from_email?.trim() || '',
+      test_email: rawConfig.test_email?.trim() || '',
+    };
     
     console.log("test-smtp-config: Testing SMTP connection to", config.host, config.port);
 
