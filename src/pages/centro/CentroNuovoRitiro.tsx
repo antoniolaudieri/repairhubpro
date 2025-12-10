@@ -60,6 +60,9 @@ export default function CentroNuovoRitiro() {
   const [aiConditionAssessment, setAiConditionAssessment] = useState<any>(null);
   const [showChecklistDialog, setShowChecklistDialog] = useState(false);
   const [createdRepairId, setCreatedRepairId] = useState<string | null>(null);
+  const [shippingEnabled, setShippingEnabled] = useState(false);
+  
+  const UTOPYA_SHIPPING_COST = 7.50;
   
   // Customer display integration
   const { 
@@ -160,9 +163,11 @@ export default function CentroNuovoRitiro() {
   useEffect(() => {
     if (!centroId) return;
     
+    const shippingCost = shippingEnabled ? UTOPYA_SHIPPING_COST : 0;
     const estimatedTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) 
       + selectedServices.reduce((sum, s) => sum + s.price, 0) 
-      + laborCost;
+      + laborCost
+      + shippingCost;
     
     // Build quote items array for display
     const quoteItems = [
@@ -684,6 +689,7 @@ export default function CentroNuovoRitiro() {
           estimated_cost: estimatedTotal > 0 ? estimatedTotal : null,
           repair_notes: servicesNotes || null,
           acconto: finalAcconto,
+          shipping_cost: shippingEnabled ? UTOPYA_SHIPPING_COST : null,
         })
         .select()
         .single();
@@ -981,11 +987,14 @@ export default function CentroNuovoRitiro() {
             deviceBrand={deviceData.brand}
             deviceModel={deviceData.model}
             reportedIssue={deviceData.reported_issue}
+            shippingEnabled={shippingEnabled}
+            onShippingToggle={setShippingEnabled}
           />
         );
 
       case 4:
-        const estimatedCostTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + selectedServices.reduce((sum, s) => sum + s.price, 0) + laborCost;
+        const shippingCostForStep4 = shippingEnabled ? UTOPYA_SHIPPING_COST : 0;
+        const estimatedCostTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + selectedServices.reduce((sum, s) => sum + s.price, 0) + laborCost + shippingCostForStep4;
         return (
           <IntakeSignatureStep
             onSignatureComplete={(signature) => setIntakeSignature(signature)}
@@ -1050,11 +1059,43 @@ export default function CentroNuovoRitiro() {
               </Card>
             )}
             
-            <Card className="p-4 bg-primary/5 border-primary/20">
-              <div className="flex justify-between items-center">
+            <Card className="p-4 bg-primary/5 border-primary/20 space-y-3">
+              <div className="space-y-2 text-sm">
+                {selectedSpareParts.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">🔧 Ricambi</span>
+                    <span>€{selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0).toFixed(2)}</span>
+                  </div>
+                )}
+                {selectedServices.length > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">⚙️ Servizi</span>
+                    <span>€{selectedServices.reduce((sum, s) => sum + s.price, 0).toFixed(2)}</span>
+                  </div>
+                )}
+                {laborCost > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">👷 Manodopera</span>
+                    <span>€{laborCost.toFixed(2)}</span>
+                  </div>
+                )}
+                {shippingEnabled && (
+                  <div className="flex justify-between text-blue-600">
+                    <span>🚚 Spedizione Utopya</span>
+                    <span>€{UTOPYA_SHIPPING_COST.toFixed(2)}</span>
+                  </div>
+                )}
+                {diagnosticFee > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">📋 Gestione Diagnosi</span>
+                    <span>€{diagnosticFee.toFixed(2)}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-between items-center pt-2 border-t border-primary/20">
                 <span className="font-semibold">Totale Preventivo</span>
                 <span className="text-xl font-bold text-primary">
-                  €{Math.ceil(selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + selectedServices.reduce((sum, s) => sum + s.price, 0) + laborCost + diagnosticFee)}
+                  €{Math.ceil(selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + selectedServices.reduce((sum, s) => sum + s.price, 0) + laborCost + (shippingEnabled ? UTOPYA_SHIPPING_COST : 0) + diagnosticFee)}
                 </span>
               </div>
             </Card>

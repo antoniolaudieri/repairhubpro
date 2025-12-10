@@ -1516,6 +1516,7 @@ export type Database = {
           priority: string
           privacy_consent_at: string | null
           repair_notes: string | null
+          shipping_cost: number | null
           started_at: string | null
           status: string
           updated_at: string
@@ -1546,6 +1547,7 @@ export type Database = {
           priority?: string
           privacy_consent_at?: string | null
           repair_notes?: string | null
+          shipping_cost?: number | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -1576,6 +1578,7 @@ export type Database = {
           priority?: string
           privacy_consent_at?: string | null
           repair_notes?: string | null
+          shipping_cost?: number | null
           started_at?: string | null
           status?: string
           updated_at?: string
