@@ -173,6 +173,7 @@ export function useCustomerDisplay(centroId: string | null) {
     onPasswordSubmitted?: (password: string) => void;
     onPasswordSkipped?: () => void;
     onSignatureSubmitted?: (signatureData: string) => void;
+    onPrivacyConsentChanged?: (consent: boolean) => void;
   }) => {
     if (!centroId) return () => {};
     
@@ -190,6 +191,9 @@ export function useCustomerDisplay(centroId: string | null) {
       })
       .on('broadcast', { event: 'signature_submitted' }, (payload) => {
         callbacks.onSignatureSubmitted?.(payload.payload.signatureData);
+      })
+      .on('broadcast', { event: 'privacy_consent_changed' }, (payload) => {
+        callbacks.onPrivacyConsentChanged?.(payload.payload.privacyConsent);
       })
       .subscribe();
 
