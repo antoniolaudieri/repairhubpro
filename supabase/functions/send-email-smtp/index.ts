@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { encode as base64Encode } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,12 +19,19 @@ interface SmtpConfig {
   from_email: string;
 }
 
+interface Attachment {
+  filename: string;
+  content: string; // base64 encoded content
+  contentType: string;
+}
+
 interface EmailRequest {
   centro_id: string;
   to: string | string[];
   subject: string;
   html: string;
   from_name_override?: string;
+  attachments?: Attachment[];
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -34,9 +42,12 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { centro_id, to, subject, html, from_name_override }: EmailRequest = await req.json();
+    const { centro_id, to, subject, html, from_name_override, attachments }: EmailRequest = await req.json();
     
     console.log("send-email-smtp: Sending email to", to, "for centro", centro_id);
+    if (attachments?.length) {
+      console.log("send-email-smtp: With", attachments.length, "attachment(s)");
+    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -66,10 +77,16 @@ const handler = async (req: Request): Promise<Response> => {
     const fromName = from_name_override || smtpConfig?.from_name || centroName;
     const recipients = Array.isArray(to) ? to : [to];
 
+    // Prepare attachments for SMTP
+    const smtpAttachments = attachments?.map(att => ({
+      filename: att.filename,
+      content: Uint8Array.from(atob(att.content), c => c.charCodeAt(0)),
+      contentType: att.contentType,
+    })) || [];
+
     // Try SMTP if configured
     if (smtpConfig) {
       try {
-        // Trim whitespace from SMTP config values
         const trimmedHost = smtpConfig.host?.trim() || '';
         const trimmedUser = smtpConfig.user?.trim() || '';
         const trimmedFromEmail = smtpConfig.from_email?.trim() || '';
@@ -88,14 +105,20 @@ const handler = async (req: Request): Promise<Response> => {
           },
         });
 
-        await client.send({
+        const sendOptions: any = {
           from: `${fromName} <${trimmedFromEmail}>`,
           to: recipients,
           subject: subject,
           content: "auto",
           html: html,
-        });
+        };
 
+        // Add attachments if present
+        if (smtpAttachments.length > 0) {
+          sendOptions.attachments = smtpAttachments;
+        }
+
+        await client.send(sendOptions);
         await client.close();
 
         console.log("send-email-smtp: Email sent via Centro SMTP");
@@ -104,13 +127,13 @@ const handler = async (req: Request): Promise<Response> => {
             success: true, 
             method: "smtp",
             from: `${fromName} <${trimmedFromEmail}>`,
-            to: recipients 
+            to: recipients,
+            attachments: attachments?.length || 0
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (smtpError: any) {
         console.error("send-email-smtp: SMTP error, falling back to Resend:", smtpError.message);
-        // Fall through to Resend
       }
     }
 
@@ -122,18 +145,29 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("send-email-smtp: Using Resend fallback");
 
+    // Prepare Resend request body
+    const resendBody: any = {
+      from: `${fromName} <onboarding@resend.dev>`,
+      to: recipients,
+      subject: subject,
+      html: html,
+    };
+
+    // Add attachments for Resend if present
+    if (attachments?.length) {
+      resendBody.attachments = attachments.map(att => ({
+        filename: att.filename,
+        content: att.content,
+      }));
+    }
+
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${RESEND_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        from: `${fromName} <onboarding@resend.dev>`,
-        to: recipients,
-        subject: subject,
-        html: html,
-      }),
+      body: JSON.stringify(resendBody),
     });
 
     const emailResult = await emailResponse.json();
@@ -150,7 +184,8 @@ const handler = async (req: Request): Promise<Response> => {
         method: "resend",
         emailId: emailResult.id,
         from: `${fromName} <onboarding@resend.dev>`,
-        to: recipients 
+        to: recipients,
+        attachments: attachments?.length || 0
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
