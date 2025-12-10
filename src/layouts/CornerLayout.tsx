@@ -51,7 +51,7 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
         <div className="p-6 border-b border-border">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-primary">Corner Portal</h1>
+              <h1 className="text-xl font-bold text-primary">LabLinkRiparo Corner</h1>
               <p className="text-sm text-muted-foreground">Gestione Segnalazioni</p>
             </div>
             <CornerNotificationCenter />
@@ -99,7 +99,7 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="flex items-center justify-between p-4">
-          <h1 className="text-lg font-bold text-primary">Corner Portal</h1>
+          <h1 className="text-lg font-bold text-primary">LabLinkRiparo Corner</h1>
           <div className="flex items-center gap-2">
             <CornerNotificationCenter />
             <Button

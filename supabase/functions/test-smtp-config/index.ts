@@ -81,7 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
           </div>
           <div style="background-color: #f9fafb; padding: 16px; border-top: 1px solid #e5e7eb; text-align: center;">
             <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-              Email inviata tramite RepairHubPro
+              Email inviata tramite LabLinkRiparo
             </p>
           </div>
         </div>
@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
     await client.send({
       from: `${config.from_name || 'Test'} <${config.from_email}>`,
       to: [config.test_email],
-      subject: "✅ Test Configurazione SMTP - RepairHubPro",
+      subject: "✅ Test Configurazione SMTP - LabLinkRiparo",
       content: "auto",
       html: testHtml,
     });

@@ -315,7 +315,7 @@ export default function CustomerHome() {
               </div>
               <div className="absolute -inset-1 bg-gradient-primary rounded-xl blur opacity-30 animate-pulse-glow" />
             </div>
-            <span className="font-bold text-xl text-foreground">TechRepair</span>
+            <span className="font-bold text-xl text-foreground">LabLinkRiparo</span>
           </motion.div>
 
           <div className="flex gap-2 sm:gap-3 items-center">
@@ -828,7 +828,7 @@ export default function CustomerHome() {
               <span className="text-sm font-medium text-primary">I Nostri Servizi</span>
             </motion.div>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-              Perché Scegliere <span className="text-gradient">TechRepair</span>
+              Perché Scegliere <span className="text-gradient">LabLinkRiparo</span>
             </h2>
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mx-auto">
               Qualità, affidabilità e trasparenza in ogni intervento
@@ -958,7 +958,7 @@ export default function CustomerHome() {
                     {[
                       { icon: MapPin, label: "Indirizzo", value: "Via Roma 123, 00100 Roma" },
                       { icon: Phone, label: "Telefono", value: "+39 123 456 7890" },
-                      { icon: Mail, label: "Email", value: "info@techrepair.it" },
+                      { icon: Mail, label: "Email", value: "info@lablinkriparo.it" },
                     ].map((item, idx) => (
                       <motion.div 
                         key={idx} 
@@ -1132,7 +1132,7 @@ export default function CustomerHome() {
                   <div className="p-2.5 bg-sidebar-accent rounded-xl">
                     <Wrench className="h-5 w-5 text-sidebar-accent-foreground" />
                   </div>
-                  <span className="font-bold text-xl">TechRepair</span>
+                  <span className="font-bold text-xl">LabLinkRiparo</span>
                 </motion.div>
                 <p className="text-sidebar-foreground/70 mb-6 max-w-sm">
                   Il tuo partner di fiducia per riparazioni professionali dal 2010. Qualità, affidabilità e servizio impeccabile.
@@ -1176,7 +1176,7 @@ export default function CustomerHome() {
                   </li>
                   <li className="flex items-center gap-2">
                     <Mail className="h-4 w-4" />
-                    <span>info@techrepair.it</span>
+                    <span>info@lablinkriparo.it</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <MapPin className="h-4 w-4 mt-0.5" />
@@ -1189,7 +1189,7 @@ export default function CustomerHome() {
             {/* Bottom */}
             <div className="pt-8 border-t border-sidebar-border flex flex-col sm:flex-row justify-between items-center gap-4">
               <p className="text-sm text-sidebar-foreground/60">
-                © 2024 TechRepair. Tutti i diritti riservati.
+                © 2024 LabLinkRiparo. Tutti i diritti riservati.
               </p>
               <div className="flex gap-6 text-sm text-sidebar-foreground/60">
                 <a href="#" className="hover:text-sidebar-foreground transition-colors">Privacy Policy</a>

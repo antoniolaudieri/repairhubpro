@@ -140,7 +140,7 @@ serve(async (req: Request): Promise<Response> => {
               </div>
               
               <p style="font-size: 16px; color: #374151; line-height: 1.7; margin: 0 0 24px;">
-                desidera avviare una collaborazione con te sulla piattaforma RepairHubPro.
+                desidera avviare una collaborazione con te sulla piattaforma LabLinkRiparo.
               </p>
               
               ${message ? `
@@ -185,7 +185,7 @@ serve(async (req: Request): Promise<Response> => {
           <tr>
             <td style="background-color: #f9fafb; padding: 24px 40px; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0; font-size: 13px; color: #9ca3af; text-align: center; line-height: 1.5;">
-                Questa email è stata inviata tramite <strong>RepairHubPro</strong>.<br>
+                Questa email è stata inviata tramite <strong>LabLinkRiparo</strong>.<br>
                 Puoi anche gestire questa richiesta accedendo alla tua dashboard.
               </p>
             </td>

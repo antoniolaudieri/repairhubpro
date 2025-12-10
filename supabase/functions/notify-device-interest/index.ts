@@ -135,7 +135,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("id", device.centro_id)
       .single();
 
-    const centroName = centro?.business_name || "TechRepair";
+    const centroName = centro?.business_name || "LabLinkRiparo";
 
     // Process each matching interest
     for (const interest of matchingInterests) {

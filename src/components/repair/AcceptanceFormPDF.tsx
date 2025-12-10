@@ -104,17 +104,17 @@ export function AcceptanceFormPDF({ open, onOpenChange, repairData }: Acceptance
     const loginUrl = `${baseUrl}/auth?email=${encodeURIComponent(repairData.customer.email)}`;
     const repairTrackingUrl = `${baseUrl}/customer-repair/${repairData.id}`;
     
-    const subject = encodeURIComponent(`🔧 TechRepair - Conferma Accettazione Riparazione #${repairData.id.slice(0, 8).toUpperCase()}`);
+    const subject = encodeURIComponent(`🔧 LabLinkRiparo - Conferma Accettazione Riparazione #${repairData.id.slice(0, 8).toUpperCase()}`);
     
     const body = encodeURIComponent(`
 ══════════════════════════════════════════
-          🔧 TECHREPAIR
-    Centro Assistenza Tecnica
+          🔧 LABLINKRIPARO
+     Centro Assistenza Tecnica
 ══════════════════════════════════════════
 
 Gentile ${repairData.customer.name},
 
-La ringraziamo per aver scelto TechRepair per la riparazione del suo dispositivo.
+La ringraziamo per aver scelto LabLinkRiparo per la riparazione del suo dispositivo.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📱 DETTAGLI DISPOSITIVO
@@ -169,11 +169,11 @@ di completamento della riparazione (Art. 2756 c.c.).
 ══════════════════════════════════════════
 
 Cordiali saluti,
-Il Team TechRepair
+Il Team LabLinkRiparo
 
 📞 Contatti: XXX-XXXXXXX
-📧 Email: info@techrepair.it
-🌐 Web: www.techrepair.it
+📧 Email: info@lablinkriparo.it
+🌐 Web: www.lablinkriparo.it
 
 ══════════════════════════════════════════
     `);
@@ -218,7 +218,7 @@ Il Team TechRepair
         <div ref={contentRef} className="bg-white p-6 text-black border rounded-lg text-sm">
           <div className="header">
             <h1>MODULO DI ACCETTAZIONE RIPARAZIONE</h1>
-            <p>TechRepair - Centro Assistenza Tecnica</p>
+            <p>LabLinkRiparo - Centro Assistenza Tecnica</p>
           </div>
 
           <div className="info-row">
@@ -372,7 +372,7 @@ Il Team TechRepair
                     )}
                     <div style={{ textAlign: repairData.centro?.logo_url ? "left" : "center" }}>
                       <p style={{ fontWeight: "bold", fontSize: "14px", margin: 0 }}>
-                        {repairData.centro?.business_name || "TechRepair"}
+                        {repairData.centro?.business_name || "LabLinkRiparo"}
                       </p>
                       <p style={{ fontSize: "10px", margin: "2px 0" }}>Centro Assistenza Tecnica</p>
                       {repairData.centro && (

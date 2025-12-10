@@ -987,7 +987,7 @@ export default function CentroImpostazioni() {
               {!smtpEnabled && (
                 <div className="p-4 bg-muted/30 rounded-lg">
                   <p className="text-sm text-muted-foreground">
-                    Quando disattivato, le email verranno inviate dalla piattaforma RepairHubPro.
+                    Quando disattivato, le email verranno inviate dalla piattaforma LabLinkRiparo.
                   </p>
                 </div>
               )}
@@ -1264,7 +1264,7 @@ export default function CentroImpostazioni() {
                   {/* Platform Logo */}
                   <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30 backdrop-blur-sm">
                     <Wrench className="h-2.5 w-2.5 text-white/70" />
-                    <span className="text-[8px] font-medium text-white/70">Powered by RepairHubPro</span>
+                    <span className="text-[8px] font-medium text-white/70">Powered by LabLinkRiparo</span>
                   </div>
                 </div>
               </div>

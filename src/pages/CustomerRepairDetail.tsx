@@ -276,7 +276,7 @@ const getStatusInfo = (status: string) => {
             <div className="p-1.5 sm:p-2 bg-primary rounded-lg">
               <Wrench className="h-4 w-4 sm:h-5 sm:w-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-lg sm:text-xl text-foreground">TechRepair</span>
+            <span className="font-bold text-lg sm:text-xl text-foreground">LabLinkRiparo</span>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">

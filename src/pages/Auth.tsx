@@ -188,7 +188,7 @@ const Auth = () => {
             className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
             variants={itemVariants}
           >
-            TechRepair CRM
+            LabLinkRiparo
           </motion.h1>
           <motion.p
             className="text-muted-foreground text-center mt-2"

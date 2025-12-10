@@ -44,7 +44,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Fetch Centro settings to get SMTP config
     let smtpConfig: SmtpConfig | null = null;
-    let centroName = "RepairHubPro";
+    let centroName = "LabLinkRiparo";
 
     if (centro_id) {
       const { data: centro, error } = await supabase
@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (!error && centro) {
-        centroName = centro.business_name || "RepairHubPro";
+        centroName = centro.business_name || "LabLinkRiparo";
         const settings = centro.settings as { smtp_config?: SmtpConfig } | null;
         if (settings?.smtp_config?.enabled && settings.smtp_config.host) {
           smtpConfig = settings.smtp_config;
