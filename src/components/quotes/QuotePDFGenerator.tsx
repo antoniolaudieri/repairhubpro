@@ -520,3 +520,8 @@ export async function getQuotePDFDataUrl(data: QuotePDFData): Promise<string> {
   const doc = await generateQuotePDF(data);
   return doc.output('dataurlstring');
 }
+
+export async function getQuotePDFBase64(data: QuotePDFData): Promise<string> {
+  const doc = await generateQuotePDF(data);
+  return doc.output('datauristring').split(',')[1];
+}

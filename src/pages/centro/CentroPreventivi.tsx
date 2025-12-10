@@ -14,11 +14,11 @@ import {
   Edit, 
   Send,
   Plus,
-  TrendingUp,
   Euro,
   PenLine,
-  Sparkles,
-  Filter
+  Eye,
+  Mail,
+  MessageCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -26,8 +26,8 @@ import { it } from "date-fns/locale";
 import { toast } from "sonner";
 import { EditQuoteDialog } from "@/components/quotes/EditQuoteDialog";
 import { CreateQuoteDialog } from "@/components/quotes/CreateQuoteDialog";
+import { QuotePDFPreview } from "@/components/quotes/QuotePDFPreview";
 import { motion } from "framer-motion";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface Quote {
   id: string;
@@ -63,8 +63,95 @@ export default function CentroPreventivi() {
   const [centroId, setCentroId] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [centroInfo, setCentroInfo] = useState<any>(null);
+  const [isSending, setIsSending] = useState(false);
+
+  // Load centro info for PDF
+  useEffect(() => {
+    const loadCentroInfo = async () => {
+      if (!centroId) return;
+      const { data } = await supabase
+        .from("centri_assistenza")
+        .select("*")
+        .eq("id", centroId)
+        .single();
+      if (data) setCentroInfo(data);
+    };
+    loadCentroInfo();
+  }, [centroId]);
+
+  const handleSendQuote = async (method: "email" | "whatsapp") => {
+    if (!selectedQuote || !selectedQuote.customers) return;
+    
+    setIsSending(true);
+    try {
+      const { downloadQuotePDF, getQuotePDFBase64 } = await import("@/components/quotes/QuotePDFGenerator");
+      
+      const pdfData = {
+        customerName: selectedQuote.customers.name,
+        customerEmail: selectedQuote.customers.email || "",
+        customerPhone: selectedQuote.customers.phone,
+        deviceType: selectedQuote.device_type,
+        deviceBrand: selectedQuote.device_brand || "",
+        deviceModel: selectedQuote.device_model || "",
+        issueDescription: selectedQuote.issue_description,
+        diagnosis: selectedQuote.diagnosis || "",
+        notes: selectedQuote.notes || "",
+        items: Array.isArray(selectedQuote.items) ? selectedQuote.items : [],
+        laborCost: selectedQuote.labor_cost,
+        partsCost: selectedQuote.parts_cost,
+        totalCost: selectedQuote.total_cost,
+        validUntil: selectedQuote.valid_until || "",
+        centroInfo: centroInfo ? {
+          name: centroInfo.business_name,
+          address: centroInfo.address,
+          phone: centroInfo.phone,
+          email: centroInfo.email,
+          vatNumber: centroInfo.vat_number,
+          logoUrl: centroInfo.logo_url
+        } : undefined
+      };
+
+      if (method === "whatsapp") {
+        downloadQuotePDF(pdfData);
+        const customerPhone = selectedQuote.customers.phone?.replace(/\D/g, "") || "";
+        const message = `Buongiorno ${selectedQuote.customers.name},\n\nLe invio il preventivo per la riparazione del suo ${selectedQuote.device_type} ${selectedQuote.device_brand || ""} ${selectedQuote.device_model || ""}.\n\nTotale: €${selectedQuote.total_cost.toFixed(2)}\n\nTroverà il PDF scaricato. Rimango a disposizione per qualsiasi chiarimento.\n\nCordiali saluti`;
+        const whatsappUrl = `https://wa.me/${customerPhone}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, "_blank");
+        toast.success("PDF scaricato e WhatsApp aperto");
+      } else {
+        const base64 = await getQuotePDFBase64(pdfData);
+        const { error } = await supabase.functions.invoke("send-email-smtp", {
+          body: {
+            to: selectedQuote.customers.email,
+            subject: `Preventivo Riparazione - ${selectedQuote.device_type} ${selectedQuote.device_brand || ""}`,
+            html: `<p>Gentile ${selectedQuote.customers.name},</p><p>In allegato trova il preventivo per la riparazione del suo dispositivo.</p><p><strong>Totale: €${selectedQuote.total_cost.toFixed(2)}</strong></p><p>Rimaniamo a disposizione per qualsiasi chiarimento.</p><p>Cordiali saluti,<br/>${centroInfo?.business_name || "Il Team"}</p>`,
+            centro_id: centroId,
+            attachments: [{
+              filename: `preventivo_${selectedQuote.customers.name.replace(/\s+/g, "_")}.pdf`,
+              content: base64,
+              encoding: "base64"
+            }]
+          }
+        });
+        if (error) throw error;
+        toast.success("Email inviata con successo");
+      }
+      
+      // Update quote status
+      await supabase.from("quotes").update({ status: "pending" }).eq("id", selectedQuote.id);
+      if (centroId) loadQuotes(centroId);
+      setPdfPreviewOpen(false);
+    } catch (error: any) {
+      console.error("Error sending quote:", error);
+      toast.error("Errore nell'invio: " + (error.message || "Riprova"));
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   useEffect(() => {
     if (user) fetchCentroAndQuotes();
@@ -232,32 +319,16 @@ export default function CentroPreventivi() {
     setEditDialogOpen(true);
   };
 
+  const handleViewPDF = (quote: Quote) => {
+    setSelectedQuote(quote);
+    setPdfPreviewOpen(true);
+  };
+
   const handleQuoteUpdated = () => {
     if (centroId) {
       loadQuotes(centroId);
     }
     toast.success("Preventivo aggiornato");
-  };
-
-  const handleSendToCustomer = async (quote: Quote) => {
-    try {
-      await supabase
-        .from("quotes")
-        .update({ status: "pending" })
-        .eq("id", quote.id);
-
-      if (quote.repair_request_id) {
-        await supabase
-          .from("repair_requests")
-          .update({ status: "quote_sent" })
-          .eq("id", quote.repair_request_id);
-      }
-
-      toast.success("Preventivo inviato al cliente");
-      if (centroId) loadQuotes(centroId);
-    } catch (error) {
-      toast.error("Errore nell'invio del preventivo");
-    }
   };
 
   const containerVariants = {
@@ -476,29 +547,28 @@ export default function CentroPreventivi() {
                             )}
                           </div>
                           
-                          {!quote.signed_at && (
-                            <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleViewPDF(quote)}
+                              className="h-9 w-9"
+                              title="Visualizza PDF"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            {!quote.signed_at && (
                               <Button
                                 variant="outline"
-                                size="sm"
+                                size="icon"
                                 onClick={() => handleEditQuote(quote)}
-                                className="h-9"
+                                className="h-9 w-9"
+                                title="Modifica"
                               >
-                                <Edit className="h-4 w-4 sm:mr-1" />
-                                <span className="hidden sm:inline">Modifica</span>
+                                <Edit className="h-4 w-4" />
                               </Button>
-                              {quote.status !== 'pending' && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleSendToCustomer(quote)}
-                                  className="h-9 bg-gradient-to-r from-primary to-primary-glow hover:opacity-90"
-                                >
-                                  <Send className="h-4 w-4 sm:mr-1" />
-                                  <span className="hidden sm:inline">Invia</span>
-                                </Button>
-                              )}
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
                       </div>
                     </CardContent>
@@ -512,13 +582,45 @@ export default function CentroPreventivi() {
 
       {/* Dialogs */}
       {selectedQuote && (
-        <EditQuoteDialog
-          open={editDialogOpen}
-          onOpenChange={setEditDialogOpen}
-          quote={selectedQuote}
-          onSuccess={handleQuoteUpdated}
-          centroId={centroId}
-        />
+        <>
+          <EditQuoteDialog
+            open={editDialogOpen}
+            onOpenChange={setEditDialogOpen}
+            quote={selectedQuote}
+            onSuccess={handleQuoteUpdated}
+            centroId={centroId}
+          />
+          <QuotePDFPreview
+            open={pdfPreviewOpen}
+            onOpenChange={setPdfPreviewOpen}
+            customer={{
+              id: selectedQuote.customer_id,
+              name: selectedQuote.customers?.name || "",
+              email: selectedQuote.customers?.email || null,
+              phone: selectedQuote.customers?.phone || ""
+            }}
+            deviceType={selectedQuote.device_type}
+            deviceBrand={selectedQuote.device_brand || ""}
+            deviceModel={selectedQuote.device_model || ""}
+            issueDescription={selectedQuote.issue_description}
+            diagnosis={selectedQuote.diagnosis || ""}
+            notes={selectedQuote.notes || ""}
+            items={Array.isArray(selectedQuote.items) ? selectedQuote.items : []}
+            laborCost={selectedQuote.labor_cost}
+            partsCost={selectedQuote.parts_cost}
+            totalCost={selectedQuote.total_cost}
+            centroInfo={centroInfo ? {
+              name: centroInfo.business_name,
+              address: centroInfo.address,
+              phone: centroInfo.phone,
+              email: centroInfo.email,
+              vatNumber: centroInfo.vat_number,
+              logoUrl: centroInfo.logo_url
+            } : undefined}
+            onSend={handleSendQuote}
+            isSending={isSending}
+          />
+        </>
       )}
 
       <CreateQuoteDialog
