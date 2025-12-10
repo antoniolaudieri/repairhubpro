@@ -142,15 +142,15 @@ export function CentroSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border h-full">
       <div className="min-h-full h-full bg-sidebar text-sidebar-foreground flex flex-col">
-        <SidebarHeader className="h-16 border-b border-sidebar-border flex items-center justify-center">
+        <SidebarHeader className={`h-16 border-b border-sidebar-border flex items-center ${isCollapsed ? 'justify-center px-0' : 'justify-center px-4'}`}>
           <motion.div 
-            className={`flex items-center gap-3 transition-all duration-300 ${isCollapsed ? 'px-2' : 'px-4'}`}
+            className={`flex items-center transition-all duration-300 ${isCollapsed ? 'justify-center' : 'gap-3'}`}
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
             <motion.div 
-              className={`h-9 w-9 rounded-xl overflow-hidden flex items-center justify-center ${!logoUrl ? 'bg-gradient-to-br from-primary to-primary-glow shadow-elegant' : ''}`}
+              className={`rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 ${isCollapsed ? 'h-8 w-8' : 'h-9 w-9'} ${!logoUrl ? 'bg-gradient-to-br from-primary to-primary-glow shadow-elegant' : ''}`}
               whileHover={{ scale: 1.05, rotate: 5 }}
               whileTap={{ scale: 0.95 }}
               transition={{ type: "spring", stiffness: 400, damping: 17 }}
@@ -158,7 +158,7 @@ export function CentroSidebar() {
               {logoUrl ? (
                 <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
               ) : (
-                <Building2 className="h-5 w-5 text-primary-foreground" />
+                <Building2 className={`text-primary-foreground ${isCollapsed ? 'h-4 w-4' : 'h-5 w-5'}`} />
               )}
             </motion.div>
             <AnimatePresence mode="wait">
@@ -178,7 +178,7 @@ export function CentroSidebar() {
           </motion.div>
         </SidebarHeader>
         
-        <SidebarContent className="flex-1 py-4 px-2 overflow-y-auto overflow-x-hidden">
+        <SidebarContent className={`flex-1 py-4 overflow-y-auto overflow-x-hidden ${isCollapsed ? 'px-1' : 'px-2'}`}>
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu className="space-y-1">
@@ -205,7 +205,7 @@ export function CentroSidebar() {
                           <NavLink
                             to={item.url}
                             end={item.url === "/centro"}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 hover:bg-sidebar-accent/20 relative"
+                            className={`flex items-center rounded-xl transition-all duration-300 hover:bg-sidebar-accent/20 relative ${isCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'}`}
                             activeClassName="bg-gradient-to-r from-sidebar-accent to-sidebar-accent/80 text-sidebar-accent-foreground font-semibold shadow-elegant"
                           >
                             {isActive && (
@@ -220,9 +220,9 @@ export function CentroSidebar() {
                               whileHover={{ scale: 1.15, rotate: isActive ? 0 : 5 }}
                               whileTap={{ scale: 0.9 }}
                               transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                              className="relative z-10"
+                              className="relative z-10 flex-shrink-0"
                             >
-                              <Icon className={`h-5 w-5 flex-shrink-0 ${isActive ? 'drop-shadow-glow' : ''} ${(item as any).hasBadge && pendingCornerJobs > 0 ? 'text-amber-500' : ''}`} />
+                              <Icon className={`h-5 w-5 ${isActive ? 'drop-shadow-glow' : ''} ${(item as any).hasBadge && pendingCornerJobs > 0 ? 'text-amber-500' : ''}`} />
                             </motion.div>
                             <AnimatePresence mode="wait">
                               {!isCollapsed && (
@@ -258,16 +258,16 @@ export function CentroSidebar() {
           </SidebarGroup>
         </SidebarContent>
 
-        <div className="px-2">
+        <div className={isCollapsed ? 'px-1' : 'px-2'}>
           <Separator className="bg-sidebar-border" />
         </div>
 
-        <SidebarFooter className="bg-sidebar py-4 px-2">
+        <SidebarFooter className={`bg-sidebar py-4 ${isCollapsed ? 'px-1' : 'px-2'}`}>
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={handleSignOut}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive w-full relative overflow-hidden"
+                className={`group flex items-center rounded-xl transition-all duration-300 text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive w-full relative overflow-hidden ${isCollapsed ? 'justify-center px-2 py-2.5' : 'gap-3 px-3 py-2.5'}`}
                 tooltip="Esci"
               >
                 <motion.div
@@ -277,9 +277,9 @@ export function CentroSidebar() {
                   whileHover={{ scale: 1.15, rotate: -10 }}
                   whileTap={{ scale: 0.9 }}
                   transition={{ type: "spring", stiffness: 400, damping: 17 }}
-                  className="relative z-10"
+                  className="relative z-10 flex-shrink-0"
                 >
-                  <LogOut className="h-5 w-5 flex-shrink-0" />
+                  <LogOut className="h-5 w-5" />
                 </motion.div>
                 <AnimatePresence mode="wait">
                   {!isCollapsed && (
