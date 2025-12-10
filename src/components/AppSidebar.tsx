@@ -95,8 +95,8 @@ export function AppSidebar() {
                   exit={{ opacity: 0, x: -10 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <span className="text-sm font-bold text-sidebar-foreground">TechRepair</span>
-                  <span className="text-xs text-sidebar-foreground/60">CRM System</span>
+                  <span className="text-sm font-bold text-sidebar-foreground">LabLinkRiparo</span>
+                  <span className="text-xs text-sidebar-foreground/60">Gestionale Riparazioni</span>
                 </motion.div>
               )}
             </AnimatePresence>

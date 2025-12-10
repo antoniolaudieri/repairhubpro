@@ -376,7 +376,7 @@ export default function UsatoDetail() {
                 <div className="p-2 bg-gradient-primary rounded-xl">
                   <Wrench className="h-5 w-5 text-primary-foreground" />
                 </div>
-                <span className="font-bold text-xl">TechRepair</span>
+                <span className="font-bold text-xl">LabLinkRiparo</span>
               </div>
             </div>
           </div>

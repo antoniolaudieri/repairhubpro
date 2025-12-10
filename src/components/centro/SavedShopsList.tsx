@@ -302,7 +302,7 @@ function ShopCard({
                 size="sm"
                 asChild
               >
-                <a href={`mailto:${shop.email}?subject=Proposta di Partnership RepairHubPro&body=Buongiorno,%0A%0ASiamo un Centro di Assistenza e vorremmo proporvi una collaborazione sulla piattaforma RepairHubPro.%0A%0ACordiali saluti`}>
+                <a href={`mailto:${shop.email}?subject=Proposta di Partnership LabLinkRiparo&body=Buongiorno,%0A%0ASiamo un Centro di Assistenza e vorremmo proporvi una collaborazione sulla piattaforma LabLinkRiparo.%0A%0ACordiali saluti`}>
                   <Mail className="h-4 w-4 mr-1" />
                   Email
                 </a>

@@ -132,8 +132,8 @@ const DeviceImage = ({ photoUrl }: { photoUrl: string | null | undefined }) => {
     return (
       <div className="w-full h-full bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center">
         <div className="text-white text-center">
-          <div className="text-lg md:text-xl font-black tracking-tight">TR</div>
-          <div className="text-[6px] md:text-[8px] font-medium opacity-80 -mt-0.5">TechRepair</div>
+          <div className="text-lg md:text-xl font-black tracking-tight">LL</div>
+          <div className="text-[6px] md:text-[8px] font-medium opacity-80 -mt-0.5">LabLinkRiparo</div>
         </div>
       </div>
     );

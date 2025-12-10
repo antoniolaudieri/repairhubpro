@@ -607,7 +607,7 @@ export default function CustomerDisplay() {
           )}
           <div className="text-white text-right">
             {centroName && <p className="text-sm font-medium">{centroName}</p>}
-            <p className="text-xs text-white/50">Powered by RepairHubPro</p>
+            <p className="text-xs text-white/50">Powered by LabLinkRiparo</p>
           </div>
         </motion.div>
       </div>

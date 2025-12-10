@@ -570,7 +570,7 @@ export default function ProviderRegistration() {
                         <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input
                           id="business_name"
-                          placeholder="TechRepair Srl"
+                          placeholder="Centro Riparazioni Srl"
                           className="pl-10"
                           value={centroForm.business_name}
                           onChange={(e) => setCentroForm({ ...centroForm, business_name: e.target.value })}

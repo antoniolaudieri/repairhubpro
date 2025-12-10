@@ -230,7 +230,7 @@ export default function CustomerDashboard() {
             <div className="p-2 bg-primary rounded-lg">
               <Wrench className="h-5 w-5 text-primary-foreground" />
             </div>
-            <span className="font-bold text-xl text-foreground">TechRepair</span>
+            <span className="font-bold text-xl text-foreground">LabLinkRiparo</span>
           </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
