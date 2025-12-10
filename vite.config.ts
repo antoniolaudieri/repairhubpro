@@ -43,9 +43,13 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
+      // Disable workbox SW generation - we use our own /sw.js for push
+      selfDestroying: false,
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MiB
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+        // Import our custom push notification handler
+        importScripts: ["/sw.js"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,

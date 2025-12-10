@@ -70,19 +70,9 @@ export function usePushNotifications() {
         return false;
       }
 
-      // Register custom service worker for push notifications
-      let registration: ServiceWorkerRegistration;
-      try {
-        // First try to register our custom sw.js
-        registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-        console.log('Custom push SW registered:', registration.scope);
-        
-        // Wait for the service worker to be ready
-        await navigator.serviceWorker.ready;
-      } catch (swError) {
-        console.warn('Custom SW registration failed, using default:', swError);
-        registration = await navigator.serviceWorker.ready;
-      }
+      // Wait for the service worker to be ready (VitePWA handles registration)
+      const registration = await navigator.serviceWorker.ready;
+      console.log('Service Worker ready for push:', registration.scope);
 
       // Convert VAPID key to Uint8Array
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);

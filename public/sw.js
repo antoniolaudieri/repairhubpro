@@ -1,8 +1,20 @@
-// Service Worker for Push Notifications
-// This file is imported by the main service worker
+// Service Worker for Push Notifications and PWA
+// Self-contained push notification handling
 
+// Skip waiting and claim clients immediately
+self.addEventListener('install', (event) => {
+  console.log('[SW] Installing...');
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('[SW] Activating...');
+  event.waitUntil(clients.claim());
+});
+
+// Push notification handler
 self.addEventListener('push', function(event) {
-  console.log('[SW] Push event received');
+  console.log('[SW] Push event received!');
   
   let data = {
     title: 'Nuova Notifica',
@@ -15,7 +27,7 @@ self.addEventListener('push', function(event) {
   if (event.data) {
     try {
       const payload = event.data.json();
-      console.log('[SW] Push payload:', payload);
+      console.log('[SW] Push payload:', JSON.stringify(payload));
       data = { ...data, ...payload };
     } catch (e) {
       console.log('[SW] Push data as text:', event.data.text());
@@ -29,12 +41,12 @@ self.addEventListener('push', function(event) {
     badge: data.badge || '/pwa-192x192.png',
     vibrate: [200, 100, 200],
     data: data.data || {},
-    tag: data.tag || 'default-tag',
+    tag: data.tag || 'notification-' + Date.now(),
     renotify: true,
     requireInteraction: true
   };
 
-  console.log('[SW] Showing notification:', data.title, options);
+  console.log('[SW] Showing notification:', data.title);
   
   event.waitUntil(
     self.registration.showNotification(data.title, options)
@@ -64,4 +76,10 @@ self.addEventListener('notificationclick', function(event) {
 
 self.addEventListener('notificationclose', function(event) {
   console.log('[SW] Notification closed');
+});
+
+// Fetch handler for basic caching (simplified)
+self.addEventListener('fetch', function(event) {
+  // Let network requests pass through normally
+  // This SW is primarily for push notifications
 });
