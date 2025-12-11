@@ -21,6 +21,9 @@ verify_jwt = false
 [functions.create-customer-account]
 verify_jwt = false
 
+[functions.check-customer-account]
+verify_jwt = false
+
 [functions.check-forfeiture]
 verify_jwt = false
 

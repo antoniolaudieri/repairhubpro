@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, Mail, Phone, MapPin, Edit, Smartphone, FileText, 
   Calendar, User, Laptop, Tablet, Monitor, Gamepad2, Watch, HelpCircle,
-  ChevronRight, Clock, Euro, ShoppingCart, Package, UserPlus, UserX, Loader2, KeyRound
+  ChevronRight, Clock, Euro, ShoppingCart, Package, UserPlus, UserX, Loader2, KeyRound, Check
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -87,27 +87,17 @@ export default function CentroClienteDetail() {
 
   const checkCustomerAccount = async (email: string) => {
     try {
-      // Check if user exists in user_roles with customer role
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("id, user_id")
-        .eq("role", "customer");
-      
+      const { data, error } = await supabase.functions.invoke("check-customer-account", {
+        body: { email },
+      });
+
       if (error) {
         console.error("Error checking account:", error);
         setHasAccount(null);
         return;
       }
 
-      // We can't directly query auth.users, so we check profiles instead
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id")
-        .limit(1000);
-      
-      // For now, we'll use the edge function to check
-      // This is a simplified check - the actual verification happens on create/delete
-      setHasAccount(null); // Will be set after attempted create
+      setHasAccount(data?.exists ?? false);
     } catch (err) {
       console.error("Error:", err);
       setHasAccount(null);
@@ -250,6 +240,12 @@ export default function CentroClienteDetail() {
   useEffect(() => {
     loadCustomerData();
   }, [id]);
+
+  useEffect(() => {
+    if (customer?.email) {
+      checkCustomerAccount(customer.email);
+    }
+  }, [customer?.email]);
 
   if (loading) {
     return (
@@ -474,14 +470,19 @@ export default function CentroClienteDetail() {
                     <p className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-2">
                       Aggiungi un'email per creare un account
                     </p>
-                  ) : (
-                    <div className="flex flex-col sm:flex-row gap-2">
+                  ) : hasAccount === null ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Verifica account...
+                    </div>
+                  ) : hasAccount === false ? (
+                    <div className="flex flex-col gap-2">
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={createCustomerAccount}
                         disabled={accountLoading}
-                        className="flex-1 h-8 text-xs"
+                        className="h-8 text-xs"
                       >
                         {accountLoading ? (
                           <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -490,14 +491,21 @@ export default function CentroClienteDetail() {
                         )}
                         Crea Account
                       </Button>
-                      
+                      <p className="text-[10px] text-muted-foreground">Nessun account attivo</p>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2 text-xs text-accent bg-accent/10 rounded-lg px-3 py-2">
+                        <Check className="h-3.5 w-3.5" />
+                        Account attivo
+                      </div>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
                             size="sm"
-                            variant="destructive"
+                            variant="ghost"
                             disabled={accountLoading}
-                            className="flex-1 h-8 text-xs"
+                            className="h-7 text-[10px] text-destructive hover:text-destructive hover:bg-destructive/10"
                           >
                             {accountLoading ? (
                               <Loader2 className="h-3 w-3 animate-spin mr-1" />
@@ -524,13 +532,6 @@ export default function CentroClienteDetail() {
                         </AlertDialogContent>
                       </AlertDialog>
                     </div>
-                  )}
-                  
-                  {hasAccount === true && (
-                    <p className="text-[10px] text-accent mt-1.5">✓ Account attivo</p>
-                  )}
-                  {hasAccount === false && (
-                    <p className="text-[10px] text-muted-foreground mt-1.5">Nessun account</p>
                   )}
                 </div>
               </CardContent>
