@@ -642,8 +642,8 @@ export function EditQuoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) resetDialog(); }}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="p-4 sm:p-6 border-b">
+      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-4 sm:p-6 border-b flex-shrink-0">
           <DialogTitle className="text-xl flex items-center gap-2">
             <Package className="h-6 w-6" />
             {step === 'edit' ? 'Modifica Preventivo' : 'Anteprima e Invio'}
@@ -657,9 +657,9 @@ export function EditQuoteDialog({
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="flex-1 overflow-hidden"
+              className="flex-1 overflow-y-auto"
             >
-              <ScrollArea className="h-full max-h-[calc(90vh-140px)]">
+              <div className="max-h-[calc(90vh-180px)] overflow-y-auto">
                 <form onSubmit={form.handleSubmit((data) => handleSave(data, false))} className="p-4 sm:p-6 space-y-6">
                   {/* Device Info */}
                   <div className="space-y-4 p-4 bg-muted/30 rounded-xl">
@@ -959,7 +959,7 @@ export function EditQuoteDialog({
                     </Button>
                   </div>
                 </form>
-              </ScrollArea>
+              </div>
             </motion.div>
           ) : (
             <motion.div
