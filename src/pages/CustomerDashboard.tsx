@@ -39,6 +39,7 @@ import { NotificationBanner } from "@/components/customer/NotificationBanner";
 import { InAppNotifications } from "@/components/customer/InAppNotifications";
 import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
 import PromotionPreferences from "@/components/customer/PromotionPreferences";
+import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 
 interface Repair {
   id: string;
@@ -628,6 +629,9 @@ export default function CustomerDashboard() {
           {user?.email && (
             <PromotionPreferences userEmail={user.email} />
           )}
+
+          {/* Push Notification Settings */}
+          <PushNotificationSettings />
 
           {/* Used Devices Section */}
           <UsedDevicesCarousel />
