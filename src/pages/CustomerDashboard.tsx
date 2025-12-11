@@ -26,6 +26,8 @@ import {
   PenTool,
   FileSignature,
   Building2,
+  Store,
+  Briefcase,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { SignatureDialog } from "@/components/quotes/SignatureDialog";
@@ -629,6 +631,33 @@ export default function CustomerDashboard() {
 
           {/* Used Devices Section */}
           <UsedDevicesCarousel />
+
+          {/* Become Partner Section */}
+          <Card className="p-6 bg-gradient-to-br from-card via-card to-primary/5 border-primary/20">
+            <div className="text-center space-y-4">
+              <h2 className="text-xl font-bold text-foreground">Vuoi diventare Partner?</h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto">
+                Entra a far parte della nostra rete di partner. Diventa un punto di raccolta (Corner) o un centro assistenza autorizzato.
+              </p>
+              <div className="flex flex-col sm:flex-row justify-center gap-4 pt-2">
+                <Button 
+                  variant="outline" 
+                  className="gap-2 border-primary/30 hover:bg-primary/10"
+                  onClick={() => navigate("/provider-registration?type=corner")}
+                >
+                  <Store className="h-5 w-5" />
+                  Diventa Corner
+                </Button>
+                <Button 
+                  className="gap-2"
+                  onClick={() => navigate("/provider-registration?type=centro")}
+                >
+                  <Briefcase className="h-5 w-5" />
+                  Diventa Centro Assistenza
+                </Button>
+              </div>
+            </div>
+          </Card>
         </div>
       </main>
 
