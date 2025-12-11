@@ -68,12 +68,91 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Fetch Centro details if centroId is provided
+    let centroDetails: {
+      business_name: string;
+      address: string;
+      phone: string;
+      email: string;
+      vat_number: string | null;
+      logo_url: string | null;
+    } | null = null;
+
+    if (centroId) {
+      const { data: centro, error: centroError } = await supabaseAdmin
+        .from('centri_assistenza')
+        .select('business_name, address, phone, email, vat_number, logo_url')
+        .eq('id', centroId)
+        .single();
+
+      if (!centroError && centro) {
+        centroDetails = centro;
+        console.log('Fetched Centro details:', centroDetails);
+      } else {
+        console.log('Could not fetch Centro details:', centroError?.message);
+      }
+    }
+
     // Send welcome email via send-email-smtp edge function (uses Centro SMTP if configured)
-    // Get the correct app URL from request origin or use production URL
     const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/');
     const appUrl = origin || 'https://lablinkriparo.lovable.app';
     const loginUrl = `${appUrl}/auth`;
-    const shopName = centroName || 'LabLinkRiparo';
+    const shopName = centroDetails?.business_name || centroName || 'LabLinkRiparo';
+    const shopAddress = centroDetails?.address || '';
+    const shopPhone = centroDetails?.phone || '';
+    const shopEmail = centroDetails?.email || '';
+    const shopVat = centroDetails?.vat_number || '';
+    const shopLogo = centroDetails?.logo_url || '';
+
+    // Build header with or without logo
+    const headerContent = shopLogo 
+      ? `<table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="center" style="padding-bottom: 16px;">
+              <img src="${shopLogo}" alt="${shopName}" style="max-height: 60px; max-width: 200px; border-radius: 8px;" />
+            </td>
+          </tr>
+          <tr>
+            <td align="center">
+              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">${shopName}</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Gestionale Riparazioni</p>
+            </td>
+          </tr>
+        </table>`
+      : `<h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">${shopName}</h1>
+         <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Gestionale Riparazioni</p>`;
+
+    // Build contact info section
+    const hasContactInfo = shopAddress || shopPhone || shopEmail;
+    const contactInfoSection = hasContactInfo ? `
+      <div style="background: #f8fafc; border-radius: 8px; padding: 16px; margin-bottom: 24px; border: 1px solid #e2e8f0;">
+        <h3 style="color: #475569; margin: 0 0 12px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">📍 Contatti ${shopName}</h3>
+        <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 14px; color: #334155;">
+          ${shopAddress ? `<tr><td style="padding: 4px 0;"><strong>Indirizzo:</strong> ${shopAddress}</td></tr>` : ''}
+          ${shopPhone ? `<tr><td style="padding: 4px 0;"><strong>Telefono:</strong> <a href="tel:${shopPhone}" style="color: #2563eb; text-decoration: none;">${shopPhone}</a></td></tr>` : ''}
+          ${shopEmail ? `<tr><td style="padding: 4px 0;"><strong>Email:</strong> <a href="mailto:${shopEmail}" style="color: #2563eb; text-decoration: none;">${shopEmail}</a></td></tr>` : ''}
+          ${shopVat ? `<tr><td style="padding: 4px 0; color: #64748b; font-size: 12px;"><strong>P.IVA:</strong> ${shopVat}</td></tr>` : ''}
+        </table>
+      </div>
+    ` : '';
+
+    // Build footer with Centro info
+    const footerInfo = hasContactInfo 
+      ? `<p style="color: #71717a; font-size: 12px; margin: 0 0 8px 0;">
+          Questa email è stata inviata automaticamente da ${shopName}.
+        </p>
+        ${shopAddress ? `<p style="color: #a1a1aa; font-size: 11px; margin: 0 0 4px 0;">${shopAddress}</p>` : ''}
+        ${shopPhone ? `<p style="color: #a1a1aa; font-size: 11px; margin: 0 0 4px 0;">Tel: ${shopPhone}</p>` : ''}
+        ${shopVat ? `<p style="color: #a1a1aa; font-size: 11px; margin: 0 0 8px 0;">P.IVA: ${shopVat}</p>` : ''}
+        <p style="color: #a1a1aa; font-size: 11px; margin: 0;">
+          © ${new Date().getFullYear()} ${shopName} - Gestionale Riparazioni
+        </p>`
+      : `<p style="color: #71717a; font-size: 12px; margin: 0 0 8px 0;">
+          Questa email è stata inviata automaticamente da ${shopName}.
+        </p>
+        <p style="color: #a1a1aa; font-size: 11px; margin: 0;">
+          © ${new Date().getFullYear()} ${shopName} - Gestionale Riparazioni
+        </p>`;
 
     const emailHtml = `
 <!DOCTYPE html>
@@ -87,11 +166,10 @@ Deno.serve(async (req) => {
     <tr>
       <td align="center">
         <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; max-width: 600px;">
-          <!-- Header -->
+          <!-- Header with Logo -->
           <tr>
             <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 32px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">${shopName}</h1>
-              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Gestionale Riparazioni</p>
+              ${headerContent}
             </td>
           </tr>
           
@@ -105,10 +183,13 @@ Deno.serve(async (req) => {
                 Con questo account potrai seguire lo stato delle tue riparazioni direttamente online, 
                 in totale trasparenza.
               </p>
+
+              <!-- Centro Contact Info -->
+              ${contactInfoSection}
               
               <!-- Credentials Box -->
               <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
-                <h3 style="color: #0369a1; margin: 0 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">I tuoi dati di accesso</h3>
+                <h3 style="color: #0369a1; margin: 0 0 12px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">🔐 I tuoi dati di accesso</h3>
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="padding: 8px 0; border-bottom: 1px solid #e0f2fe;">
@@ -208,15 +289,10 @@ Deno.serve(async (req) => {
             </td>
           </tr>
           
-          <!-- Footer -->
+          <!-- Footer with Centro Info -->
           <tr>
             <td style="background: #f8fafc; padding: 24px 32px; text-align: center; border-top: 1px solid #e4e4e7;">
-              <p style="color: #71717a; font-size: 12px; margin: 0 0 8px 0;">
-                Questa email è stata inviata automaticamente da ${shopName}.
-              </p>
-              <p style="color: #a1a1aa; font-size: 11px; margin: 0;">
-                © ${new Date().getFullYear()} ${shopName} - Gestionale Riparazioni
-              </p>
+              ${footerInfo}
             </td>
           </tr>
         </table>
