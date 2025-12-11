@@ -64,6 +64,7 @@ import NotFound from "@/pages/NotFound";
 import RemoteSignature from "@/pages/RemoteSignature";
 import CustomerDisplay from "@/pages/CustomerDisplay";
 import Install from "@/pages/Install";
+import DiventaPartner from "@/pages/DiventaPartner";
 
 export const AnimatedRoutes = () => {
   const location = useLocation();
@@ -179,15 +180,14 @@ export const AnimatedRoutes = () => {
           }
         />
         
-        {/* Provider Registration */}
+        {/* Provider Registration - Public landing page */}
         <Route
           path="/diventa-partner"
           element={
-            <ProtectedRoute>
-              <PageTransition><ProviderRegistration /></PageTransition>
-            </ProtectedRoute>
+            <PageTransition><DiventaPartner /></PageTransition>
           }
         />
+        {/* Provider Registration Form - Protected */}
         <Route
           path="/provider-registration"
           element={
