@@ -592,7 +592,7 @@ export function EnhancedQuoteDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle className="text-2xl flex items-center gap-2">
             <Package className="h-6 w-6" />
@@ -794,11 +794,11 @@ export function EnhancedQuoteDialog({
 
           {/* Tabs for manual selection */}
           <Tabs defaultValue="utopya" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="utopya">Utopya</TabsTrigger>
-              <TabsTrigger value="inventory">Inventario</TabsTrigger>
-              <TabsTrigger value="labor">Lavorazioni</TabsTrigger>
-              <TabsTrigger value="services">Servizi</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-2 sm:grid-cols-4 h-auto">
+              <TabsTrigger value="utopya" className="text-xs sm:text-sm py-2">Utopya</TabsTrigger>
+              <TabsTrigger value="inventory" className="text-xs sm:text-sm py-2">Inventario</TabsTrigger>
+              <TabsTrigger value="labor" className="text-xs sm:text-sm py-2">Lavorazioni</TabsTrigger>
+              <TabsTrigger value="services" className="text-xs sm:text-sm py-2">Servizi</TabsTrigger>
             </TabsList>
 
             {/* Utopya Search */}
@@ -911,28 +911,30 @@ export function EnhancedQuoteDialog({
 
           {/* Selected Items */}
           {items.length > 0 && (
-            <div className="space-y-4 p-4 bg-muted/30 rounded-xl">
-              <h3 className="font-semibold text-lg">Articoli Selezionati ({items.length})</h3>
+            <div className="space-y-4 p-3 sm:p-4 bg-muted/30 rounded-xl">
+              <h3 className="font-semibold text-base sm:text-lg">Articoli Selezionati ({items.length})</h3>
               <div className="space-y-2">
                 {items.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
+                  <div key={item.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-card rounded-lg border">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-medium text-sm truncate">{item.description}</p>
                         <Badge variant="outline" className="text-xs">
                           {item.type === 'part' ? 'Ricambio' : item.type === 'labor' ? 'Lavorazione' : 'Servizio'}
                         </Badge>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
-                        className="w-16 text-center"
-                      />
-                      <span className="text-muted-foreground">×</span>
+                    <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground">Qtà:</span>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={item.quantity}
+                          onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value) || 1)}
+                          className="w-14 sm:w-16 text-center h-8"
+                        />
+                      </div>
                       <div className="flex items-center gap-1">
                         <span className="text-muted-foreground">€</span>
                         <Input
@@ -941,11 +943,11 @@ export function EnhancedQuoteDialog({
                           min="0"
                           value={item.unitPrice}
                           onChange={(e) => updateItemPrice(item.id, parseFloat(e.target.value) || 0)}
-                          className="w-20"
+                          className="w-16 sm:w-20 h-8"
                         />
                       </div>
-                      <span className="font-semibold min-w-[60px] text-right">€{item.total.toFixed(2)}</span>
-                      <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(item.id)}>
+                      <span className="font-semibold min-w-[50px] sm:min-w-[60px] text-right text-sm">€{item.total.toFixed(2)}</span>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(item.id)} className="h-8 w-8 p-0">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
