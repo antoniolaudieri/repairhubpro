@@ -548,5 +548,12 @@ export async function getQuotePDFDataUrl(data: QuotePDFData): Promise<string> {
 
 export async function getQuotePDFBase64(data: QuotePDFData): Promise<string> {
   const doc = await generateQuotePDF(data);
-  return doc.output('datauristring').split(',')[1];
+  // Get arraybuffer and convert to base64
+  const arrayBuffer = doc.output('arraybuffer');
+  const uint8Array = new Uint8Array(arrayBuffer);
+  let binary = '';
+  for (let i = 0; i < uint8Array.length; i++) {
+    binary += String.fromCharCode(uint8Array[i]);
+  }
+  return btoa(binary);
 }
