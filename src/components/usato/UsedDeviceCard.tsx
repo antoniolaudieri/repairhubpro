@@ -36,6 +36,9 @@ interface UsedDevice {
     business_name: string;
     logo_url: string | null;
   };
+  corner?: {
+    business_name: string;
+  };
 }
 
 interface UsedDeviceCardProps {
@@ -340,25 +343,40 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
         </div>
 
         <CardContent className={`${compact ? "p-3" : "p-4"} relative z-10`}>
-          {/* Centro Badge */}
-          {device.centro && (
+          {/* Centro/Corner Badge */}
+          {(device.centro || device.corner) && (
             <div className="flex items-center gap-2 mb-3 pb-3 border-b border-border/30">
-              {device.centro.logo_url ? (
-                <img 
-                  src={device.centro.logo_url} 
-                  alt={device.centro.business_name}
-                  className="h-5 w-5 rounded-md object-contain"
-                />
-              ) : (
-                <div className="h-5 w-5 rounded-md bg-gradient-primary flex items-center justify-center">
-                  <span className="text-[9px] font-bold text-primary-foreground">
-                    {device.centro.business_name.charAt(0)}
+              {device.centro ? (
+                <>
+                  {device.centro.logo_url ? (
+                    <img 
+                      src={device.centro.logo_url} 
+                      alt={device.centro.business_name}
+                      className="h-5 w-5 rounded-md object-contain"
+                    />
+                  ) : (
+                    <div className="h-5 w-5 rounded-md bg-gradient-primary flex items-center justify-center">
+                      <span className="text-[9px] font-bold text-primary-foreground">
+                        {device.centro.business_name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <span className="text-[11px] text-muted-foreground truncate font-medium">
+                    {device.centro.business_name}
                   </span>
-                </div>
-              )}
-              <span className="text-[11px] text-muted-foreground truncate font-medium">
-                {device.centro.business_name}
-              </span>
+                </>
+              ) : device.corner ? (
+                <>
+                  <div className="h-5 w-5 rounded-md bg-accent/80 flex items-center justify-center">
+                    <span className="text-[9px] font-bold text-accent-foreground">
+                      {device.corner.business_name.charAt(0)}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-muted-foreground truncate font-medium">
+                    {device.corner.business_name}
+                  </span>
+                </>
+              ) : null}
             </div>
           )}
           
