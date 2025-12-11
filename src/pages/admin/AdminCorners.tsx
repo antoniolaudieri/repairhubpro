@@ -386,12 +386,16 @@ export default function AdminCorners() {
                   <SelectTrigger>
                     <SelectValue placeholder="Seleziona un utente..." />
                   </SelectTrigger>
-                  <SelectContent>
-                    {availableUsers.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.full_name} {u.phone && `(${u.phone})`}
-                      </SelectItem>
-                    ))}
+                  <SelectContent position="popper" className="z-[200]">
+                    {availableUsers.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground">Nessun utente disponibile</div>
+                    ) : (
+                      availableUsers.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.full_name} {u.phone && `(${u.phone})`}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -433,12 +437,16 @@ export default function AdminCorners() {
                   <SelectTrigger>
                     <SelectValue placeholder="Seleziona un utente..." />
                   </SelectTrigger>
-                  <SelectContent>
-                    {availableUsers.map((u) => (
-                      <SelectItem key={u.id} value={u.id}>
-                        {u.full_name} {u.phone && `(${u.phone})`}
-                      </SelectItem>
-                    ))}
+                  <SelectContent position="popper" className="z-[200]">
+                    {availableUsers.length === 0 ? (
+                      <div className="p-2 text-sm text-muted-foreground">Nessun utente disponibile</div>
+                    ) : (
+                      availableUsers.map((u) => (
+                        <SelectItem key={u.id} value={u.id}>
+                          {u.full_name} {u.phone && `(${u.phone})`}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>
