@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { getBrandSuggestions, getModelSuggestions } from "@/data/commonDevices";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { sendPushNotification, getCentroUserId } from "@/services/pushNotificationService";
 
 interface Centro {
   id: string;
@@ -412,6 +413,27 @@ export default function CornerNuovaSegnalazione() {
       });
 
       if (requestError) throw requestError;
+
+      // Send push notification directly to Centro owner
+      if (selectedCentroId) {
+        const centroUserId = await getCentroUserId(selectedCentroId);
+        if (centroUserId) {
+          const deviceName = `${deviceData.brand || ''} ${deviceData.model || deviceData.device_type}`.trim();
+          const cornerName = await supabase
+            .from("corners")
+            .select("business_name")
+            .eq("id", cornerId)
+            .single()
+            .then(res => res.data?.business_name || "Corner");
+          
+          await sendPushNotification([centroUserId], {
+            title: "🔔 Nuovo Lavoro da Corner!",
+            body: `${cornerName} ti ha assegnato: ${deviceName} - ${deviceData.reported_issue.substring(0, 50)}...`,
+            data: { url: "/centro/lavori-corner" },
+          });
+          console.log("[CornerNuovaSegnalazione] Push notification sent to Centro:", centroUserId);
+        }
+      }
 
       toast.success("Segnalazione inviata al Centro con successo!");
       navigate("/corner");
