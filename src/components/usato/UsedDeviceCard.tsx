@@ -361,9 +361,12 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
                       </span>
                     </div>
                   )}
-                  <span className="text-[11px] text-muted-foreground truncate font-medium">
+                  <span className="text-[11px] text-muted-foreground truncate font-medium flex-1">
                     {device.centro.business_name}
                   </span>
+                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-primary/10 text-primary border-primary/30 font-semibold">
+                    Centro
+                  </Badge>
                 </>
               ) : device.corner ? (
                 <>
@@ -372,9 +375,12 @@ export function UsedDeviceCard({ device, compact = false }: UsedDeviceCardProps)
                       {device.corner.business_name.charAt(0)}
                     </span>
                   </div>
-                  <span className="text-[11px] text-muted-foreground truncate font-medium">
+                  <span className="text-[11px] text-muted-foreground truncate font-medium flex-1">
                     {device.corner.business_name}
                   </span>
+                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-accent/20 text-accent-foreground border-accent/40 font-semibold">
+                    Corner
+                  </Badge>
                 </>
               ) : null}
             </div>
