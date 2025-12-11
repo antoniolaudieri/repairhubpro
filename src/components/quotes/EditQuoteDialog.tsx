@@ -552,13 +552,17 @@ export function EditQuoteDialog({
       if (error) throw error;
 
       // Update quote status and notify Corner
+      console.log("[EditQuoteDialog] Quote repair_request_id:", quote.repair_request_id);
+      
       if (quote.repair_request_id) {
         // Get repair_request to find corner_id
-        const { data: repairRequest } = await supabase
+        const { data: repairRequest, error: reqError } = await supabase
           .from("repair_requests")
           .select("corner_id")
           .eq("id", quote.repair_request_id)
           .single();
+        
+        console.log("[EditQuoteDialog] Repair request data:", repairRequest, "Error:", reqError);
         
         await supabase
           .from("repair_requests")
@@ -567,16 +571,26 @@ export function EditQuoteDialog({
         
         // Send push notification to Corner
         if (repairRequest?.corner_id) {
+          console.log("[EditQuoteDialog] Corner ID found:", repairRequest.corner_id);
           const cornerUserId = await getCornerUserId(repairRequest.corner_id);
+          console.log("[EditQuoteDialog] Corner user_id:", cornerUserId);
+          
           if (cornerUserId) {
-            await sendPushNotification([cornerUserId], {
+            console.log("[EditQuoteDialog] Sending push notification to Corner...");
+            const pushResult = await sendPushNotification([cornerUserId], {
               title: "📋 Nuovo Preventivo Pronto!",
               body: `Preventivo per ${deviceName} inviato al cliente. €${getTotalCost().toFixed(2)} - Fai firmare il cliente!`,
               data: { url: "/corner/segnalazioni" },
             });
-            console.log("[EditQuoteDialog] Push notification sent to Corner:", cornerUserId);
+            console.log("[EditQuoteDialog] Push notification result:", pushResult);
+          } else {
+            console.warn("[EditQuoteDialog] No user_id found for corner:", repairRequest.corner_id);
           }
+        } else {
+          console.warn("[EditQuoteDialog] No corner_id in repair_request");
         }
+      } else {
+        console.warn("[EditQuoteDialog] No repair_request_id on quote");
       }
 
       toast.success("Preventivo inviato via email con PDF allegato");
