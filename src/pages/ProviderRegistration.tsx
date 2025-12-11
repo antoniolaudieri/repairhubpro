@@ -203,31 +203,42 @@ export default function ProviderRegistration() {
     {
       type: "corner" as const,
       title: "Corner",
+      subtitle: "Punto di Raccolta",
       description: "Negozio di telefonia che segnala riparazioni",
       icon: Store,
       color: "text-primary",
       bgColor: "bg-primary/10",
+      borderColor: "border-primary/30",
       commission: "10% sul margine",
+      welcomeMessage: "Stai per diventare un Corner, il punto di riferimento per i clienti nella tua zona. Guadagnerai una commissione su ogni riparazione segnalata!",
     },
     {
       type: "riparatore" as const,
       title: "Riparatore",
+      subtitle: "Tecnico Indipendente",
       description: "Tecnico indipendente per riparazioni",
       icon: Wrench,
       color: "text-info",
       bgColor: "bg-info/10",
+      borderColor: "border-info/30",
       commission: "60% sul margine",
+      welcomeMessage: "Stai per diventare un Riparatore indipendente. Riceverai lavori nella tua zona e gestirai i tuoi orari in totale autonomia!",
     },
     {
       type: "centro" as const,
       title: "Centro Assistenza",
+      subtitle: "Laboratorio Professionale",
       description: "Centro con sede fisica e team",
       icon: Building2,
       color: "text-success",
       bgColor: "bg-success/10",
-      commission: "Fino al 70% sul margine",
+      borderColor: "border-success/30",
+      commission: "Fino al 80% sul margine",
+      welcomeMessage: "Stai per diventare un Centro Assistenza. Avrai accesso al gestionale completo, alla rete di Corner per nuovi clienti e al marketplace dispositivi usati!",
     },
   ];
+
+  const selectedProvider = providerTypes.find(p => p.type === selectedType);
 
   if (submitted) {
     return (
@@ -260,17 +271,43 @@ export default function ProviderRegistration() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => selectedType ? setSelectedType(null) : navigate("/")}
+            onClick={() => selectedType ? setSelectedType(null) : navigate("/diventa-partner")}
             className="mb-4"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            {selectedType ? "Indietro" : "Home"}
+            {selectedType ? "Cambia tipo" : "Torna indietro"}
           </Button>
           <h1 className="text-2xl md:text-3xl font-bold">Diventa Partner</h1>
           <p className="text-muted-foreground">
             Scegli il tipo di attività e inizia a guadagnare con le riparazioni
           </p>
         </div>
+
+        {/* Welcome Banner when type is selected */}
+        {selectedProvider && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`mb-6 p-4 rounded-xl border-2 ${selectedProvider.borderColor} ${selectedProvider.bgColor}`}
+          >
+            <div className="flex items-start gap-4">
+              <div className={`p-3 rounded-lg bg-background/80 shrink-0`}>
+                <selectedProvider.icon className={`h-6 w-6 ${selectedProvider.color}`} />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h3 className="font-semibold text-lg">{selectedProvider.title}</h3>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${selectedProvider.bgColor} ${selectedProvider.color} font-medium`}>
+                    {selectedProvider.commission}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {selectedProvider.welcomeMessage}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         <AnimatePresence mode="wait">
           {!selectedType ? (
