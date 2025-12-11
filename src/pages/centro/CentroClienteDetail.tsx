@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, Mail, Phone, MapPin, Edit, Smartphone, FileText, 
   Calendar, User, Laptop, Tablet, Monitor, Gamepad2, Watch, HelpCircle,
-  ChevronRight, Clock, Euro, ShoppingCart, Package
+  ChevronRight, Clock, Euro, ShoppingCart, Package, UserPlus, UserX, Loader2, KeyRound
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -20,6 +20,7 @@ import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { QuoteDialog } from "@/components/quotes/QuoteDialog";
 import { OrderSparePartDialog } from "@/components/customers/OrderSparePartDialog";
 import { OrderDetailDialog } from "@/components/customers/OrderDetailDialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -80,6 +81,102 @@ export default function CentroClienteDetail() {
   const [editOpen, setEditOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [hasAccount, setHasAccount] = useState<boolean | null>(null);
+  const [accountLoading, setAccountLoading] = useState(false);
+
+  const checkCustomerAccount = async (email: string) => {
+    try {
+      // Check if user exists in user_roles with customer role
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("id, user_id")
+        .eq("role", "customer");
+      
+      if (error) {
+        console.error("Error checking account:", error);
+        setHasAccount(null);
+        return;
+      }
+
+      // We can't directly query auth.users, so we check profiles instead
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id")
+        .limit(1000);
+      
+      // For now, we'll use the edge function to check
+      // This is a simplified check - the actual verification happens on create/delete
+      setHasAccount(null); // Will be set after attempted create
+    } catch (err) {
+      console.error("Error:", err);
+      setHasAccount(null);
+    }
+  };
+
+  const createCustomerAccount = async () => {
+    if (!customer?.email) {
+      toast.error("Il cliente deve avere un'email per creare un account");
+      return;
+    }
+
+    setAccountLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-customer-account", {
+        body: {
+          email: customer.email,
+          fullName: customer.name,
+          phone: customer.phone,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("Account creato! Password: 12345678", {
+        description: `L'utente può accedere con ${customer.email}`,
+        duration: 10000,
+      });
+      setHasAccount(true);
+    } catch (error: any) {
+      if (error.message?.includes("already been registered")) {
+        toast.info("L'account esiste già per questa email");
+        setHasAccount(true);
+      } else {
+        toast.error(error.message || "Errore nella creazione dell'account");
+      }
+    } finally {
+      setAccountLoading(false);
+    }
+  };
+
+  const deleteCustomerAccount = async () => {
+    if (!customer?.email) {
+      toast.error("Il cliente non ha un'email associata");
+      return;
+    }
+
+    setAccountLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-customer-account", {
+        body: { email: customer.email },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast.success("Account eliminato con successo");
+      setHasAccount(false);
+    } catch (error: any) {
+      if (error.message?.includes("not found")) {
+        toast.info("Nessun account trovato per questa email");
+        setHasAccount(false);
+      } else {
+        toast.error(error.message || "Errore nell'eliminazione dell'account");
+      }
+    } finally {
+      setAccountLoading(false);
+    }
+  };
 
   const loadCustomerData = async () => {
     if (!id) return;
@@ -341,6 +438,77 @@ export default function CentroClienteDetail() {
                     <p className="text-xs text-foreground/80 bg-muted/20 rounded-lg p-2">{customer.notes}</p>
                   </div>
                 )}
+
+                {/* Account Management Section */}
+                <div className="pt-3 mt-2 border-t">
+                  <p className="text-[10px] font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                    <KeyRound className="h-3 w-3" />
+                    Accesso WebApp
+                  </p>
+                  
+                  {!customer.email ? (
+                    <p className="text-xs text-muted-foreground bg-muted/20 rounded-lg p-2">
+                      Aggiungi un'email per creare un account
+                    </p>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={createCustomerAccount}
+                        disabled={accountLoading}
+                        className="flex-1 h-8 text-xs"
+                      >
+                        {accountLoading ? (
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                        ) : (
+                          <UserPlus className="h-3 w-3 mr-1" />
+                        )}
+                        Crea Account
+                      </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            disabled={accountLoading}
+                            className="flex-1 h-8 text-xs"
+                          >
+                            {accountLoading ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : (
+                              <UserX className="h-3 w-3 mr-1" />
+                            )}
+                            Elimina Account
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Eliminare l'account?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Questa azione eliminerà definitivamente l'account utente associato a <strong>{customer.email}</strong>. 
+                              Il cliente non potrà più accedere alla webapp. I dati del cliente (anagrafica, riparazioni, ordini) rimarranno nel sistema.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annulla</AlertDialogCancel>
+                            <AlertDialogAction onClick={deleteCustomerAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                              Elimina Account
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
+                  
+                  {hasAccount === true && (
+                    <p className="text-[10px] text-accent mt-1.5">✓ Account attivo</p>
+                  )}
+                  {hasAccount === false && (
+                    <p className="text-[10px] text-muted-foreground mt-1.5">Nessun account</p>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
