@@ -187,6 +187,14 @@ export const AnimatedRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/provider-registration"
+          element={
+            <ProtectedRoute>
+              <PageTransition><ProviderRegistration /></PageTransition>
+            </ProtectedRoute>
+          }
+        />
         {/* Corner Dashboard */}
         <Route
           path="/corner"
