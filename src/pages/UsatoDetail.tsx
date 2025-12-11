@@ -56,6 +56,11 @@ import {
   Droplets,
   Star,
   Users,
+  MapPin,
+  Phone,
+  Mail,
+  Store,
+  Navigation,
 } from "lucide-react";
 
 const conditionLabels: Record<string, { label: string; color: string; description: string }> = {
@@ -220,7 +225,11 @@ export default function UsatoDetail() {
     try {
       const { data, error } = await supabase
         .from("used_devices")
-        .select("*, centro:centri_assistenza(business_name, logo_url, address, phone, email)")
+        .select(`
+          *, 
+          centro:centri_assistenza(business_name, logo_url, address, phone, email),
+          corner:corners(business_name, address, phone, email, latitude, longitude)
+        `)
         .eq("id", id)
         .single();
 
@@ -746,6 +755,106 @@ export default function UsatoDetail() {
               </Card>
             )}
 
+            {/* Seller Info Card - Centro or Corner */}
+            {(device.centro || device.corner) && (
+              <Card className="border-primary/30 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Store className="h-5 w-5 text-primary" />
+                    Dove Visionare e Acquistare
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-4">
+                  <div className="flex items-start gap-4">
+                    {device.centro?.logo_url ? (
+                      <img 
+                        src={device.centro.logo_url} 
+                        alt={device.centro.business_name}
+                        className="w-16 h-16 rounded-xl object-cover border border-border"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                        <Store className="h-8 w-8 text-primary" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <h3 className="font-bold text-lg">
+                        {device.centro?.business_name || device.corner?.business_name}
+                      </h3>
+                      <Badge variant="secondary" className="mt-1">
+                        {device.centro ? "Centro Assistenza" : "Punto Ritiro Corner"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-3">
+                    {/* Address */}
+                    {(device.centro?.address || device.corner?.address) && (
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg">
+                          <MapPin className="h-4 w-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Indirizzo</p>
+                          <p className="font-medium">{device.centro?.address || device.corner?.address}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Phone */}
+                    {(device.centro?.phone || device.corner?.phone) && (
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-success/10 rounded-lg">
+                          <Phone className="h-4 w-4 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Telefono</p>
+                          <a 
+                            href={`tel:${device.centro?.phone || device.corner?.phone}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {device.centro?.phone || device.corner?.phone}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Email */}
+                    {(device.centro?.email || device.corner?.email) && (
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-info/10 rounded-lg">
+                          <Mail className="h-4 w-4 text-info" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Email</p>
+                          <a 
+                            href={`mailto:${device.centro?.email || device.corner?.email}`}
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {device.centro?.email || device.corner?.email}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Navigation Button for Corner with coordinates */}
+                  {device.corner?.latitude && device.corner?.longitude && (
+                    <Button 
+                      variant="outline" 
+                      className="w-full gap-2 mt-2"
+                      onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${device.corner.latitude},${device.corner.longitude}`, '_blank')}
+                    >
+                      <Navigation className="h-4 w-4" />
+                      Apri in Google Maps
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <Separator />
 
             {/* Actions */}
@@ -792,16 +901,19 @@ export default function UsatoDetail() {
                         </Card>
 
                         {/* Store Info */}
-                        {device.centro && (
+                        {(device.centro || device.corner) && (
                           <Card className="border-border/50">
                             <CardContent className="p-4 space-y-3">
                               <div className="flex items-center gap-3">
                                 <div className="p-2 bg-muted rounded-lg">
-                                  <Package className="h-5 w-5 text-muted-foreground" />
+                                  <Store className="h-5 w-5 text-muted-foreground" />
                                 </div>
                                 <div>
                                   <p className="text-sm text-muted-foreground">Ritira presso</p>
-                                  <p className="font-semibold">{device.centro.business_name}</p>
+                                  <p className="font-semibold">{device.centro?.business_name || device.corner?.business_name}</p>
+                                  {(device.centro?.address || device.corner?.address) && (
+                                    <p className="text-xs text-muted-foreground">{device.centro?.address || device.corner?.address}</p>
+                                  )}
                                 </div>
                               </div>
                               
@@ -858,20 +970,20 @@ export default function UsatoDetail() {
                       )}
 
                       {/* Pickup Location Info */}
-                      {device.centro && (
+                      {(device.centro || device.corner) && (
                         <Card className="border-primary/20 bg-primary/5">
                           <CardContent className="p-4 space-y-2">
                             <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                              <Package className="h-4 w-4" />
+                              <MapPin className="h-4 w-4" />
                               <span>Dove ritirare il dispositivo</span>
                             </div>
                             <div className="space-y-1 text-sm">
-                              <p className="font-semibold">{device.centro.business_name}</p>
-                              {device.centro.address && (
-                                <p className="text-muted-foreground">{device.centro.address}</p>
+                              <p className="font-semibold">{device.centro?.business_name || device.corner?.business_name}</p>
+                              {(device.centro?.address || device.corner?.address) && (
+                                <p className="text-muted-foreground">{device.centro?.address || device.corner?.address}</p>
                               )}
-                              {device.centro.phone && (
-                                <p className="text-muted-foreground">Tel: {device.centro.phone}</p>
+                              {(device.centro?.phone || device.corner?.phone) && (
+                                <p className="text-muted-foreground">Tel: {device.centro?.phone || device.corner?.phone}</p>
                               )}
                             </div>
                           </CardContent>
