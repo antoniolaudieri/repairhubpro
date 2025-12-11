@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
@@ -28,7 +29,11 @@ import {
   Tablet,
   Laptop,
   Monitor,
-  HelpCircle
+  HelpCircle,
+  Package,
+  Wrench,
+  Headphones,
+  Save
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { QuotePDFPreview } from "./QuotePDFPreview";
@@ -48,9 +53,13 @@ interface Customer {
 }
 
 interface QuoteItem {
+  id: string;
   description: string;
   quantity: number;
   unitPrice: number;
+  total: number;
+  type: 'part' | 'labor' | 'service';
+  purchaseCost?: number;
 }
 
 interface CentroInfo {
@@ -74,6 +83,35 @@ interface DetectedDeviceInfo {
   };
 }
 
+interface SparePart {
+  id: string;
+  name: string;
+  brand: string | null;
+  category: string;
+  stock_quantity: number;
+  cost: number | null;
+  selling_price: number | null;
+  supplier_code: string | null;
+  image_url: string | null;
+}
+
+interface LaborPrice {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  category: string;
+  device_type: string | null;
+}
+
+interface AdditionalService {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  is_active: boolean;
+}
+
 const deviceTypes = [
   { value: "Smartphone", icon: Smartphone },
   { value: "Tablet", icon: Tablet },
@@ -95,15 +133,26 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   const [issueDescription, setIssueDescription] = useState("");
   const [diagnosis, setDiagnosis] = useState("");
   const [notes, setNotes] = useState("");
+  const [validUntil, setValidUntil] = useState("");
   
   // AI Device Info
   const [detectedDevice, setDetectedDevice] = useState<DetectedDeviceInfo | null>(null);
   const [isLookingUpDevice, setIsLookingUpDevice] = useState(false);
   
-  const [items, setItems] = useState<QuoteItem[]>([
-    { description: "", quantity: 1, unitPrice: 0 }
-  ]);
-  const [laborCost, setLaborCost] = useState(0);
+  // Items with type support
+  const [items, setItems] = useState<QuoteItem[]>([]);
+  const [markupPercentage, setMarkupPercentage] = useState(40);
+  
+  // Data for tabs
+  const [spareParts, setSpareParts] = useState<SparePart[]>([]);
+  const [laborPrices, setLaborPrices] = useState<LaborPrice[]>([]);
+  const [availableServices, setAvailableServices] = useState<AdditionalService[]>([]);
+  
+  // Search states
+  const [utopyaSearchQuery, setUtopyaSearchQuery] = useState("");
+  const [utopyaSearchResults, setUtopyaSearchResults] = useState<any[]>([]);
+  const [utopyaSearchLoading, setUtopyaSearchLoading] = useState(false);
+  const [inventorySearch, setInventorySearch] = useState("");
   
   const [isSending, setIsSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -113,6 +162,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
     if (open && centroId) {
       loadCustomers();
       loadCentroInfo();
+      loadData();
     }
   }, [open, centroId]);
 
@@ -191,24 +241,179 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
     }
   };
 
-  const addItem = () => {
-    setItems([...items, { description: "", quantity: 1, unitPrice: 0 }]);
+  const loadData = async () => {
+    await Promise.all([loadSpareParts(), loadLaborPrices(), loadServices()]);
   };
 
-  const removeItem = (index: number) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
+  const loadSpareParts = async () => {
+    let query = supabase
+      .from("spare_parts")
+      .select("id, name, brand, category, stock_quantity, cost, selling_price, supplier_code, image_url")
+      .order("name");
+    
+    if (centroId) {
+      query = query.eq("centro_id", centroId);
+    }
+    
+    const { data } = await query;
+    setSpareParts(data || []);
+  };
+
+  const loadLaborPrices = async () => {
+    const { data } = await supabase
+      .from("labor_prices")
+      .select("*")
+      .order("category")
+      .order("name");
+    setLaborPrices(data || []);
+  };
+
+  const loadServices = async () => {
+    const { data } = await supabase
+      .from("additional_services")
+      .select("*")
+      .eq("is_active", true)
+      .order("sort_order");
+    setAvailableServices(data || []);
+  };
+
+  // Utopya search
+  const searchUtopya = async () => {
+    if (!utopyaSearchQuery.trim()) {
+      toast.error("Inserisci un termine di ricerca");
+      return;
+    }
+    
+    setUtopyaSearchLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('scrape-utopya', {
+        body: { searchQuery: utopyaSearchQuery.trim() }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.products && data.products.length > 0) {
+        setUtopyaSearchResults(data.products);
+        toast.success(`Trovati ${data.products.length} prodotti su Utopya`);
+      } else {
+        setUtopyaSearchResults([]);
+        toast.info("Nessun prodotto trovato su Utopya");
+      }
+    } catch (err: any) {
+      console.error("Utopya search error:", err);
+      toast.error("Errore nella ricerca su Utopya");
+      setUtopyaSearchResults([]);
+    } finally {
+      setUtopyaSearchLoading(false);
     }
   };
 
-  const updateItem = (index: number, field: keyof QuoteItem, value: string | number) => {
-    const newItems = [...items];
-    newItems[index] = { ...newItems[index], [field]: value };
-    setItems(newItems);
+  const addUtopyaProduct = (product: any) => {
+    const price = product.priceNumeric || 0;
+    const sellingPrice = price * (1 + markupPercentage / 100);
+    
+    setItems([...items, {
+      id: `utopya-${Date.now()}`,
+      description: product.name,
+      quantity: 1,
+      unitPrice: Math.round(sellingPrice * 100) / 100,
+      total: Math.round(sellingPrice * 100) / 100,
+      type: 'part',
+      purchaseCost: price,
+    }]);
+    toast.success(`${product.name} aggiunto`);
   };
 
-  const partsCost = items.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-  const totalCost = partsCost + laborCost;
+  const addInventoryPart = (part: SparePart) => {
+    if (items.some(i => i.id === part.id)) {
+      toast.info("Ricambio già aggiunto");
+      return;
+    }
+    
+    const price = part.selling_price || part.cost || 0;
+    setItems([...items, {
+      id: part.id,
+      description: part.name,
+      quantity: 1,
+      unitPrice: price,
+      total: price,
+      type: 'part',
+      purchaseCost: part.cost || 0,
+    }]);
+    toast.success(`${part.name} aggiunto`);
+  };
+
+  const addLabor = (labor: LaborPrice) => {
+    if (items.some(i => i.id === labor.id)) {
+      toast.info("Lavorazione già aggiunta");
+      return;
+    }
+    
+    setItems([...items, {
+      id: labor.id,
+      description: labor.name,
+      quantity: 1,
+      unitPrice: labor.price,
+      total: labor.price,
+      type: 'labor',
+    }]);
+    toast.success(`${labor.name} aggiunta`);
+  };
+
+  const addService = (service: AdditionalService) => {
+    if (items.some(i => i.id === service.id)) {
+      toast.info("Servizio già aggiunto");
+      return;
+    }
+    
+    setItems([...items, {
+      id: service.id,
+      description: service.name,
+      quantity: 1,
+      unitPrice: service.price,
+      total: service.price,
+      type: 'service',
+    }]);
+    toast.success(`${service.name} aggiunto`);
+  };
+
+  const removeItem = (id: string) => {
+    setItems(items.filter(i => i.id !== id));
+  };
+
+  const updateItemQuantity = (id: string, quantity: number) => {
+    if (quantity < 1) return;
+    setItems(items.map(i => 
+      i.id === id ? { ...i, quantity, total: i.unitPrice * quantity } : i
+    ));
+  };
+
+  const updateItemPrice = (id: string, price: number) => {
+    setItems(items.map(i => 
+      i.id === id ? { ...i, unitPrice: price, total: price * i.quantity } : i
+    ));
+  };
+
+  // Cost calculations
+  const getPartsCost = () => items.filter(i => i.type === 'part').reduce((sum, i) => sum + i.total, 0);
+  const getLaborCost = () => items.filter(i => i.type === 'labor').reduce((sum, i) => sum + i.total, 0);
+  const getServicesCost = () => items.filter(i => i.type === 'service').reduce((sum, i) => sum + i.total, 0);
+  const getTotalCost = () => items.reduce((sum, i) => sum + i.total, 0);
+  const getPartsPurchaseCost = () => items.filter(i => i.type === 'part').reduce((sum, i) => sum + ((i.purchaseCost || 0) * i.quantity), 0);
+
+  const filteredInventory = spareParts.filter(part => {
+    if (!inventorySearch) return false;
+    const term = inventorySearch.toLowerCase();
+    return (
+      part.name.toLowerCase().includes(term) ||
+      part.category.toLowerCase().includes(term) ||
+      (part.brand && part.brand.toLowerCase().includes(term))
+    );
+  });
+
+  const filteredLaborPrices = laborPrices.filter(lp => {
+    return !lp.device_type || !deviceType || lp.device_type.toLowerCase() === deviceType.toLowerCase();
+  });
 
   const handleSelectCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -225,10 +430,14 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
     setIssueDescription("");
     setDiagnosis("");
     setNotes("");
+    setValidUntil("");
     setDetectedDevice(null);
-    setItems([{ description: "", quantity: 1, unitPrice: 0 }]);
-    setLaborCost(0);
+    setItems([]);
+    setMarkupPercentage(40);
     setShowPreview(false);
+    setUtopyaSearchQuery("");
+    setUtopyaSearchResults([]);
+    setInventorySearch("");
   };
 
   const handleShowPreview = () => {
@@ -237,8 +446,8 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
       return;
     }
 
-    if (totalCost <= 0) {
-      toast.error("Il totale deve essere maggiore di zero");
+    if (items.length === 0) {
+      toast.error("Aggiungi almeno un articolo");
       return;
     }
 
@@ -255,6 +464,23 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
 
     setIsSending(true);
     try {
+      const partsPurchaseCost = getPartsPurchaseCost();
+      const laborCost = getLaborCost() + getServicesCost();
+      const totalCost = getTotalCost();
+
+      const quoteValidUntil = validUntil 
+        ? validUntil
+        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const quoteItems = items.map(i => ({
+        description: i.description,
+        quantity: i.quantity,
+        unitPrice: i.unitPrice,
+        total: i.total,
+        type: i.type,
+        purchaseCost: i.purchaseCost || 0,
+      }));
+
       const { data: quote, error: quoteError } = await supabase
         .from("quotes")
         .insert({
@@ -265,15 +491,11 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
           issue_description: issueDescription,
           diagnosis: diagnosis || null,
           notes: notes || null,
-          items: items.filter(i => i.description).map(i => ({
-            description: i.description,
-            quantity: i.quantity,
-            unitPrice: i.unitPrice,
-            total: i.quantity * i.unitPrice
-          })),
+          items: JSON.stringify(quoteItems),
           labor_cost: laborCost,
-          parts_cost: partsCost,
+          parts_cost: partsPurchaseCost,
           total_cost: totalCost,
+          valid_until: quoteValidUntil,
           status: "pending"
         })
         .select()
@@ -289,7 +511,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
             to: selectedCustomer.email,
             subject: `Preventivo per ${deviceName}`,
             html: generateEmailHTML(deviceName),
-            centroId
+            centro_id: centroId
           }
         });
 
@@ -319,6 +541,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   };
 
   const generateEmailHTML = (deviceName: string) => {
+    const totalCost = getTotalCost();
     const deviceImage = detectedDevice?.imageUrl 
       ? `<img src="${detectedDevice.imageUrl}" alt="${deviceName}" style="width: 80px; height: 80px; object-fit: contain; border-radius: 8px; background: #f1f5f9;" />`
       : '';
@@ -345,16 +568,12 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
           <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
             <h3 style="margin: 0 0 15px 0; color: #1e293b;">Dettaglio Costi</h3>
             <table style="width: 100%; border-collapse: collapse;">
-              ${items.filter(i => i.description).map(i => `
+              ${items.map(i => `
                 <tr>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color: #475569;">${i.description}</td>
-                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: right; color: #1e293b;">€${(i.quantity * i.unitPrice).toFixed(2)}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color: #475569;">${i.description} ${i.quantity > 1 ? `(x${i.quantity})` : ''}</td>
+                  <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: right; color: #1e293b;">€${i.total.toFixed(2)}</td>
                 </tr>
               `).join('')}
-              <tr>
-                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; color: #475569;">Manodopera</td>
-                <td style="padding: 8px 0; border-bottom: 1px solid #e2e8f0; text-align: right; color: #1e293b;">€${laborCost.toFixed(2)}</td>
-              </tr>
               <tr>
                 <td style="padding: 12px 0; font-weight: bold; font-size: 18px; color: #1e293b;">TOTALE</td>
                 <td style="padding: 12px 0; text-align: right; font-weight: bold; font-size: 20px; color: #3b82f6;">€${totalCost.toFixed(2)}</td>
@@ -376,6 +595,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   };
 
   const generateWhatsAppMessage = (deviceName: string) => {
+    const totalCost = getTotalCost();
     return `*📋 PREVENTIVO RIPARAZIONE*\n\n` +
       `Gentile ${selectedCustomer?.name},\n` +
       `Le inviamo il preventivo per:\n\n` +
@@ -384,9 +604,8 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
       `🔧 *Problema:* ${issueDescription}\n` +
       `${diagnosis ? `📝 *Diagnosi:* ${diagnosis}\n` : ''}` +
       `\n*DETTAGLIO COSTI:*\n` +
-      items.filter(i => i.description).map(i => `• ${i.description}: €${(i.quantity * i.unitPrice).toFixed(2)}`).join('\n') +
-      `\n• Manodopera: €${laborCost.toFixed(2)}\n\n` +
-      `💰 *TOTALE: €${totalCost.toFixed(2)}*\n\n` +
+      items.map(i => `• ${i.description}${i.quantity > 1 ? ` (x${i.quantity})` : ''}: €${i.total.toFixed(2)}`).join('\n') +
+      `\n\n💰 *TOTALE: €${totalCost.toFixed(2)}*\n\n` +
       `${notes ? `📌 Note: ${notes}\n\n` : ''}` +
       `Per confermare risponda a questo messaggio.\n` +
       `${centroInfo ? `\n_${centroInfo.name}_` : ''}`;
@@ -395,7 +614,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   return (
     <>
       <Dialog open={open && !showPreview} onOpenChange={(o) => { onOpenChange(o); if (!o) resetForm(); }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden">
+        <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
           <DialogHeader className="p-4 pb-0 sm:p-6 sm:pb-0">
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
@@ -403,13 +622,16 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
               </div>
               Nuovo Preventivo
             </DialogTitle>
+            <DialogDescription>
+              Crea un nuovo preventivo per il cliente selezionato
+            </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-4 pb-4 sm:px-6 sm:pb-6" style={{ maxHeight: 'calc(90vh - 80px)' }}>
+          <ScrollArea className="flex-1 px-4 pb-4 sm:px-6 sm:pb-6" style={{ maxHeight: 'calc(90vh - 100px)' }}>
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-4 sm:space-y-6 pt-4"
+              className="space-y-4 pt-4"
             >
               {/* Customer Selection */}
               <Card className="border-primary/20">
@@ -469,231 +691,356 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                       Dispositivo
                     </Label>
                     {isLookingUpDevice && (
-                      <Badge variant="secondary" className="text-xs">
-                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                        Ricerca AI...
+                      <Badge variant="outline" className="text-xs animate-pulse">
+                        <Sparkles className="h-3 w-3 mr-1" />
+                        Riconoscimento...
                       </Badge>
                     )}
                   </div>
-
-                  {/* AI Detected Device Preview */}
-                  {detectedDevice && (detectedDevice.imageUrl || detectedDevice.specs) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="p-3 bg-gradient-to-br from-primary/10 to-primary/5 rounded-xl border border-primary/20"
-                    >
-                      <div className="flex gap-3">
-                        {detectedDevice.imageUrl && (
-                          <div className="relative flex-shrink-0">
-                            <img
-                              src={detectedDevice.imageUrl}
-                              alt={`${deviceBrand} ${deviceModel}`}
-                              className="h-16 w-16 sm:h-20 sm:w-20 object-contain rounded-lg bg-white p-1 shadow-sm"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                              }}
-                            />
-                            <Badge 
-                              variant="secondary" 
-                              className="absolute -top-1 -right-1 text-[8px] px-1 py-0 bg-primary text-primary-foreground"
-                            >
-                              <Sparkles className="h-2 w-2" />
-                            </Badge>
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-sm truncate">
-                            {detectedDevice.fullName || `${deviceBrand} ${deviceModel}`}
-                          </h4>
-                          {detectedDevice.year && detectedDevice.year !== "N/A" && (
-                            <p className="text-xs text-muted-foreground">Anno: {detectedDevice.year}</p>
-                          )}
-                          {detectedDevice.specs && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {detectedDevice.specs.storage && detectedDevice.specs.storage !== "N/A" && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{detectedDevice.specs.storage}</Badge>
-                              )}
-                              {detectedDevice.specs.ram && detectedDevice.specs.ram !== "N/A" && (
-                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">{detectedDevice.specs.ram}</Badge>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-
-                  {/* Device Type Grid - Mobile optimized */}
-                  <div className="grid grid-cols-5 gap-1 sm:gap-2">
-                    {deviceTypes.map((type) => {
-                      const Icon = type.icon;
-                      const isSelected = deviceType === type.value;
-                      return (
-                        <button
-                          key={type.value}
-                          type="button"
-                          onClick={() => setDeviceType(type.value)}
-                          className={`flex flex-col items-center justify-center p-1.5 sm:p-2 rounded-lg border-2 transition-all ${
-                            isSelected 
-                              ? "border-primary bg-primary/10 text-primary" 
-                              : "border-border hover:border-primary/50"
-                          }`}
-                        >
-                          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} />
-                          <span className="text-[8px] sm:text-[10px] font-medium mt-0.5">{type.value}</span>
-                        </button>
-                      );
-                    })}
+                  
+                  {/* Device Type Selection */}
+                  <div className="flex flex-wrap gap-2">
+                    {deviceTypes.map(({ value, icon: Icon }) => (
+                      <Button
+                        key={value}
+                        type="button"
+                        variant={deviceType === value ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setDeviceType(value)}
+                        className="flex-1 min-w-[80px]"
+                      >
+                        <Icon className="h-4 w-4 mr-1" />
+                        {value}
+                      </Button>
+                    ))}
                   </div>
 
-                  {/* Brand & Model - Responsive */}
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <Label className="text-xs">Marca</Label>
-                      <Input
-                        placeholder="Es. Apple"
+                      <Label className="text-xs text-muted-foreground">Marca</Label>
+                      <Input 
+                        placeholder="es. Apple" 
                         value={deviceBrand}
                         onChange={(e) => setDeviceBrand(e.target.value)}
-                        className="h-9"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs">Modello</Label>
-                      <Input
-                        placeholder="Es. iPhone 15"
+                      <Label className="text-xs text-muted-foreground">Modello</Label>
+                      <Input 
+                        placeholder="es. iPhone 14" 
                         value={deviceModel}
                         onChange={(e) => setDeviceModel(e.target.value)}
-                        className="h-9"
                       />
+                    </div>
+                  </div>
+
+                  {/* AI Detected Info */}
+                  <AnimatePresence>
+                    {detectedDevice && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20"
+                      >
+                        {detectedDevice.imageUrl && (
+                          <img 
+                            src={detectedDevice.imageUrl} 
+                            alt={detectedDevice.fullName}
+                            className="w-12 h-12 object-contain rounded-lg bg-white"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{detectedDevice.fullName}</p>
+                          {detectedDevice.year && detectedDevice.year !== 'N/A' && (
+                            <p className="text-xs text-muted-foreground">Anno: {detectedDevice.year}</p>
+                          )}
+                        </div>
+                        <Badge variant="secondary" className="shrink-0">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          AI
+                        </Badge>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </CardContent>
+              </Card>
+
+              {/* Issue Description */}
+              <Card className="border-primary/20">
+                <CardContent className="p-3 sm:p-4 space-y-3">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Problema riscontrato *</Label>
+                    <Textarea 
+                      placeholder="Descrivi il problema..." 
+                      value={issueDescription}
+                      onChange={(e) => setIssueDescription(e.target.value)}
+                      className="min-h-[60px]"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Diagnosi (opzionale)</Label>
+                    <Textarea 
+                      placeholder="Diagnosi tecnica..." 
+                      value={diagnosis}
+                      onChange={(e) => setDiagnosis(e.target.value)}
+                      className="min-h-[40px]"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Markup Percentage */}
+              <Card className="border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-amber-500/5">
+                <CardContent className="p-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Euro className="h-4 w-4 text-amber-600" />
+                      <Label className="text-sm font-medium">Ricarico %</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        value={markupPercentage}
+                        onChange={(e) => setMarkupPercentage(Number(e.target.value))}
+                        className="w-20 text-center"
+                        min={0}
+                        max={200}
+                      />
+                      <span className="text-sm text-muted-foreground">%</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Issue & Diagnosis */}
-              <div className="space-y-3">
-                <div>
-                  <Label className="text-xs">Problema Segnalato *</Label>
-                  <Textarea
-                    placeholder="Descrivi il problema..."
-                    value={issueDescription}
-                    onChange={(e) => setIssueDescription(e.target.value)}
-                    rows={2}
-                    className="resize-none text-sm"
-                  />
-                </div>
-
-                <div>
-                  <Label className="text-xs text-muted-foreground">Diagnosi (opzionale)</Label>
-                  <Textarea
-                    placeholder="Diagnosi tecnica..."
-                    value={diagnosis}
-                    onChange={(e) => setDiagnosis(e.target.value)}
-                    rows={2}
-                    className="resize-none text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Quote Items */}
+              {/* Items Selection with Tabs */}
               <Card className="border-primary/20">
                 <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <Label className="flex items-center gap-2">
-                      <Euro className="h-4 w-4 text-primary" />
-                      Voci di Costo
-                    </Label>
-                    <Button variant="outline" size="sm" onClick={addItem} className="h-7 text-xs">
-                      <Plus className="h-3 w-3 mr-1" />
-                      Aggiungi
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    {items.map((item, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex gap-2 items-start"
-                      >
-                        <div className="flex-1">
-                          <Input
-                            placeholder="Descrizione..."
-                            value={item.description}
-                            onChange={(e) => updateItem(index, "description", e.target.value)}
-                            className="h-9 text-sm"
-                          />
-                        </div>
-                        <div className="w-14 sm:w-16">
-                          <Input
-                            type="number"
-                            min={1}
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)}
-                            className="h-9 text-sm text-center"
-                          />
-                        </div>
-                        <div className="w-20 sm:w-24">
-                          <Input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            placeholder="€"
-                            value={item.unitPrice || ""}
-                            onChange={(e) => updateItem(index, "unitPrice", parseFloat(e.target.value) || 0)}
-                            className="h-9 text-sm"
-                          />
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeItem(index)}
-                          disabled={items.length === 1}
-                          className="h-9 w-9 text-muted-foreground hover:text-destructive flex-shrink-0"
+                  <Label className="flex items-center gap-2 mb-3">
+                    <Package className="h-4 w-4 text-primary" />
+                    Aggiungi Articoli
+                  </Label>
+
+                  <Tabs defaultValue="utopya" className="w-full">
+                    <TabsList className="grid w-full grid-cols-4 h-auto">
+                      <TabsTrigger value="utopya" className="text-xs px-2 py-1.5">
+                        <Search className="h-3 w-3 mr-1" />
+                        Utopya
+                      </TabsTrigger>
+                      <TabsTrigger value="inventory" className="text-xs px-2 py-1.5">
+                        <Package className="h-3 w-3 mr-1" />
+                        Inventario
+                      </TabsTrigger>
+                      <TabsTrigger value="labor" className="text-xs px-2 py-1.5">
+                        <Wrench className="h-3 w-3 mr-1" />
+                        Lavorazioni
+                      </TabsTrigger>
+                      <TabsTrigger value="services" className="text-xs px-2 py-1.5">
+                        <Headphones className="h-3 w-3 mr-1" />
+                        Servizi
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="utopya" className="mt-3 space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Cerca su Utopya..."
+                          value={utopyaSearchQuery}
+                          onChange={(e) => setUtopyaSearchQuery(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && searchUtopya()}
+                        />
+                        <Button 
+                          onClick={searchUtopya} 
+                          disabled={utopyaSearchLoading}
+                          size="sm"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          {utopyaSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
                         </Button>
-                      </motion.div>
-                    ))}
-                  </div>
+                      </div>
+                      <ScrollArea className="h-[150px]">
+                        <div className="space-y-1">
+                          {utopyaSearchResults.map((product, idx) => (
+                            <div 
+                              key={idx}
+                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer"
+                              onClick={() => addUtopyaProduct(product)}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{product.name}</p>
+                                <p className="text-xs text-muted-foreground">€{product.priceNumeric?.toFixed(2) || '0.00'}</p>
+                              </div>
+                              <Plus className="h-4 w-4 text-primary shrink-0" />
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
 
-                  {/* Labor Cost */}
-                  <div className="flex items-center gap-2 mt-3 pt-3 border-t">
-                    <Label className="text-xs flex-shrink-0">Manodopera:</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={laborCost || ""}
-                      onChange={(e) => setLaborCost(parseFloat(e.target.value) || 0)}
-                      className="h-9 w-24 text-sm"
-                    />
-                    <span className="text-xs text-muted-foreground">€</span>
-                  </div>
+                    <TabsContent value="inventory" className="mt-3 space-y-2">
+                      <Input
+                        placeholder="Cerca nell'inventario..."
+                        value={inventorySearch}
+                        onChange={(e) => setInventorySearch(e.target.value)}
+                      />
+                      <ScrollArea className="h-[150px]">
+                        <div className="space-y-1">
+                          {filteredInventory.map((part) => (
+                            <div 
+                              key={part.id}
+                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer"
+                              onClick={() => addInventoryPart(part)}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{part.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  €{(part.selling_price || part.cost || 0).toFixed(2)} - Qta: {part.stock_quantity}
+                                </p>
+                              </div>
+                              <Plus className="h-4 w-4 text-primary shrink-0" />
+                            </div>
+                          ))}
+                          {inventorySearch && filteredInventory.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">Nessun risultato</p>
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
 
-                  {/* Total */}
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t bg-primary/5 -mx-3 sm:-mx-4 px-3 sm:px-4 py-3 -mb-3 sm:-mb-4 rounded-b-lg">
-                    <span className="font-semibold text-sm">Totale:</span>
-                    <span className="text-xl sm:text-2xl font-bold text-primary">€ {totalCost.toFixed(2)}</span>
+                    <TabsContent value="labor" className="mt-3">
+                      <ScrollArea className="h-[150px]">
+                        <div className="space-y-1">
+                          {filteredLaborPrices.map((labor) => (
+                            <div 
+                              key={labor.id}
+                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer"
+                              onClick={() => addLabor(labor)}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{labor.name}</p>
+                                <p className="text-xs text-muted-foreground">{labor.category}</p>
+                              </div>
+                              <Badge variant="secondary">€{labor.price.toFixed(2)}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+
+                    <TabsContent value="services" className="mt-3">
+                      <ScrollArea className="h-[150px]">
+                        <div className="space-y-1">
+                          {availableServices.map((service) => (
+                            <div 
+                              key={service.id}
+                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer"
+                              onClick={() => addService(service)}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{service.name}</p>
+                                {service.description && (
+                                  <p className="text-xs text-muted-foreground truncate">{service.description}</p>
+                                )}
+                              </div>
+                              <Badge variant="secondary">€{service.price.toFixed(2)}</Badge>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+
+              {/* Selected Items */}
+              {items.length > 0 && (
+                <Card className="border-emerald-500/30">
+                  <CardContent className="p-3 sm:p-4">
+                    <Label className="flex items-center gap-2 mb-3">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      Articoli Selezionati ({items.length})
+                    </Label>
+                    <div className="space-y-2">
+                      {items.map((item) => (
+                        <div 
+                          key={item.id}
+                          className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg"
+                        >
+                          <Badge variant="outline" className="shrink-0 text-xs">
+                            {item.type === 'part' ? 'Ricambio' : item.type === 'labor' ? 'Lavorazione' : 'Servizio'}
+                          </Badge>
+                          <p className="flex-1 text-sm truncate">{item.description}</p>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))}
+                              className="w-14 h-7 text-center text-xs"
+                              min={1}
+                            />
+                            <span className="text-xs text-muted-foreground">x</span>
+                            <Input
+                              type="number"
+                              value={item.unitPrice}
+                              onChange={(e) => updateItemPrice(item.id, Number(e.target.value))}
+                              className="w-20 h-7 text-center text-xs"
+                              step={0.01}
+                            />
+                          </div>
+                          <p className="text-sm font-medium w-16 text-right">€{item.total.toFixed(2)}</p>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0"
+                            onClick={() => removeItem(item.id)}
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Cost Summary */}
+              <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
+                <CardContent className="p-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Ricambi:</span>
+                      <span>€{getPartsCost().toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Lavorazioni:</span>
+                      <span>€{getLaborCost().toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Servizi:</span>
+                      <span>€{getServicesCost().toFixed(2)}</span>
+                    </div>
+                    <div className="h-px bg-border my-2" />
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Totale:</span>
+                      <span className="text-primary">€{getTotalCost().toFixed(2)}</span>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Notes */}
-              <div>
-                <Label className="text-xs text-muted-foreground">Note aggiuntive</Label>
-                <Textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Note per il cliente..."
-                  rows={2}
-                  className="resize-none text-sm"
-                />
-              </div>
+              <Card className="border-primary/20">
+                <CardContent className="p-3 sm:p-4">
+                  <Label className="text-xs text-muted-foreground">Note aggiuntive</Label>
+                  <Textarea 
+                    placeholder="Note per il cliente..." 
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="min-h-[40px]"
+                  />
+                </CardContent>
+              </Card>
 
-              {/* Actions */}
+              {/* Action Buttons */}
               <div className="flex gap-2 pt-2">
                 <Button 
                   variant="outline" 
@@ -704,11 +1051,11 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                 </Button>
                 <Button 
                   onClick={handleShowPreview}
-                  disabled={!selectedCustomer || totalCost <= 0}
-                  className="flex-1 gap-2"
+                  className="flex-1 bg-gradient-to-r from-primary to-primary-glow"
+                  disabled={!selectedCustomer || items.length === 0}
                 >
-                  <Eye className="h-4 w-4" />
-                  Anteprima PDF
+                  <Eye className="h-4 w-4 mr-2" />
+                  Anteprima
                 </Button>
               </div>
             </motion.div>
@@ -716,26 +1063,32 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
         </DialogContent>
       </Dialog>
 
-      {/* Preview Dialog */}
-      <QuotePDFPreview
-        open={showPreview}
-        onOpenChange={setShowPreview}
-        customer={selectedCustomer!}
-        deviceType={deviceType}
-        deviceBrand={deviceBrand}
-        deviceModel={deviceModel}
-        issueDescription={issueDescription}
-        diagnosis={diagnosis}
-        notes={notes}
-        items={items}
-        laborCost={laborCost}
-        partsCost={partsCost}
-        totalCost={totalCost}
-        centroInfo={centroInfo || undefined}
-        deviceInfo={detectedDevice}
-        onSend={handleSendQuote}
-        isSending={isSending}
-      />
+      {/* PDF Preview */}
+      {showPreview && selectedCustomer && (
+        <QuotePDFPreview
+          open={showPreview}
+          onOpenChange={(o) => setShowPreview(o)}
+          customer={selectedCustomer}
+          deviceType={deviceType}
+          deviceBrand={deviceBrand}
+          deviceModel={deviceModel}
+          issueDescription={issueDescription}
+          diagnosis={diagnosis}
+          notes={notes}
+          items={items.map(i => ({
+            description: i.description,
+            quantity: i.quantity,
+            unitPrice: i.unitPrice,
+          }))}
+          laborCost={getLaborCost() + getServicesCost()}
+          partsCost={getPartsPurchaseCost()}
+          totalCost={getTotalCost()}
+          centroInfo={centroInfo || undefined}
+          deviceInfo={detectedDevice}
+          onSend={handleSendQuote}
+          isSending={isSending}
+        />
+      )}
     </>
   );
 }
