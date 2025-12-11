@@ -122,18 +122,32 @@ export default function CentroClienteDetail() {
 
     setAccountLoading(true);
     try {
+      // Fetch centro name
+      let centroName = "LabLinkRiparo";
+      if (user?.id) {
+        const { data: centroData } = await supabase
+          .from("centri_assistenza")
+          .select("business_name")
+          .eq("owner_user_id", user.id)
+          .single();
+        if (centroData?.business_name) {
+          centroName = centroData.business_name;
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke("create-customer-account", {
         body: {
           email: customer.email,
           fullName: customer.name,
           phone: customer.phone,
+          centroName,
         },
       });
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success("Account creato! Password: 12345678", {
+      toast.success("Account creato e email inviata!", {
         description: `L'utente può accedere con ${customer.email}`,
         duration: 10000,
       });
