@@ -20,6 +20,7 @@ import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { QuoteDialog } from "@/components/quotes/QuoteDialog";
 import { OrderSparePartDialog } from "@/components/customers/OrderSparePartDialog";
 import { OrderDetailDialog } from "@/components/customers/OrderDetailDialog";
+import { CustomerDeviceInterests } from "@/components/centro/CustomerDeviceInterests";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -382,6 +383,15 @@ export default function CentroClienteDetail() {
           {/* Charts */}
           <motion.div variants={itemVariants}>
             <CustomerCharts devices={devices} allRepairs={allRepairs} />
+          </motion.div>
+
+          {/* Contact & Devices Grid */}
+          {/* Device Interests */}
+          <motion.div variants={itemVariants}>
+            <CustomerDeviceInterests 
+              customerId={id!} 
+              customerEmail={customer.email} 
+            />
           </motion.div>
 
           {/* Contact & Devices Grid */}
