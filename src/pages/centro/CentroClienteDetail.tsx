@@ -114,14 +114,16 @@ export default function CentroClienteDetail() {
     try {
       // Fetch centro name
       let centroName = "LabLinkRiparo";
+      let centroId = "";
       if (user?.id) {
         const { data: centroData } = await supabase
           .from("centri_assistenza")
-          .select("business_name")
+          .select("id, business_name")
           .eq("owner_user_id", user.id)
           .single();
-        if (centroData?.business_name) {
-          centroName = centroData.business_name;
+        if (centroData) {
+          centroId = centroData.id;
+          centroName = centroData.business_name || centroName;
         }
       }
 
@@ -130,6 +132,7 @@ export default function CentroClienteDetail() {
           email: customer.email,
           fullName: customer.name,
           phone: customer.phone,
+          centroId,
           centroName,
         },
       });
