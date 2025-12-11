@@ -676,6 +676,7 @@ export type Database = {
         Row: {
           brand: string
           centro_id: string | null
+          corner_id: string | null
           created_at: string
           device_type: string
           grade_a: number | null
@@ -692,6 +693,7 @@ export type Database = {
         Insert: {
           brand: string
           centro_id?: string | null
+          corner_id?: string | null
           created_at?: string
           device_type?: string
           grade_a?: number | null
@@ -708,6 +710,7 @@ export type Database = {
         Update: {
           brand?: string
           centro_id?: string | null
+          corner_id?: string | null
           created_at?: string
           device_type?: string
           grade_a?: number | null
@@ -727,6 +730,13 @@ export type Database = {
             columns: ["centro_id"]
             isOneToOne: false
             referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_price_valuations_corner_id_fkey"
+            columns: ["corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
             referencedColumns: ["id"]
           },
         ]
@@ -1953,11 +1963,12 @@ export type Database = {
         Row: {
           brand: string
           centro_gross_margin: number | null
-          centro_id: string
+          centro_id: string | null
           centro_net_margin: number | null
           centro_split_percentage: number
           color: string | null
           condition: Database["public"]["Enums"]["device_condition"]
+          corner_id: string | null
           created_at: string
           description: string | null
           device_type: string
@@ -1986,11 +1997,12 @@ export type Database = {
         Insert: {
           brand: string
           centro_gross_margin?: number | null
-          centro_id: string
+          centro_id?: string | null
           centro_net_margin?: number | null
           centro_split_percentage?: number
           color?: string | null
           condition?: Database["public"]["Enums"]["device_condition"]
+          corner_id?: string | null
           created_at?: string
           description?: string | null
           device_type: string
@@ -2019,11 +2031,12 @@ export type Database = {
         Update: {
           brand?: string
           centro_gross_margin?: number | null
-          centro_id?: string
+          centro_id?: string | null
           centro_net_margin?: number | null
           centro_split_percentage?: number
           color?: string | null
           condition?: Database["public"]["Enums"]["device_condition"]
+          corner_id?: string | null
           created_at?: string
           description?: string | null
           device_type?: string
@@ -2055,6 +2068,13 @@ export type Database = {
             columns: ["centro_id"]
             isOneToOne: false
             referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "used_devices_corner_id_fkey"
+            columns: ["corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
             referencedColumns: ["id"]
           },
           {

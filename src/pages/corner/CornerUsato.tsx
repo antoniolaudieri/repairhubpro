@@ -260,7 +260,7 @@ export default function CornerUsato() {
       const { data, error } = await supabase
         .from("used_devices")
         .select("*")
-        .eq("centro_id", cornerId)
+        .eq("corner_id", cornerId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -311,7 +311,8 @@ export default function CornerUsato() {
       }
       
       const deviceData = {
-        centro_id: cornerId,
+        corner_id: cornerId,
+        centro_id: null,
         device_type: formData.device_type.toLowerCase(),
         brand: formData.brand,
         model: formData.model,
@@ -350,7 +351,7 @@ export default function CornerUsato() {
         if (priceEstimate?.grades && cornerId) {
           const storageToSave = selectedStorageOption || formData.storage_capacity || null;
           await supabase.from("device_price_valuations").insert({
-            centro_id: cornerId,
+            corner_id: cornerId,
             device_type: formData.device_type,
             brand: formData.brand,
             model: formData.model,
