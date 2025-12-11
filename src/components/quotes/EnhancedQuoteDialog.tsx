@@ -958,7 +958,7 @@ export function EnhancedQuoteDialog({
           )}
 
           {/* Totals */}
-          <div className="p-4 bg-muted/30 rounded-xl space-y-2">
+          <div className="p-3 sm:p-4 bg-muted/30 rounded-xl space-y-2">
             <div className="flex justify-between text-sm">
               <span>Ricambi:</span>
               <span>€{getPartsCost().toFixed(2)}</span>
@@ -968,24 +968,21 @@ export function EnhancedQuoteDialog({
               <span>€{(getLaborCost() + getServicesCost()).toFixed(2)}</span>
             </div>
             
-            {/* Cost Coverage Toggles - For Corner jobs: both toggles, for direct repairs: only platform */}
+            {/* Cost Coverage Toggles - Compact on mobile */}
             {items.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-dashed space-y-3">
-                <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+              <div className="mt-3 pt-3 border-t border-dashed space-y-2">
+                <h4 className="text-xs sm:text-sm font-semibold text-muted-foreground">
                   🎯 Copri Costi Commissioni
                 </h4>
-                <p className="text-xs text-muted-foreground">
-                  Attiva per aggiungere i costi delle commissioni al prezzo finale (il cliente paga di più, tu non ci rimetti)
-                </p>
                 
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="space-y-2">
                   {/* Cover Corner Cost - Only for Corner jobs */}
                   {!isDirectRepair && (
-                    <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${coverCornerCost ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700' : 'bg-card border-border'}`}>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">📍 Corner ({cornerCommissionRate}%)</span>
+                    <div className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-colors ${coverCornerCost ? 'bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700' : 'bg-card border-border'}`}>
+                      <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                        <span className="text-xs sm:text-sm truncate">📍 Corner ({cornerCommissionRate}%)</span>
                         {coverCornerCost && (
-                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                          <Badge variant="secondary" className="text-[10px] sm:text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 shrink-0">
                             +€{getCornerCoverageAmount().toFixed(2)}
                           </Badge>
                         )}
@@ -993,16 +990,17 @@ export function EnhancedQuoteDialog({
                       <Switch
                         checked={coverCornerCost}
                         onCheckedChange={setCoverCornerCost}
+                        className="shrink-0"
                       />
                     </div>
                   )}
                   
                   {/* Cover Platform Cost - Always visible */}
-                  <div className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${coverPlatformCost ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-700' : 'bg-card border-border'}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">🏢 Piattaforma ({platformCommissionRate}%)</span>
+                  <div className={`flex items-center justify-between p-2 sm:p-3 rounded-lg border transition-colors ${coverPlatformCost ? 'bg-purple-50 dark:bg-purple-950/30 border-purple-300 dark:border-purple-700' : 'bg-card border-border'}`}>
+                    <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                      <span className="text-xs sm:text-sm truncate">🏢 Piattaforma ({platformCommissionRate}%)</span>
                       {coverPlatformCost && (
-                        <Badge variant="secondary" className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300">
+                        <Badge variant="secondary" className="text-[10px] sm:text-xs bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 shrink-0">
                           +€{getPlatformCoverageAmount().toFixed(2)}
                         </Badge>
                       )}
@@ -1010,91 +1008,94 @@ export function EnhancedQuoteDialog({
                     <Switch
                       checked={coverPlatformCost}
                       onCheckedChange={setCoverPlatformCost}
+                      className="shrink-0"
                     />
                   </div>
                 </div>
               </div>
             )}
             
-            <div className="flex justify-between text-lg font-bold pt-2 border-t">
-              <span>Totale Preventivo:</span>
+            <div className="flex justify-between text-base sm:text-lg font-bold pt-2 border-t">
+              <span>Totale:</span>
               <span className="text-primary">€{getTotalCost().toFixed(2)}</span>
             </div>
             
-            {/* Commission breakdown */}
+            {/* Commission breakdown - Collapsible on mobile */}
             {items.length > 0 && (
-              <div className="mt-4 pt-4 border-t border-dashed space-y-2">
-                <h4 className="text-sm font-semibold text-muted-foreground flex items-center gap-2">
+              <details className="mt-3 pt-3 border-t border-dashed">
+                <summary className="text-xs sm:text-sm font-semibold text-muted-foreground cursor-pointer">
                   📊 Ripartizione Guadagni
-                </h4>
-                <div className="flex justify-between text-sm text-muted-foreground">
-                  <span>Costo Acquisto Ricambi:</span>
-                  <span>- €{getPartsPurchaseCost().toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm font-medium">
-                  <span>Margine Lordo:</span>
-                  <span>€{getGrossMargin().toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
-                  <span>🏪 Tuo Guadagno (Centro {isDirectRepair ? (100 - platformCommissionRate) : centroCommissionRate}%):</span>
-                  <span className="font-semibold">€{isDirectRepair ? (getGrossMargin() * ((100 - platformCommissionRate) / 100)).toFixed(2) : getCentroCommission().toFixed(2)}</span>
-                </div>
-                {!isDirectRepair && (
-                  <div className="flex justify-between text-sm text-blue-600 dark:text-blue-400">
-                    <span>📍 Guadagno Corner ({cornerCommissionRate}%):</span>
-                    <span className="font-semibold">€{getCornerCommission().toFixed(2)}</span>
+                </summary>
+                <div className="mt-2 space-y-1 text-xs sm:text-sm">
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Costo Ricambi:</span>
+                    <span>- €{getPartsPurchaseCost().toFixed(2)}</span>
                   </div>
-                )}
-                <div className="flex justify-between text-sm text-purple-600 dark:text-purple-400">
-                  <span>🏢 Commissione Piattaforma ({platformCommissionRate}%):</span>
-                  <span className="font-semibold">€{getPlatformCommission().toFixed(2)}</span>
+                  <div className="flex justify-between font-medium">
+                    <span>Margine Lordo:</span>
+                    <span>€{getGrossMargin().toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
+                    <span>🏪 Centro ({isDirectRepair ? (100 - platformCommissionRate) : centroCommissionRate}%):</span>
+                    <span className="font-semibold">€{isDirectRepair ? (getGrossMargin() * ((100 - platformCommissionRate) / 100)).toFixed(2) : getCentroCommission().toFixed(2)}</span>
+                  </div>
+                  {!isDirectRepair && (
+                    <div className="flex justify-between text-blue-600 dark:text-blue-400">
+                      <span>📍 Corner ({cornerCommissionRate}%):</span>
+                      <span className="font-semibold">€{getCornerCommission().toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-purple-600 dark:text-purple-400">
+                    <span>🏢 Piattaforma ({platformCommissionRate}%):</span>
+                    <span className="font-semibold">€{getPlatformCommission().toFixed(2)}</span>
+                  </div>
                 </div>
-              </div>
+              </details>
             )}
           </div>
 
           {/* Payment Collection Method for Corner jobs */}
           {repairRequestId && (
-            <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl border border-amber-200 dark:border-amber-800 space-y-4">
-              <h4 className="font-semibold text-sm flex items-center gap-2">
+            <div className="p-3 sm:p-4 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl border border-amber-200 dark:border-amber-800 space-y-3">
+              <h4 className="font-semibold text-xs sm:text-sm">
                 💰 Modalità di Incasso
               </h4>
               
               <RadioGroup 
                 value={paymentCollectionMethod} 
                 onValueChange={(value: 'direct' | 'via_corner') => setPaymentCollectionMethod(value)}
-                className="space-y-3"
+                className="space-y-2"
               >
-                <div className="flex items-start space-x-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer">
-                  <RadioGroupItem value="direct" id="direct" className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="direct" className="font-medium cursor-pointer">
-                      Incasso Diretto dal Cliente
+                <div className="flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value="direct" id="direct" className="mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="direct" className="font-medium cursor-pointer text-xs sm:text-sm">
+                      Incasso Diretto
                     </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Il cliente paga direttamente a te (€{getTotalCost().toFixed(2)}). Dovrai poi versare al Corner la sua commissione di €{getCornerCommission().toFixed(2)}.
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                      Cliente paga a te €{getTotalCost().toFixed(2)}, versi al Corner €{getCornerCommission().toFixed(2)}
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-start space-x-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer">
-                  <RadioGroupItem value="via_corner" id="via_corner" className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="via_corner" className="font-medium cursor-pointer">
-                      Incasso tramite Corner
+                <div className="flex items-start space-x-2 sm:space-x-3 p-2 sm:p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer">
+                  <RadioGroupItem value="via_corner" id="via_corner" className="mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="via_corner" className="font-medium cursor-pointer text-xs sm:text-sm">
+                      Incasso via Corner
                     </Label>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Il Corner incassa dal cliente (€{getTotalCost().toFixed(2)}), trattiene la sua commissione (€{getCornerCommission().toFixed(2)}) e ti versa €{(getTotalCost() - getCornerCommission()).toFixed(2)}.
+                    <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
+                      Corner incassa €{getTotalCost().toFixed(2)}, trattiene €{getCornerCommission().toFixed(2)}, ti versa €{(getTotalCost() - getCornerCommission()).toFixed(2)}
                     </p>
                   </div>
                 </div>
               </RadioGroup>
               
-              {/* Legal Disclaimer */}
-              <div className="flex items-start gap-2 p-3 bg-amber-100/50 dark:bg-amber-900/20 rounded-lg text-xs text-amber-800 dark:text-amber-200">
-                <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+              {/* Legal Disclaimer - Hidden on mobile, shown on larger screens */}
+              <div className="hidden sm:flex items-start gap-2 p-2 bg-amber-100/50 dark:bg-amber-900/20 rounded-lg text-[10px] sm:text-xs text-amber-800 dark:text-amber-200">
+                <AlertTriangle className="h-3 w-3 sm:h-4 sm:w-4 shrink-0 mt-0.5" />
                 <p>
-                  <strong>Nota legale:</strong> La fatturazione, la gestione fiscale e gli adempimenti tributari relativi ai compensi percepiti sono interamente a carico tuo, come previsto dalla normativa fiscale vigente. La piattaforma non è sostituto d'imposta.
+                  <strong>Nota:</strong> Fatturazione e adempimenti fiscali sono a tuo carico.
                 </p>
               </div>
             </div>
@@ -1111,17 +1112,17 @@ export function EnhancedQuoteDialog({
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col gap-3 pt-4">
+          <div className="flex flex-col gap-2 pt-3 sm:pt-4">
             {items.length === 0 && (
-              <p className="text-sm text-amber-600 dark:text-amber-400 text-center">
-                ⚠️ Aggiungi almeno un articolo (ricambio, lavorazione o servizio) prima di creare il preventivo
+              <p className="text-xs sm:text-sm text-amber-600 dark:text-amber-400 text-center">
+                ⚠️ Aggiungi almeno un articolo prima di creare il preventivo
               </p>
             )}
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 sm:gap-3">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading} className="w-full sm:w-auto">
                 Annulla
               </Button>
-              <Button type="submit" disabled={loading || items.length === 0} className="min-w-[150px]">
+              <Button type="submit" disabled={loading || items.length === 0} className="w-full sm:w-auto sm:min-w-[150px]">
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
