@@ -224,6 +224,13 @@ Deno.serve(async (req) => {
 </html>
     `;
 
+    // Minify HTML to prevent quoted-printable encoding issues (=20 artifacts)
+    const minifiedHtml = emailHtml
+      .replace(/\n\s*/g, '')
+      .replace(/>\s+</g, '><')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
     try {
       // Call send-email-smtp edge function
       const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-smtp`, {
@@ -236,7 +243,7 @@ Deno.serve(async (req) => {
           centro_id: centroId,
           to: email,
           subject: `Benvenuto su ${shopName} - I tuoi dati di accesso`,
-          html: emailHtml,
+          html: minifiedHtml,
         }),
       });
 
