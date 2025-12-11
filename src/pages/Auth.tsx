@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectPath = searchParams.get("redirect");
   const { user, signIn, signUp, userRoles, loading: authLoading, isPlatformAdmin, isTechnician, isAdmin, isCentroAdmin, isCentroTech, isRiparatore, isCorner } = useAuth();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("signin");
@@ -29,22 +31,29 @@ const Auth = () => {
     if (user && !authLoading && userRoles.length > 0 && !hasRedirected.current) {
       hasRedirected.current = true;
       
-      let redirectPath = "/customer-dashboard";
-      if (isPlatformAdmin) {
-        redirectPath = "/admin";
-      } else if (isTechnician || isAdmin) {
-        redirectPath = "/dashboard";
-      } else if (isCentroAdmin || isCentroTech) {
-        redirectPath = "/centro";
-      } else if (isRiparatore) {
-        redirectPath = "/riparatore";
-      } else if (isCorner) {
-        redirectPath = "/corner";
+      // If there's a redirect parameter, use it
+      if (redirectPath) {
+        navigate(redirectPath, { replace: true });
+        return;
       }
       
-      navigate(redirectPath, { replace: true });
+      // Otherwise, redirect based on role
+      let defaultPath = "/customer-dashboard";
+      if (isPlatformAdmin) {
+        defaultPath = "/admin";
+      } else if (isTechnician || isAdmin) {
+        defaultPath = "/dashboard";
+      } else if (isCentroAdmin || isCentroTech) {
+        defaultPath = "/centro";
+      } else if (isRiparatore) {
+        defaultPath = "/riparatore";
+      } else if (isCorner) {
+        defaultPath = "/corner";
+      }
+      
+      navigate(defaultPath, { replace: true });
     }
-  }, [user, userRoles, authLoading, navigate, isPlatformAdmin, isTechnician, isAdmin, isCentroAdmin, isCentroTech, isRiparatore, isCorner]);
+  }, [user, userRoles, authLoading, navigate, redirectPath, isPlatformAdmin, isTechnician, isAdmin, isCentroAdmin, isCentroTech, isRiparatore, isCorner]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
