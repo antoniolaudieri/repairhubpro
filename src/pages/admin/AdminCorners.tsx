@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -5,11 +6,25 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Store, CheckCircle, XCircle, MapPin, Phone, Mail } from "lucide-react";
+import { Store, CheckCircle, XCircle, MapPin, Phone, Mail, UserPlus } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { PlatformAdminLayout } from "@/layouts/PlatformAdminLayout";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 const statusColors: Record<string, string> = {
   pending: "bg-warning/20 text-warning border-warning/30",
@@ -35,9 +50,18 @@ interface Corner {
   commission_rate: number;
 }
 
+interface Profile {
+  id: string;
+  full_name: string;
+  phone: string | null;
+}
+
 export default function AdminCorners() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedCorner, setSelectedCorner] = useState<Corner | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
 
   const { data: corners = [], isLoading } = useQuery({
     queryKey: ["admin-corners"],
@@ -48,6 +72,19 @@ export default function AdminCorners() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as Corner[];
+    },
+  });
+
+  // Fetch all users (profiles) for assignment
+  const { data: availableUsers = [] } = useQuery({
+    queryKey: ["admin-available-users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, phone")
+        .order("full_name");
+      if (error) throw error;
+      return data as Profile[];
     },
   });
 
@@ -76,6 +113,36 @@ export default function AdminCorners() {
     },
     onError: () => toast.error("Errore nell'aggiornamento"),
   });
+
+  const assignUserMutation = useMutation({
+    mutationFn: async ({ cornerId, userId }: { cornerId: string; userId: string }) => {
+      // Update corner with new user_id
+      const { error } = await supabase
+        .from("corners")
+        .update({ user_id: userId })
+        .eq("id", cornerId);
+      if (error) throw error;
+
+      // Assign corner role to new user
+      await supabase
+        .from("user_roles")
+        .upsert({ user_id: userId, role: "corner" }, { onConflict: "user_id,role" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-corners"] });
+      toast.success("Utente assegnato con successo");
+      setAssignDialogOpen(false);
+      setSelectedCorner(null);
+      setSelectedUserId("");
+    },
+    onError: () => toast.error("Errore nell'assegnazione"),
+  });
+
+  const handleOpenAssignDialog = (corner: Corner) => {
+    setSelectedCorner(corner);
+    setSelectedUserId(corner.user_id || "");
+    setAssignDialogOpen(true);
+  };
 
   const pendingCount = corners.filter(c => c.status === "pending").length;
 
@@ -208,6 +275,14 @@ export default function AdminCorners() {
                             Riattiva
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenAssignDialog(corner)}
+                        >
+                          <UserPlus className="h-4 w-4 mr-1" />
+                          Assegna Utente
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -216,6 +291,50 @@ export default function AdminCorners() {
             ))}
           </motion.div>
         )}
+
+        {/* Assign User Dialog */}
+        <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Assegna Utente a {selectedCorner?.business_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Seleziona Utente</Label>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona un utente..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name} {u.phone && `(${u.phone})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>
+                  Annulla
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (selectedCorner && selectedUserId) {
+                      assignUserMutation.mutate({
+                        cornerId: selectedCorner.id,
+                        userId: selectedUserId,
+                      });
+                    }
+                  }}
+                  disabled={!selectedUserId || assignUserMutation.isPending}
+                >
+                  Assegna
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </PlatformAdminLayout>
   );
