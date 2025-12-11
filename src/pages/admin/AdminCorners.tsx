@@ -57,6 +57,11 @@ interface Profile {
   phone: string | null;
 }
 
+interface UserFromRoles {
+  user_id: string;
+  email?: string;
+}
+
 export default function AdminCorners() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -87,16 +92,37 @@ export default function AdminCorners() {
     },
   });
 
-  // Fetch all users (profiles) for assignment
+  // Fetch all users for assignment - try profiles first, fallback to user_roles
   const { data: availableUsers = [] } = useQuery({
     queryKey: ["admin-available-users"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First try profiles table
+      const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name, phone")
         .order("full_name");
-      if (error) throw error;
-      return data as Profile[];
+      
+      if (!profilesError && profiles && profiles.length > 0) {
+        return profiles as Profile[];
+      }
+      
+      // Fallback: get unique user_ids from user_roles
+      const { data: userRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .order("user_id");
+      
+      if (rolesError || !userRoles) return [];
+      
+      // Get unique user_ids
+      const uniqueUserIds = [...new Set(userRoles.map(r => r.user_id))];
+      
+      // Map to Profile format with user_id as display name
+      return uniqueUserIds.map(uid => ({
+        id: uid,
+        full_name: `Utente ${uid.substring(0, 8)}...`,
+        phone: null,
+      })) as Profile[];
     },
   });
 
