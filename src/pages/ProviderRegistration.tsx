@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,9 +75,13 @@ const specializations = [
 
 export default function ProviderRegistration() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { latitude, longitude, loading: geoLoading, error: geoError, requestLocation } = useGeolocation();
-  const [selectedType, setSelectedType] = useState<ProviderType>(null);
+  
+  // Read type from URL query param
+  const typeParam = searchParams.get("type") as ProviderType;
+  const [selectedType, setSelectedType] = useState<ProviderType>(typeParam || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
