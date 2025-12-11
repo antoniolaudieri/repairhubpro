@@ -48,6 +48,7 @@ import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
 import { PatternDisplay } from "@/components/customer/PatternDisplay";
 import RepairGuide from "@/components/repair/RepairGuide";
 import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
+import { notifyCustomerStatusChange } from "@/services/pushNotificationService";
 import { AcceptanceFormPDF } from "@/components/repair/AcceptanceFormPDF";
 import { RepairChecklistDialog } from "@/components/checklist/RepairChecklistDialog";
 import { VisualStatusManager, DIRECT_REPAIR_STATUSES } from "@/components/repair/VisualStatusManager";
@@ -399,6 +400,7 @@ export default function RepairDetail() {
     if (!repair) return;
 
     const isStartingRepair = previousStatus === "pending" && repair.status === "in_progress";
+    const statusChanged = previousStatus !== repair.status;
 
     setSaving(true);
     try {
@@ -419,6 +421,11 @@ export default function RepairDetail() {
         .eq("id", id);
 
       if (error) throw error;
+
+      // Notify customer if status changed
+      if (statusChanged && id) {
+        notifyCustomerStatusChange(id, repair.status, repair.customer?.email);
+      }
 
       if (isStartingRepair) {
         setShowStartedAnimation(true);
