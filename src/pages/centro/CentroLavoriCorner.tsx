@@ -38,6 +38,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { RepairWorkflowTimeline, getStatusLabel, getStatusColor } from "@/components/corner/RepairWorkflowTimeline";
 import { CornerDetailDialog } from "@/components/corner/CornerDetailDialog";
+import { sendPushNotification, getCornerUserId } from "@/services/pushNotificationService";
 import { StatusSelector } from "@/components/corner/StatusSelector";
 
 interface CornerRequest {
@@ -279,7 +280,6 @@ export default function CentroLavoriCorner() {
 
   const handleQuoteCreated = async () => {
     setQuoteDialogOpen(false);
-    setSelectedRequest(null);
     
     if (selectedRequest) {
       await supabase
@@ -289,8 +289,23 @@ export default function CentroLavoriCorner() {
           quote_sent_at: new Date().toISOString()
         })
         .eq("id", selectedRequest.id);
+      
+      // Send push notification to Corner
+      if (selectedRequest.corner?.id) {
+        const cornerUserId = await getCornerUserId(selectedRequest.corner.id);
+        if (cornerUserId) {
+          const deviceName = `${selectedRequest.device_brand || ''} ${selectedRequest.device_model || selectedRequest.device_type}`.trim();
+          await sendPushNotification([cornerUserId], {
+            title: "📋 Nuovo Preventivo Pronto!",
+            body: `Preventivo per ${deviceName} inviato al cliente. Fai firmare il cliente!`,
+            data: { url: "/corner/segnalazioni" },
+          });
+          console.log("[CentroLavoriCorner] Push notification sent to Corner");
+        }
+      }
     }
     
+    setSelectedRequest(null);
     toast.success("Preventivo inviato!");
     if (centroId) fetchRequests(centroId);
   };

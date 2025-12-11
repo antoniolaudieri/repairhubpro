@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { motion, AnimatePresence } from "framer-motion";
 import { generateQuotePDF, downloadQuotePDF, getQuotePDFDataUrl } from "./QuotePDFGenerator";
+import { sendPushNotification, getCornerUserId } from "@/services/pushNotificationService";
 
 const quoteSchema = z.object({
   deviceType: z.string().min(1, "Tipo dispositivo richiesto"),
@@ -550,12 +551,32 @@ export function EditQuoteDialog({
 
       if (error) throw error;
 
-      // Update quote status
+      // Update quote status and notify Corner
       if (quote.repair_request_id) {
+        // Get repair_request to find corner_id
+        const { data: repairRequest } = await supabase
+          .from("repair_requests")
+          .select("corner_id")
+          .eq("id", quote.repair_request_id)
+          .single();
+        
         await supabase
           .from("repair_requests")
-          .update({ status: "quote_sent" })
+          .update({ status: "quote_sent", quote_sent_at: new Date().toISOString() })
           .eq("id", quote.repair_request_id);
+        
+        // Send push notification to Corner
+        if (repairRequest?.corner_id) {
+          const cornerUserId = await getCornerUserId(repairRequest.corner_id);
+          if (cornerUserId) {
+            await sendPushNotification([cornerUserId], {
+              title: "📋 Nuovo Preventivo Pronto!",
+              body: `Preventivo per ${deviceName} inviato al cliente. €${getTotalCost().toFixed(2)} - Fai firmare il cliente!`,
+              data: { url: "/corner/segnalazioni" },
+            });
+            console.log("[EditQuoteDialog] Push notification sent to Corner:", cornerUserId);
+          }
+        }
       }
 
       toast.success("Preventivo inviato via email con PDF allegato");
