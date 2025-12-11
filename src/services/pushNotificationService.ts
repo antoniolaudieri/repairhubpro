@@ -15,9 +15,10 @@ export async function sendPushNotification(
   payload: PushPayload
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    console.log("[PushService] Invoking send-push-notification for users:", userIds);
     const { data, error } = await supabase.functions.invoke("send-push-notification", {
       body: {
-        userIds,
+        user_ids: userIds,
         payload,
       },
     });
