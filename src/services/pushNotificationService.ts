@@ -14,8 +14,15 @@ export async function sendPushNotification(
   userIds: string[],
   payload: PushPayload
 ): Promise<{ success: boolean; error?: string }> {
+  console.log("[PushService] sendPushNotification called with:", { userIds, payload });
+  
+  if (!userIds || userIds.length === 0) {
+    console.error("[PushService] No userIds provided");
+    return { success: false, error: "No userIds provided" };
+  }
+  
   try {
-    console.log("[PushService] Invoking send-push-notification for users:", userIds);
+    console.log("[PushService] Invoking send-push-notification edge function...");
     const { data, error } = await supabase.functions.invoke("send-push-notification", {
       body: {
         user_ids: userIds,
@@ -24,11 +31,11 @@ export async function sendPushNotification(
     });
 
     if (error) {
-      console.error("[PushService] Error sending push:", error);
+      console.error("[PushService] Edge function error:", error);
       return { success: false, error: error.message };
     }
 
-    console.log("[PushService] Push sent successfully:", data);
+    console.log("[PushService] Edge function response:", data);
     return { success: true };
   } catch (err) {
     console.error("[PushService] Exception:", err);
