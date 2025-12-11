@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
 
     try {
       await resend.emails.send({
-        from: 'LabLinkRiparo <noreply@lablinkriparo.it>',
+        from: 'LabLinkRiparo <onboarding@resend.dev>',
         to: [email],
         subject: `Benvenuto su LabLinkRiparo - I tuoi dati di accesso`,
         html: `
