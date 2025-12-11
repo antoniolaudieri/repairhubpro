@@ -69,7 +69,10 @@ Deno.serve(async (req) => {
     }
 
     // Send welcome email via send-email-smtp edge function (uses Centro SMTP if configured)
-    const appUrl = supabaseUrl?.replace('.supabase.co', '.lovable.app') || 'https://lablinkriparo.it';
+    // Get the correct app URL from request origin or use production URL
+    const origin = req.headers.get('origin') || req.headers.get('referer')?.split('/').slice(0, 3).join('/');
+    const appUrl = origin || 'https://lablinkriparo.lovable.app';
+    const loginUrl = `${appUrl}/auth`;
     const shopName = centroName || 'LabLinkRiparo';
 
     const emailHtml = `
@@ -196,7 +199,7 @@ Deno.serve(async (req) => {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center">
-                    <a href="${appUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+                    <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
                       Accedi al tuo account
                     </a>
                   </td>
