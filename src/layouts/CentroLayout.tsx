@@ -5,6 +5,7 @@ import { CentroNotificationCenter } from "@/components/centro/CentroNotification
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2 } from "lucide-react";
+import { useAutoPromptNotifications } from "@/hooks/useAutoPromptNotifications";
 
 interface CentroLayoutProps {
   children: ReactNode;
@@ -14,6 +15,9 @@ export const CentroLayout = ({ children }: CentroLayoutProps) => {
   const { user } = useAuth();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string>("Centro Assistenza");
+  
+  // Auto-prompt for push notifications after login
+  useAutoPromptNotifications();
 
   useEffect(() => {
     const fetchCentroInfo = async () => {

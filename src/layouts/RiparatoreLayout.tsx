@@ -13,6 +13,7 @@ import {
   Settings
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAutoPromptNotifications } from "@/hooks/useAutoPromptNotifications";
 
 interface RiparatoreLayoutProps {
   children: ReactNode;
@@ -30,6 +31,9 @@ export const RiparatoreLayout = ({ children }: RiparatoreLayoutProps) => {
   const { signOut } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Auto-prompt for push notifications after login
+  useAutoPromptNotifications();
 
   const handleSignOut = async () => {
     await signOut();

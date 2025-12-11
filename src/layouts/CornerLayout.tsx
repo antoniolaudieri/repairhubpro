@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CornerNotificationCenter } from "@/components/corner/CornerNotificationCenter";
 import { useCornerAppointmentNotifications } from "@/hooks/useCornerAppointmentNotifications";
+import { useAutoPromptNotifications } from "@/hooks/useAutoPromptNotifications";
 
 interface CornerLayoutProps {
   children: ReactNode;
@@ -38,6 +39,9 @@ export const CornerLayout = ({ children }: CornerLayoutProps) => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { pendingAppointmentsCount } = useCornerAppointmentNotifications();
+  
+  // Auto-prompt for push notifications after login
+  useAutoPromptNotifications();
 
   const handleSignOut = async () => {
     await signOut();
