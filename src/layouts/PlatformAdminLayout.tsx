@@ -1,13 +1,13 @@
 import { ReactNode } from "react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { PlatformAdminSidebar } from "@/components/admin/PlatformAdminSidebar";
-import { Shield } from "lucide-react";
+import { Shield, Clock } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Navigate } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { useAutoPromptNotifications } from "@/hooks/useAutoPromptNotifications";
 
 interface PlatformAdminLayoutProps {
   children: ReactNode;
@@ -15,6 +15,9 @@ interface PlatformAdminLayoutProps {
 
 export const PlatformAdminLayout = ({ children }: PlatformAdminLayoutProps) => {
   const { user } = useAuth();
+  
+  // Auto-prompt for push notifications after login
+  useAutoPromptNotifications();
 
   // Check if user is platform admin
   const { data: isPlatformAdmin, isLoading: checkingAdmin } = useQuery({
