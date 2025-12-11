@@ -69,7 +69,7 @@ const providerTypes = [
     color: "text-success",
     bgColor: "bg-success/10",
     borderColor: "border-success/30",
-    commission: "Fino al 70% sul margine",
+    commission: "Fino al 80% sul margine",
     benefits: [
       "Gestionale completo incluso",
       "Rete di Corner per nuovi clienti",
@@ -263,6 +263,52 @@ export default function DiventaPartner() {
                         <p className="text-xs font-medium">{feature.title}</p>
                       </motion.div>
                     ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Founder Story */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mb-20"
+          >
+            <Card className="bg-card/50 backdrop-blur border-border/50 overflow-hidden">
+              <div className="grid lg:grid-cols-5 gap-0">
+                <div className="lg:col-span-2 bg-gradient-to-br from-primary/20 via-accent/15 to-info/20 p-8 lg:p-12 flex flex-col items-center justify-center text-center">
+                  <div className="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center mb-4 shadow-glow">
+                    <span className="text-3xl font-bold text-primary-foreground">RC</span>
+                  </div>
+                  <h3 className="text-xl font-bold mb-1">Riccardo Casagrande</h3>
+                  <p className="text-sm text-muted-foreground mb-2">Fondatore di LabLinkRiparo</p>
+                  <p className="text-xs text-muted-foreground/80">Imperia, 1986</p>
+                </div>
+                <div className="lg:col-span-3 p-8 lg:p-12 flex flex-col justify-center">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-accent/20 rounded-lg">
+                      <Award className="h-5 w-5 text-accent" />
+                    </div>
+                    <h2 className="text-2xl font-bold">La mia storia</h2>
+                  </div>
+                  <div className="space-y-4 text-muted-foreground leading-relaxed">
+                    <p>
+                      <strong className="text-foreground">Nel 2012</strong> ho fondato il mio negozio-laboratorio partendo dal nulla. 
+                      Anni di esperienza sul campo mi hanno insegnato le sfide quotidiane che ogni riparatore deve affrontare: 
+                      gestione clienti, preventivi, ricambi, e la difficoltà di farsi conoscere.
+                    </p>
+                    <p>
+                      Da questa esperienza è nato <strong className="text-foreground">LabLinkRiparo</strong>: un software pensato 
+                      per aiutare i riparatori a gestire al meglio ogni aspetto del lavoro, dalla riparazione alla vendita, 
+                      trovando nuovi clienti grazie ai Corner, collaborando con tecnici qualificati, e creando un 
+                      <strong className="text-foreground"> marketplace condiviso</strong> di dispositivi usati e ricondizionati.
+                    </p>
+                    <p className="italic border-l-4 border-primary/50 pl-4 py-2 bg-primary/5 rounded-r-lg">
+                      "Questo software racchiude tutta la passione che dedico da anni alla mia attività. 
+                      Sono sicuro che aiuterà a incrementare in modo significativo il benessere e il fatturato di tutti i partner."
+                    </p>
                   </div>
                 </div>
               </div>
