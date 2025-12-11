@@ -42,11 +42,13 @@ import {
   ChevronDown,
   ChevronUp,
   Play,
+  Rocket,
+  Target,
+  Crown,
 } from "lucide-react";
 
 type ProviderType = "corner" | "riparatore" | "centro";
 
-// Detailed features for each provider type
 const centroFeatures = [
   { icon: Brain, title: "Preventivi con IA", description: "Preventivi automatici con suggerimenti intelligenti su ricambi, manodopera e servizi." },
   { icon: Monitor, title: "Display Pubblicitario", description: "Display interno per pubblicità personalizzate e monetizzazione degli spazi di attesa." },
@@ -89,11 +91,8 @@ const providerTypes = [
     icon: Building2,
     color: "text-success",
     bgColor: "bg-success/10",
-    borderColor: "border-success/40",
-    gradientFrom: "from-success/20",
-    gradientVia: "via-success/10",
-    gradientTo: "to-success/5",
-    accentColor: "hsl(142 76% 36%)",
+    borderColor: "border-success/30",
+    glowColor: "shadow-[0_0_60px_hsl(142_76%_36%/0.2)]",
     commission: "Fino al 80% sul margine",
     features: centroFeatures,
     benefits: ["Gestionale completo incluso", "Rete di Corner per nuovi clienti", "Marketplace dispositivi usati", "Reportistica e analytics avanzati"],
@@ -106,11 +105,8 @@ const providerTypes = [
     icon: Store,
     color: "text-primary",
     bgColor: "bg-primary/10",
-    borderColor: "border-primary/40",
-    gradientFrom: "from-primary/20",
-    gradientVia: "via-primary/10",
-    gradientTo: "to-primary/5",
-    accentColor: "hsl(217 91% 60%)",
+    borderColor: "border-primary/30",
+    glowColor: "shadow-[0_0_60px_hsl(217_91%_60%/0.2)]",
     commission: "10% sul margine",
     features: cornerFeatures,
     benefits: ["Nessun investimento iniziale", "Guadagno su ogni riparazione", "Aumenti traffico nel negozio", "Formazione e supporto inclusi"],
@@ -123,39 +119,19 @@ const providerTypes = [
     icon: Wrench,
     color: "text-info",
     bgColor: "bg-info/10",
-    borderColor: "border-info/40",
-    gradientFrom: "from-info/20",
-    gradientVia: "via-info/10",
-    gradientTo: "to-info/5",
-    accentColor: "hsl(199 89% 48%)",
+    borderColor: "border-info/30",
+    glowColor: "shadow-[0_0_60px_hsl(199_89%_48%/0.2)]",
     commission: "60% sul margine",
     features: riparatoreFeatures,
     benefits: ["Lavori nella tua zona", "Flessibilità totale sugli orari", "Accesso a ricambi scontati", "Pagamenti rapidi e sicuri"],
   },
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.1 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.4, 0, 0.2, 1] as const } }
-};
-
-const scaleVariants = {
-  hidden: { opacity: 0, scale: 0.9 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] as const } }
-};
-
 export default function DiventaPartner() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [expandedType, setExpandedType] = useState<ProviderType | null>("centro");
+  const [hoveredFeature, setHoveredFeature] = useState<string | null>(null);
 
   const handleProceed = (type: ProviderType) => {
     if (user) {
@@ -166,41 +142,41 @@ export default function DiventaPartner() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Aurora Background */}
-      <div className="fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-mesh animate-aurora" />
-        <div className="absolute inset-0 bg-pattern-dots opacity-20" />
+    <div className="min-h-screen bg-background overflow-hidden">
+      {/* Premium Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(217_91%_60%/0.12),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,hsl(142_76%_36%/0.08),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,hsl(199_89%_48%/0.06),transparent_50%)]" />
+        
+        {/* Animated orbs */}
         <motion.div 
-          className="absolute top-20 left-1/4 w-[500px] h-[500px] bg-primary/8 rounded-full blur-[100px]"
+          className="absolute top-[10%] left-[15%] w-[600px] h-[600px] rounded-full"
+          style={{ background: "radial-gradient(circle, hsl(217 91% 60% / 0.08) 0%, transparent 70%)" }}
           animate={{ 
-            x: [0, 30, 0], 
-            y: [0, -20, 0],
-            scale: [1, 1.1, 1] 
+            x: [0, 50, 0], 
+            y: [0, -30, 0],
+            scale: [1, 1.1, 1]
           }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div 
-          className="absolute bottom-20 right-1/4 w-[400px] h-[400px] bg-success/8 rounded-full blur-[80px]"
+          className="absolute bottom-[5%] right-[10%] w-[500px] h-[500px] rounded-full"
+          style={{ background: "radial-gradient(circle, hsl(142 76% 36% / 0.06) 0%, transparent 70%)" }}
           animate={{ 
-            x: [0, -20, 0], 
-            y: [0, 30, 0],
-            scale: [1, 1.15, 1] 
+            x: [0, -40, 0], 
+            y: [0, 40, 0],
+            scale: [1, 1.15, 1]
           }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut" }}
         />
-        <motion.div 
-          className="absolute top-1/2 right-1/3 w-[300px] h-[300px] bg-info/6 rounded-full blur-[60px]"
-          animate={{ 
-            x: [0, 40, 0], 
-            y: [0, -40, 0] 
-          }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
-        />
+        
+        {/* Grid pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(hsl(217_91%_60%/0.02)_1px,transparent_1px),linear-gradient(90deg,hsl(217_91%_60%/0.02)_1px,transparent_1px)] bg-[size:60px_60px]" />
       </div>
 
       {/* Navigation */}
-      <nav className="border-b border-border/40 bg-background/70 backdrop-blur-xl sticky top-0 z-50">
+      <nav className="border-b border-border/30 bg-background/60 backdrop-blur-2xl sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -209,24 +185,29 @@ export default function DiventaPartner() {
             onClick={() => navigate("/")}
           >
             <div className="relative">
-              <div className="p-2.5 bg-gradient-primary rounded-xl shadow-glow group-hover:shadow-glow-lg transition-shadow">
+              <motion.div 
+                className="absolute inset-0 bg-primary/30 rounded-2xl blur-xl"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.8, 0.5] }}
+                transition={{ duration: 3, repeat: Infinity }}
+              />
+              <div className="relative p-3 bg-gradient-to-br from-primary to-primary/80 rounded-2xl shadow-lg group-hover:shadow-xl transition-all duration-300">
                 <Wrench className="h-5 w-5 text-primary-foreground" />
               </div>
             </div>
-            <span className="font-bold text-xl text-foreground">LabLinkRiparo</span>
+            <span className="font-bold text-xl text-foreground tracking-tight">LabLinkRiparo</span>
           </motion.div>
 
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex gap-2 items-center"
+            className="flex gap-3 items-center"
           >
-            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-2 hover:bg-primary/5">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-2 hover:bg-muted/50 rounded-xl">
               <ArrowLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Home</span>
             </Button>
             {!user && (
-              <Button variant="outline" size="sm" onClick={() => navigate("/auth")} className="gap-2 border-primary/30 hover:border-primary hover:bg-primary/5">
+              <Button size="sm" onClick={() => navigate("/auth")} className="gap-2 rounded-xl shadow-md hover:shadow-lg transition-all">
                 <Shield className="h-4 w-4" />
                 <span className="hidden sm:inline">Accedi</span>
               </Button>
@@ -236,96 +217,165 @@ export default function DiventaPartner() {
       </nav>
 
       {/* Hero Section */}
-      <section className="py-16 lg:py-24 relative overflow-hidden">
+      <section className="pt-16 pb-24 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <motion.div
-            initial="hidden"
-            animate="visible"
-            variants={containerVariants}
-            className="text-center max-w-4xl mx-auto mb-20"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center max-w-4xl mx-auto mb-24"
           >
-            <motion.div variants={itemVariants} className="mb-8">
-              <motion.div 
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full glass-card border border-primary/20 mb-6"
-                animate={{ boxShadow: ["0 0 20px hsl(217 91% 60% / 0.15)", "0 0 35px hsl(217 91% 60% / 0.25)", "0 0 20px hsl(217 91% 60% / 0.15)"] }}
-                transition={{ duration: 3, repeat: Infinity }}
+            {/* Badge */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.2 }}
+              className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-primary/5 border border-primary/20 mb-8"
+            >
+              <motion.div
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
               >
-                <Sparkles className="h-4 w-4 text-primary animate-bounce-gentle" />
-                <span className="text-sm font-semibold text-primary">Unisciti alla Rete Professionale</span>
+                <Sparkles className="h-4 w-4 text-primary" />
               </motion.div>
+              <span className="text-sm font-semibold text-primary">La Rete Professionale delle Riparazioni</span>
             </motion.div>
 
+            {/* Title */}
             <motion.h1 
-              variants={itemVariants}
-              className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6 leading-tight"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="text-5xl sm:text-6xl lg:text-7xl font-bold text-foreground mb-8 leading-[1.1] tracking-tight"
             >
-              Diventa Partner di{" "}
-              <span className="text-gradient-accent">LabLinkRiparo</span>
+              Diventa Partner di
+              <br />
+              <span className="relative inline-block mt-2">
+                <span className="text-gradient-accent">LabLinkRiparo</span>
+                <motion.span 
+                  className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-primary via-accent to-primary rounded-full"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: 1 }}
+                  transition={{ delay: 0.8, duration: 0.6 }}
+                />
+              </span>
             </motion.h1>
             
             <motion.p 
-              variants={itemVariants}
-              className="text-lg sm:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.6 }}
+              className="text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto"
             >
               La piattaforma che connette negozi, riparatori e centri assistenza per offrire 
               il miglior servizio di riparazione dispositivi in Italia.
             </motion.p>
 
-            <motion.div variants={itemVariants} className="mt-10 flex flex-wrap justify-center gap-4">
-              <Button size="lg" onClick={() => document.getElementById('partner-types')?.scrollIntoView({ behavior: 'smooth' })} className="gap-2 shadow-lg hover:shadow-xl transition-shadow">
-                <Play className="h-4 w-4" />
+            {/* CTA Buttons */}
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              className="mt-12 flex flex-wrap justify-center gap-4"
+            >
+              <Button 
+                size="lg" 
+                onClick={() => document.getElementById('partner-types')?.scrollIntoView({ behavior: 'smooth' })} 
+                className="gap-3 h-14 px-8 text-base rounded-2xl shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300"
+              >
+                <Rocket className="h-5 w-5" />
                 Scopri i Ruoli
+                <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" onClick={() => navigate(user ? "/provider-registration" : "/auth?redirect=/provider-registration")} className="gap-2 border-primary/30 hover:border-primary">
-                <Zap className="h-4 w-4" />
-                {user ? "Candidati Ora" : "Registrati"}
+              <Button 
+                size="lg" 
+                variant="outline" 
+                onClick={() => navigate(user ? "/provider-registration" : "/auth?redirect=/provider-registration")} 
+                className="gap-3 h-14 px-8 text-base rounded-2xl border-2 hover:bg-muted/50 transition-all duration-300"
+              >
+                <Zap className="h-5 w-5" />
+                {user ? "Candidati Ora" : "Registrati Gratis"}
               </Button>
+            </motion.div>
+
+            {/* Stats */}
+            <motion.div 
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 }}
+              className="mt-16 grid grid-cols-3 gap-8 max-w-2xl mx-auto"
+            >
+              {[
+                { value: "500+", label: "Partner Attivi" },
+                { value: "15K+", label: "Riparazioni/Mese" },
+                { value: "98%", label: "Soddisfazione" },
+              ].map((stat, i) => (
+                <motion.div 
+                  key={stat.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1 + i * 0.1 }}
+                  className="text-center"
+                >
+                  <div className="text-3xl sm:text-4xl font-bold text-foreground">{stat.value}</div>
+                  <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+                </motion.div>
+              ))}
             </motion.div>
           </motion.div>
 
-          {/* What is LabLinkRiparo & Founder Story Combined */}
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={containerVariants}
-            className="grid lg:grid-cols-2 gap-6 mb-20"
-          >
+          {/* Info Cards */}
+          <div className="grid lg:grid-cols-2 gap-6 mb-24">
             {/* What is LabLinkRiparo */}
-            <motion.div variants={scaleVariants}>
-              <Card className="h-full glass-card-strong border-border/40 overflow-hidden hover:shadow-lg transition-shadow">
+            <motion.div
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <Card className="h-full bg-card/50 backdrop-blur-xl border-border/40 overflow-hidden group hover:shadow-xl hover:shadow-primary/5 transition-all duration-500">
                 <CardContent className="p-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="p-3 bg-gradient-primary rounded-xl shadow-md">
-                      <HeartHandshake className="h-6 w-6 text-primary-foreground" />
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="relative">
+                      <motion.div 
+                        className="absolute inset-0 bg-primary/20 rounded-2xl blur-lg"
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                      />
+                      <div className="relative p-4 bg-gradient-to-br from-primary to-primary/80 rounded-2xl">
+                        <HeartHandshake className="h-7 w-7 text-primary-foreground" />
+                      </div>
                     </div>
                     <div>
-                      <h2 className="text-xl font-bold">Cos'è LabLinkRiparo?</h2>
-                      <p className="text-sm text-muted-foreground">Ecosistema completo per riparazioni</p>
+                      <h2 className="text-2xl font-bold">Cos'è LabLinkRiparo?</h2>
+                      <p className="text-muted-foreground">Ecosistema completo per riparazioni</p>
                     </div>
                   </div>
-                  <p className="text-muted-foreground mb-6 leading-relaxed text-sm">
+                  <p className="text-muted-foreground mb-8 leading-relaxed text-lg">
                     Mettiamo in contatto <strong className="text-foreground">negozi</strong>, 
                     <strong className="text-foreground"> tecnici</strong> e 
                     <strong className="text-foreground"> laboratori</strong> per creare una rete efficiente 
                     che garantisce riparazioni rapide e professionali.
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     {[
-                      { icon: Smartphone, text: "Gestionale Pro" },
-                      { icon: TrendingUp, text: "Commissioni Chiare" },
-                      { icon: Users, text: "Rete Partner" },
-                      { icon: Globe, text: "Marketplace" },
+                      { icon: Smartphone, text: "Gestionale Pro", color: "primary" },
+                      { icon: TrendingUp, text: "Commissioni Chiare", color: "success" },
+                      { icon: Users, text: "Rete Partner", color: "info" },
+                      { icon: Globe, text: "Marketplace", color: "warning" },
                     ].map((item, i) => (
                       <motion.div 
                         key={item.text}
-                        initial={{ opacity: 0, x: -10 }}
-                        whileInView={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        whileInView={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
-                        className="flex items-center gap-2 p-2.5 rounded-lg bg-success/5 border border-success/20"
+                        whileHover={{ scale: 1.02, y: -2 }}
+                        className={`flex items-center gap-3 p-4 rounded-xl bg-${item.color}/5 border border-${item.color}/20 cursor-default`}
                       >
-                        <item.icon className="h-4 w-4 text-success" />
-                        <span className="text-xs font-medium">{item.text}</span>
+                        <div className={`p-2 rounded-lg bg-${item.color}/10`}>
+                          <item.icon className={`h-5 w-5 text-${item.color}`} />
+                        </div>
+                        <span className="font-medium">{item.text}</span>
                       </motion.div>
                     ))}
                   </div>
@@ -334,283 +384,312 @@ export default function DiventaPartner() {
             </motion.div>
 
             {/* Founder Story */}
-            <motion.div variants={scaleVariants}>
-              <Card className="h-full glass-card-strong border-border/40 overflow-hidden hover:shadow-lg transition-shadow">
+            <motion.div
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <Card className="h-full bg-card/50 backdrop-blur-xl border-border/40 overflow-hidden group hover:shadow-xl hover:shadow-warning/5 transition-all duration-500">
                 <CardContent className="p-8">
-                  <div className="flex items-start gap-4 mb-6">
+                  <div className="flex items-start gap-5 mb-8">
                     <motion.div 
-                      className="w-16 h-16 rounded-2xl bg-gradient-primary flex items-center justify-center shadow-glow shrink-0"
+                      className="relative shrink-0"
                       whileHover={{ scale: 1.05 }}
                     >
-                      <span className="text-xl font-bold text-primary-foreground">RC</span>
+                      <motion.div 
+                        className="absolute inset-0 bg-warning/20 rounded-2xl blur-lg"
+                        animate={{ scale: [1, 1.2, 1] }}
+                        transition={{ duration: 3, repeat: Infinity }}
+                      />
+                      <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-warning to-warning/80 flex items-center justify-center shadow-lg">
+                        <span className="text-2xl font-bold text-warning-foreground">RC</span>
+                      </div>
+                      <div className="absolute -bottom-1 -right-1 p-1.5 bg-card rounded-lg border border-border shadow-sm">
+                        <Crown className="h-4 w-4 text-warning" />
+                      </div>
                     </motion.div>
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Award className="h-4 w-4 text-warning" />
-                        <span className="text-xs text-warning font-medium">Fondatore</span>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge className="bg-warning/10 text-warning border-warning/20 hover:bg-warning/10">
+                          <Award className="h-3 w-3 mr-1" />
+                          Fondatore
+                        </Badge>
                       </div>
-                      <h3 className="text-lg font-bold">Riccardo Casagrande</h3>
-                      <p className="text-xs text-muted-foreground">Imperia, dal 2012 nel settore</p>
+                      <h3 className="text-2xl font-bold">Riccardo Casagrande</h3>
+                      <p className="text-muted-foreground">Imperia • Nel settore dal 2012</p>
                     </div>
                   </div>
-                  <div className="space-y-4 text-sm text-muted-foreground leading-relaxed">
-                    <p>
+                  <div className="space-y-5 text-muted-foreground leading-relaxed">
+                    <p className="text-lg">
                       <strong className="text-foreground">Nel 2012</strong> ho fondato il mio laboratorio partendo dal nulla. 
                       Anni di esperienza mi hanno insegnato le sfide quotidiane dei riparatori.
                     </p>
                     <motion.blockquote 
-                      className="border-l-4 border-primary/50 pl-4 py-3 bg-primary/5 rounded-r-lg italic"
-                      initial={{ opacity: 0, x: -20 }}
-                      whileInView={{ opacity: 1, x: 0 }}
+                      className="relative border-l-4 border-warning/50 pl-6 py-4 bg-warning/5 rounded-r-xl italic text-lg"
+                      whileHover={{ x: 5 }}
                     >
-                      "LabLinkRiparo racchiude tutta la passione che dedico da anni. 
-                      Sono sicuro aiuterà a incrementare fatturato e benessere di tutti i partner."
+                      <span className="absolute -left-3 -top-2 text-4xl text-warning/30">"</span>
+                      LabLinkRiparo racchiude tutta la passione che dedico da anni. 
+                      Sono sicuro aiuterà a incrementare fatturato e benessere di tutti i partner.
                     </motion.blockquote>
                   </div>
                 </CardContent>
               </Card>
             </motion.div>
-          </motion.div>
+          </div>
 
           {/* Partner Types Section */}
-          <motion.div
-            id="partner-types"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-50px" }}
-            variants={containerVariants}
-            className="mb-20"
-          >
-            <motion.div variants={itemVariants} className="text-center mb-12">
-              <Badge variant="outline" className="mb-4 border-primary/30 text-primary">
-                <Sparkles className="h-3 w-3 mr-1" />
-                3 Ruoli Disponibili
+          <div id="partner-types" className="mb-24">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-16"
+            >
+              <Badge className="mb-4 px-4 py-2 text-sm bg-primary/10 text-primary border-primary/20 hover:bg-primary/10">
+                <Target className="h-4 w-4 mr-2" />
+                Scegli il Tuo Ruolo
               </Badge>
-              <h2 className="text-3xl lg:text-4xl font-bold mb-4">Scegli il tuo ruolo</h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Ogni ruolo ha vantaggi unici. Scopri tutte le funzionalità esclusive per ogni categoria.
+              <h2 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">
+                Tre Modi per <span className="text-gradient-accent">Crescere</span>
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Ogni ruolo offre opportunità uniche per aumentare i tuoi guadagni
               </p>
             </motion.div>
 
             <div className="space-y-6">
-              {providerTypes.map((provider, index) => (
-                <motion.div
-                  key={provider.type}
-                  variants={itemVariants}
-                  layout
-                >
-                  <Card 
-                    className={`overflow-hidden transition-all duration-300 cursor-pointer border-2 ${
-                      expandedType === provider.type 
-                        ? `${provider.borderColor} shadow-xl glass-card-strong` 
-                        : 'border-border/40 hover:border-border glass-card hover:shadow-lg'
-                    }`}
-                    onClick={() => setExpandedType(expandedType === provider.type ? null : provider.type)}
+              {providerTypes.map((provider, index) => {
+                const isExpanded = expandedType === provider.type;
+                const Icon = provider.icon;
+
+                return (
+                  <motion.div
+                    key={provider.type}
+                    initial={{ opacity: 0, y: 30 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.15 }}
                   >
-                    {/* Header - Always visible */}
-                    <div className={`p-6 lg:p-8 bg-gradient-to-r ${provider.gradientFrom} ${provider.gradientVia} ${provider.gradientTo}`}>
-                      <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                        <div className="flex items-center gap-4 flex-1">
+                    <Card 
+                      className={`
+                        relative overflow-hidden transition-all duration-500 cursor-pointer
+                        bg-card/60 backdrop-blur-xl border-2
+                        ${isExpanded ? `${provider.borderColor} ${provider.glowColor}` : 'border-border/40 hover:border-border'}
+                      `}
+                      onClick={() => setExpandedType(isExpanded ? null : provider.type)}
+                    >
+                      {/* Background gradient when expanded */}
+                      <AnimatePresence>
+                        {isExpanded && (
                           <motion.div 
-                            className={`w-16 h-16 lg:w-20 lg:h-20 rounded-2xl ${provider.bgColor} flex items-center justify-center border ${provider.borderColor}`}
-                            whileHover={{ scale: 1.05, rotate: 5 }}
-                            transition={{ type: "spring", stiffness: 300 }}
-                          >
-                            <provider.icon className={`h-8 w-8 lg:h-10 lg:w-10 ${provider.color}`} />
-                          </motion.div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-3 mb-1">
-                              <h3 className="text-2xl lg:text-3xl font-bold">{provider.title}</h3>
-                              <Badge className={`${provider.bgColor} ${provider.color} border-0`}>
-                                {provider.subtitle}
-                              </Badge>
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className={`absolute inset-0 ${provider.bgColor} pointer-events-none`}
+                          />
+                        )}
+                      </AnimatePresence>
+
+                      <CardContent className="relative p-6 sm:p-8">
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex items-center gap-5">
+                            <motion.div 
+                              className={`relative p-4 rounded-2xl ${provider.bgColor} border ${provider.borderColor}`}
+                              whileHover={{ scale: 1.05, rotate: 5 }}
+                            >
+                              <Icon className={`h-8 w-8 ${provider.color}`} />
+                            </motion.div>
+                            <div>
+                              <div className="flex items-center gap-3 mb-1">
+                                <h3 className="text-2xl font-bold">{provider.title}</h3>
+                                <Badge className={`${provider.bgColor} ${provider.color} border-0 font-semibold`}>
+                                  {provider.commission}
+                                </Badge>
+                              </div>
+                              <p className="text-muted-foreground">{provider.subtitle}</p>
                             </div>
-                            <p className="text-muted-foreground text-sm lg:text-base line-clamp-2">
-                              {provider.description}
-                            </p>
                           </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-3 lg:gap-4">
-                          <motion.div 
-                            className="px-5 py-2.5 rounded-full bg-success/15 border border-success/30"
-                            whileHover={{ scale: 1.05 }}
+                          <motion.div
+                            animate={{ rotate: isExpanded ? 180 : 0 }}
+                            className={`p-2 rounded-xl ${provider.bgColor} shrink-0`}
                           >
-                            <span className="text-success font-bold text-sm lg:text-base">{provider.commission}</span>
+                            <ChevronDown className={`h-6 w-6 ${provider.color}`} />
                           </motion.div>
-                          
-                          <Button
-                            size="lg"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleProceed(provider.type);
-                            }}
-                            className="gap-2 shadow-md hover:shadow-lg"
-                          >
-                            {user ? "Candidati" : "Registrati"}
-                            <ArrowRight className="h-4 w-4" />
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setExpandedType(expandedType === provider.type ? null : provider.type);
-                            }}
-                            className={`${provider.bgColor} hover:${provider.bgColor}`}
-                          >
-                            {expandedType === provider.type ? (
-                              <ChevronUp className={`h-5 w-5 ${provider.color}`} />
-                            ) : (
-                              <ChevronDown className={`h-5 w-5 ${provider.color}`} />
-                            )}
-                          </Button>
                         </div>
-                      </div>
-                    </div>
 
-                    {/* Expandable Content */}
-                    <AnimatePresence>
-                      {expandedType === provider.type && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.3, ease: "easeInOut" }}
-                        >
-                          <CardContent className="p-6 lg:p-8 border-t border-border/40">
-                            {/* Features Grid */}
-                            <div className="mb-8">
-                              <div className="flex items-center gap-2 mb-6">
-                                <div className={`p-2 rounded-lg ${provider.bgColor}`}>
+                        <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
+                          {provider.description}
+                        </p>
+
+                        {/* Quick benefits */}
+                        <div className="flex flex-wrap gap-2 mt-5">
+                          {provider.benefits.map((benefit, i) => (
+                            <motion.div
+                              key={benefit}
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: i * 0.05 }}
+                              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/50 text-sm"
+                            >
+                              <CheckCircle className={`h-4 w-4 ${provider.color}`} />
+                              <span>{benefit}</span>
+                            </motion.div>
+                          ))}
+                        </div>
+
+                        {/* Expanded Features */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                              className="overflow-hidden"
+                            >
+                              <div className="pt-8 mt-8 border-t border-border/50">
+                                <h4 className="text-lg font-semibold mb-6 flex items-center gap-2">
                                   <Sparkles className={`h-5 w-5 ${provider.color}`} />
+                                  Funzionalità Incluse
+                                </h4>
+                                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                  {provider.features.map((feature, i) => {
+                                    const FeatureIcon = feature.icon;
+                                    return (
+                                      <motion.div
+                                        key={feature.title}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: i * 0.05 }}
+                                        onMouseEnter={() => setHoveredFeature(feature.title)}
+                                        onMouseLeave={() => setHoveredFeature(null)}
+                                        className={`
+                                          group/feature p-5 rounded-2xl border transition-all duration-300
+                                          ${hoveredFeature === feature.title 
+                                            ? `${provider.bgColor} ${provider.borderColor} shadow-lg` 
+                                            : 'bg-muted/30 border-border/30 hover:border-border/50'
+                                          }
+                                        `}
+                                      >
+                                        <div className="flex items-start gap-4">
+                                          <div className={`p-2.5 rounded-xl ${provider.bgColor} shrink-0 group-hover/feature:scale-110 transition-transform`}>
+                                            <FeatureIcon className={`h-5 w-5 ${provider.color}`} />
+                                          </div>
+                                          <div>
+                                            <h5 className="font-semibold mb-1">{feature.title}</h5>
+                                            <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+                                          </div>
+                                        </div>
+                                      </motion.div>
+                                    );
+                                  })}
                                 </div>
-                                <div>
-                                  <h4 className="font-semibold text-lg">Funzionalità Esclusive</h4>
-                                  <p className="text-sm text-muted-foreground">
-                                    Scopri cosa puoi fare come {provider.title}
-                                  </p>
-                                </div>
-                              </div>
 
-                              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {provider.features.map((feature, i) => (
-                                  <motion.div
-                                    key={feature.title}
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * 0.05 }}
-                                    className={`p-4 rounded-xl border bg-gradient-to-br ${provider.gradientFrom} ${provider.gradientTo} border-border/30 hover:shadow-md transition-all group`}
+                                {/* CTA Button */}
+                                <motion.div 
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: 0.3 }}
+                                  className="mt-8 flex justify-center"
+                                >
+                                  <Button 
+                                    size="lg" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleProceed(provider.type);
+                                    }}
+                                    className={`gap-3 h-14 px-10 text-base rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300`}
                                   >
-                                    <div className="flex items-start gap-3">
-                                      <div className="p-2.5 rounded-lg bg-background/80 border border-border/50 group-hover:border-border transition-colors shrink-0">
-                                        <feature.icon className={`h-5 w-5 ${provider.color}`} />
-                                      </div>
-                                      <div>
-                                        <h5 className="font-semibold text-sm mb-1">{feature.title}</h5>
-                                        <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
-                                      </div>
-                                    </div>
-                                  </motion.div>
-                                ))}
+                                    <Zap className="h-5 w-5" />
+                                    Diventa {provider.title}
+                                    <ArrowRight className="h-5 w-5" />
+                                  </Button>
+                                </motion.div>
                               </div>
-                            </div>
-
-                            {/* Quick Benefits */}
-                            <div className="pt-6 border-t border-border/40">
-                              <p className="text-sm font-medium mb-4 text-muted-foreground">Vantaggi Principali:</p>
-                              <div className="flex flex-wrap gap-3">
-                                {provider.benefits.map((benefit, i) => (
-                                  <motion.div 
-                                    key={i}
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{ delay: 0.3 + i * 0.1 }}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-background/80 border border-border/50 hover:border-success/50 hover:bg-success/5 transition-colors"
-                                  >
-                                    <CheckCircle className="h-4 w-4 text-success shrink-0" />
-                                    <span className="text-sm font-medium">{benefit}</span>
-                                  </motion.div>
-                                ))}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </Card>
-                </motion.div>
-              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
             </div>
-          </motion.div>
+          </div>
 
-          {/* CTA Section */}
+          {/* Community CTA */}
           <motion.div
-            initial="hidden"
-            whileInView="visible"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            variants={scaleVariants}
-            className="text-center"
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-accent/5 border border-primary/20 p-10 sm:p-16 text-center"
           >
-            <Card className="overflow-hidden glass-card-strong border-primary/20">
-              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-success/5 to-info/5" />
-              <CardContent className="relative p-10 lg:p-16">
-                <motion.div
-                  animate={{ scale: [1, 1.05, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
+            <motion.div 
+              className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl"
+              animate={{ x: [0, 30, 0], y: [0, -20, 0] }}
+              transition={{ duration: 10, repeat: Infinity }}
+            />
+            <motion.div 
+              className="absolute bottom-0 left-0 w-64 h-64 bg-accent/10 rounded-full blur-3xl"
+              animate={{ x: [0, -30, 0], y: [0, 20, 0] }}
+              transition={{ duration: 12, repeat: Infinity }}
+            />
+            
+            <div className="relative">
+              <motion.div 
+                initial={{ scale: 0 }}
+                whileInView={{ scale: 1 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-primary to-primary/80 shadow-xl shadow-primary/20 mb-8"
+              >
+                <Users className="h-10 w-10 text-primary-foreground" />
+              </motion.div>
+              
+              <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+                Unisciti alla Community <span className="text-gradient-accent">LabLinkPro</span>
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+                Siamo una rete di laboratori connessi che crescono insieme. 
+                Le nuove funzionalità vengono sviluppate ascoltando i partner.
+              </p>
+              
+              <div className="flex flex-wrap justify-center gap-4">
+                <Button 
+                  size="lg" 
+                  onClick={() => navigate(user ? "/provider-registration" : "/auth?redirect=/provider-registration")}
+                  className="gap-3 h-14 px-10 text-base rounded-2xl shadow-lg shadow-primary/20 hover:shadow-xl transition-all"
                 >
-                  <Award className="h-16 w-16 mx-auto mb-6 text-primary drop-shadow-glow" />
-                </motion.div>
-                <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-                  Pronto a iniziare?
-                </h2>
-                <p className="text-muted-foreground mb-8 max-w-lg mx-auto text-lg">
-                  Unisciti a centinaia di partner che hanno già scelto LabLinkRiparo 
-                  per far crescere il loro business.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  {user ? (
-                    <Button size="lg" onClick={() => navigate("/provider-registration")} className="gap-2 shadow-lg hover:shadow-xl text-lg px-8">
-                      <Zap className="h-5 w-5" />
-                      Invia la tua Candidatura
-                      <ArrowRight className="h-5 w-5" />
-                    </Button>
-                  ) : (
-                    <>
-                      <Button size="lg" onClick={() => navigate("/auth?redirect=/provider-registration")} className="gap-2 shadow-lg hover:shadow-xl text-lg px-8">
-                        <Zap className="h-5 w-5" />
-                        Registrati e Candidati
-                        <ArrowRight className="h-5 w-5" />
-                      </Button>
-                      <Button size="lg" variant="outline" onClick={() => navigate("/auth?redirect=/provider-registration")} className="gap-2 border-primary/30 hover:border-primary text-lg px-8">
-                        <Shield className="h-5 w-5" />
-                        Accedi
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+                  <Rocket className="h-5 w-5" />
+                  Inizia Ora
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-border/40 py-10 bg-background/70 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
-          <motion.div 
-            className="flex items-center justify-center gap-2 mb-3"
-            whileHover={{ scale: 1.05 }}
-          >
-            <div className="p-2 bg-gradient-primary rounded-lg shadow-glow">
-              <Wrench className="h-4 w-4 text-primary-foreground" />
+      <footer className="border-t border-border/30 bg-background/60 backdrop-blur-xl py-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl">
+                <Wrench className="h-4 w-4 text-primary-foreground" />
+              </div>
+              <span className="font-semibold">LabLinkRiparo</span>
             </div>
-            <span className="font-bold text-lg">LabLinkRiparo</span>
-          </motion.div>
-          <p className="text-sm text-muted-foreground">
-            Gestionale Riparazioni • info@lablinkriparo.it
-          </p>
+            <p className="text-sm text-muted-foreground text-center">
+              © {new Date().getFullYear()} LabLinkRiparo. Tutti i diritti riservati.
+            </p>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="gap-2 rounded-xl">
+              <ArrowLeft className="h-4 w-4" />
+              Torna alla Home
+            </Button>
+          </div>
         </div>
       </footer>
     </div>
