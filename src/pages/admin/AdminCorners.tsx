@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Store, CheckCircle, XCircle, MapPin, Phone, Mail, UserPlus } from "lucide-react";
+import { Store, CheckCircle, XCircle, MapPin, Phone, Mail, UserPlus, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 const statusColors: Record<string, string> = {
   pending: "bg-warning/20 text-warning border-warning/30",
@@ -60,8 +61,19 @@ export default function AdminCorners() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedCorner, setSelectedCorner] = useState<Corner | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  
+  // New Corner form state
+  const [newCorner, setNewCorner] = useState({
+    user_id: "",
+    business_name: "",
+    address: "",
+    phone: "",
+    email: "",
+    commission_rate: 10,
+  });
 
   const { data: corners = [], isLoading } = useQuery({
     queryKey: ["admin-corners"],
@@ -144,6 +156,43 @@ export default function AdminCorners() {
     setAssignDialogOpen(true);
   };
 
+  const createCornerMutation = useMutation({
+    mutationFn: async () => {
+      // Create corner with approved status
+      const { error } = await supabase.from("corners").insert({
+        user_id: newCorner.user_id,
+        business_name: newCorner.business_name,
+        address: newCorner.address,
+        phone: newCorner.phone,
+        email: newCorner.email,
+        commission_rate: newCorner.commission_rate,
+        status: "approved",
+        approved_at: new Date().toISOString(),
+        approved_by: user?.id,
+      });
+      if (error) throw error;
+
+      // Assign corner role to user
+      await supabase
+        .from("user_roles")
+        .upsert({ user_id: newCorner.user_id, role: "corner" }, { onConflict: "user_id,role" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-corners"] });
+      toast.success("Corner creato con successo");
+      setCreateDialogOpen(false);
+      setNewCorner({
+        user_id: "",
+        business_name: "",
+        address: "",
+        phone: "",
+        email: "",
+        commission_rate: 10,
+      });
+    },
+    onError: () => toast.error("Errore nella creazione del Corner"),
+  });
+
   const pendingCount = corners.filter(c => c.status === "pending").length;
 
   return (
@@ -164,11 +213,17 @@ export default function AdminCorners() {
               <p className="text-sm text-muted-foreground">{corners.length} registrati</p>
             </div>
           </div>
-          {pendingCount > 0 && (
-            <Badge className="bg-warning/20 text-warning border-warning/30 self-start sm:self-auto">
-              {pendingCount} in attesa
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {pendingCount > 0 && (
+              <Badge className="bg-warning/20 text-warning border-warning/30">
+                {pendingCount} in attesa
+              </Badge>
+            )}
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nuovo Corner
+            </Button>
+          </div>
         </motion.div>
 
         {/* List */}
@@ -330,6 +385,98 @@ export default function AdminCorners() {
                   disabled={!selectedUserId || assignUserMutation.isPending}
                 >
                   Assegna
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Corner Dialog */}
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Crea Nuovo Corner</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Utente *</Label>
+                <Select 
+                  value={newCorner.user_id} 
+                  onValueChange={(v) => setNewCorner({ ...newCorner, user_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona un utente..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.full_name} {u.phone && `(${u.phone})`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Nome Attività *</Label>
+                <Input
+                  value={newCorner.business_name}
+                  onChange={(e) => setNewCorner({ ...newCorner, business_name: e.target.value })}
+                  placeholder="Nome del negozio/attività"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Indirizzo *</Label>
+                <Input
+                  value={newCorner.address}
+                  onChange={(e) => setNewCorner({ ...newCorner, address: e.target.value })}
+                  placeholder="Via, numero, città"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Telefono *</Label>
+                  <Input
+                    value={newCorner.phone}
+                    onChange={(e) => setNewCorner({ ...newCorner, phone: e.target.value })}
+                    placeholder="Telefono"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Commissione %</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={newCorner.commission_rate}
+                    onChange={(e) => setNewCorner({ ...newCorner, commission_rate: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Email *</Label>
+                <Input
+                  type="email"
+                  value={newCorner.email}
+                  onChange={(e) => setNewCorner({ ...newCorner, email: e.target.value })}
+                  placeholder="email@esempio.it"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-4">
+                <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                  Annulla
+                </Button>
+                <Button
+                  onClick={() => createCornerMutation.mutate()}
+                  disabled={
+                    !newCorner.user_id || 
+                    !newCorner.business_name || 
+                    !newCorner.address || 
+                    !newCorner.phone || 
+                    !newCorner.email ||
+                    createCornerMutation.isPending
+                  }
+                >
+                  Crea Corner
                 </Button>
               </div>
             </div>
