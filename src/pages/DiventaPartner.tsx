@@ -21,9 +21,156 @@ import {
   Globe,
   HeartHandshake,
   Sparkles,
+  Monitor,
+  Bell,
+  Gift,
+  Megaphone,
+  BookOpen,
+  FileText,
+  BarChart3,
+  Brain,
+  ShoppingCart,
+  Wallet,
+  MapPin,
+  Clock,
+  Eye,
+  Calendar,
+  Star,
+  GraduationCap,
+  Handshake,
 } from "lucide-react";
 
 type ProviderType = "corner" | "riparatore" | "centro";
+
+// Detailed features for each provider type
+const centroFeatures = [
+  {
+    icon: Brain,
+    title: "Preventivi con IA",
+    description: "Crea preventivi professionali sfruttando l'intelligenza artificiale per suggerimenti automatici su ricambi, manodopera e servizi.",
+  },
+  {
+    icon: Monitor,
+    title: "Display Pubblicitario",
+    description: "Usa un display interno al negozio per far girare pubblicità personalizzate e monetizzare gli spazi di attesa.",
+  },
+  {
+    icon: FileText,
+    title: "Firma Digitale GDPR",
+    description: "Fai firmare i clienti in modo innovativo con tutte le compliance GDPR a norma di legge italiana.",
+  },
+  {
+    icon: Bell,
+    title: "Notifiche Automatiche",
+    description: "Il sistema invia automaticamente notifiche ai clienti sull'avanzamento della riparazione via push e email.",
+  },
+  {
+    icon: Gift,
+    title: "Programma Fedeltà",
+    description: "Premia i clienti con bonus o punti fedeltà per incentivare il ritorno e aumentare la fidelizzazione.",
+  },
+  {
+    icon: Megaphone,
+    title: "Marketing Innovativo",
+    description: "Sistema di marketing integrato per promuovere i tuoi servizi e raggiungere nuovi clienti nella tua zona.",
+  },
+  {
+    icon: BookOpen,
+    title: "Guide Auto-Generate",
+    description: "Guide di riparazione autogenerate o collaborative per ogni singolo intervento, create dalla community di laboratori.",
+  },
+  {
+    icon: Wallet,
+    title: "Gestione Perizie",
+    description: "Strumenti dedicati per gestire perizie e valutazioni tecniche in modo professionale e documentato.",
+  },
+  {
+    icon: ShoppingCart,
+    title: "Marketplace Usato con IA",
+    description: "Gestisci dispositivi usati con valutazione istantanea sfruttando l'intelligenza artificiale per prezzi di mercato.",
+  },
+  {
+    icon: BarChart3,
+    title: "Analytics Predittivo",
+    description: "Agente IA integrato che analizza i dati di ogni cliente per prevedere trend, ingressi e riparazioni future.",
+  },
+  {
+    icon: Settings,
+    title: "Suggerimenti Acquisti",
+    description: "Consigli automatici su quali prodotti e ricambi acquistare per ogni singola riparazione.",
+  },
+  {
+    icon: Handshake,
+    title: "Community Connessa",
+    description: "Siamo una comunità di laboratori connessi (LabLinkPro). Le nuove funzionalità vengono sviluppate insieme a voi!",
+  },
+];
+
+const cornerFeatures = [
+  {
+    icon: TrendingUp,
+    title: "Aumenta lo Scontrino Medio",
+    description: "Consiglia i nostri servizi di riparazione ai tuoi clienti e guadagna una commissione su ogni segnalazione.",
+  },
+  {
+    icon: Smartphone,
+    title: "Portale Semplice",
+    description: "Gestisci tutto in modo semplice e funzionale attraverso un portale dedicato pensato per la massima usabilità.",
+  },
+  {
+    icon: ShoppingCart,
+    title: "Pubblica Dispositivi Usati",
+    description: "Aggiungi dispositivi usati nella sezione marketplace per ampliare la scelta per i clienti e guadagnare extra.",
+  },
+  {
+    icon: Eye,
+    title: "Tracking Riparazioni",
+    description: "I clienti possono seguire le riparazioni in tempo reale dalla propria dashboard personale.",
+  },
+  {
+    icon: Calendar,
+    title: "Prenotazioni Online",
+    description: "I clienti possono prenotare riparazioni o visionare dispositivi usati prima di acquistarli, direttamente online.",
+  },
+  {
+    icon: Bell,
+    title: "Notifiche Marketplace",
+    description: "I clienti ricevono avvisi automatici quando un nuovo dispositivo viene aggiunto al marketplace, senza perdite di tempo.",
+  },
+];
+
+const riparatoreFeatures = [
+  {
+    icon: GraduationCap,
+    title: "Formazione Completa",
+    description: "Unisciti anche senza esperienza! Forniamo tutto il supporto necessario per intraprendere la professione del riparatore.",
+  },
+  {
+    icon: MapPin,
+    title: "Lavori nella Tua Zona",
+    description: "Ricevi richieste di lavoro geolocalizzate nella tua area di servizio, ottimizzando tempi e spostamenti.",
+  },
+  {
+    icon: Clock,
+    title: "Flessibilità Totale",
+    description: "Gestisci i tuoi orari in autonomia, accettando i lavori quando preferisci e massimizzando i tuoi guadagni.",
+  },
+  {
+    icon: BookOpen,
+    title: "Guide e Supporto",
+    description: "Accedi a guide di riparazione dettagliate e supporto dalla community per ogni tipo di intervento.",
+  },
+  {
+    icon: Wallet,
+    title: "Pagamenti Sicuri",
+    description: "Sistema di pagamento trasparente con commissioni chiare e trasferimenti rapidi.",
+  },
+  {
+    icon: Star,
+    title: "Crescita Professionale",
+    description: "Costruisci la tua reputazione e specializzati in diverse tipologie di riparazione con feedback e valutazioni.",
+  },
+];
 
 const providerTypes = [
   {
@@ -35,7 +182,10 @@ const providerTypes = [
     color: "text-primary",
     bgColor: "bg-primary/10",
     borderColor: "border-primary/30",
+    gradientFrom: "from-primary/20",
+    gradientTo: "to-primary/5",
     commission: "10% sul margine",
+    features: cornerFeatures,
     benefits: [
       "Nessun investimento iniziale",
       "Guadagno su ogni riparazione segnalata",
@@ -52,7 +202,10 @@ const providerTypes = [
     color: "text-info",
     bgColor: "bg-info/10",
     borderColor: "border-info/30",
+    gradientFrom: "from-info/20",
+    gradientTo: "to-info/5",
     commission: "60% sul margine",
+    features: riparatoreFeatures,
     benefits: [
       "Lavori nella tua zona",
       "Flessibilità totale sugli orari",
@@ -69,7 +222,10 @@ const providerTypes = [
     color: "text-success",
     bgColor: "bg-success/10",
     borderColor: "border-success/30",
+    gradientFrom: "from-success/20",
+    gradientTo: "to-success/5",
     commission: "Fino al 80% sul margine",
+    features: centroFeatures,
     benefits: [
       "Gestionale completo incluso",
       "Rete di Corner per nuovi clienti",
@@ -119,10 +275,8 @@ export default function DiventaPartner() {
 
   const handleProceed = (type: ProviderType) => {
     if (user) {
-      // User is logged in, go directly to registration with type
       navigate(`/provider-registration?type=${type}`);
     } else {
-      // User not logged in, go to auth with redirect
       navigate(`/auth?redirect=/provider-registration?type=${type}`);
     }
   };
@@ -315,7 +469,7 @@ export default function DiventaPartner() {
             </Card>
           </motion.div>
 
-          {/* Partner Types */}
+          {/* Partner Types with Detailed Features */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -325,63 +479,105 @@ export default function DiventaPartner() {
             <div className="text-center mb-10">
               <h2 className="text-3xl font-bold mb-3">Scegli il tuo ruolo</h2>
               <p className="text-muted-foreground">
-                Ogni ruolo ha i suoi vantaggi. Scegli quello più adatto alla tua attività.
+                Ogni ruolo ha i suoi vantaggi. Scopri tutte le funzionalità disponibili per ogni categoria.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <div className="space-y-12">
               {providerTypes.map((provider, index) => (
                 <motion.div
                   key={provider.type}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 30 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 + index * 0.1 }}
+                  transition={{ delay: 0.5 + index * 0.15 }}
                 >
                   <Card 
-                    className={`h-full cursor-pointer transition-all hover:scale-[1.02] hover:shadow-xl bg-card/50 backdrop-blur border-2 ${
+                    className={`overflow-hidden bg-card/50 backdrop-blur border-2 transition-all ${
                       selectedType === provider.type 
-                        ? `${provider.borderColor} shadow-lg` 
+                        ? `${provider.borderColor} shadow-xl` 
                         : 'border-border/50 hover:border-border'
                     }`}
                     onClick={() => setSelectedType(provider.type)}
                   >
-                    <CardHeader className="text-center pb-4">
-                      <div className={`w-16 h-16 rounded-2xl ${provider.bgColor} flex items-center justify-center mx-auto mb-4`}>
-                        <provider.icon className={`h-8 w-8 ${provider.color}`} />
-                      </div>
-                      <CardTitle className="text-xl">{provider.title}</CardTitle>
-                      <p className={`text-sm font-medium ${provider.color}`}>{provider.subtitle}</p>
-                      <CardDescription className="text-sm mt-2">
-                        {provider.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="text-center">
-                        <span className="inline-block px-4 py-1.5 rounded-full bg-success/10 text-success text-sm font-semibold">
-                          {provider.commission}
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2 pt-2">
-                        {provider.benefits.map((benefit, i) => (
-                          <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <CheckCircle className="h-4 w-4 text-success shrink-0" />
-                            <span>{benefit}</span>
+                    {/* Header */}
+                    <div className={`bg-gradient-to-r ${provider.gradientFrom} ${provider.gradientTo} p-6 lg:p-8`}>
+                      <div className="flex flex-col lg:flex-row lg:items-center gap-6">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-16 h-16 rounded-2xl ${provider.bgColor} flex items-center justify-center`}>
+                            <provider.icon className={`h-8 w-8 ${provider.color}`} />
                           </div>
+                          <div>
+                            <h3 className="text-2xl font-bold">{provider.title}</h3>
+                            <p className={`text-sm font-medium ${provider.color}`}>{provider.subtitle}</p>
+                          </div>
+                        </div>
+                        <div className="lg:ml-auto flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                          <span className="inline-block px-4 py-2 rounded-full bg-success/20 text-success text-sm font-bold border border-success/30">
+                            {provider.commission}
+                          </span>
+                          <Button
+                            size="lg"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleProceed(provider.type);
+                            }}
+                            className="gap-2"
+                          >
+                            {user ? "Invia Candidatura" : "Registrati ora"}
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <p className="mt-4 text-muted-foreground leading-relaxed max-w-3xl">
+                        {provider.description}
+                      </p>
+                    </div>
+
+                    {/* Features Grid */}
+                    <CardContent className="p-6 lg:p-8">
+                      <div className="mb-6">
+                        <h4 className="text-lg font-semibold mb-2 flex items-center gap-2">
+                          <Sparkles className={`h-5 w-5 ${provider.color}`} />
+                          Funzionalità Disponibili
+                        </h4>
+                        <p className="text-sm text-muted-foreground">
+                          Scopri tutte le funzionalità esclusive per {provider.title}
+                        </p>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {provider.features.map((feature, i) => (
+                          <motion.div
+                            key={feature.title}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6 + i * 0.05 }}
+                            className={`p-4 rounded-xl border ${provider.bgColor} border-border/50 hover:shadow-md transition-all`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className={`p-2 rounded-lg bg-background/80 shrink-0`}>
+                                <feature.icon className={`h-5 w-5 ${provider.color}`} />
+                              </div>
+                              <div>
+                                <h5 className="font-medium text-sm mb-1">{feature.title}</h5>
+                                <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
+                              </div>
+                            </div>
+                          </motion.div>
                         ))}
                       </div>
 
-                      <Button
-                        className="w-full mt-4"
-                        variant={selectedType === provider.type ? "default" : "outline"}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleProceed(provider.type);
-                        }}
-                      >
-                        {user ? "Invia Candidatura" : "Registrati ora"}
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
+                      {/* Quick Benefits */}
+                      <div className="mt-6 pt-6 border-t border-border/50">
+                        <div className="flex flex-wrap gap-3">
+                          {provider.benefits.map((benefit, i) => (
+                            <div key={i} className="flex items-center gap-2 text-sm bg-background/50 rounded-full px-3 py-1.5 border border-border/50">
+                              <CheckCircle className="h-4 w-4 text-success shrink-0" />
+                              <span>{benefit}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 </motion.div>
