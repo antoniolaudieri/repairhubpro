@@ -289,6 +289,16 @@ export default function CentroLavoriCorner() {
     setQuoteDialogOpen(false);
     
     if (selectedRequest) {
+      // Fetch the newly created quote
+      const { data: quote } = await supabase
+        .from("quotes")
+        .select("id, total_cost")
+        .eq("repair_request_id", selectedRequest.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      
+      // Update repair request status
       await supabase
         .from("repair_requests")
         .update({ 
@@ -296,6 +306,25 @@ export default function CentroLavoriCorner() {
           quote_sent_at: new Date().toISOString()
         })
         .eq("id", selectedRequest.id);
+      
+      // Send email to customer with signing link
+      if (quote && centroId) {
+        try {
+          const { data: emailResult } = await supabase.functions.invoke("send-quote-email", {
+            body: {
+              quote_id: quote.id,
+              repair_request_id: selectedRequest.id,
+              centro_id: centroId,
+            },
+          });
+          
+          if (emailResult?.email_sent) {
+            console.log("[CentroLavoriCorner] Quote email sent to customer");
+          }
+        } catch (emailError) {
+          console.error("[CentroLavoriCorner] Error sending quote email:", emailError);
+        }
+      }
       
       // Send push notification to Corner
       if (selectedRequest.corner?.id) {
@@ -313,7 +342,7 @@ export default function CentroLavoriCorner() {
     }
     
     setSelectedRequest(null);
-    toast.success("Preventivo inviato!");
+    toast.success("Preventivo inviato al cliente!");
     if (centroId) fetchRequests(centroId);
   };
 

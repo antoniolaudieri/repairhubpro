@@ -53,3 +53,9 @@ verify_jwt = false
 
 [functions.send-push-notification]
 verify_jwt = false
+
+[functions.send-quote-email]
+verify_jwt = false
+
+[functions.delete-customer-account]
+verify_jwt = false
