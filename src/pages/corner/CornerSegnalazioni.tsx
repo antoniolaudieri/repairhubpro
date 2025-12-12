@@ -67,6 +67,7 @@ interface RepairRequest {
   repair_completed_at: string | null;
   ready_for_return_at: string | null;
   at_corner_at: string | null;
+  customer_paid_at: string | null;
   delivered_at: string | null;
   customer: {
     name: string;
@@ -752,37 +753,50 @@ export default function CornerSegnalazioni() {
                               </span>
                             </div>
                             
-                            {/* Corner Commission - Only show if NOT direct-to-centro */}
+                            {/* Corner Commission - Halved if direct-to-centro */}
                             {(() => {
                               const isDirectToCentro = request.corner_direct_to_centro === true;
                               const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
-                              const cornerCommission = isDirectToCentro ? 0 : grossMargin * 0.10;
+                              // Half commission if direct-to-centro
+                              const commissionRate = isDirectToCentro ? 0.05 : 0.10;
+                              const cornerCommission = grossMargin * commissionRate;
                               const isViaCorner = request.quote.payment_collection_method === 'via_corner';
                               const amountToRemitToCentro = request.quote.total_cost - cornerCommission;
+                              // Check if customer has paid (for direct-to-centro)
+                              const customerPaid = request.customer_paid_at != null;
                               
                               return (
                                 <>
-                                  {/* Show commission only if NOT direct-to-centro */}
-                                  {!hideEarnings && !isDirectToCentro && cornerCommission > 0 && (
-                                    <div className="flex justify-between items-center bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-xl p-4 border border-emerald-500/20">
+                                  {/* Show commission */}
+                                  {!hideEarnings && cornerCommission > 0 && (
+                                    <div className={`flex justify-between items-center rounded-xl p-4 border ${
+                                      isDirectToCentro && !customerPaid 
+                                        ? 'bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-amber-500/20'
+                                        : 'bg-gradient-to-r from-emerald-500/10 to-green-500/10 border-emerald-500/20'
+                                    }`}>
                                       <div>
-                                        <span className="text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-2">
+                                        <span className={`font-medium flex items-center gap-2 ${
+                                          isDirectToCentro && !customerPaid 
+                                            ? 'text-amber-700 dark:text-amber-400'
+                                            : 'text-emerald-700 dark:text-emerald-400'
+                                        }`}>
                                           <TrendingUp className="h-4 w-4" />
-                                          Tuo Compenso (10% margine)
+                                          Tuo Compenso ({isDirectToCentro ? '5' : '10'}% margine)
+                                          {isDirectToCentro && <Badge variant="secondary" className="text-xs">dimezzato</Badge>}
                                         </span>
-                                        <p className="text-xs text-emerald-600/70">Margine: €{grossMargin.toFixed(2)}</p>
+                                        <p className={`text-xs ${isDirectToCentro && !customerPaid ? 'text-amber-600/70' : 'text-emerald-600/70'}`}>
+                                          Margine: €{grossMargin.toFixed(2)}
+                                        </p>
+                                        {isDirectToCentro && !customerPaid && (
+                                          <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                                            <Clock className="h-3 w-3" />
+                                            In attesa che il cliente paghi il Centro
+                                          </p>
+                                        )}
                                       </div>
-                                      <span className="text-xl font-bold text-emerald-600">€{cornerCommission.toFixed(2)}</span>
-                                    </div>
-                                  )}
-                                  
-                                  {/* Info for direct-to-centro - no commission */}
-                                  {isDirectToCentro && (
-                                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl border border-border/50">
-                                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                                      <p className="text-sm text-muted-foreground">
-                                        Invio diretto al Centro: nessuna commissione prevista
-                                      </p>
+                                      <span className={`text-xl font-bold ${
+                                        isDirectToCentro && !customerPaid ? 'text-amber-600' : 'text-emerald-600'
+                                      }`}>€{cornerCommission.toFixed(2)}</span>
                                     </div>
                                   )}
                                   
