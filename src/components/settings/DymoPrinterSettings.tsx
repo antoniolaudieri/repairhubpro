@@ -157,36 +157,42 @@ export function DymoPrinterSettings({
                     {environment.errorMessage || 'Dymo Connect non è disponibile'}
                   </p>
                   
-                  {/* Certificate Trust Instructions */}
+                  {/* Connection Instructions */}
                   <div className="bg-background/50 p-3 rounded-md mb-3 border border-border/50">
-                    <p className="font-medium text-sm mb-2">⚠️ Problema di connessione?</p>
-                    <p className="text-xs mb-2">
-                      Prova ad aprire uno di questi link per verificare se Dymo Connect è attivo:
-                    </p>
-                    <div className="flex flex-col gap-1 mb-2">
+                    <p className="font-medium text-sm mb-2">📋 Verifica questi passaggi:</p>
+                    <ol className="list-decimal list-inside text-xs space-y-2 mb-2">
+                      <li>
+                        <strong>Apri Dymo Connect</strong> dal menu Start
+                      </li>
+                      <li>
+                        Vai in <strong>Impostazioni</strong> (⚙️) → cerca <strong>"Web Service"</strong> e attivalo
+                      </li>
+                      <li>
+                        La stampante deve essere <strong>accesa e collegata via USB</strong>
+                      </li>
+                      <li>
+                        Verifica che funzioni:{' '}
+                        <a
+                          href="http://localhost:41952/DYMO/DLS/Printing/StatusConnected"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline text-primary"
+                        >
+                          Test connessione
+                        </a>
+                      </li>
+                    </ol>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      ⚠️ Serve <strong>Dymo Connect</strong> (non "Dymo Label Software"). 
+                      Se hai la versione vecchia, aggiorna da{' '}
                       <a
-                        href="http://127.0.0.1:41952/DYMO/DLS/Printing/StatusConnected"
+                        href="https://www.dymo.com/support"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs underline text-primary font-medium"
+                        className="underline"
                       >
-                        → Prova HTTP (porta 41952)
+                        dymo.com/support
                       </a>
-                      <a
-                        href="https://127.0.0.1:41951/DYMO/DLS/Printing/StatusConnected"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs underline text-primary font-medium"
-                      >
-                        → Prova HTTPS (porta 41951)
-                      </a>
-                    </div>
-                    <p className="text-xs">
-                      Se nessuno dei link funziona, <strong>Dymo Connect non è in esecuzione</strong>. 
-                      Aprilo dal menu Start/Applicazioni.
-                    </p>
-                    <p className="text-xs mt-1 text-muted-foreground">
-                      Se vedi "Congratulations!" o una risposta, torna qui e clicca <strong>Rileva</strong>.
                     </p>
                   </div>
 
