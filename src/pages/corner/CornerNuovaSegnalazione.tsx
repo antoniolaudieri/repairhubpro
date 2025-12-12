@@ -60,6 +60,9 @@ export default function CornerNuovaSegnalazione() {
   // Gestione fee
   const [gestioneFeeEnabled, setGestioneFeeEnabled] = useState(true);
   const [cornerCommissionRate, setCornerCommissionRate] = useState(10);
+  
+  // Direct to Centro (customer goes directly, halved commission)
+  const [directToCentro, setDirectToCentro] = useState(false);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -80,9 +83,10 @@ export default function CornerNuovaSegnalazione() {
     initial_condition: "",
   });
 
-  // Calculate corner earnings from gestione fee
+  // Calculate corner earnings from gestione fee (halved if direct to centro)
+  const effectiveCommissionRate = directToCentro ? cornerCommissionRate / 2 : cornerCommissionRate;
   const cornerGestioneEarnings = gestioneFeeEnabled 
-    ? (GESTIONE_FEE_AMOUNT * cornerCommissionRate / 100)
+    ? (GESTIONE_FEE_AMOUNT * effectiveCommissionRate / 100)
     : 0;
 
   // Fetch corner, centri and commission rate on mount
@@ -440,8 +444,9 @@ export default function CornerNuovaSegnalazione() {
         photos: photos,
         corner_gestione_fee: GESTIONE_FEE_AMOUNT,
         corner_gestione_fee_enabled: gestioneFeeEnabled,
-        corner_gestione_fee_collected: gestioneFeeEnabled, // Collected immediately if enabled
+        corner_gestione_fee_collected: gestioneFeeEnabled,
         corner_gestione_fee_collected_at: gestioneFeeEnabled ? new Date().toISOString() : null,
+        corner_direct_to_centro: directToCentro,
       });
 
       if (requestError) throw requestError;
@@ -684,6 +689,34 @@ export default function CornerNuovaSegnalazione() {
       case 4:
         return (
           <div className="space-y-4">
+            {/* Direct to Centro Option */}
+            <Card className="p-4 space-y-3 bg-gradient-to-br from-blue-500/10 to-indigo-500/5 border-blue-500/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">Cliente Diretto al Centro</h4>
+                    <p className="text-xs text-muted-foreground">Il cliente consegnerà il dispositivo direttamente</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={directToCentro}
+                  onCheckedChange={setDirectToCentro}
+                />
+              </div>
+              
+              {directToCentro && (
+                <div className="flex items-start gap-2 p-2 bg-blue-500/10 rounded-lg">
+                  <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                  <p className="text-xs text-blue-700 dark:text-blue-400">
+                    La tua commissione sarà dimezzata ({cornerCommissionRate}% → {effectiveCommissionRate}%) perché il cliente va direttamente in laboratorio.
+                  </p>
+                </div>
+              )}
+            </Card>
+
             {/* Gestione Fee Card */}
             <Card className="p-4 space-y-4 bg-gradient-to-br from-emerald-500/10 to-green-500/5 border-emerald-500/30">
               <div className="flex items-center justify-between">
@@ -709,7 +742,9 @@ export default function CornerNuovaSegnalazione() {
                     <span className="font-bold text-lg">€{GESTIONE_FEE_AMOUNT.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">Tua commissione ({cornerCommissionRate}%)</span>
+                    <span className="text-muted-foreground">
+                      Tua commissione ({effectiveCommissionRate}%{directToCentro ? ' ridotta' : ''})
+                    </span>
                     <Badge className="bg-emerald-500 text-white">
                       €{cornerGestioneEarnings.toFixed(2)}
                     </Badge>
@@ -717,7 +752,8 @@ export default function CornerNuovaSegnalazione() {
                   <div className="flex items-start gap-2 mt-2 p-2 bg-emerald-500/10 rounded-lg">
                     <Info className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
                     <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                      Il cliente paga €{GESTIONE_FEE_AMOUNT} come fee di gestione, indipendentemente dall'esito del preventivo. Tu guadagni €{cornerGestioneEarnings.toFixed(2)}.
+                      Il cliente paga €{GESTIONE_FEE_AMOUNT} come fee di gestione. Tu guadagni €{cornerGestioneEarnings.toFixed(2)}.
+                      {directToCentro && " (Commissione dimezzata per invio diretto)"}
                     </p>
                   </div>
                 </div>

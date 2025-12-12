@@ -1428,6 +1428,7 @@ export type Database = {
           assigned_provider_type: string | null
           at_corner_at: string | null
           awaiting_pickup_at: string | null
+          corner_direct_to_centro: boolean | null
           corner_gestione_fee: number | null
           corner_gestione_fee_collected: boolean | null
           corner_gestione_fee_collected_at: string | null
@@ -1464,6 +1465,7 @@ export type Database = {
           assigned_provider_type?: string | null
           at_corner_at?: string | null
           awaiting_pickup_at?: string | null
+          corner_direct_to_centro?: boolean | null
           corner_gestione_fee?: number | null
           corner_gestione_fee_collected?: boolean | null
           corner_gestione_fee_collected_at?: string | null
@@ -1500,6 +1502,7 @@ export type Database = {
           assigned_provider_type?: string | null
           at_corner_at?: string | null
           awaiting_pickup_at?: string | null
+          corner_direct_to_centro?: boolean | null
           corner_gestione_fee?: number | null
           corner_gestione_fee_collected?: boolean | null
           corner_gestione_fee_collected_at?: string | null
