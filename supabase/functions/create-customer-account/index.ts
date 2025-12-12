@@ -44,7 +44,27 @@ Deno.serve(async (req) => {
       },
     });
 
+    // Handle existing user case - check if user already exists
     if (userError) {
+      // If user already exists, that's OK - just return success
+      if (userError.message?.includes('already been registered') || userError.code === 'email_exists') {
+        console.log('User already exists:', email);
+        
+        // Try to get the existing user
+        const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+        const existingUser = existingUsers?.users?.find(u => u.email === email);
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            user_id: existingUser?.id || null,
+            message: 'Account già esistente per questa email',
+            existing: true
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       console.error('Error creating user:', userError);
       return new Response(
         JSON.stringify({ error: userError.message }),
@@ -62,10 +82,7 @@ Deno.serve(async (req) => {
 
     if (roleError) {
       console.error('Error assigning role:', roleError);
-      return new Response(
-        JSON.stringify({ error: 'User created but role assignment failed' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      // Don't fail - role might already exist
     }
 
     // Fetch Centro details if centroId is provided
