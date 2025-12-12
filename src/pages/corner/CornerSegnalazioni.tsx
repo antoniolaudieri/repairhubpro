@@ -664,14 +664,15 @@ export default function CornerSegnalazioni() {
                         
                         {request.quote ? (
                           (() => {
+                            const isDirectToCentro = request.corner_direct_to_centro === true;
                             const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
-                            const cornerCommission = grossMargin * 0.10;
+                            const cornerCommission = isDirectToCentro ? 0 : grossMargin * 0.10;
                             return (
                               <div className="text-right space-y-1">
                                 <div className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
                                   €{request.quote.total_cost.toFixed(2)}
                                 </div>
-                                {!hideEarnings && (
+                                {!hideEarnings && !isDirectToCentro && cornerCommission > 0 && (
                                   <div className="inline-flex items-center gap-1.5 text-sm font-medium bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-emerald-600 px-3 py-1 rounded-full border border-emerald-500/20">
                                     <TrendingUp className="h-3.5 w-3.5" />
                                     €{cornerCommission.toFixed(2)}
@@ -751,16 +752,18 @@ export default function CornerSegnalazioni() {
                               </span>
                             </div>
                             
-                            {/* Corner Commission */}
+                            {/* Corner Commission - Only show if NOT direct-to-centro */}
                             {(() => {
+                              const isDirectToCentro = request.corner_direct_to_centro === true;
                               const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
-                              const cornerCommission = grossMargin * 0.10;
+                              const cornerCommission = isDirectToCentro ? 0 : grossMargin * 0.10;
                               const isViaCorner = request.quote.payment_collection_method === 'via_corner';
                               const amountToRemitToCentro = request.quote.total_cost - cornerCommission;
                               
                               return (
                                 <>
-                                  {!hideEarnings && (
+                                  {/* Show commission only if NOT direct-to-centro */}
+                                  {!hideEarnings && !isDirectToCentro && cornerCommission > 0 && (
                                     <div className="flex justify-between items-center bg-gradient-to-r from-emerald-500/10 to-green-500/10 rounded-xl p-4 border border-emerald-500/20">
                                       <div>
                                         <span className="text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-2">
@@ -773,8 +776,18 @@ export default function CornerSegnalazioni() {
                                     </div>
                                   )}
                                   
-                                  {/* Collection Info for Via Corner */}
-                                  {isViaCorner && (
+                                  {/* Info for direct-to-centro - no commission */}
+                                  {isDirectToCentro && (
+                                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-xl border border-border/50">
+                                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                                      <p className="text-sm text-muted-foreground">
+                                        Invio diretto al Centro: nessuna commissione prevista
+                                      </p>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Collection Info for Via Corner - only if NOT direct-to-centro */}
+                                  {isViaCorner && !isDirectToCentro && (
                                     <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-yellow-500/10 rounded-xl p-4 border-2 border-amber-500/30 space-y-3">
                                       <div className="flex items-center gap-2">
                                         <div className="p-2 rounded-lg bg-amber-500/20">
