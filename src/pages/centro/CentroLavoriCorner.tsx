@@ -63,6 +63,10 @@ interface CornerRequest {
   ready_for_return_at: string | null;
   at_corner_at: string | null;
   delivered_at: string | null;
+  // Corner gestione fee fields
+  corner_gestione_fee: number | null;
+  corner_gestione_fee_enabled: boolean | null;
+  corner_gestione_fee_collected: boolean | null;
   customer: {
     id: string;
     name: string;
@@ -194,6 +198,9 @@ export default function CentroLavoriCorner() {
         ready_for_return_at,
         at_corner_at,
         delivered_at,
+        corner_gestione_fee,
+        corner_gestione_fee_enabled,
+        corner_gestione_fee_collected,
         customer:customers (
           id,
           name,
@@ -619,6 +626,16 @@ export default function CentroLavoriCorner() {
                 </div>
               )}
             </div>
+
+            {/* Corner Gestione Fee Badge */}
+            {request.corner_gestione_fee_enabled && request.corner_gestione_fee_collected && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                  Cliente ha già versato €{(request.corner_gestione_fee || 15).toFixed(2)} al Corner (Gestione Segnalazione)
+                </span>
+              </div>
+            )}
 
             {/* Customer & Corner Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm bg-muted/50 rounded-lg p-2">
