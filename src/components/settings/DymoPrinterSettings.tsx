@@ -156,6 +156,32 @@ export function DymoPrinterSettings({
                   <p className="font-medium mb-2">
                     {environment.errorMessage || 'Dymo Connect non è disponibile'}
                   </p>
+                  
+                  {/* Certificate Trust Instructions */}
+                  <div className="bg-background/50 p-3 rounded-md mb-3 border border-border/50">
+                    <p className="font-medium text-sm mb-2">⚠️ Problema Certificato SSL?</p>
+                    <p className="text-xs mb-2">
+                      Il browser potrebbe bloccare la connessione per via del certificato. Prova questi passaggi:
+                    </p>
+                    <ol className="list-decimal list-inside text-xs space-y-1 mb-2">
+                      <li>
+                        Clicca su questo link:{' '}
+                        <a
+                          href="https://127.0.0.1:41951/DYMO/DLS/Printing/StatusConnected"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline text-primary font-medium"
+                        >
+                          Apri Dymo Service
+                        </a>
+                      </li>
+                      <li>Se appare "La connessione non è privata", clicca <strong>Avanzate</strong></li>
+                      <li>Poi clicca <strong>Procedi su 127.0.0.1 (non sicuro)</strong></li>
+                      <li>Se vedi "Congratulations!", torna qui e clicca <strong>Rileva</strong></li>
+                    </ol>
+                  </div>
+
+                  <p className="text-sm font-medium mb-1">Se non hai Dymo Connect:</p>
                   <ol className="list-decimal list-inside text-sm space-y-1">
                     <li>
                       Scarica e installa{' '}
