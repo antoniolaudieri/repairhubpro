@@ -56,6 +56,7 @@ interface RepairRequest {
   created_at: string;
   assigned_provider_type: string | null;
   assigned_provider_id: string | null;
+  corner_direct_to_centro: boolean | null;
   quote_sent_at: string | null;
   quote_accepted_at: string | null;
   awaiting_pickup_at: string | null;
@@ -634,6 +635,7 @@ export default function CornerSegnalazioni() {
                             <RepairWorkflowTimeline 
                               currentStatus={request.status} 
                               compact 
+                              isDirectToCentro={request.corner_direct_to_centro === true}
                               timestamps={{
                                 created_at: request.created_at,
                                 quote_sent_at: request.quote_sent_at,

@@ -757,6 +757,7 @@ export default function CentroLavoriCorner() {
                 currentStatus={request.status}
                 onStatusChange={(newStatus) => updateStatus(request, newStatus, `Stato cambiato in ${getStatusLabel(newStatus)}`)}
                 disabled={processingId === request.id}
+                isDirectToCentro={request.corner_direct_to_centro === true}
               />
             </div>
 
@@ -764,6 +765,7 @@ export default function CentroLavoriCorner() {
             <RepairWorkflowTimeline 
               currentStatus={request.status} 
               compact 
+              isDirectToCentro={request.corner_direct_to_centro === true}
               timestamps={{
                 created_at: request.created_at,
                 quote_sent_at: request.quote_sent_at,

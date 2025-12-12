@@ -43,6 +43,7 @@ interface RepairWorkflowTimelineProps {
   currentStatus: string;
   compact?: boolean;
   timestamps?: StatusTimestamps;
+  isDirectToCentro?: boolean;
 }
 
 const getTimestampForStatus = (statusId: string, timestamps?: StatusTimestamps): string | null => {
@@ -68,13 +69,16 @@ const getTimestampForStatus = (statusId: string, timestamps?: StatusTimestamps):
   return field ? (timestamps[field] as string | null) : null;
 };
 
-const getWorkflowSteps = (currentStatus: string, timestamps?: StatusTimestamps): WorkflowStep[] => {
+const getWorkflowSteps = (currentStatus: string, timestamps?: StatusTimestamps, isDirectToCentro?: boolean): WorkflowStep[] => {
   // Normalize status aliases
   const normalizedStatus = currentStatus === 'completed' ? 'delivered' : 
                           currentStatus === 'in_progress' ? 'in_repair' : 
                           currentStatus;
   
-  const statusOrder = [
+  // Steps that should be skipped for direct-to-centro repairs
+  const skipForDirectToCentro = ['awaiting_pickup', 'picked_up', 'at_corner'];
+  
+  const allSteps = [
     { id: 'quote_sent', label: 'Preventivo Inviato', icon: FileText },
     { id: 'quote_accepted', label: 'Preventivo Accettato', icon: Check },
     { id: 'awaiting_pickup', label: 'In Attesa Ritiro', icon: Truck },
@@ -87,6 +91,11 @@ const getWorkflowSteps = (currentStatus: string, timestamps?: StatusTimestamps):
     { id: 'at_corner', label: 'Al Corner', icon: Store },
     { id: 'delivered', label: 'Consegnato', icon: User },
   ];
+
+  // Filter out corner-related steps for direct-to-centro repairs
+  const statusOrder = isDirectToCentro 
+    ? allSteps.filter(step => !skipForDirectToCentro.includes(step.id))
+    : allSteps;
 
   const currentIndex = statusOrder.findIndex(s => s.id === normalizedStatus);
   
@@ -106,13 +115,13 @@ const formatTimestamp = (timestamp: string | null | undefined): string => {
   }
 };
 
-export function RepairWorkflowTimeline({ currentStatus, compact = false, timestamps }: RepairWorkflowTimelineProps) {
+export function RepairWorkflowTimeline({ currentStatus, compact = false, timestamps, isDirectToCentro = false }: RepairWorkflowTimelineProps) {
   // Don't show timeline for early statuses
   if (['pending', 'assigned'].includes(currentStatus)) {
     return null;
   }
 
-  const steps = getWorkflowSteps(currentStatus, timestamps);
+  const steps = getWorkflowSteps(currentStatus, timestamps, isDirectToCentro);
   
   // Filter to show only relevant steps based on current status
   const visibleSteps = steps.filter(step => {
