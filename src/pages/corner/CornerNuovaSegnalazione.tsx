@@ -370,17 +370,45 @@ export default function CornerNuovaSegnalazione() {
     setLoading(true);
 
     try {
-      // Create or find customer
+      // Create or find customer by phone OR email
       let customerId: string;
+      let existingCustomer = null;
       
-      const { data: existingCustomer } = await supabase
+      // First try to find by phone
+      const { data: customerByPhone } = await supabase
         .from("customers")
         .select("id")
         .eq("phone", customerData.phone)
         .maybeSingle();
 
+      if (customerByPhone) {
+        existingCustomer = customerByPhone;
+      } else if (customerData.email) {
+        // If not found by phone, try by email
+        const { data: customerByEmail } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("email", customerData.email)
+          .maybeSingle();
+        
+        if (customerByEmail) {
+          existingCustomer = customerByEmail;
+        }
+      }
+
       if (existingCustomer) {
         customerId = existingCustomer.id;
+        
+        // Update customer info if needed
+        await supabase
+          .from("customers")
+          .update({
+            name: customerData.name,
+            phone: customerData.phone,
+            email: customerData.email || null,
+            address: customerData.address || null,
+          })
+          .eq("id", existingCustomer.id);
       } else {
         // Create customer account if email is provided
         if (customerData.email) {
