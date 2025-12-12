@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CentroLayout } from "@/layouts/CentroLayout";
@@ -15,16 +15,21 @@ import {
   Users,
   Wrench,
   ArrowRight,
-  Calendar,
   Sparkles,
-  TrendingUp,
   Euro,
-  CreditCard
+  CreditCard,
+  Filter,
+  Clock,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { CustomerAIAgent } from "@/components/centro/CustomerAIAgent";
+import { CustomerScoreBadge } from "@/components/centro/CustomerScoreBadge";
+import { CustomerReturnPrediction } from "@/components/centro/CustomerReturnPrediction";
+import { useCustomerAnalytics, type CustomerAnalytics } from "@/hooks/useCustomerAnalytics";
 
 interface Customer {
   id: string;
@@ -39,6 +44,8 @@ interface CustomerStats {
   totalSpent: number;
 }
 
+type CustomerFilter = "all" | "gold" | "atRisk" | "overdue" | "returningThisWeek";
+
 export default function CentroClienti() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -48,12 +55,28 @@ export default function CentroClienti() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [customerStats, setCustomerStats] = useState<Record<string, CustomerStats>>({});
+  const [centroId, setCentroId] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<CustomerFilter>("all");
+
+  // Fetch customer analytics from AI agent
+  const { analytics, loading: analyticsLoading } = useCustomerAnalytics(centroId);
 
   const loadCustomers = async () => {
     if (!user) return;
     
     setLoading(true);
     try {
+      // Get centro_id first
+      const { data: centroData } = await supabase
+        .from("centri_assistenza")
+        .select("id")
+        .eq("owner_user_id", user.id)
+        .single();
+      
+      if (centroData) {
+        setCentroId(centroData.id);
+      }
+      
       // Single query with nested relations for efficiency
       const { data, error } = await supabase
         .from("customers")
@@ -115,19 +138,58 @@ export default function CentroClienti() {
     loadCustomers();
   }, [user]);
 
+  // Create analytics map for quick lookup
+  const analyticsMap = useMemo(() => {
+    const map: Record<string, CustomerAnalytics> = {};
+    analytics.forEach(a => { map[a.id] = a; });
+    return map;
+  }, [analytics]);
+
+  // Filter customers based on search and active filter
   useEffect(() => {
-    const filtered = customers.filter(
+    let filtered = customers.filter(
       (customer) =>
         customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         customer.phone.includes(searchQuery)
     );
+
+    // Apply additional filters based on analytics
+    if (activeFilter !== "all" && Object.keys(analyticsMap).length > 0) {
+      filtered = filtered.filter(customer => {
+        const a = analyticsMap[customer.id];
+        if (!a) return false;
+        
+        switch (activeFilter) {
+          case "gold":
+            return a.score >= 80;
+          case "atRisk":
+            return a.score < 50;
+          case "overdue":
+            return a.daysOverdue !== null && a.daysOverdue > 0;
+          case "returningThisWeek":
+            if (!a.predictedReturn) return false;
+            const pred = new Date(a.predictedReturn);
+            const now = new Date();
+            const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            return pred >= now && pred <= weekFromNow;
+          default:
+            return true;
+        }
+      });
+    }
+
     setFilteredCustomers(filtered);
-  }, [searchQuery, customers]);
+  }, [searchQuery, customers, activeFilter, analyticsMap]);
 
   const totalRepairs = Object.values(customerStats).reduce((a, b) => a + b.repairCount, 0);
   const totalRevenue = Object.values(customerStats).reduce((a, b) => a + b.totalSpent, 0);
   const avgPerCustomer = customers.length > 0 ? totalRevenue / customers.length : 0;
+  
+  // Stats from analytics
+  const goldCount = analytics.filter(a => a.score >= 80).length;
+  const atRiskCount = analytics.filter(a => a.score < 50).length;
+  const overdueCount = analytics.filter(a => a.daysOverdue && a.daysOverdue > 0).length;
 
   if (loading) {
     return (
@@ -225,6 +287,51 @@ export default function CentroClienti() {
             </Card>
           </motion.div>
 
+          {/* Filter Chips */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12 }}
+            className="flex flex-wrap gap-2"
+          >
+            <Button
+              variant={activeFilter === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter("all")}
+              className="gap-1.5"
+            >
+              <Users className="h-3.5 w-3.5" />
+              Tutti
+            </Button>
+            <Button
+              variant={activeFilter === "gold" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter("gold")}
+              className="gap-1.5"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Gold ({goldCount})
+            </Button>
+            <Button
+              variant={activeFilter === "atRisk" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter("atRisk")}
+              className="gap-1.5"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              A Rischio ({atRiskCount})
+            </Button>
+            <Button
+              variant={activeFilter === "overdue" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter("overdue")}
+              className="gap-1.5"
+            >
+              <Clock className="h-3.5 w-3.5" />
+              In Ritardo ({overdueCount})
+            </Button>
+          </motion.div>
+
           {/* Search */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -279,7 +386,8 @@ export default function CentroClienti() {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredCustomers.map((customer, index) => {
                   const stats = customerStats[customer.id] || { repairCount: 0, totalSpent: 0 };
-                  const isVip = stats.totalSpent >= 200;
+                  const customerAnalytics = analyticsMap[customer.id];
+                  const isVip = customerAnalytics ? customerAnalytics.score >= 80 : stats.totalSpent >= 200;
                   const isNew = (Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24) <= 7;
                   
                   return (
@@ -326,18 +434,23 @@ export default function CentroClienti() {
                                 <h3 className="font-semibold text-foreground truncate text-lg group-hover:text-primary transition-colors">
                                   {customer.name}
                                 </h3>
-                                {isVip && (
-                                  <Sparkles className="h-4 w-4 text-amber-500 flex-shrink-0" />
+                                {customerAnalytics && (
+                                  <CustomerScoreBadge 
+                                    score={customerAnalytics.score} 
+                                    breakdown={customerAnalytics.scoreBreakdown}
+                                    size="sm"
+                                  />
                                 )}
                               </div>
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-muted-foreground">
-                                  {new Date(customer.created_at).toLocaleDateString("it-IT", { 
-                                    day: "numeric",
-                                    month: "short", 
-                                    year: "numeric" 
-                                  })}
-                                </span>
+                                {customerAnalytics && (
+                                  <CustomerReturnPrediction
+                                    predictedReturn={customerAnalytics.predictedReturn}
+                                    avgInterval={customerAnalytics.avgInterval}
+                                    daysOverdue={customerAnalytics.daysOverdue}
+                                    repairCount={customerAnalytics.repairCount}
+                                  />
+                                )}
                                 {isNew && (
                                   <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-green-500/10 text-green-600 border-green-500/20">
                                     NUOVO
@@ -436,6 +549,9 @@ export default function CentroClienti() {
           />
         </div>
       </PageTransition>
+      
+      {/* AI Agent Chat */}
+      {centroId && <CustomerAIAgent centroId={centroId} />}
     </CentroLayout>
   );
 }
