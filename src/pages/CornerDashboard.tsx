@@ -191,6 +191,11 @@ export default function CornerDashboard() {
   }, [corner]);
 
   // Calculate stats
+  const gestioneFeesCollected = requests.filter(r => r.corner_gestione_fee_enabled && r.corner_gestione_fee_collected).length;
+  const gestioneFeesTotal = requests
+    .filter(r => r.corner_gestione_fee_enabled && r.corner_gestione_fee_collected)
+    .reduce((sum, r) => sum + (r.corner_gestione_fee || 15), 0);
+    
   const stats = {
     totalRequests: requests.length,
     pendingRequests: requests.filter((r) => r.status === "pending" || r.status === "dispatched" || r.status === "assigned").length,
@@ -203,6 +208,8 @@ export default function CornerDashboard() {
         return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
       })
       .reduce((sum, c) => sum + (c.corner_commission || 0), 0),
+    gestioneFeesCollected,
+    gestioneFeesTotal,
   };
 
   const statsCards = [
@@ -362,7 +369,7 @@ export default function CornerDashboard() {
             </div>
 
             {/* Quick Stats in Header */}
-            <div className="relative mt-4 grid grid-cols-3 gap-3">
+            <div className="relative mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
                 <p className="text-2xl md:text-3xl font-bold">{stats.totalRequests}</p>
                 <p className="text-xs text-white/70">Segnalazioni</p>
@@ -372,8 +379,12 @@ export default function CornerDashboard() {
                 <p className="text-xs text-white/70">Completate</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
+                <p className="text-2xl md:text-3xl font-bold">€{stats.gestioneFeesTotal}</p>
+                <p className="text-xs text-white/70">Fee Gestione</p>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
                 <p className="text-2xl md:text-3xl font-bold">€{stats.thisMonthCommissions.toFixed(0)}</p>
-                <p className="text-xs text-white/70">Questo Mese</p>
+                <p className="text-xs text-white/70">Commissioni</p>
               </div>
             </div>
           </motion.div>
