@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { LocationPicker } from "@/components/maps/LocationPicker";
 import { DisplayAdEditor, DisplayAd } from "@/components/centro/DisplayAdEditor";
+import { DymoPrinterSettings } from "@/components/settings/DymoPrinterSettings";
+import { LabelFormat } from "@/utils/labelTemplates";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { 
   Settings,
@@ -71,12 +73,19 @@ interface SmtpConfig {
   from_email: string;
 }
 
+interface DymoConfig {
+  enabled: boolean;
+  printer_name: string | null;
+  label_format: '30252' | '99012' | '11354' | '30336';
+}
+
 interface CentroSettings {
   disable_diagnostic_fee?: boolean;
   display_ads?: DisplayAd[];
   slide_interval?: number;
   smtp_config?: SmtpConfig;
-  [key: string]: boolean | string | number | DisplayAd[] | SmtpConfig | undefined;
+  dymo_config?: DymoConfig;
+  [key: string]: boolean | string | number | DisplayAd[] | SmtpConfig | DymoConfig | undefined;
 }
 
 interface Centro {
@@ -182,6 +191,11 @@ export default function CentroImpostazioni() {
   const [isTestingSmtp, setIsTestingSmtp] = useState(false);
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showSmtpGuide, setShowSmtpGuide] = useState(false);
+
+  // Dymo Configuration State
+  const [dymoEnabled, setDymoEnabled] = useState(false);
+  const [dymoPrinter, setDymoPrinter] = useState<string | null>(null);
+  const [dymoLabelFormat, setDymoLabelFormat] = useState<LabelFormat>('30252');
 
   // Preview ads rotation
   const previewAds = displayAds.length > 0 ? displayAds : defaultAdvertisements;
@@ -290,6 +304,13 @@ export default function CentroImpostazioni() {
         });
       }
       
+      // Load Dymo config
+      if (settings?.dymo_config) {
+        setDymoEnabled(settings.dymo_config.enabled || false);
+        setDymoPrinter(settings.dymo_config.printer_name || null);
+        setDymoLabelFormat(settings.dymo_config.label_format || '30252');
+      }
+      
       setCentro({
         id: centroData.id,
         business_name: centroData.business_name,
@@ -348,6 +369,11 @@ export default function CentroImpostazioni() {
         display_ads: displayAds,
         slide_interval: slideInterval * 1000, // Save in milliseconds
         smtp_config: smtpToSave,
+        dymo_config: {
+          enabled: dymoEnabled,
+          printer_name: dymoPrinter,
+          label_format: dymoLabelFormat,
+        },
       };
       
       const { error } = await supabase
@@ -1516,6 +1542,16 @@ export default function CentroImpostazioni() {
               />
             </CardContent>
           </Card>
+
+          {/* Dymo Printer Settings */}
+          <DymoPrinterSettings
+            enabled={dymoEnabled}
+            onEnabledChange={setDymoEnabled}
+            selectedPrinter={dymoPrinter}
+            onPrinterChange={setDymoPrinter}
+            labelFormat={dymoLabelFormat}
+            onLabelFormatChange={setDymoLabelFormat}
+          />
 
           {/* Save Button */}
           <div className="flex justify-end">
