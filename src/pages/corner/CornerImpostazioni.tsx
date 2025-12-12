@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LocationPicker } from "@/components/maps/LocationPicker";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
+import { DymoPrinterSettings } from "@/components/settings/DymoPrinterSettings";
+import { LabelFormat } from "@/utils/labelTemplates";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -37,6 +39,33 @@ export default function CornerImpostazioni() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+
+  // Dymo state (stored in localStorage for Corner)
+  const [dymoEnabled, setDymoEnabled] = useState(() => {
+    const saved = localStorage.getItem('corner_dymo_enabled');
+    return saved === 'true';
+  });
+  const [dymoPrinter, setDymoPrinter] = useState<string | null>(() => {
+    return localStorage.getItem('corner_dymo_printer');
+  });
+  const [dymoLabelFormat, setDymoLabelFormat] = useState<LabelFormat>(() => {
+    return (localStorage.getItem('corner_dymo_format') as LabelFormat) || '30252';
+  });
+
+  // Persist Dymo settings to localStorage
+  useEffect(() => {
+    localStorage.setItem('corner_dymo_enabled', String(dymoEnabled));
+  }, [dymoEnabled]);
+
+  useEffect(() => {
+    if (dymoPrinter) {
+      localStorage.setItem('corner_dymo_printer', dymoPrinter);
+    }
+  }, [dymoPrinter]);
+
+  useEffect(() => {
+    localStorage.setItem('corner_dymo_format', dymoLabelFormat);
+  }, [dymoLabelFormat]);
 
   useEffect(() => {
     if (user) {
@@ -329,6 +358,16 @@ export default function CornerImpostazioni() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Dymo Printer Settings */}
+          <DymoPrinterSettings
+            enabled={dymoEnabled}
+            onEnabledChange={setDymoEnabled}
+            selectedPrinter={dymoPrinter}
+            onPrinterChange={setDymoPrinter}
+            labelFormat={dymoLabelFormat}
+            onLabelFormatChange={setDymoLabelFormat}
+          />
 
           {/* Push Notifications */}
           <PushNotificationSettings />
