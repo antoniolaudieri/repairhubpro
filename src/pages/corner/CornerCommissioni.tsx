@@ -26,6 +26,8 @@ interface Commission {
   payment_collection_method: string | null;
   centro_id: string | null;
   centro_name?: string;
+  corner_direct_to_centro?: boolean;
+  customer_paid_at?: string | null;
 }
 
 export default function CornerCommissioni() {
@@ -83,6 +85,8 @@ export default function CornerCommissioni() {
       .select(`
         *,
         repair_requests!commission_ledger_repair_request_id_fkey (
+          corner_direct_to_centro,
+          customer_paid_at,
           quotes (payment_collection_method)
         ),
         centri_assistenza!commission_ledger_centro_id_fkey (
@@ -102,7 +106,9 @@ export default function CornerCommissioni() {
     const mappedCommissions = (data || []).map((c: any) => ({
       ...c,
       payment_collection_method: c.repair_requests?.quotes?.[0]?.payment_collection_method || 'direct',
-      centro_name: c.centri_assistenza?.business_name || 'Centro'
+      centro_name: c.centri_assistenza?.business_name || 'Centro',
+      corner_direct_to_centro: c.repair_requests?.corner_direct_to_centro || false,
+      customer_paid_at: c.repair_requests?.customer_paid_at || null
     }));
 
     setCommissions(mappedCommissions);
@@ -128,11 +134,33 @@ export default function CornerCommissioni() {
     return commission.corner_paid;
   };
 
+  // For direct-to-centro: check if customer has paid before commission is claimable
+  const getCommissionStatus = (commission: Commission): 'received' | 'claimable' | 'awaiting_payment' => {
+    if (commission.payment_collection_method === 'via_corner') {
+      return 'received';
+    }
+    if (commission.corner_paid) {
+      return 'received';
+    }
+    // Direct-to-centro: must wait for customer payment before claiming
+    if (commission.corner_direct_to_centro && !commission.customer_paid_at) {
+      return 'awaiting_payment';
+    }
+    return 'claimable';
+  };
+
+  const awaitingPaymentCommission = commissions
+    .filter((c) => getCommissionStatus(c) === 'awaiting_payment')
+    .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
+
   const totalCommission = commissions.reduce((sum, c) => sum + (c.corner_commission || 0), 0);
   const paidCommission = commissions
     .filter((c) => isCommissionReceived(c))
     .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
-  const pendingCommission = totalCommission - paidCommission;
+  const claimableCommission = commissions
+    .filter((c) => getCommissionStatus(c) === 'claimable')
+    .reduce((sum, c) => sum + (c.corner_commission || 0), 0);
+  const pendingCommission = claimableCommission + awaitingPaymentCommission;
   const totalReferrals = commissions.length;
 
   const { start } = getMonthRange();
@@ -353,8 +381,9 @@ export default function CornerCommissioni() {
                 ) : (
                   <div className="divide-y">
                     {commissions.map((commission, index) => {
-                      const received = isCommissionReceived(commission);
+                      const status = getCommissionStatus(commission);
                       const isViaCorner = commission.payment_collection_method === 'via_corner';
+                      const isDirectToCentro = commission.corner_direct_to_centro;
 
                       return (
                         <motion.div
@@ -363,8 +392,8 @@ export default function CornerCommissioni() {
                           animate={{ opacity: 1, x: 0 }}
                           transition={{ delay: 0.1 * index }}
                           className={`p-4 hover:bg-muted/50 transition-colors ${
-                            received ? 'bg-emerald-50/30 dark:bg-emerald-950/20' : ''
-                          }`}
+                            status === 'received' ? 'bg-emerald-50/30 dark:bg-emerald-950/20' : ''
+                          } ${status === 'awaiting_payment' ? 'bg-orange-50/30 dark:bg-orange-950/20' : ''}`}
                         >
                           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                             <div className="space-y-1 flex-1">
@@ -372,15 +401,25 @@ export default function CornerCommissioni() {
                                 <span className="font-medium">
                                   Riparazione #{commission.repair_request_id?.slice(0, 8)}
                                 </span>
+                                {isDirectToCentro && (
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800">
+                                    Diretto al Centro
+                                  </Badge>
+                                )}
                                 {isViaCorner ? (
                                   <Badge className="bg-emerald-500 hover:bg-emerald-600 text-white">
                                     <Wallet className="h-3 w-3 mr-1" />
                                     Incassato
                                   </Badge>
-                                ) : received ? (
+                                ) : status === 'received' ? (
                                   <Badge className="bg-green-500 hover:bg-green-600 text-white">
                                     <CheckCircle className="h-3 w-3 mr-1" />
                                     Pagato
+                                  </Badge>
+                                ) : status === 'awaiting_payment' ? (
+                                  <Badge variant="outline" className="bg-orange-500/10 text-orange-700 border-orange-500/30">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Attesa Pagamento Cliente
                                   </Badge>
                                 ) : (
                                   <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30">
@@ -404,6 +443,12 @@ export default function CornerCommissioni() {
                                   Hai trattenuto la tua commissione dall'incasso cliente
                                 </div>
                               )}
+                              {status === 'awaiting_payment' && (
+                                <div className="text-xs text-orange-600 dark:text-orange-400 flex items-center gap-1">
+                                  <Info className="h-3 w-3" />
+                                  Il Centro deve confermare il pagamento del cliente prima di poter richiedere
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-4">
@@ -412,7 +457,8 @@ export default function CornerCommissioni() {
                                   Fatturato €{commission.gross_revenue.toFixed(2)} → Margine €{commission.gross_margin.toFixed(2)}
                                 </div>
                                 <div className={`text-xl font-bold flex items-center justify-end gap-1 ${
-                                  received ? 'text-emerald-600 dark:text-emerald-400' : 'text-primary'
+                                  status === 'received' ? 'text-emerald-600 dark:text-emerald-400' : 
+                                  status === 'awaiting_payment' ? 'text-orange-600 dark:text-orange-400' : 'text-primary'
                                 }`}>
                                   <ArrowUpRight className="h-4 w-4" />
                                   €{(commission.corner_commission || 0).toFixed(2)}
@@ -422,7 +468,7 @@ export default function CornerCommissioni() {
                                 </div>
                               </div>
 
-                              {!received && !isViaCorner && (
+                              {status === 'claimable' && (
                                 <Button
                                   size="sm"
                                   onClick={() => handleRequestPayment(commission)}
