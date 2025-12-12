@@ -2,8 +2,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 
 // Dymo Connect Web Service runs locally on these ports
-const DYMO_PORTS = [41951, 41952]; // HTTPS and HTTP
-const DYMO_HOST = '127.0.0.1';
+// Try multiple host variations as browsers handle localhost vs 127.0.0.1 differently
+const DYMO_ENDPOINTS = [
+  { host: 'localhost', port: 41951, protocol: 'https' },
+  { host: '127.0.0.1', port: 41951, protocol: 'https' },
+  { host: 'localhost', port: 41952, protocol: 'http' },
+  { host: '127.0.0.1', port: 41952, protocol: 'http' },
+];
 
 interface DymoPrinter {
   name: string;
@@ -35,29 +40,41 @@ interface UseDymoPrinterReturn {
 
 // Try to find the running Dymo service
 async function findDymoService(): Promise<{ url: string; port: number } | null> {
-  for (const port of DYMO_PORTS) {
-    const protocol = port === 41951 ? 'https' : 'http';
-    const url = `${protocol}://${DYMO_HOST}:${port}`;
+  // Try all endpoints in parallel for faster detection
+  const attempts = DYMO_ENDPOINTS.map(async ({ host, port, protocol }) => {
+    const url = `${protocol}://${host}:${port}`;
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
       
       const response = await fetch(`${url}/DYMO/DLS/Printing/StatusConnected`, {
         method: 'GET',
         signal: controller.signal,
+        mode: 'cors',
       });
       
       clearTimeout(timeoutId);
       
       if (response.ok) {
+        console.log(`Dymo service found at ${url}`);
         return { url, port };
       }
     } catch (e) {
-      // Try next port
-      continue;
+      // This endpoint didn't work
+      console.log(`Dymo not found at ${url}:`, e);
+    }
+    return null;
+  });
+
+  // Return first successful result
+  const results = await Promise.allSettled(attempts);
+  for (const result of results) {
+    if (result.status === 'fulfilled' && result.value) {
+      return result.value;
     }
   }
+  
   return null;
 }
 
