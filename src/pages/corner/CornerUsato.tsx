@@ -776,788 +776,886 @@ export default function CornerUsato() {
 
   return (
     <CornerLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Gestione Usato</h1>
-            <p className="text-muted-foreground">Pubblica e gestisci dispositivi usati e ricondizionati</p>
-          </div>
-          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
-            <DialogTrigger asChild>
-              <Button className="gap-2">
-                <Plus className="h-4 w-4" />
-                Aggiungi Dispositivo
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  {editingDevice ? "Modifica" : "Nuovo"} Dispositivo Usato
-                </DialogTitle>
-              </DialogHeader>
-              
-              <form onSubmit={handleSubmit} className="space-y-5">
-                {/* Device Type Selection */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-1.5">
-                    <Smartphone className="h-3.5 w-3.5 text-primary" />
-                    Tipo Dispositivo *
-                  </Label>
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-                    {deviceTypesWithIcons.map((type) => {
-                      const Icon = type.icon;
-                      const isSelected = formData.device_type === type.value;
-                      return (
-                        <button
-                          key={type.value}
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, device_type: type.value }))}
-                          className={`
-                            flex flex-col items-center justify-center p-2.5 rounded-lg border-2 transition-all
-                            ${isSelected 
-                              ? "border-primary bg-primary/10 text-primary" 
-                              : "border-border bg-card hover:border-primary/50 hover:bg-muted/50 text-muted-foreground"
-                            }
-                          `}
-                        >
-                          <Icon className={`h-5 w-5 mb-1 ${isSelected ? "text-primary" : ""}`} />
-                          <span className="text-[10px] font-medium">{type.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+      <div className="space-y-4 md:space-y-6 pb-6">
+        {/* Hero Header - Mobile Optimized */}
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/20 p-4 md:p-6">
+          <div className="absolute inset-0 bg-grid-white/5 [mask-image:linear-gradient(0deg,transparent,black)]" />
+          <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-lg bg-primary/20">
+                  <Package className="h-5 w-5 text-primary" />
                 </div>
-
-                {/* Brand & Model */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="brand" className="text-xs font-medium">Marca *</Label>
-                    <div className="relative">
-                      <Input
-                        id="brand"
-                        value={formData.brand}
-                        onChange={e => setFormData(prev => ({ ...prev, brand: e.target.value }))}
-                        className="h-10 pr-8"
-                        placeholder="es. Apple"
-                        required
-                      />
-                      {isLookingUp && (
-                        <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
-                      )}
+                <h1 className="text-xl md:text-2xl font-bold">Gestione Usato</h1>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Pubblica e gestisci dispositivi usati e ricondizionati
+              </p>
+            </div>
+            <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+              <DialogTrigger asChild>
+                <Button className="gap-2 w-full md:w-auto shadow-lg">
+                  <Plus className="h-4 w-4" />
+                  Aggiungi Dispositivo
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto mx-4 md:mx-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-primary" />
+                    {editingDevice ? "Modifica" : "Nuovo"} Dispositivo Usato
+                  </DialogTitle>
+                </DialogHeader>
+                
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Device Type Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-1.5">
+                      <Smartphone className="h-3.5 w-3.5 text-primary" />
+                      Tipo Dispositivo *
+                    </Label>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      {deviceTypesWithIcons.map((type) => {
+                        const Icon = type.icon;
+                        const isSelected = formData.device_type === type.value;
+                        return (
+                          <button
+                            key={type.value}
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, device_type: type.value }))}
+                            className={`
+                              flex flex-col items-center justify-center p-2.5 rounded-lg border-2 transition-all
+                              ${isSelected 
+                                ? "border-primary bg-primary/10 text-primary" 
+                                : "border-border bg-card hover:border-primary/50 hover:bg-muted/50 text-muted-foreground"
+                              }
+                            `}
+                          >
+                            <Icon className={`h-5 w-5 mb-1 ${isSelected ? "text-primary" : ""}`} />
+                            <span className="text-[10px] font-medium">{type.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="model" className="text-xs font-medium">Modello *</Label>
-                    <div className="relative">
-                      <Input
-                        id="model"
-                        value={formData.model}
-                        onChange={e => setFormData(prev => ({ ...prev, model: e.target.value }))}
-                        className="h-10 pr-8"
-                        placeholder="es. iPhone 15 Pro"
-                        required
-                      />
-                      {detectedDevice && !isLookingUp && (
-                        <Sparkles className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
-                      )}
+
+                  {/* Brand & Model */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="brand" className="text-xs font-medium">Marca *</Label>
+                      <div className="relative">
+                        <Input
+                          id="brand"
+                          value={formData.brand}
+                          onChange={e => setFormData(prev => ({ ...prev, brand: e.target.value }))}
+                          className="h-10 pr-8"
+                          placeholder="es. Apple"
+                          required
+                        />
+                        {isLookingUp && (
+                          <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="model" className="text-xs font-medium">Modello *</Label>
+                      <div className="relative">
+                        <Input
+                          id="model"
+                          value={formData.model}
+                          onChange={e => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                          className="h-10 pr-8"
+                          placeholder="es. iPhone 15 Pro"
+                          required
+                        />
+                        {detectedDevice && !isLookingUp && (
+                          <Sparkles className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-primary" />
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* AI Detected Device Card */}
-                <AnimatePresence>
-                  {(detectedDevice || isLookingUp) && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                    >
-                      <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                        {isLookingUp ? (
-                          <div className="flex items-center gap-3">
-                            <Skeleton className="h-20 w-20 rounded-lg" />
-                            <div className="flex-1 space-y-2">
-                              <Skeleton className="h-4 w-3/4" />
-                              <Skeleton className="h-3 w-1/2" />
-                              <Skeleton className="h-3 w-2/3" />
+                  {/* AI Detected Device Card */}
+                  <AnimatePresence>
+                    {(detectedDevice || isLookingUp) && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                      >
+                        <Card className="p-4 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                          {isLookingUp ? (
+                            <div className="flex items-center gap-3">
+                              <Skeleton className="h-20 w-20 rounded-lg" />
+                              <div className="flex-1 space-y-2">
+                                <Skeleton className="h-4 w-3/4" />
+                                <Skeleton className="h-3 w-1/2" />
+                                <Skeleton className="h-3 w-2/3" />
+                              </div>
                             </div>
-                          </div>
-                        ) : detectedDevice && (
-                          <div className="flex gap-4">
-                            <div className="flex-shrink-0">
-                              {currentImageUrl && !imageError ? (
-                                <div className="relative">
-                                  <img
-                                    src={currentImageUrl}
-                                    alt={`${formData.brand} ${formData.model}`}
-                                    className="h-20 w-20 object-contain rounded-lg bg-white p-2"
-                                    onError={handleImageError}
-                                  />
-                                  <Badge 
-                                    variant="secondary" 
-                                    className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5 bg-primary text-primary-foreground"
-                                  >
-                                    AI
-                                  </Badge>
-                                </div>
-                              ) : (
-                                <div className="h-20 w-20 rounded-lg bg-muted flex flex-col items-center justify-center gap-1">
-                                  {getDeviceIcon()}
-                                  <span className="text-[8px] text-muted-foreground uppercase font-medium">
-                                    {formData.brand || 'Device'}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0 space-y-2">
-                              <div>
-                                <h3 className="font-semibold text-sm truncate">
-                                  {detectedDevice.fullName || `${formData.brand} ${formData.model}`}
-                                </h3>
-                                {detectedDevice.year && detectedDevice.year !== "N/A" && (
-                                  <p className="text-xs text-muted-foreground">Anno: {detectedDevice.year}</p>
+                          ) : detectedDevice && (
+                            <div className="flex gap-4">
+                              <div className="flex-shrink-0">
+                                {currentImageUrl && !imageError ? (
+                                  <div className="relative">
+                                    <img
+                                      src={currentImageUrl}
+                                      alt={`${formData.brand} ${formData.model}`}
+                                      className="h-20 w-20 object-contain rounded-lg bg-white p-2"
+                                      onError={handleImageError}
+                                    />
+                                    <Badge 
+                                      variant="secondary" 
+                                      className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0.5 bg-primary text-primary-foreground"
+                                    >
+                                      AI
+                                    </Badge>
+                                  </div>
+                                ) : (
+                                  <div className="h-20 w-20 rounded-lg bg-muted flex flex-col items-center justify-center gap-1">
+                                    {getDeviceIcon()}
+                                    <span className="text-[8px] text-muted-foreground uppercase font-medium">
+                                      {formData.brand || 'Device'}
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                               
-                              {detectedDevice.specs && (
-                                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                                  {detectedDevice.specs.storage && detectedDevice.specs.storage !== "N/A" && (
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[10px] text-muted-foreground">Storage:</span>
-                                      <span className="text-[10px] font-medium truncate">{detectedDevice.specs.storage}</span>
-                                    </div>
-                                  )}
-                                  {detectedDevice.specs.ram && detectedDevice.specs.ram !== "N/A" && (
-                                    <div className="flex items-center gap-1">
-                                      <span className="text-[10px] text-muted-foreground">RAM:</span>
-                                      <span className="text-[10px] font-medium truncate">{detectedDevice.specs.ram}</span>
-                                    </div>
+                              <div className="flex-1 min-w-0 space-y-2">
+                                <div>
+                                  <h3 className="font-semibold text-sm truncate">
+                                    {detectedDevice.fullName || `${formData.brand} ${formData.model}`}
+                                  </h3>
+                                  {detectedDevice.year && detectedDevice.year !== "N/A" && (
+                                    <p className="text-xs text-muted-foreground">Anno: {detectedDevice.year}</p>
                                   )}
                                 </div>
-                              )}
+                                
+                                {detectedDevice.specs && (
+                                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                    {detectedDevice.specs.storage && detectedDevice.specs.storage !== "N/A" && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-muted-foreground">Storage:</span>
+                                        <span className="text-[10px] font-medium truncate">{detectedDevice.specs.storage}</span>
+                                      </div>
+                                    )}
+                                    {detectedDevice.specs.ram && detectedDevice.specs.ram !== "N/A" && (
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-[10px] text-muted-foreground">RAM:</span>
+                                        <span className="text-[10px] font-medium truncate">{detectedDevice.specs.ram}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        )}
-                      </Card>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                          )}
+                        </Card>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
-                {/* AI Price Estimate Card */}
-                <AnimatePresence>
-                  {(priceEstimate || isEstimating) && (
+                  {/* AI Price Estimate Card */}
+                  <AnimatePresence>
+                    {(priceEstimate || isEstimating) && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                      >
+                        <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Euro className="h-4 w-4 text-success" />
+                              <span className="text-sm font-medium">Valutazione AI</span>
+                              {isEstimating && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                            </div>
+                            
+                            {isEstimating ? (
+                              <div className="space-y-3">
+                                <div className="flex gap-2">
+                                  {[1, 2, 3].map((i) => (
+                                    <Skeleton key={i} className="h-8 w-16 rounded-full" />
+                                  ))}
+                                </div>
+                                <div className="grid grid-cols-4 gap-2">
+                                  {['B', 'A', 'AA', 'AAA'].map((g) => (
+                                    <Skeleton key={g} className="h-16 rounded-lg" />
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                {allStorageEstimates && Object.keys(allStorageEstimates).length > 1 && (
+                                  <div className="flex flex-wrap gap-1.5 mb-3">
+                                    {Object.keys(allStorageEstimates).map((storageKey) => (
+                                      <button
+                                        key={storageKey}
+                                        type="button"
+                                        onClick={() => selectStorageOption(storageKey)}
+                                        className={`
+                                          px-3 py-1.5 rounded-full text-xs font-medium transition-all
+                                          ${selectedStorageOption === storageKey 
+                                            ? 'bg-primary text-primary-foreground shadow-sm' 
+                                            : 'bg-muted hover:bg-muted/80 text-muted-foreground'}
+                                        `}
+                                      >
+                                        {storageKey}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                
+                                {priceEstimate?.grades && (
+                                  <>
+                                    <div className="grid grid-cols-4 gap-2">
+                                      {(['B', 'A', 'AA', 'AAA'] as const).map((grade) => {
+                                        const gradeColors = {
+                                          B: 'from-orange-500/10 to-orange-500/20 border-orange-500/30 hover:border-orange-500',
+                                          A: 'from-yellow-500/10 to-yellow-500/20 border-yellow-500/30 hover:border-yellow-500',
+                                          AA: 'from-emerald-500/10 to-emerald-500/20 border-emerald-500/30 hover:border-emerald-500',
+                                          AAA: 'from-primary/10 to-primary/20 border-primary/30 hover:border-primary'
+                                        };
+                                        const gradeLabels = {
+                                          B: 'Discreto',
+                                          A: 'Buono',
+                                          AA: 'Ottimo',
+                                          AAA: 'Come Nuovo'
+                                        };
+                                        return (
+                                          <button
+                                            key={grade}
+                                            type="button"
+                                            onClick={() => applyGradePrice(grade)}
+                                            className={`
+                                              flex flex-col items-center justify-center p-2 rounded-lg border-2 
+                                              bg-gradient-to-br ${gradeColors[grade]} transition-all cursor-pointer
+                                            `}
+                                          >
+                                            <span className="text-xs font-bold">{grade}</span>
+                                            <span className="text-lg font-bold text-foreground">
+                                              €{priceEstimate.grades[grade]}
+                                            </span>
+                                            <span className="text-[9px] text-muted-foreground">{gradeLabels[grade]}</span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    
+                                    {priceEstimate.originalPrice && (
+                                      <p className="text-[10px] text-muted-foreground text-center">
+                                        Prezzo nuovo: €{priceEstimate.originalPrice}
+                                      </p>
+                                    )}
+                                    
+                                    {priceEstimate.trend && (
+                                      <div className={`
+                                        flex items-center justify-center gap-2 px-3 py-2 rounded-lg mt-2
+                                        ${priceEstimate.trend === 'alto' 
+                                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
+                                          : priceEstimate.trend === 'basso'
+                                          ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                                          : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}
+                                      `}>
+                                        {priceEstimate.trend === 'alto' && <TrendingUp className="h-4 w-4" />}
+                                        {priceEstimate.trend === 'stabile' && <Minus className="h-4 w-4" />}
+                                        {priceEstimate.trend === 'basso' && <TrendingDown className="h-4 w-4" />}
+                                        <span className="text-xs font-medium">
+                                          Trend: {priceEstimate.trend === 'alto' ? 'In crescita' : priceEstimate.trend === 'basso' ? 'In calo' : 'Stabile'}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </Card>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Device Details Row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="color" className="text-xs font-medium text-muted-foreground">Colore</Label>
+                      <Input
+                        id="color"
+                        value={formData.color}
+                        onChange={e => setFormData(prev => ({ ...prev, color: e.target.value }))}
+                        className="h-9 text-sm"
+                        placeholder="es. Nero"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="storage" className="text-xs font-medium text-muted-foreground">Storage</Label>
+                      <Input
+                        id="storage"
+                        value={formData.storage_capacity}
+                        onChange={e => setFormData(prev => ({ ...prev, storage_capacity: e.target.value }))}
+                        className="h-9 text-sm"
+                        placeholder="es. 256GB"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="warranty" className="text-xs font-medium text-muted-foreground">Garanzia (mesi)</Label>
+                      <Input
+                        id="warranty"
+                        type="number"
+                        value={formData.warranty_months}
+                        onChange={e => setFormData(prev => ({ ...prev, warranty_months: e.target.value }))}
+                        className="h-9 text-sm"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Condition & Source Row */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium flex items-center gap-1">
+                        <Tag className="h-3 w-3 text-primary" />
+                        Condizione *
+                      </Label>
+                      <Select value={formData.condition} onValueChange={v => setFormData(prev => ({ ...prev, condition: v }))}>
+                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {conditionOptions.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-medium flex items-center gap-1 text-muted-foreground">
+                        <Info className="h-3 w-3" />
+                        Provenienza
+                      </Label>
+                      <Select value={formData.source} onValueChange={v => setFormData(prev => ({ ...prev, source: v }))}>
+                        <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {sourceOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Price Section */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="price" className="text-sm font-medium flex items-center gap-1">
+                        <Euro className="h-3.5 w-3.5 text-primary" />
+                        Prezzo di Vendita *
+                      </Label>
+                      <Input
+                        id="price"
+                        type="number"
+                        step="0.01"
+                        value={formData.price}
+                        onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))}
+                        className="h-10"
+                        placeholder="299.00"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="original_price" className="text-xs font-medium text-muted-foreground">Prezzo Originale €</Label>
+                      <Input
+                        id="original_price"
+                        type="number"
+                        step="0.01"
+                        value={formData.original_price}
+                        onChange={e => setFormData(prev => ({ ...prev, original_price: e.target.value }))}
+                        className="h-9 text-sm"
+                        placeholder="es. 999.00"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Sale Type Selection */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium flex items-center gap-1">
+                      <DollarSign className="h-3.5 w-3.5 text-primary" />
+                      Tipo Vendita
+                    </Label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {saleTypeOptions.map((option) => {
+                        const Icon = option.icon;
+                        const isSelected = formData.sale_type === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, sale_type: option.value }))}
+                            className={`
+                              flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                              ${isSelected 
+                                ? "border-primary bg-primary/10 text-primary" 
+                                : "border-border bg-card hover:border-primary/50 hover:bg-muted/50 text-muted-foreground"
+                              }
+                            `}
+                          >
+                            <Icon className={`h-5 w-5 mb-1 ${isSelected ? "text-primary" : ""}`} />
+                            <span className="text-xs font-medium">{option.label}</span>
+                            <span className="text-[9px] text-muted-foreground">{option.description}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Consignment Split Settings */}
+                  {formData.sale_type === "conto_vendita" && (
                     <motion.div
                       initial={{ opacity: 0, height: 0 }}
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
+                      className="space-y-4 p-4 rounded-lg bg-muted/50 border"
                     >
-                      <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2">
-                            <Euro className="h-4 w-4 text-success" />
-                            <span className="text-sm font-medium">Valutazione AI</span>
-                            {isEstimating && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-                          </div>
-                          
-                          {isEstimating ? (
-                            <div className="space-y-3">
-                              <div className="flex gap-2">
-                                {[1, 2, 3].map((i) => (
-                                  <Skeleton key={i} className="h-8 w-16 rounded-full" />
-                                ))}
-                              </div>
-                              <div className="grid grid-cols-4 gap-2">
-                                {['B', 'A', 'AA', 'AAA'].map((g) => (
-                                  <Skeleton key={g} className="h-16 rounded-lg" />
-                                ))}
-                              </div>
+                      <div className="flex items-center gap-2">
+                        <Handshake className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">Impostazioni Conto Vendita</span>
+                      </div>
+
+                      {/* Customer Search */}
+                      <div className="space-y-2">
+                        <Label className="text-xs">Cliente Proprietario</Label>
+                        {selectedCustomer ? (
+                          <div className="flex items-center justify-between p-2 rounded bg-background border">
+                            <div>
+                              <p className="text-sm font-medium">{selectedCustomer.name}</p>
+                              <p className="text-xs text-muted-foreground">{selectedCustomer.phone}</p>
                             </div>
-                          ) : (
-                            <>
-                              {allStorageEstimates && Object.keys(allStorageEstimates).length > 1 && (
-                                <div className="flex flex-wrap gap-1.5 mb-3">
-                                  {Object.keys(allStorageEstimates).map((storageKey) => (
-                                    <button
-                                      key={storageKey}
-                                      type="button"
-                                      onClick={() => selectStorageOption(storageKey)}
-                                      className={`
-                                        px-3 py-1.5 rounded-full text-xs font-medium transition-all
-                                        ${selectedStorageOption === storageKey 
-                                          ? 'bg-primary text-primary-foreground shadow-sm' 
-                                          : 'bg-muted hover:bg-muted/80 text-muted-foreground'}
-                                      `}
-                                    >
-                                      {storageKey}
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                              
-                              {priceEstimate?.grades && (
-                                <>
-                                  <div className="grid grid-cols-4 gap-2">
-                                    {(['B', 'A', 'AA', 'AAA'] as const).map((grade) => {
-                                      const gradeColors = {
-                                        B: 'from-orange-500/10 to-orange-500/20 border-orange-500/30 hover:border-orange-500',
-                                        A: 'from-yellow-500/10 to-yellow-500/20 border-yellow-500/30 hover:border-yellow-500',
-                                        AA: 'from-emerald-500/10 to-emerald-500/20 border-emerald-500/30 hover:border-emerald-500',
-                                        AAA: 'from-primary/10 to-primary/20 border-primary/30 hover:border-primary'
-                                      };
-                                      const gradeLabels = {
-                                        B: 'Discreto',
-                                        A: 'Buono',
-                                        AA: 'Ottimo',
-                                        AAA: 'Come Nuovo'
-                                      };
-                                      return (
-                                        <button
-                                          key={grade}
-                                          type="button"
-                                          onClick={() => applyGradePrice(grade)}
-                                          className={`
-                                            flex flex-col items-center justify-center p-2 rounded-lg border-2 
-                                            bg-gradient-to-br ${gradeColors[grade]} transition-all cursor-pointer
-                                          `}
-                                        >
-                                          <span className="text-xs font-bold">{grade}</span>
-                                          <span className="text-lg font-bold text-foreground">
-                                            €{priceEstimate.grades[grade]}
-                                          </span>
-                                          <span className="text-[9px] text-muted-foreground">{gradeLabels[grade]}</span>
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                  
-                                  {priceEstimate.originalPrice && (
-                                    <p className="text-[10px] text-muted-foreground text-center">
-                                      Prezzo nuovo: €{priceEstimate.originalPrice}
-                                    </p>
-                                  )}
-                                  
-                                  {priceEstimate.trend && (
-                                    <div className={`
-                                      flex items-center justify-center gap-2 px-3 py-2 rounded-lg mt-2
-                                      ${priceEstimate.trend === 'alto' 
-                                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' 
-                                        : priceEstimate.trend === 'basso'
-                                        ? 'bg-red-500/10 text-red-600 dark:text-red-400'
-                                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}
-                                    `}>
-                                      {priceEstimate.trend === 'alto' && <TrendingUp className="h-4 w-4" />}
-                                      {priceEstimate.trend === 'stabile' && <Minus className="h-4 w-4" />}
-                                      {priceEstimate.trend === 'basso' && <TrendingDown className="h-4 w-4" />}
-                                      <span className="text-xs font-medium">
-                                        Trend: {priceEstimate.trend === 'alto' ? 'In crescita' : priceEstimate.trend === 'basso' ? 'In calo' : 'Stabile'}
-                                      </span>
-                                    </div>
-                                  )}
-                                </>
-                              )}
-                            </>
-                          )}
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedCustomer(null)}>
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              value={customerSearch}
+                              onChange={e => setCustomerSearch(e.target.value)}
+                              placeholder="Cerca cliente..."
+                              className="pl-8"
+                            />
+                            {searchingCustomers && <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
+                            
+                            {customerSearchResults.length > 0 && (
+                              <div className="absolute z-10 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                                {customerSearchResults.map(customer => (
+                                  <button
+                                    key={customer.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedCustomer(customer);
+                                      setCustomerSearch("");
+                                      setCustomerSearchResults([]);
+                                    }}
+                                    className="w-full text-left p-2 hover:bg-muted text-sm"
+                                  >
+                                    <p className="font-medium">{customer.name}</p>
+                                    <p className="text-xs text-muted-foreground">{customer.phone} • {customer.email}</p>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Split Percentage Slider */}
+                      <div className="space-y-3">
+                        <div className="flex justify-between text-xs">
+                          <span className="flex items-center gap-1"><User className="h-3 w-3" /> Cliente: {formData.owner_split_percentage}%</span>
+                          <span className="flex items-center gap-1"><ShoppingCart className="h-3 w-3" /> Corner: {formData.centro_split_percentage}%</span>
                         </div>
-                      </Card>
+                        <Slider
+                          value={[formData.owner_split_percentage]}
+                          onValueChange={([val]) => setFormData(prev => ({
+                            ...prev,
+                            owner_split_percentage: val,
+                            centro_split_percentage: 100 - val
+                          }))}
+                          min={0}
+                          max={100}
+                          step={5}
+                        />
+                      </div>
+
+                      {/* Split Preview */}
+                      {splitPreview && (
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="p-2 rounded bg-background">
+                            <p className="text-xs text-muted-foreground">Cliente riceve</p>
+                            <p className="font-bold text-green-600">€{splitPreview.ownerPayout.toFixed(2)}</p>
+                          </div>
+                          <div className="p-2 rounded bg-background">
+                            <p className="text-xs text-muted-foreground">Corner lordo</p>
+                            <p className="font-bold">€{splitPreview.cornerGross.toFixed(2)}</p>
+                          </div>
+                          <div className="p-2 rounded bg-background">
+                            <p className="text-xs text-muted-foreground">Corner netto</p>
+                            <p className="font-bold text-primary">€{splitPreview.cornerNet.toFixed(2)}</p>
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
-                </AnimatePresence>
 
-                {/* Device Details Row */}
-                <div className="grid grid-cols-3 gap-3">
+                  {/* Description */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="color" className="text-xs font-medium text-muted-foreground">Colore</Label>
-                    <Input
-                      id="color"
-                      value={formData.color}
-                      onChange={e => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                      className="h-9 text-sm"
-                      placeholder="es. Nero"
+                    <Label htmlFor="description" className="text-xs font-medium text-muted-foreground">Descrizione</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Descrizione aggiuntiva, accessori inclusi..."
+                      className="min-h-[80px]"
                     />
                   </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="storage" className="text-xs font-medium text-muted-foreground">Capacità</Label>
-                    <Input
-                      id="storage"
-                      value={formData.storage_capacity}
-                      onChange={e => setFormData(prev => ({ ...prev, storage_capacity: e.target.value }))}
-                      className="h-9 text-sm"
-                      placeholder="128GB"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="warranty" className="text-xs font-medium text-muted-foreground">Garanzia (mesi)</Label>
-                    <Input
-                      id="warranty"
-                      type="number"
-                      value={formData.warranty_months}
-                      onChange={e => setFormData(prev => ({ ...prev, warranty_months: e.target.value }))}
-                      className="h-9 text-sm"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
 
-                {/* Condition & Source Row */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
+                  {/* Photo Upload */}
+                  <div className="space-y-2">
                     <Label className="text-xs font-medium flex items-center gap-1">
-                      <Tag className="h-3 w-3 text-primary" />
-                      Condizione *
+                      <ImageIcon className="h-3 w-3" />
+                      Foto Dispositivo
                     </Label>
-                    <Select value={formData.condition} onValueChange={v => setFormData(prev => ({ ...prev, condition: v }))}>
-                      <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {conditionOptions.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium flex items-center gap-1 text-muted-foreground">
-                      <Info className="h-3 w-3" />
-                      Provenienza
-                    </Label>
-                    <Select value={formData.source} onValueChange={v => setFormData(prev => ({ ...prev, source: v }))}>
-                      <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {sourceOptions.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Price Section */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="price" className="text-sm font-medium flex items-center gap-1">
-                      <Euro className="h-3.5 w-3.5 text-primary" />
-                      Prezzo di Vendita *
-                    </Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={e => setFormData(prev => ({ ...prev, price: e.target.value }))}
-                      className="h-10"
-                      placeholder="299.00"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="original_price" className="text-xs font-medium text-muted-foreground">Prezzo Originale €</Label>
-                    <Input
-                      id="original_price"
-                      type="number"
-                      step="0.01"
-                      value={formData.original_price}
-                      onChange={e => setFormData(prev => ({ ...prev, original_price: e.target.value }))}
-                      className="h-9 text-sm"
-                      placeholder="es. 999.00"
-                    />
-                  </div>
-                </div>
-
-                {/* Sale Type Selection */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium flex items-center gap-1">
-                    <DollarSign className="h-3.5 w-3.5 text-primary" />
-                    Tipo Vendita
-                  </Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {saleTypeOptions.map((option) => {
-                      const Icon = option.icon;
-                      const isSelected = formData.sale_type === option.value;
-                      return (
-                        <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, sale_type: option.value }))}
-                          className={`
-                            flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
-                            ${isSelected 
-                              ? "border-primary bg-primary/10 text-primary" 
-                              : "border-border bg-card hover:border-primary/50 hover:bg-muted/50 text-muted-foreground"
-                            }
-                          `}
-                        >
-                          <Icon className={`h-5 w-5 mb-1 ${isSelected ? "text-primary" : ""}`} />
-                          <span className="text-xs font-medium">{option.label}</span>
-                          <span className="text-[9px] text-muted-foreground">{option.description}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Consignment Split Settings */}
-                {formData.sale_type === "conto_vendita" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="space-y-4 p-4 rounded-lg bg-muted/50 border"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Handshake className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Impostazioni Conto Vendita</span>
-                    </div>
-
-                    {/* Customer Search */}
-                    <div className="space-y-2">
-                      <Label className="text-xs">Cliente Proprietario</Label>
-                      {selectedCustomer ? (
-                        <div className="flex items-center justify-between p-2 rounded bg-background border">
-                          <div>
-                            <p className="text-sm font-medium">{selectedCustomer.name}</p>
-                            <p className="text-xs text-muted-foreground">{selectedCustomer.phone}</p>
-                          </div>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedCustomer(null)}>
-                            <X className="h-4 w-4" />
-                          </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {uploadedPhotos.map((photo, idx) => (
+                        <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border">
+                          <img src={photo} alt="" className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => removePhoto(photo)}
+                            className="absolute top-0.5 right-0.5 bg-destructive text-white rounded-full p-0.5"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
                         </div>
-                      ) : (
-                        <div className="relative">
-                          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            value={customerSearch}
-                            onChange={e => setCustomerSearch(e.target.value)}
-                            placeholder="Cerca cliente..."
-                            className="pl-8"
-                          />
-                          {searchingCustomers && <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin" />}
-                          
-                          {customerSearchResults.length > 0 && (
-                            <div className="absolute z-10 w-full mt-1 bg-background border rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                              {customerSearchResults.map(customer => (
-                                <button
-                                  key={customer.id}
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedCustomer(customer);
-                                    setCustomerSearch("");
-                                    setCustomerSearchResults([]);
-                                  }}
-                                  className="w-full text-left p-2 hover:bg-muted text-sm"
-                                >
-                                  <p className="font-medium">{customer.name}</p>
-                                  <p className="text-xs text-muted-foreground">{customer.phone} • {customer.email}</p>
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Split Percentage Slider */}
-                    <div className="space-y-3">
-                      <div className="flex justify-between text-xs">
-                        <span className="flex items-center gap-1"><User className="h-3 w-3" /> Cliente: {formData.owner_split_percentage}%</span>
-                        <span className="flex items-center gap-1"><ShoppingCart className="h-3 w-3" /> Corner: {formData.centro_split_percentage}%</span>
-                      </div>
-                      <Slider
-                        value={[formData.owner_split_percentage]}
-                        onValueChange={([val]) => setFormData(prev => ({
-                          ...prev,
-                          owner_split_percentage: val,
-                          centro_split_percentage: 100 - val
-                        }))}
-                        min={0}
-                        max={100}
-                        step={5}
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingPhoto}
+                        className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors"
+                      >
+                        {uploadingPhoto ? (
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        ) : (
+                          <Plus className="h-5 w-5 text-muted-foreground" />
+                        )}
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePhotoUpload}
+                        className="hidden"
                       />
                     </div>
-
-                    {/* Split Preview */}
-                    {splitPreview && (
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="p-2 rounded bg-background">
-                          <p className="text-xs text-muted-foreground">Cliente riceve</p>
-                          <p className="font-bold text-green-600">€{splitPreview.ownerPayout.toFixed(2)}</p>
-                        </div>
-                        <div className="p-2 rounded bg-background">
-                          <p className="text-xs text-muted-foreground">Corner lordo</p>
-                          <p className="font-bold">€{splitPreview.cornerGross.toFixed(2)}</p>
-                        </div>
-                        <div className="p-2 rounded bg-background">
-                          <p className="text-xs text-muted-foreground">Corner netto</p>
-                          <p className="font-bold text-primary">€{splitPreview.cornerNet.toFixed(2)}</p>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-
-                {/* Description */}
-                <div className="space-y-1.5">
-                  <Label htmlFor="description" className="text-xs font-medium text-muted-foreground">Descrizione</Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={e => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                    placeholder="Descrizione aggiuntiva, accessori inclusi..."
-                    className="min-h-[80px]"
-                  />
-                </div>
-
-                {/* Photo Upload */}
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium flex items-center gap-1">
-                    <ImageIcon className="h-3 w-3" />
-                    Foto Dispositivo
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {uploadedPhotos.map((photo, idx) => (
-                      <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border">
-                        <img src={photo} alt="" className="w-full h-full object-cover" />
-                        <button
-                          type="button"
-                          onClick={() => removePhoto(photo)}
-                          className="absolute top-0.5 right-0.5 bg-destructive text-white rounded-full p-0.5"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={uploadingPhoto}
-                      className="w-16 h-16 rounded-lg border-2 border-dashed border-muted-foreground/30 flex items-center justify-center hover:border-primary/50 transition-colors"
-                    >
-                      {uploadingPhoto ? (
-                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                      ) : (
-                        <Plus className="h-5 w-5 text-muted-foreground" />
-                      )}
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handlePhotoUpload}
-                      className="hidden"
-                    />
                   </div>
-                </div>
 
-                <Button type="submit" className="w-full" disabled={formLoading}>
-                  {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {editingDevice ? "Salva Modifiche" : "Aggiungi Dispositivo"}
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <Button type="submit" className="w-full" disabled={formLoading}>
+                    {formLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {editingDevice ? "Salva Modifiche" : "Aggiungi Dispositivo"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <Package className="h-8 w-8 text-muted-foreground" />
-              <div>
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-xs text-muted-foreground">Totale</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <Eye className="h-8 w-8 text-success" />
-              <div>
-                <p className="text-2xl font-bold">{stats.published}</p>
-                <p className="text-xs text-muted-foreground">Pubblicati</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <Clock className="h-8 w-8 text-warning" />
-              <div>
-                <p className="text-2xl font-bold">{stats.reserved}</p>
-                <p className="text-xs text-muted-foreground">Prenotati</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="h-8 w-8 text-primary" />
-              <div>
-                <p className="text-2xl font-bold">{stats.sold}</p>
-                <p className="text-xs text-muted-foreground">Venduti</p>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-4">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-8 w-8 text-orange-500" />
-              <div>
-                <p className="text-2xl font-bold">{stats.pendingReservations}</p>
-                <p className="text-xs text-muted-foreground">Prenotazioni</p>
-              </div>
-            </div>
-          </Card>
+        {/* Stats - Horizontal Scroll on Mobile */}
+        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-5 scrollbar-hide">
+          {[
+            { icon: Package, value: stats.total, label: "Totale", color: "text-muted-foreground" },
+            { icon: Eye, value: stats.published, label: "Pubblicati", color: "text-success" },
+            { icon: Clock, value: stats.reserved, label: "Prenotati", color: "text-warning" },
+            { icon: CheckCircle2, value: stats.sold, label: "Venduti", color: "text-primary" },
+            { icon: AlertCircle, value: stats.pendingReservations, label: "Prenotazioni", color: "text-orange-500" },
+          ].map((stat, idx) => (
+            <motion.div
+              key={idx}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05 }}
+            >
+              <Card className="p-3 md:p-4 min-w-[120px] md:min-w-0 bg-gradient-to-br from-card to-muted/30 border-border/50 hover:shadow-md transition-shadow">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className={`p-2 rounded-lg bg-muted/50 ${stat.color}`}>
+                    <stat.icon className="h-5 w-5 md:h-6 md:w-6" />
+                  </div>
+                  <div>
+                    <p className="text-xl md:text-2xl font-bold">{stat.value}</p>
+                    <p className="text-[10px] md:text-xs text-muted-foreground">{stat.label}</p>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          ))}
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="devices">
-          <TabsList>
-            <TabsTrigger value="devices">Dispositivi</TabsTrigger>
-            <TabsTrigger value="reservations">
+        <Tabs defaultValue="devices" className="space-y-4">
+          <TabsList className="w-full md:w-auto grid grid-cols-3 md:inline-flex h-auto p-1 bg-muted/50">
+            <TabsTrigger value="devices" className="text-xs md:text-sm py-2">Dispositivi</TabsTrigger>
+            <TabsTrigger value="reservations" className="text-xs md:text-sm py-2 relative">
               Prenotazioni
               {stats.pendingReservations > 0 && (
-                <Badge className="ml-2 bg-orange-500">{stats.pendingReservations}</Badge>
+                <Badge className="ml-1.5 bg-orange-500 text-[10px] px-1.5 py-0">{stats.pendingReservations}</Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="market">Storico Prezzi</TabsTrigger>
+            <TabsTrigger value="market" className="text-xs md:text-sm py-2">Storico</TabsTrigger>
           </TabsList>
 
           <TabsContent value="devices" className="mt-4">
             {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-16 w-full" />)}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {[1, 2, 3].map(i => (
+                  <Card key={i} className="p-4">
+                    <div className="flex gap-3">
+                      <Skeleton className="h-20 w-20 rounded-lg" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                        <Skeleton className="h-6 w-20" />
+                      </div>
+                    </div>
+                  </Card>
+                ))}
               </div>
             ) : devices.length === 0 ? (
-              <Card className="p-8 text-center">
-                <Package className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">Nessun dispositivo usato</p>
-                <Button className="mt-4" onClick={() => setDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Aggiungi il primo
-                </Button>
+              <Card className="p-8 md:p-12 text-center bg-gradient-to-br from-muted/30 to-muted/50">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="space-y-4"
+                >
+                  <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Package className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-lg">Nessun dispositivo usato</p>
+                    <p className="text-sm text-muted-foreground mt-1">Inizia ad aggiungere dispositivi al tuo catalogo</p>
+                  </div>
+                  <Button onClick={() => setDialogOpen(true)} className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Aggiungi il primo
+                  </Button>
+                </motion.div>
               </Card>
             ) : (
-              <div className="rounded-lg border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Dispositivo</TableHead>
-                      <TableHead>Condizione</TableHead>
-                      <TableHead>Prezzo</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {devices.map(device => (
-                      <TableRow key={device.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            {device.photos?.[0] ? (
-                              <img src={device.photos[0]} alt="" className="w-10 h-10 rounded object-cover" />
-                            ) : (
-                              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
-                                <Smartphone className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                            )}
-                            <div>
-                              <p className="font-medium">{device.brand} {device.model}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {device.storage_capacity} • {device.color}
-                              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {devices.map((device, idx) => (
+                  <motion.div
+                    key={device.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.03 }}
+                  >
+                    <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/30">
+                      <div className="flex p-3 gap-3">
+                        {/* Image */}
+                        <div className="relative flex-shrink-0">
+                          {device.photos?.[0] ? (
+                            <img 
+                              src={device.photos[0]} 
+                              alt="" 
+                              className="w-20 h-20 md:w-24 md:h-24 rounded-lg object-cover bg-muted"
+                            />
+                          ) : (
+                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-lg bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
+                              <Smartphone className="h-8 w-8 text-muted-foreground/50" />
+                            </div>
+                          )}
+                          {/* Status Badge Overlay */}
+                          <div className="absolute -top-1 -right-1">
+                            {getStatusBadge(device.status)}
+                          </div>
+                        </div>
+
+                        {/* Content */}
+                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                          <div>
+                            <h3 className="font-semibold text-sm truncate">
+                              {device.brand} {device.model}
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                              {device.storage_capacity && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                  {device.storage_capacity}
+                                </span>
+                              )}
+                              {device.color && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                  {device.color}
+                                </span>
+                              )}
+                              <Badge variant="outline" className="text-[10px] h-5">
+                                {conditionOptions.find(c => c.value === device.condition)?.label || device.condition}
+                              </Badge>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {conditionOptions.find(c => c.value === device.condition)?.label || device.condition}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">€{device.price}</TableCell>
-                        <TableCell>{getStatusBadge(device.status)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            {device.status === "draft" && (
-                              <Button size="sm" variant="outline" onClick={() => handlePublish(device.id)}>
-                                <Eye className="h-3.5 w-3.5 mr-1" />
-                                Pubblica
-                              </Button>
-                            )}
-                            {(device.status === "published" || device.status === "reserved") && (
-                              <Button size="sm" variant="outline" onClick={() => handleMarkAsSold(device.id)}>
-                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                                Venduto
-                              </Button>
-                            )}
-                            <Button size="icon" variant="ghost" onClick={() => handleEdit(device)}>
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(device.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+
+                          <div className="flex items-center justify-between mt-2">
+                            <div>
+                              <p className="text-lg font-bold text-primary">€{device.price}</p>
+                              {device.original_price && (
+                                <p className="text-[10px] text-muted-foreground line-through">€{device.original_price}</p>
+                              )}
+                            </div>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                      </div>
+
+                      {/* Actions Footer */}
+                      <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-t border-border/50">
+                        <div className="flex items-center gap-1">
+                          {device.status === "draft" && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-7 text-xs gap-1 text-success hover:text-success hover:bg-success/10"
+                              onClick={() => handlePublish(device.id)}
+                            >
+                              <Eye className="h-3 w-3" />
+                              <span className="hidden sm:inline">Pubblica</span>
+                            </Button>
+                          )}
+                          {(device.status === "published" || device.status === "reserved") && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-7 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                              onClick={() => handleMarkAsSold(device.id)}
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              <span className="hidden sm:inline">Venduto</span>
+                            </Button>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-0.5">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-7 w-7"
+                            onClick={() => handleEdit(device)}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => handleDelete(device.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))}
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="reservations" className="mt-4">
             {reservations.filter(r => r.status === "pending").length === 0 ? (
-              <Card className="p-8 text-center">
-                <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
-                <p className="text-muted-foreground">Nessuna prenotazione in attesa</p>
+              <Card className="p-8 md:p-12 text-center bg-gradient-to-br from-muted/30 to-muted/50">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="space-y-4"
+                >
+                  <div className="mx-auto w-16 h-16 rounded-full bg-warning/10 flex items-center justify-center">
+                    <Clock className="h-8 w-8 text-warning" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-lg">Nessuna prenotazione in attesa</p>
+                    <p className="text-sm text-muted-foreground mt-1">Le prenotazioni dei clienti appariranno qui</p>
+                  </div>
+                </motion.div>
               </Card>
             ) : (
-              <div className="rounded-lg border overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>Dispositivo</TableHead>
-                      <TableHead>Messaggio</TableHead>
-                      <TableHead>Data</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reservations.filter(r => r.status === "pending").map(res => (
-                      <TableRow key={res.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{res.customer_name}</p>
-                            <p className="text-xs text-muted-foreground">{res.customer_phone}</p>
-                            <p className="text-xs text-muted-foreground">{res.customer_email}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {res.device && (
-                            <div>
-                              <p className="font-medium">{res.device.brand} {res.device.model}</p>
-                              <p className="text-xs text-muted-foreground">€{res.device.price}</p>
+              <div className="space-y-3">
+                {reservations.filter(r => r.status === "pending").map((res, idx) => (
+                  <motion.div
+                    key={res.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <Card className="p-4 hover:shadow-md transition-shadow">
+                      <div className="flex flex-col md:flex-row md:items-center gap-4">
+                        {/* Customer Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start gap-3">
+                            <div className="p-2 rounded-full bg-primary/10">
+                              <User className="h-4 w-4 text-primary" />
                             </div>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm max-w-xs truncate">{res.message || "-"}</p>
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm">{format(new Date(res.created_at), "dd/MM/yyyy HH:mm", { locale: it })}</p>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button size="sm" onClick={() => handleReservationAction(res.id, "confirmed")}>
-                              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-sm">{res.customer_name}</p>
+                              <p className="text-xs text-muted-foreground truncate">{res.customer_phone}</p>
+                              <p className="text-xs text-muted-foreground truncate">{res.customer_email}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Device Info */}
+                        {res.device && (
+                          <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                            <Smartphone className="h-5 w-5 text-muted-foreground" />
+                            <div>
+                              <p className="font-medium text-sm">{res.device.brand} {res.device.model}</p>
+                              <p className="text-xs text-primary font-semibold">€{res.device.price}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Message */}
+                        {res.message && (
+                          <div className="hidden md:block flex-1 max-w-xs">
+                            <p className="text-sm text-muted-foreground truncate italic">"{res.message}"</p>
+                          </div>
+                        )}
+
+                        {/* Date & Actions */}
+                        <div className="flex items-center justify-between md:justify-end gap-3">
+                          <p className="text-xs text-muted-foreground">
+                            {format(new Date(res.created_at), "dd/MM HH:mm", { locale: it })}
+                          </p>
+                          <div className="flex gap-1.5">
+                            <Button 
+                              size="sm" 
+                              className="h-8 gap-1.5"
+                              onClick={() => handleReservationAction(res.id, "confirmed")}
+                            >
+                              <CheckCircle2 className="h-3.5 w-3.5" />
                               Conferma
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleReservationAction(res.id, "cancelled")}>
-                              <X className="h-3.5 w-3.5 mr-1" />
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="h-8 gap-1.5"
+                              onClick={() => handleReservationAction(res.id, "cancelled")}
+                            >
+                              <X className="h-3.5 w-3.5" />
                               Annulla
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        </div>
+                      </div>
+
+                      {/* Mobile message */}
+                      {res.message && (
+                        <div className="md:hidden mt-3 pt-3 border-t">
+                          <p className="text-sm text-muted-foreground italic">"{res.message}"</p>
+                        </div>
+                      )}
+                    </Card>
+                  </motion.div>
+                ))}
               </div>
             )}
           </TabsContent>
