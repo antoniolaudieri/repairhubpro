@@ -54,42 +54,55 @@ export default function CentroClienti() {
     
     setLoading(true);
     try {
+      // Single query with nested relations for efficiency
       const { data, error } = await supabase
         .from("customers")
-        .select("id, name, email, phone, created_at")
+        .select(`
+          id, name, email, phone, created_at,
+          devices (
+            id,
+            repairs (
+              id, final_cost, estimated_cost
+            )
+          )
+        `)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      setCustomers(data || []);
-      setFilteredCustomers(data || []);
+      
+      // Also get repair_requests for Corner segnalazioni
+      const { data: repairRequests } = await supabase
+        .from("repair_requests")
+        .select("customer_id, estimated_cost");
 
-      // Load repair counts and spending for each customer
-      const stats: Record<string, CustomerStats> = {};
-      for (const customer of data || []) {
-        const { data: devices } = await supabase
-          .from("devices")
-          .select("id")
-          .eq("customer_id", customer.id);
-
-        if (devices && devices.length > 0) {
-          const deviceIds = devices.map(d => d.id);
-          
-          // Get repairs with costs
-          const { data: repairs } = await supabase
-            .from("repairs")
-            .select("id, final_cost, estimated_cost")
-            .in("device_id", deviceIds);
-
-          const repairCount = repairs?.length || 0;
-          const totalSpent = repairs?.reduce((sum, repair) => {
-            return sum + (repair.final_cost || repair.estimated_cost || 0);
-          }, 0) || 0;
-
-          stats[customer.id] = { repairCount, totalSpent };
-        } else {
-          stats[customer.id] = { repairCount: 0, totalSpent: 0 };
+      const requestsByCustomer: Record<string, { count: number; spent: number }> = {};
+      repairRequests?.forEach(req => {
+        if (!requestsByCustomer[req.customer_id]) {
+          requestsByCustomer[req.customer_id] = { count: 0, spent: 0 };
         }
-      }
+        requestsByCustomer[req.customer_id].count++;
+        requestsByCustomer[req.customer_id].spent += req.estimated_cost || 0;
+      });
+
+      // Process customers and calculate stats in memory
+      const stats: Record<string, CustomerStats> = {};
+      const customersData = (data || []).map(c => {
+        const repairs = c.devices?.flatMap(d => d.repairs || []) || [];
+        const repairCount = repairs.length;
+        const repairSpent = repairs.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
+        
+        const reqStats = requestsByCustomer[c.id] || { count: 0, spent: 0 };
+        
+        stats[c.id] = { 
+          repairCount: repairCount + reqStats.count, 
+          totalSpent: repairSpent + reqStats.spent 
+        };
+        
+        return { id: c.id, name: c.name, email: c.email, phone: c.phone, created_at: c.created_at };
+      });
+      
+      setCustomers(customersData);
+      setFilteredCustomers(customersData);
       setCustomerStats(stats);
     } catch (error: any) {
       toast.error(error.message || "Errore nel caricamento dei clienti");
