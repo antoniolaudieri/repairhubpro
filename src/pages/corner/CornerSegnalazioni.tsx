@@ -667,16 +667,19 @@ export default function CornerSegnalazioni() {
                           (() => {
                             const isDirectToCentro = request.corner_direct_to_centro === true;
                             const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
-                            const cornerCommission = isDirectToCentro ? 0 : grossMargin * 0.10;
+                            // Direct-to-centro: Corner gets 5% (half commission), otherwise 10%
+                            const cornerRate = isDirectToCentro ? 0.05 : 0.10;
+                            const cornerCommission = grossMargin * cornerRate;
                             return (
                               <div className="text-right space-y-1">
                                 <div className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
                                   €{request.quote.total_cost.toFixed(2)}
                                 </div>
-                                {!hideEarnings && !isDirectToCentro && cornerCommission > 0 && (
+                                {!hideEarnings && cornerCommission > 0 && (
                                   <div className="inline-flex items-center gap-1.5 text-sm font-medium bg-gradient-to-r from-emerald-500/10 to-green-500/10 text-emerald-600 px-3 py-1 rounded-full border border-emerald-500/20">
                                     <TrendingUp className="h-3.5 w-3.5" />
                                     €{cornerCommission.toFixed(2)}
+                                    {isDirectToCentro && <span className="text-xs opacity-70">(5%)</span>}
                                   </div>
                                 )}
                               </div>
