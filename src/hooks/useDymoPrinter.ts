@@ -1,6 +1,10 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 
+// Dymo Connect Web Service runs locally on these ports
+const DYMO_PORTS = [41951, 41952]; // HTTPS and HTTP
+const DYMO_HOST = '127.0.0.1';
+
 interface DymoPrinter {
   name: string;
   modelName: string;
@@ -12,6 +16,7 @@ interface DymoEnvironment {
   isSupported: boolean;
   isInstalled: boolean;
   isServiceRunning: boolean;
+  serviceUrl?: string;
   errorMessage?: string;
 }
 
@@ -28,47 +33,145 @@ interface UseDymoPrinterReturn {
   printTestLabel: () => Promise<boolean>;
 }
 
+// Try to find the running Dymo service
+async function findDymoService(): Promise<{ url: string; port: number } | null> {
+  for (const port of DYMO_PORTS) {
+    const protocol = port === 41951 ? 'https' : 'http';
+    const url = `${protocol}://${DYMO_HOST}:${port}`;
+    
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      
+      const response = await fetch(`${url}/DYMO/DLS/Printing/StatusConnected`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        return { url, port };
+      }
+    } catch (e) {
+      // Try next port
+      continue;
+    }
+  }
+  return null;
+}
+
+// Get printers from Dymo service
+async function getDymoPrinters(serviceUrl: string): Promise<DymoPrinter[]> {
+  try {
+    const response = await fetch(`${serviceUrl}/DYMO/DLS/Printing/GetPrinters`, {
+      method: 'GET',
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to get printers');
+    }
+    
+    const xmlText = await response.text();
+    
+    // Parse XML response
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+    const printerNodes = xmlDoc.querySelectorAll('LabelWriterPrinter');
+    
+    const printers: DymoPrinter[] = [];
+    printerNodes.forEach((node) => {
+      const name = node.querySelector('Name')?.textContent || '';
+      const modelName = node.querySelector('ModelName')?.textContent || '';
+      const isConnected = node.querySelector('IsConnected')?.textContent === 'True';
+      const isLocal = node.querySelector('IsLocal')?.textContent === 'True';
+      
+      if (name && modelName.includes('LabelWriter')) {
+        printers.push({ name, modelName, isConnected, isLocal });
+      }
+    });
+    
+    return printers;
+  } catch (error) {
+    console.error('Error fetching printers:', error);
+    return [];
+  }
+}
+
+// Print label via Dymo service
+async function printLabelViaDymo(
+  serviceUrl: string,
+  printerName: string,
+  labelXml: string,
+  copies: number = 1
+): Promise<boolean> {
+  try {
+    const printParams = `
+      <LabelWriterPrintParams>
+        <Copies>${copies}</Copies>
+        <PrintQuality>BarcodeAndGraphics</PrintQuality>
+        <JobTitle>LabLinkRiparo Label</JobTitle>
+      </LabelWriterPrintParams>
+    `;
+    
+    const formData = new URLSearchParams();
+    formData.append('printerName', printerName);
+    formData.append('printParamsXml', printParams);
+    formData.append('labelXml', labelXml);
+    formData.append('labelSetXml', '');
+    
+    const response = await fetch(`${serviceUrl}/DYMO/DLS/Printing/PrintLabel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString(),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Print failed: ${response.statusText}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Print error:', error);
+    throw error;
+  }
+}
+
 export function useDymoPrinter(): UseDymoPrinterReturn {
   const [printers, setPrinters] = useState<DymoPrinter[]>([]);
   const [selectedPrinter, setSelectedPrinter] = useState<string | null>(null);
   const [environment, setEnvironment] = useState<DymoEnvironment | null>(null);
+  const [serviceUrl, setServiceUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const checkEnvironment = useCallback(async (): Promise<DymoEnvironment> => {
     setIsLoading(true);
     try {
-      // Check if dymo object exists
-      if (typeof window === 'undefined' || !window.dymo) {
+      const service = await findDymoService();
+      
+      if (service) {
         const env: DymoEnvironment = {
-          isSupported: false,
-          isInstalled: false,
-          isServiceRunning: false,
-          errorMessage: 'Dymo Connect Framework non caricato. Ricarica la pagina.',
+          isSupported: true,
+          isInstalled: true,
+          isServiceRunning: true,
+          serviceUrl: service.url,
         };
         setEnvironment(env);
+        setServiceUrl(service.url);
+        setIsInitialized(true);
         return env;
       }
-
-      // Initialize the framework
-      await window.dymo.connect.framework.init();
-      
-      // Check environment
-      const envCheck = await window.dymo.connect.framework.checkEnvironment();
       
       const env: DymoEnvironment = {
-        isSupported: envCheck.isBrowserSupported,
-        isInstalled: envCheck.isFrameworkInstalled,
-        isServiceRunning: envCheck.isWebServicePresent,
-        errorMessage: envCheck.errorDetails,
+        isSupported: true,
+        isInstalled: false,
+        isServiceRunning: false,
+        errorMessage: 'Dymo Connect Web Service non trovato. Assicurati che Dymo Connect sia installato e in esecuzione.',
       };
-
-      if (!env.isServiceRunning) {
-        env.errorMessage = 'Dymo Connect non è in esecuzione. Avvia l\'applicazione Dymo Connect.';
-      }
-
       setEnvironment(env);
-      setIsInitialized(true);
       return env;
     } catch (error: any) {
       console.error('Dymo environment check error:', error);
@@ -76,7 +179,7 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
         isSupported: false,
         isInstalled: false,
         isServiceRunning: false,
-        errorMessage: error.message || 'Errore nella verifica dell\'ambiente Dymo',
+        errorMessage: error.message || 'Errore nella verifica Dymo Connect',
       };
       setEnvironment(env);
       return env;
@@ -86,32 +189,29 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
   }, []);
 
   const refreshPrinters = useCallback(async (): Promise<DymoPrinter[]> => {
+    if (!serviceUrl) {
+      const env = await checkEnvironment();
+      if (!env.serviceUrl) {
+        return [];
+      }
+    }
+    
     setIsLoading(true);
     try {
-      if (!window.dymo) {
-        throw new Error('Dymo Connect Framework non disponibile');
-      }
-
-      const dymoprinters = await window.dymo.connect.framework.getPrinters();
+      const url = serviceUrl || environment?.serviceUrl;
+      if (!url) return [];
       
-      // Filter only LabelWriter printers that are connected
-      const labelWriters = dymoprinters
-        .filter((p) => p.isConnected && p.modelName.includes('LabelWriter'))
-        .map((p) => ({
-          name: p.name,
-          modelName: p.modelName,
-          isConnected: p.isConnected,
-          isLocal: p.isLocal,
-        }));
-
-      setPrinters(labelWriters);
+      const dymoprinters = await getDymoPrinters(url);
+      const connectedPrinters = dymoprinters.filter((p) => p.isConnected);
+      
+      setPrinters(connectedPrinters);
       
       // Auto-select first printer if none selected
-      if (labelWriters.length > 0 && !selectedPrinter) {
-        setSelectedPrinter(labelWriters[0].name);
+      if (connectedPrinters.length > 0 && !selectedPrinter) {
+        setSelectedPrinter(connectedPrinters[0].name);
       }
-
-      return labelWriters;
+      
+      return connectedPrinters;
     } catch (error: any) {
       console.error('Error fetching printers:', error);
       setPrinters([]);
@@ -119,7 +219,7 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPrinter]);
+  }, [serviceUrl, environment, selectedPrinter, checkEnvironment]);
 
   const printLabel = useCallback(async (labelXml: string, copies: number = 1): Promise<boolean> => {
     if (!selectedPrinter) {
@@ -127,24 +227,15 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
       return false;
     }
 
-    if (!window.dymo) {
-      toast.error('Dymo Connect Framework non disponibile');
+    const url = serviceUrl || environment?.serviceUrl;
+    if (!url) {
+      toast.error('Dymo Connect non disponibile');
       return false;
     }
 
     setIsLoading(true);
     try {
-      const printParams = window.dymo.connect.framework.createLabelWriterPrintParamsXml({
-        copies,
-        printQuality: 'BarcodeAndGraphics',
-      });
-
-      await window.dymo.connect.framework.printLabel(
-        selectedPrinter,
-        printParams,
-        labelXml
-      );
-
+      await printLabelViaDymo(url, selectedPrinter, labelXml, copies);
       toast.success(`Etichetta stampata su ${selectedPrinter}`);
       return true;
     } catch (error: any) {
@@ -154,10 +245,9 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedPrinter]);
+  }, [selectedPrinter, serviceUrl, environment]);
 
   const printTestLabel = useCallback(async (): Promise<boolean> => {
-    // Simple test label XML
     const testLabelXml = `<?xml version="1.0" encoding="utf-8"?>
 <DieCutLabel Version="8.0" Units="twips">
   <PaperOrientation>Landscape</PaperOrientation>
@@ -214,12 +304,14 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
   // Auto-initialize on mount
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (window.dymo) {
-        checkEnvironment();
-      }
+      checkEnvironment().then((env) => {
+        if (env.isServiceRunning) {
+          refreshPrinters();
+        }
+      });
     }, 500);
     return () => clearTimeout(timer);
-  }, [checkEnvironment]);
+  }, []);
 
   return {
     printers,
