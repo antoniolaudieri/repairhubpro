@@ -321,7 +321,7 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
               <ul className="text-xs space-y-1">
                 <li>• ID Riparazione: #{shortId}</li>
                 <li>• Data Ritiro: {intakeDate}</li>
-                <li>• Telefono: {data.customerPhone}</li>
+                <li>• Telefono: {data?.customerPhone || '-'}</li>
               </ul>
             </div>
           </TabsContent>
