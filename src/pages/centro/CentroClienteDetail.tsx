@@ -299,8 +299,17 @@ export default function CentroClienteDetail() {
   const completedRepairs = allRepairs.filter(r => r.status === "completed" || r.status === "delivered");
   const pendingRepairs = allRepairs.filter(r => r.status === "pending").length;
   const inProgressRepairs = allRepairs.filter(r => r.status === "in-progress").length;
+  
+  // Include repair_requests (segnalazioni Corner) in totals
+  const completedRequests = repairRequests.filter(r => r.status === "repair_completed" || r.status === "delivered");
+  const totalRepairsCount = allRepairs.length + repairRequests.length;
+  const totalCompletedCount = completedRepairs.length + completedRequests.length;
+  
   // Calcola spesa totale usando final_cost o estimated_cost come fallback
-  const totalSpent = allRepairs.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
+  const repairsSpent = allRepairs.reduce((sum, r) => sum + (r.final_cost || r.estimated_cost || 0), 0);
+  const requestsSpent = repairRequests.reduce((sum, r) => sum + (r.estimated_cost || 0), 0);
+  const totalSpent = repairsSpent + requestsSpent;
+  
   const avgRepairTime = completedRepairs.length > 0
     ? Math.round(
         completedRepairs.reduce((sum, r) => {
@@ -314,12 +323,16 @@ export default function CentroClienteDetail() {
         }, 0) / completedRepairs.length
       )
     : 0;
-  const completionRate = allRepairs.length > 0
-    ? Math.round((completedRepairs.length / allRepairs.length) * 100)
+  const completionRate = totalRepairsCount > 0
+    ? Math.round((totalCompletedCount / totalRepairsCount) * 100)
     : 0;
   
-  const lastRepairDate = allRepairs.length > 0 
-    ? allRepairs.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0].created_at
+  const allDates = [
+    ...allRepairs.map(r => r.created_at),
+    ...repairRequests.map(r => r.created_at)
+  ];
+  const lastRepairDate = allDates.length > 0 
+    ? allDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
     : null;
 
   const getStatusBadge = (status: string) => {
@@ -416,7 +429,7 @@ export default function CentroClienteDetail() {
           {/* Stats */}
           <motion.div variants={itemVariants}>
             <CustomerStats
-              totalRepairs={allRepairs.length}
+              totalRepairs={totalRepairsCount}
               totalSpent={totalSpent}
               avgRepairTime={avgRepairTime}
               completionRate={completionRate}
