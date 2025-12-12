@@ -51,6 +51,7 @@ import SelectSavedGuideDialog from "@/components/repair/SelectSavedGuideDialog";
 import { notifyCustomerStatusChange } from "@/services/pushNotificationService";
 import { AcceptanceFormPDF } from "@/components/repair/AcceptanceFormPDF";
 import { RepairChecklistDialog } from "@/components/checklist/RepairChecklistDialog";
+import { PrintLabelButton } from "@/components/repair/PrintLabelButton";
 import { VisualStatusManager, DIRECT_REPAIR_STATUSES } from "@/components/repair/VisualStatusManager";
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -710,6 +711,18 @@ export default function RepairDetail() {
                   <ClipboardCheck className="h-4 w-4 text-emerald-500" />
                   <span className="hidden lg:inline">Post</span>
                 </Button>
+                <PrintLabelButton
+                  repairId={repair.id}
+                  customerName={repair.customer.name}
+                  customerPhone={repair.customer.phone}
+                  deviceBrand={repair.device.brand}
+                  deviceModel={repair.device.model}
+                  deviceType={repair.device.device_type}
+                  issueDescription={repair.device.reported_issue}
+                  createdAt={repair.created_at}
+                  variant="outline"
+                  className="gap-2"
+                />
               </div>
               <Button
                 onClick={saveChanges} 

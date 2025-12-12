@@ -21,6 +21,7 @@ import { SparePartsStep } from "@/components/repair/SparePartsStep";
 import { RepairChecklistDialog } from "@/components/checklist";
 import { useCustomerDisplay } from "@/hooks/useCustomerDisplay";
 import { TopupRequestDialog } from "@/components/credit/TopupRequestDialog";
+import { PrintLabelButton } from "@/components/repair/PrintLabelButton";
 
 export default function CentroNuovoRitiro() {
   const navigate = useNavigate();
@@ -1118,6 +1119,26 @@ export default function CentroNuovoRitiro() {
                 <span className="text-sm text-green-600 font-medium">Firma di ritiro acquisita</span>
               </div>
             )}
+
+            {/* Print Label button in summary */}
+            <div className="pt-2">
+              <PrintLabelButton
+                repairId={createdRepairId || 'preview'}
+                customerName={customerData.name}
+                customerPhone={customerData.phone}
+                deviceBrand={deviceData.brand}
+                deviceModel={deviceData.model}
+                deviceType={deviceData.device_type}
+                issueDescription={deviceData.reported_issue}
+                createdAt={new Date().toISOString()}
+                variant="outline"
+                className="w-full gap-2"
+                showLabel={true}
+              />
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                Stampa l'etichetta dopo aver confermato il ritiro
+              </p>
+            </div>
           </div>
         );
 
