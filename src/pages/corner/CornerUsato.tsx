@@ -1366,28 +1366,29 @@ export default function CornerUsato() {
         </div>
 
         {/* Stats - Horizontal Scroll on Mobile */}
-        <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-5 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-5 md:gap-3 scrollbar-hide">
           {[
-            { icon: Package, value: stats.total, label: "Totale", color: "text-muted-foreground" },
-            { icon: Eye, value: stats.published, label: "Pubblicati", color: "text-success" },
-            { icon: Clock, value: stats.reserved, label: "Prenotati", color: "text-warning" },
-            { icon: CheckCircle2, value: stats.sold, label: "Venduti", color: "text-primary" },
-            { icon: AlertCircle, value: stats.pendingReservations, label: "Prenotazioni", color: "text-orange-500" },
+            { icon: Package, value: stats.total, label: "Tot", color: "text-muted-foreground" },
+            { icon: Eye, value: stats.published, label: "Pub", color: "text-success" },
+            { icon: Clock, value: stats.reserved, label: "Pren", color: "text-warning" },
+            { icon: CheckCircle2, value: stats.sold, label: "Vend", color: "text-primary" },
+            { icon: AlertCircle, value: stats.pendingReservations, label: "Richieste", color: "text-orange-500" },
           ].map((stat, idx) => (
             <motion.div
               key={idx}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.05 }}
+              className="flex-shrink-0"
             >
-              <Card className="p-3 md:p-4 min-w-[120px] md:min-w-0 bg-gradient-to-br from-card to-muted/30 border-border/50 hover:shadow-md transition-shadow">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <div className={`p-2 rounded-lg bg-muted/50 ${stat.color}`}>
-                    <stat.icon className="h-5 w-5 md:h-6 md:w-6" />
+              <Card className="p-2.5 md:p-4 w-[72px] md:w-auto md:min-w-0 bg-gradient-to-br from-card to-muted/30 border-border/50 hover:shadow-md transition-shadow">
+                <div className="flex flex-col items-center gap-1 md:flex-row md:items-center md:gap-3">
+                  <div className={`p-1.5 md:p-2 rounded-lg bg-muted/50 ${stat.color}`}>
+                    <stat.icon className="h-4 w-4 md:h-5 md:w-5" />
                   </div>
-                  <div>
-                    <p className="text-xl md:text-2xl font-bold">{stat.value}</p>
-                    <p className="text-[10px] md:text-xs text-muted-foreground">{stat.label}</p>
+                  <div className="text-center md:text-left">
+                    <p className="text-lg md:text-2xl font-bold leading-none">{stat.value}</p>
+                    <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">{stat.label}</p>
                   </div>
                 </div>
               </Card>
