@@ -83,8 +83,8 @@ export default function CornerNuovaSegnalazione() {
     initial_condition: "",
   });
 
-  // Calculate corner earnings from gestione fee (NO commission if direct to centro)
-  const effectiveCommissionRate = directToCentro ? 0 : cornerCommissionRate;
+  // Calculate corner earnings from gestione fee (HALF commission if direct to centro)
+  const effectiveCommissionRate = directToCentro ? cornerCommissionRate / 2 : cornerCommissionRate;
   const cornerGestioneEarnings = gestioneFeeEnabled 
     ? (GESTIONE_FEE_AMOUNT * effectiveCommissionRate / 100)
     : 0;
@@ -741,31 +741,22 @@ export default function CornerNuovaSegnalazione() {
                     <span className="text-muted-foreground">Importo incassato</span>
                     <span className="font-bold text-lg">€{GESTIONE_FEE_AMOUNT.toFixed(2)}</span>
                   </div>
-                  {!directToCentro ? (
-                    <>
-                      <div className="flex justify-between items-center text-sm">
-                        <span className="text-muted-foreground">
-                          Tua commissione ({effectiveCommissionRate}%)
-                        </span>
-                        <Badge className="bg-emerald-500 text-white">
-                          €{cornerGestioneEarnings.toFixed(2)}
-                        </Badge>
-                      </div>
-                      <div className="flex items-start gap-2 mt-2 p-2 bg-emerald-500/10 rounded-lg">
-                        <Info className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-                        <p className="text-xs text-emerald-700 dark:text-emerald-400">
-                          Il cliente paga €{GESTIONE_FEE_AMOUNT} come fee di gestione. Tu guadagni €{cornerGestioneEarnings.toFixed(2)}.
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-lg">
-                      <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                      <p className="text-xs text-muted-foreground">
-                        Invio diretto al Centro: nessuna commissione prevista per questa segnalazione.
-                      </p>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">
+                      Tua commissione ({effectiveCommissionRate}%)
+                      {directToCentro && <span className="text-xs ml-1">(dimezzata)</span>}
+                    </span>
+                    <Badge className="bg-emerald-500 text-white">
+                      €{cornerGestioneEarnings.toFixed(2)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-start gap-2 mt-2 p-2 bg-emerald-500/10 rounded-lg">
+                    <Info className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                      Il cliente paga €{GESTIONE_FEE_AMOUNT} come fee di gestione. Tu guadagni €{cornerGestioneEarnings.toFixed(2)}.
+                      {directToCentro && " Riceverai il pagamento dopo che il cliente avrà pagato il Centro."}
+                    </p>
+                  </div>
                 </div>
               )}
               
