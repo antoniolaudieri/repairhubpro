@@ -207,7 +207,21 @@ export function EnhancedQuoteDialog({
       }
     }
     
-    // Load default corner commission rate
+    // Load the actual Corner's commission rate if this is a Corner-referred repair
+    if (repairRequestId) {
+      const { data: repairRequest } = await supabase
+        .from("repair_requests")
+        .select("corner_id, corners!repair_requests_corner_id_fkey(commission_rate)")
+        .eq("id", repairRequestId)
+        .single();
+      
+      if (repairRequest?.corners?.commission_rate != null) {
+        setCornerCommissionRate(repairRequest.corners.commission_rate);
+        return; // Corner rate found, skip default
+      }
+    }
+    
+    // Fallback: Load default corner commission rate from platform settings
     const { data: cornerSettings } = await supabase
       .from("platform_settings")
       .select("value")
