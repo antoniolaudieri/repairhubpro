@@ -6,7 +6,7 @@ import { CornerLayout } from "@/layouts/CornerLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Sparkles, AlertTriangle, Smartphone, ArrowLeft, Building2, Check, Loader2 } from "lucide-react";
+import { Sparkles, AlertTriangle, Smartphone, ArrowLeft, Building2, Check, Loader2, Euro, Info } from "lucide-react";
 import { PhotoUpload } from "@/components/repair/PhotoUpload";
 import { DeviceInfoCard } from "@/components/repair/DeviceInfoCard";
 import { CustomerFormStep } from "@/components/repair/CustomerFormStep";
@@ -17,6 +17,8 @@ import { Button } from "@/components/ui/button";
 import { getBrandSuggestions, getModelSuggestions } from "@/data/commonDevices";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { sendPushNotification, getCentroUserId } from "@/services/pushNotificationService";
 
 interface Centro {
@@ -25,6 +27,8 @@ interface Centro {
   address: string;
   phone: string;
 }
+
+const GESTIONE_FEE_AMOUNT = 15;
 
 export default function CornerNuovaSegnalazione() {
   const navigate = useNavigate();
@@ -53,6 +57,10 @@ export default function CornerNuovaSegnalazione() {
   const [selectedCentroId, setSelectedCentroId] = useState<string | null>(null);
   const [loadingCentri, setLoadingCentri] = useState(false);
 
+  // Gestione fee
+  const [gestioneFeeEnabled, setGestioneFeeEnabled] = useState(true);
+  const [cornerCommissionRate, setCornerCommissionRate] = useState(10);
+
   const [customerData, setCustomerData] = useState({
     name: "",
     email: "",
@@ -72,7 +80,12 @@ export default function CornerNuovaSegnalazione() {
     initial_condition: "",
   });
 
-  // Fetch corner and centri on mount
+  // Calculate corner earnings from gestione fee
+  const cornerGestioneEarnings = gestioneFeeEnabled 
+    ? (GESTIONE_FEE_AMOUNT * cornerCommissionRate / 100)
+    : 0;
+
+  // Fetch corner, centri and commission rate on mount
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
@@ -80,13 +93,28 @@ export default function CornerNuovaSegnalazione() {
       // Fetch corner
       const { data: cornerData } = await supabase
         .from("corners")
-        .select("id, payment_status")
+        .select("id, payment_status, commission_rate")
         .eq("user_id", user.id)
         .maybeSingle();
       
       if (cornerData) {
         setCornerId(cornerData.id);
         setPaymentStatus(cornerData.payment_status);
+        // Use corner's individual commission rate if set, otherwise use default
+        if (cornerData.commission_rate) {
+          setCornerCommissionRate(cornerData.commission_rate);
+        }
+      }
+      
+      // Fetch platform default corner commission rate as fallback
+      const { data: settingsData } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "corner_commission_rate")
+        .maybeSingle();
+      
+      if (settingsData && !cornerData?.commission_rate) {
+        setCornerCommissionRate(settingsData.value);
       }
       
       // Fetch approved centri
@@ -396,7 +424,7 @@ export default function CornerNuovaSegnalazione() {
         }
       }
 
-      // Create repair request with assigned Centro
+      // Create repair request with assigned Centro and gestione fee info
       const { error: requestError } = await supabase.from("repair_requests").insert({
         corner_id: cornerId,
         customer_id: customerId,
@@ -410,6 +438,10 @@ export default function CornerNuovaSegnalazione() {
         assigned_provider_type: "centro",
         assigned_at: new Date().toISOString(),
         photos: photos,
+        corner_gestione_fee: GESTIONE_FEE_AMOUNT,
+        corner_gestione_fee_enabled: gestioneFeeEnabled,
+        corner_gestione_fee_collected: gestioneFeeEnabled, // Collected immediately if enabled
+        corner_gestione_fee_collected_at: gestioneFeeEnabled ? new Date().toISOString() : null,
       });
 
       if (requestError) throw requestError;
@@ -652,6 +684,55 @@ export default function CornerNuovaSegnalazione() {
       case 4:
         return (
           <div className="space-y-4">
+            {/* Gestione Fee Card */}
+            <Card className="p-4 space-y-4 bg-gradient-to-br from-emerald-500/10 to-green-500/5 border-emerald-500/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
+                    <Euro className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold">Gestione Segnalazione</h4>
+                    <p className="text-xs text-muted-foreground">Fee incassata dal cliente</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={gestioneFeeEnabled}
+                  onCheckedChange={setGestioneFeeEnabled}
+                />
+              </div>
+              
+              {gestioneFeeEnabled && (
+                <div className="pt-3 border-t border-emerald-500/20 space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Importo incassato</span>
+                    <span className="font-bold text-lg">€{GESTIONE_FEE_AMOUNT.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-muted-foreground">Tua commissione ({cornerCommissionRate}%)</span>
+                    <Badge className="bg-emerald-500 text-white">
+                      €{cornerGestioneEarnings.toFixed(2)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-start gap-2 mt-2 p-2 bg-emerald-500/10 rounded-lg">
+                    <Info className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400">
+                      Il cliente paga €{GESTIONE_FEE_AMOUNT} come fee di gestione, indipendentemente dall'esito del preventivo. Tu guadagni €{cornerGestioneEarnings.toFixed(2)}.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {!gestioneFeeEnabled && (
+                <div className="flex items-start gap-2 p-2 bg-muted/50 rounded-lg">
+                  <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    Nessuna fee di gestione verrà incassata per questa segnalazione.
+                  </p>
+                </div>
+              )}
+            </Card>
+
             <Card className="p-4 space-y-3">
               <h4 className="font-semibold">👤 Cliente</h4>
               <div className="text-sm space-y-1 text-muted-foreground">
@@ -688,6 +769,7 @@ export default function CornerNuovaSegnalazione() {
             <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
               <p className="text-sm text-amber-600 dark:text-amber-400">
                 ⚠️ Confermando, la segnalazione verrà inviata direttamente al Centro selezionato.
+                {gestioneFeeEnabled && " Ricordati di incassare €15 dal cliente."}
               </p>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { List, Smartphone, Clock, User, MapPin, CheckCircle2, Package } from "lucide-react";
+import { List, Smartphone, Clock, User, MapPin, CheckCircle2, Package, Euro } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,9 @@ interface RepairRequest {
   service_type: string;
   created_at: string;
   estimated_cost: number | null;
+  corner_gestione_fee_enabled?: boolean;
+  corner_gestione_fee?: number;
+  corner_gestione_fee_collected?: boolean;
   customers?: {
     name: string;
     phone: string;
@@ -184,11 +187,17 @@ export const RepairRequestsList = ({ requests, isLoading, onRefresh }: RepairReq
                       {request.issue_description}
                     </p>
 
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                    <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {format(new Date(request.created_at), "dd MMM yyyy HH:mm", { locale: it })}
                       </span>
+                      {request.corner_gestione_fee_enabled && request.corner_gestione_fee_collected && (
+                        <Badge className="bg-emerald-500 text-white text-[10px] gap-1">
+                          <Euro className="h-3 w-3" />
+                          Gestione €{(request.corner_gestione_fee || 15).toFixed(0)}
+                        </Badge>
+                      )}
                       {request.estimated_cost && (
                         <span className="font-medium text-primary">
                           Preventivo: €{request.estimated_cost.toFixed(2)}

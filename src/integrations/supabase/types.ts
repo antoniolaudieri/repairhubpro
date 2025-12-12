@@ -1425,6 +1425,10 @@ export type Database = {
           assigned_provider_type: string | null
           at_corner_at: string | null
           awaiting_pickup_at: string | null
+          corner_gestione_fee: number | null
+          corner_gestione_fee_collected: boolean | null
+          corner_gestione_fee_collected_at: string | null
+          corner_gestione_fee_enabled: boolean | null
           corner_id: string | null
           created_at: string
           customer_id: string
@@ -1457,6 +1461,10 @@ export type Database = {
           assigned_provider_type?: string | null
           at_corner_at?: string | null
           awaiting_pickup_at?: string | null
+          corner_gestione_fee?: number | null
+          corner_gestione_fee_collected?: boolean | null
+          corner_gestione_fee_collected_at?: string | null
+          corner_gestione_fee_enabled?: boolean | null
           corner_id?: string | null
           created_at?: string
           customer_id: string
@@ -1489,6 +1497,10 @@ export type Database = {
           assigned_provider_type?: string | null
           at_corner_at?: string | null
           awaiting_pickup_at?: string | null
+          corner_gestione_fee?: number | null
+          corner_gestione_fee_collected?: boolean | null
+          corner_gestione_fee_collected_at?: string | null
+          corner_gestione_fee_enabled?: boolean | null
           corner_id?: string | null
           created_at?: string
           customer_id?: string
