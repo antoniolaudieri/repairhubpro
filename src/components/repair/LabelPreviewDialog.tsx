@@ -50,10 +50,10 @@ const PAPER_FORMATS = getLabelFormats();
 export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDialogProps) {
   const { environment, selectedPrinter, printLabel, isLoading, checkEnvironment, refreshPrinters } = useDymoPrinter();
   
-  // Editable fields
-  const [customerName, setCustomerName] = useState(data.customerName);
-  const [deviceInfo, setDeviceInfo] = useState(`${data.deviceBrand} ${data.deviceModel}`);
-  const [issue, setIssue] = useState(data.issueDescription);
+  // Editable fields - use empty string defaults to avoid crashes when data is undefined
+  const [customerName, setCustomerName] = useState('');
+  const [deviceInfo, setDeviceInfo] = useState('');
+  const [issue, setIssue] = useState('');
   
   // Label configuration
   const [labelFormat, setLabelFormat] = useState<LabelFormat>('30252');
@@ -65,15 +65,15 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
 
   // Reset fields when dialog opens with new data
   useEffect(() => {
-    if (open) {
-      setCustomerName(data.customerName);
-      setDeviceInfo(`${data.deviceBrand} ${data.deviceModel}`);
-      setIssue(data.issueDescription);
+    if (open && data) {
+      setCustomerName(data.customerName || '');
+      setDeviceInfo(`${data.deviceBrand || ''} ${data.deviceModel || ''}`.trim());
+      setIssue(data.issueDescription || '');
     }
   }, [open, data]);
 
-  const shortId = data.repairId.slice(0, 8).toUpperCase();
-  const intakeDate = format(new Date(data.createdAt), 'dd/MM/yyyy HH:mm', { locale: it });
+  const shortId = data?.repairId?.slice(0, 8).toUpperCase() || '';
+  const intakeDate = data?.createdAt ? format(new Date(data.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '';
 
   // Get label dimensions for preview
   const getLabelDimensions = () => {
@@ -108,15 +108,20 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
       return;
     }
 
+    if (!data) {
+      toast.error('Dati etichetta non disponibili');
+      return;
+    }
+
     setIsPrinting(true);
     try {
       const labelXml = generateRepairLabel({
-        repairId: data.repairId,
+        repairId: data.repairId || '',
         customerName: customerName.substring(0, 25),
-        phone: data.customerPhone,
-        deviceBrand: data.deviceBrand,
-        deviceModel: data.deviceModel,
-        deviceType: data.deviceType,
+        phone: data.customerPhone || '',
+        deviceBrand: data.deviceBrand || '',
+        deviceModel: data.deviceModel || '',
+        deviceType: data.deviceType || '',
         issueDescription: issue.substring(0, 40),
         intakeDate,
       }, labelFormat);
