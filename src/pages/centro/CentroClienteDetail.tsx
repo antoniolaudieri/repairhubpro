@@ -62,6 +62,18 @@ interface Order {
   supplier: string;
 }
 
+interface RepairRequest {
+  id: string;
+  device_type: string;
+  device_brand: string | null;
+  device_model: string | null;
+  issue_description: string;
+  status: string;
+  estimated_cost: number | null;
+  created_at: string;
+  corner?: { business_name: string } | null;
+}
+
 const deviceIcons: Record<string, React.ReactNode> = {
   smartphone: <Smartphone className="h-5 w-5" />,
   tablet: <Tablet className="h-5 w-5" />,
@@ -77,6 +89,7 @@ export default function CentroClienteDetail() {
   const { user } = useAuth();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
+  const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
@@ -223,6 +236,26 @@ export default function CentroClienteDetail() {
 
       if (devicesError) throw devicesError;
       setDevices(devicesData || []);
+
+      // Load repair_requests (segnalazioni from Corner)
+      const { data: repairRequestsData, error: repairRequestsError } = await supabase
+        .from("repair_requests")
+        .select(`
+          id,
+          device_type,
+          device_brand,
+          device_model,
+          issue_description,
+          status,
+          estimated_cost,
+          created_at,
+          corner:corners(business_name)
+        `)
+        .eq("customer_id", id)
+        .order("created_at", { ascending: false });
+
+      if (repairRequestsError) throw repairRequestsError;
+      setRepairRequests(repairRequestsData || []);
 
       const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
@@ -588,6 +621,58 @@ export default function CentroClienteDetail() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Repair Requests from Corner (Segnalazioni) */}
+          {repairRequests.length > 0 && (
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Segnalazioni Corner
+                    </CardTitle>
+                    <Badge variant="secondary" className="text-xs">{repairRequests.length}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1.5">
+                    {repairRequests.map((req) => (
+                      <div
+                        key={req.id}
+                        className="flex items-center gap-2 p-2.5 border rounded-lg hover:bg-muted/30 cursor-pointer transition-colors"
+                        onClick={() => navigate(`/centro/lavori-corner`)}
+                      >
+                        <div className="h-10 w-10 flex items-center justify-center rounded-lg border bg-primary/5 text-primary">
+                          {getDeviceIcon(req.device_type)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">
+                            {req.device_brand || 'N/D'} {req.device_model || ''}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground capitalize">
+                            {req.device_type} • {req.issue_description?.substring(0, 30)}...
+                          </p>
+                          {req.corner && (
+                            <p className="text-[10px] text-primary">via {req.corner.business_name}</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <Badge variant="outline" className="text-[10px] capitalize">
+                            {req.status.replace(/_/g, ' ')}
+                          </Badge>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {format(new Date(req.created_at), "dd MMM", { locale: it })}
+                          </p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           {/* Repairs History */}
           <motion.div variants={itemVariants}>
