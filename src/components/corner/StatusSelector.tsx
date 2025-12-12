@@ -19,20 +19,28 @@ const ALL_STATUSES = [
   'cancelled',
 ];
 
+// Statuses to skip for direct-to-centro repairs (no Corner pickup/return)
+const DIRECT_TO_CENTRO_SKIP = ['awaiting_pickup', 'picked_up', 'at_corner'];
+
 interface StatusSelectorProps {
   currentStatus: string;
   onStatusChange: (newStatus: string) => void;
   disabled?: boolean;
+  isDirectToCentro?: boolean;
 }
 
-export function StatusSelector({ currentStatus, onStatusChange, disabled }: StatusSelectorProps) {
+export function StatusSelector({ currentStatus, onStatusChange, disabled, isDirectToCentro = false }: StatusSelectorProps) {
+  const availableStatuses = isDirectToCentro 
+    ? ALL_STATUSES.filter(s => !DIRECT_TO_CENTRO_SKIP.includes(s))
+    : ALL_STATUSES;
+
   return (
     <Select value={currentStatus} onValueChange={onStatusChange} disabled={disabled}>
       <SelectTrigger className="w-full">
         <SelectValue placeholder="Seleziona stato" />
       </SelectTrigger>
       <SelectContent>
-        {ALL_STATUSES.map((status) => (
+        {availableStatuses.map((status) => (
           <SelectItem key={status} value={status}>
             {getStatusLabel(status)}
           </SelectItem>
