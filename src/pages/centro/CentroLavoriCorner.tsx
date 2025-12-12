@@ -27,7 +27,8 @@ import {
   Edit,
   ShoppingCart,
   MapPin,
-  Info
+  Info,
+  Wallet
 } from "lucide-react";
 import { EnhancedQuoteDialog } from "@/components/quotes/EnhancedQuoteDialog";
 import { EditQuoteDialog } from "@/components/quotes/EditQuoteDialog";
@@ -67,6 +68,9 @@ interface CornerRequest {
   corner_gestione_fee: number | null;
   corner_gestione_fee_enabled: boolean | null;
   corner_gestione_fee_collected: boolean | null;
+  // Direct-to-centro payment tracking
+  corner_direct_to_centro: boolean | null;
+  customer_paid_at: string | null;
   customer: {
     id: string;
     name: string;
@@ -201,6 +205,8 @@ export default function CentroLavoriCorner() {
         corner_gestione_fee,
         corner_gestione_fee_enabled,
         corner_gestione_fee_collected,
+        corner_direct_to_centro,
+        customer_paid_at,
         customer:customers (
           id,
           name,
@@ -398,6 +404,39 @@ export default function CentroLavoriCorner() {
     }
   };
 
+  const confirmCustomerPayment = async (request: CornerRequest) => {
+    setProcessingId(request.id);
+    try {
+      const { error } = await supabase
+        .from("repair_requests")
+        .update({ customer_paid_at: new Date().toISOString() })
+        .eq("id", request.id);
+
+      if (error) throw error;
+      
+      // Notify Corner that payment is confirmed
+      if (request.corner?.id) {
+        const cornerUserId = await getCornerUserId(request.corner.id);
+        if (cornerUserId) {
+          const deviceName = `${request.device_brand || ''} ${request.device_model || request.device_type}`.trim();
+          await sendPushNotification([cornerUserId], {
+            title: "💰 Pagamento Cliente Confermato!",
+            body: `Il cliente ha pagato per ${deviceName}. Puoi ora richiedere la tua commissione.`,
+            data: { url: "/corner/commissioni" },
+          });
+        }
+      }
+      
+      toast.success("Pagamento cliente confermato! Il Corner può ora richiedere la commissione.");
+      if (centroId) fetchRequests(centroId);
+    } catch (error: any) {
+      console.error("Error confirming payment:", error);
+      toast.error("Errore nella conferma pagamento");
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const getNextAction = (request: CornerRequest) => {
     const status = request.status;
     
@@ -565,8 +604,21 @@ export default function CentroLavoriCorner() {
       
       case 'completed':
       case 'delivered':
+        // Show confirm payment button for direct-to-centro if not yet confirmed
+        const showPaymentConfirm = request.corner_direct_to_centro && !request.customer_paid_at;
         return (
           <div className="flex gap-2 flex-1 flex-wrap">
+            {showPaymentConfirm && (
+              <Button 
+                size="sm" 
+                onClick={() => confirmCustomerPayment(request)}
+                disabled={processingId === request.id}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                <Wallet className="h-4 w-4 mr-1" />
+                Conferma Pagamento Cliente
+              </Button>
+            )}
             <Button 
               size="sm" 
               variant="outline"
@@ -576,10 +628,17 @@ export default function CentroLavoriCorner() {
               <Wrench className="h-4 w-4 mr-1" />
               Riapri
             </Button>
-            <Badge variant="secondary" className="flex items-center">
-              <CheckCircle2 className="h-3 w-3 mr-1" />
-              Completato
-            </Badge>
+            {request.customer_paid_at ? (
+              <Badge className="bg-emerald-500 flex items-center">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Pagamento Confermato
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="flex items-center">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Completato
+              </Badge>
+            )}
           </div>
         );
       

@@ -1438,6 +1438,7 @@ export type Database = {
           customer_id: string
           customer_latitude: number | null
           customer_longitude: number | null
+          customer_paid_at: string | null
           delivered_at: string | null
           device_brand: string | null
           device_model: string | null
@@ -1475,6 +1476,7 @@ export type Database = {
           customer_id: string
           customer_latitude?: number | null
           customer_longitude?: number | null
+          customer_paid_at?: string | null
           delivered_at?: string | null
           device_brand?: string | null
           device_model?: string | null
@@ -1512,6 +1514,7 @@ export type Database = {
           customer_id?: string
           customer_latitude?: number | null
           customer_longitude?: number | null
+          customer_paid_at?: string | null
           delivered_at?: string | null
           device_brand?: string | null
           device_model?: string | null
