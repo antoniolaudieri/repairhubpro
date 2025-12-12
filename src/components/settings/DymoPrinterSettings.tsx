@@ -159,40 +159,35 @@ export function DymoPrinterSettings({
                   
                   {/* Connection Instructions */}
                   <div className="bg-background/50 p-3 rounded-md mb-3 border border-border/50">
-                    <p className="font-medium text-sm mb-2">📋 Verifica questi passaggi:</p>
-                    <ol className="list-decimal list-inside text-xs space-y-2 mb-2">
+                    <p className="font-medium text-sm mb-2">🔧 Problema SSL nel servizio Dymo</p>
+                    <p className="text-xs mb-2">
+                      Il Web Service di Dymo ha un problema di connessione SSL. Prova:
+                    </p>
+                    <ol className="list-decimal list-inside text-xs space-y-1 mb-2">
                       <li>
-                        <strong>Apri Dymo Connect</strong> dal menu Start
+                        <strong>Riavvia il servizio:</strong> Apri "services.msc" dal menu Start, 
+                        trova "Dymo Connect Web Service" e clicca Riavvia
                       </li>
                       <li>
-                        Vai in <strong>Impostazioni</strong> (⚙️) → cerca <strong>"Web Service"</strong> e attivalo
-                      </li>
-                      <li>
-                        La stampante deve essere <strong>accesa e collegata via USB</strong>
-                      </li>
-                      <li>
-                        Verifica che funzioni:{' '}
+                        <strong>Se non funziona:</strong> Reinstalla Dymo Connect da{' '}
                         <a
-                          href="http://localhost:41952/DYMO/DLS/Printing/StatusConnected"
+                          href="https://www.dymo.com/support"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="underline text-primary"
                         >
-                          Test connessione
+                          dymo.com/support
                         </a>
                       </li>
                     </ol>
-                    <p className="text-xs text-muted-foreground mt-2">
-                      ⚠️ Serve <strong>Dymo Connect</strong> (non "Dymo Label Software"). 
-                      Se hai la versione vecchia, aggiorna da{' '}
-                      <a
-                        href="https://www.dymo.com/support"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline"
-                      >
-                        dymo.com/support
-                      </a>
+                  </div>
+                  
+                  {/* Alternative: Browser Print */}
+                  <div className="bg-primary/5 p-3 rounded-md border border-primary/20">
+                    <p className="font-medium text-sm mb-1">💡 Alternativa: Stampa Browser</p>
+                    <p className="text-xs text-muted-foreground">
+                      Puoi stampare etichette usando la funzione di stampa del browser (Ctrl+P) 
+                      selezionando la stampante Dymo. Non è automatico ma funziona sempre.
                     </p>
                   </div>
 
