@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useGeolocation } from "@/hooks/useGeolocation";
@@ -29,7 +29,10 @@ import {
   Users,
   TrendingUp,
   Shield,
-  FileText
+  FileText,
+  Upload,
+  X,
+  Image as ImageIcon
 } from "lucide-react";
 import { LocationPicker } from "@/components/maps/LocationPicker";
 
@@ -42,6 +45,7 @@ interface CornerForm {
   email: string;
   latitude: number | null;
   longitude: number | null;
+  logo_url: string | null;
 }
 
 interface RiparatoreForm {
@@ -83,11 +87,13 @@ export default function ProviderRegistration() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { latitude, longitude, loading: geoLoading, error: geoError, requestLocation } = useGeolocation();
+  const cornerLogoInputRef = useRef<HTMLInputElement>(null);
   
   const typeParam = searchParams.get("type") as ProviderType;
   const [selectedType, setSelectedType] = useState<ProviderType>(typeParam || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
 
   const [cornerForm, setCornerForm] = useState<CornerForm>({
     business_name: "",
@@ -96,6 +102,7 @@ export default function ProviderRegistration() {
     email: user?.email || "",
     latitude: null,
     longitude: null,
+    logo_url: null,
   });
 
   const [riparatoreForm, setRiparatoreForm] = useState<RiparatoreForm>({
@@ -158,6 +165,7 @@ export default function ProviderRegistration() {
           email: cornerForm.email,
           latitude: cornerForm.latitude,
           longitude: cornerForm.longitude,
+          logo_url: cornerForm.logo_url,
         });
         if (error) throw error;
       } else if (selectedType === "riparatore") {
@@ -498,6 +506,90 @@ export default function ProviderRegistration() {
                   </div>
                 </CardHeader>
                 <CardContent className="p-6 space-y-6">
+                  {/* Logo Upload */}
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4 text-primary" />
+                      Logo Negozio (Opzionale)
+                    </Label>
+                    <div className="flex items-center gap-4">
+                      {cornerForm.logo_url ? (
+                        <div className="relative group">
+                          <img
+                            src={cornerForm.logo_url}
+                            alt="Logo preview"
+                            className="w-20 h-20 rounded-xl object-cover border-2 border-border shadow-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setCornerForm({ ...cornerForm, logo_url: null })}
+                            className="absolute -top-2 -right-2 p-1 bg-destructive text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-md"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="w-20 h-20 rounded-xl bg-muted flex items-center justify-center border-2 border-dashed border-border">
+                          <Store className="h-8 w-8 text-muted-foreground/50" />
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => cornerLogoInputRef.current?.click()}
+                          disabled={uploadingLogo}
+                          className="gap-2"
+                        >
+                          {uploadingLogo ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Upload className="h-4 w-4" />
+                          )}
+                          {cornerForm.logo_url ? "Cambia" : "Carica"}
+                        </Button>
+                        <input
+                          ref={cornerLogoInputRef}
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (!file.type.startsWith("image/")) {
+                              toast.error("Seleziona un file immagine");
+                              return;
+                            }
+                            if (file.size > 2 * 1024 * 1024) {
+                              toast.error("Max 2MB");
+                              return;
+                            }
+                            setUploadingLogo(true);
+                            try {
+                              const fileExt = file.name.split(".").pop();
+                              const fileName = `corner-temp-${Date.now()}.${fileExt}`;
+                              const { error: uploadError } = await supabase.storage
+                                .from("centro-logos")
+                                .upload(fileName, file, { upsert: true });
+                              if (uploadError) throw uploadError;
+                              const { data: urlData } = supabase.storage
+                                .from("centro-logos")
+                                .getPublicUrl(fileName);
+                              setCornerForm({ ...cornerForm, logo_url: urlData.publicUrl });
+                              toast.success("Logo caricato");
+                            } catch (err) {
+                              toast.error("Errore upload logo");
+                            } finally {
+                              setUploadingLogo(false);
+                            }
+                          }}
+                        />
+                        <p className="text-[10px] text-muted-foreground">JPG, PNG. Max 2MB</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="grid md:grid-cols-2 gap-5">
                     <div className="space-y-2">
                       <Label htmlFor="business_name" className="text-sm font-medium">Nome Negozio *</Label>

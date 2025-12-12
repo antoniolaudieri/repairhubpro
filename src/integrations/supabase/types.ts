@@ -496,6 +496,7 @@ export type Database = {
           id: string
           last_credit_update: string | null
           latitude: number | null
+          logo_url: string | null
           longitude: number | null
           notes: string | null
           payment_status: string | null
@@ -517,6 +518,7 @@ export type Database = {
           id?: string
           last_credit_update?: string | null
           latitude?: number | null
+          logo_url?: string | null
           longitude?: number | null
           notes?: string | null
           payment_status?: string | null
@@ -538,6 +540,7 @@ export type Database = {
           id?: string
           last_credit_update?: string | null
           latitude?: number | null
+          logo_url?: string | null
           longitude?: number | null
           notes?: string | null
           payment_status?: string | null
