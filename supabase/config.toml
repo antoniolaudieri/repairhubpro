@@ -59,3 +59,6 @@ verify_jwt = false
 
 [functions.delete-customer-account]
 verify_jwt = false
+
+[functions.customer-analytics-agent]
+verify_jwt = false
