@@ -1365,31 +1365,26 @@ export default function CornerUsato() {
           </div>
         </div>
 
-        {/* Stats - Horizontal Scroll on Mobile */}
-        <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-5 md:gap-3 scrollbar-hide">
+        {/* Stats - Grid on Mobile */}
+        <div className="grid grid-cols-5 gap-1.5 md:gap-3">
           {[
-            { icon: Package, value: stats.total, label: "Tot", color: "text-muted-foreground" },
-            { icon: Eye, value: stats.published, label: "Pub", color: "text-success" },
-            { icon: Clock, value: stats.reserved, label: "Pren", color: "text-warning" },
-            { icon: CheckCircle2, value: stats.sold, label: "Vend", color: "text-primary" },
-            { icon: AlertCircle, value: stats.pendingReservations, label: "Richieste", color: "text-orange-500" },
+            { icon: Package, value: stats.total, label: "Tot", color: "text-muted-foreground", bg: "bg-muted/30" },
+            { icon: Eye, value: stats.published, label: "Pub", color: "text-emerald-500", bg: "bg-emerald-500/10" },
+            { icon: Clock, value: stats.reserved, label: "Pren", color: "text-amber-500", bg: "bg-amber-500/10" },
+            { icon: CheckCircle2, value: stats.sold, label: "Vend", color: "text-primary", bg: "bg-primary/10" },
+            { icon: AlertCircle, value: stats.pendingReservations, label: "Rich", color: "text-orange-500", bg: "bg-orange-500/10" },
           ].map((stat, idx) => (
             <motion.div
               key={idx}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: idx * 0.05 }}
-              className="flex-shrink-0"
             >
-              <Card className="p-2.5 md:p-4 w-[72px] md:w-auto md:min-w-0 bg-gradient-to-br from-card to-muted/30 border-border/50 hover:shadow-md transition-shadow">
-                <div className="flex flex-col items-center gap-1 md:flex-row md:items-center md:gap-3">
-                  <div className={`p-1.5 md:p-2 rounded-lg bg-muted/50 ${stat.color}`}>
-                    <stat.icon className="h-4 w-4 md:h-5 md:w-5" />
-                  </div>
-                  <div className="text-center md:text-left">
-                    <p className="text-lg md:text-2xl font-bold leading-none">{stat.value}</p>
-                    <p className="text-[9px] md:text-xs text-muted-foreground mt-0.5">{stat.label}</p>
-                  </div>
+              <Card className={`p-2 md:p-4 ${stat.bg} border-0 shadow-sm`}>
+                <div className="flex flex-col items-center text-center">
+                  <stat.icon className={`h-4 w-4 md:h-5 md:w-5 ${stat.color} mb-1`} />
+                  <p className="text-base md:text-2xl font-bold">{stat.value}</p>
+                  <p className="text-[8px] md:text-xs text-muted-foreground leading-tight">{stat.label}</p>
                 </div>
               </Card>
             </motion.div>
@@ -1446,7 +1441,7 @@ export default function CornerUsato() {
                 </motion.div>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                 {devices.map((device, idx) => (
                   <motion.div
                     key={device.id}
@@ -1455,83 +1450,105 @@ export default function CornerUsato() {
                     transition={{ delay: idx * 0.03 }}
                   >
                     <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/30">
-                      <div className="flex p-3 gap-3">
-                        {/* Image */}
-                        <div className="relative flex-shrink-0">
-                          {device.photos?.[0] ? (
-                            <img 
-                              src={device.photos[0]} 
-                              alt="" 
-                              className="w-20 h-20 md:w-24 md:h-24 rounded-lg object-cover bg-muted"
-                            />
-                          ) : (
-                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-lg bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
-                              <Smartphone className="h-8 w-8 text-muted-foreground/50" />
+                      {/* Main Content */}
+                      <div className="p-3">
+                        <div className="flex gap-3">
+                          {/* Image */}
+                          <div className="relative flex-shrink-0">
+                            {device.photos?.[0] ? (
+                              <img 
+                                src={device.photos[0]} 
+                                alt="" 
+                                className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover bg-muted"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center">
+                                <Smartphone className="h-6 w-6 text-muted-foreground/50" />
+                              </div>
+                            )}
+                            {/* Status Badge Overlay */}
+                            <div className="absolute -top-1.5 -right-1.5">
+                              {getStatusBadge(device.status)}
                             </div>
-                          )}
-                          {/* Status Badge Overlay */}
-                          <div className="absolute -top-1 -right-1">
-                            {getStatusBadge(device.status)}
                           </div>
-                        </div>
 
-                        {/* Content */}
-                        <div className="flex-1 min-w-0 flex flex-col justify-between">
-                          <div>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
                             <h3 className="font-semibold text-sm truncate">
                               {device.brand} {device.model}
                             </h3>
-                            <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                            
+                            {/* Tags */}
+                            <div className="flex flex-wrap items-center gap-1 mt-1">
                               {device.storage_capacity && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
                                   {device.storage_capacity}
                                 </span>
                               )}
-                              {device.color && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-                                  {device.color}
-                                </span>
-                              )}
-                              <Badge variant="outline" className="text-[10px] h-5">
-                                {conditionOptions.find(c => c.value === device.condition)?.label || device.condition}
+                              <Badge variant="outline" className="text-[9px] h-4 px-1.5">
+                                {conditionOptions.find(c => c.value === device.condition)?.label?.substring(0, 8) || device.condition}
                               </Badge>
                             </div>
-                          </div>
 
-                          <div className="flex items-center justify-between mt-2">
-                            <div>
-                              <p className="text-lg font-bold text-primary">€{device.price}</p>
+                            {/* Price */}
+                            <div className="flex items-baseline gap-2 mt-1.5">
+                              <p className="text-base font-bold text-primary">€{device.price}</p>
                               {device.original_price && (
                                 <p className="text-[10px] text-muted-foreground line-through">€{device.original_price}</p>
                               )}
                             </div>
                           </div>
                         </div>
+
+                        {/* Stats Row */}
+                        <div className="flex items-center justify-between mt-2.5 pt-2 border-t border-border/30">
+                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Eye className="h-3 w-3" />
+                              <span>{device.views_count || 0}</span>
+                            </div>
+                            {device.warranty_months > 0 && (
+                              <div className="flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                <span>{device.warranty_months}m gar.</span>
+                              </div>
+                            )}
+                            {device.sale_type === "conto_vendita" && (
+                              <div className="flex items-center gap-1">
+                                <Handshake className="h-3 w-3 text-primary" />
+                                <span>C/V</span>
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground">
+                            {format(new Date(device.created_at), "dd/MM", { locale: it })}
+                          </p>
+                        </div>
                       </div>
 
                       {/* Actions Footer */}
-                      <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-t border-border/50">
-                        <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-muted/30 border-t border-border/50">
+                        <div className="flex items-center gap-0.5">
                           {device.status === "draft" && (
                             <Button 
                               size="sm" 
                               variant="ghost" 
-                              className="h-7 text-xs gap-1 text-success hover:text-success hover:bg-success/10"
+                              className="h-7 px-2 text-xs gap-1 text-success hover:text-success hover:bg-success/10"
                               onClick={() => handlePublish(device.id)}
                             >
                               <Eye className="h-3 w-3" />
-                              <span className="hidden sm:inline">Pubblica</span>
+                              Pubblica
                             </Button>
                           )}
                           {(device.status === "published" || device.status === "reserved") && (
                             <Button 
                               size="sm" 
                               variant="ghost" 
-                              className="h-7 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
+                              className="h-7 px-2 text-xs gap-1 text-primary hover:text-primary hover:bg-primary/10"
                               onClick={() => handleMarkAsSold(device.id)}
                             >
                               <CheckCircle2 className="h-3 w-3" />
-                              <span className="hidden sm:inline">Venduto</span>
+                              Venduto
                             </Button>
                           )}
                         </div>
