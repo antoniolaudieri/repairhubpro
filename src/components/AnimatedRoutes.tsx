@@ -1,5 +1,4 @@
-import { Routes, Route, useLocation } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
+import { Routes, Route } from "react-router-dom";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { PageTransition } from "@/components/PageTransition";
 import TechnicianLayout from "@/layouts/TechnicianLayout";
@@ -67,11 +66,8 @@ import Install from "@/pages/Install";
 import DiventaPartner from "@/pages/DiventaPartner";
 
 export const AnimatedRoutes = () => {
-  const location = useLocation();
-
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+    <Routes>
         {/* Public Remote Signature Route */}
         <Route path="/firma-remota/:sessionId" element={<PageTransition><RemoteSignature /></PageTransition>} />
         
@@ -554,6 +550,5 @@ export const AnimatedRoutes = () => {
         />
         <Route path="*" element={<PageTransition><NotFound /></PageTransition>} />
       </Routes>
-    </AnimatePresence>
   );
 };
