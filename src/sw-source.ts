@@ -20,7 +20,41 @@ self.addEventListener('install', () => {
 
 self.addEventListener('activate', (event) => {
   console.log('[SW] Activating...');
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      // Clear old caches that might cause iOS issues
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames
+            .filter((cacheName) => !cacheName.includes('workbox'))
+            .map((cacheName) => {
+              console.log('[SW] Deleting old cache:', cacheName);
+              return caches.delete(cacheName);
+            })
+        );
+      }),
+    ])
+  );
+});
+
+// iOS PWA fix: Handle navigation requests properly
+self.addEventListener('fetch', (event: FetchEvent) => {
+  const { request } = event;
+  
+  // For navigation requests (HTML pages), always try network first on iOS
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .catch(() => {
+          // If network fails, try cache
+          return caches.match(request).then((response) => {
+            return response || caches.match('/index.html');
+          });
+        })
+        .then((response) => response || fetch(request))
+    );
+  }
 });
 
 // Push notification handler - CRITICAL for Safari iOS

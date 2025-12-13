@@ -27,9 +27,18 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Initial loading state for iOS PWA - prevents white screen -->
+      <div id="initial-loader" style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#ffffff;font-family:system-ui,-apple-system,sans-serif;">
+        <div style="text-align:center;">
+          <div style="width:48px;height:48px;border:3px solid #e5e7eb;border-top-color:#3b82f6;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
+          <p style="color:#6b7280;font-size:14px;">Caricamento...</p>
+        </div>
+      </div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- Dymo Connect Framework for local label printing -->
-    <script src="https://labelwriter.com/software/dls/sdk/js/dymo.connect.framework.js"></script>
+    <!-- Dymo Connect Framework - loaded async to not block PWA -->
+    <script src="https://labelwriter.com/software/dls/sdk/js/dymo.connect.framework.js" async defer></script>
   </body>
 </html>
