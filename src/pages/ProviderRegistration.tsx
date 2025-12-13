@@ -157,7 +157,7 @@ export default function ProviderRegistration() {
 
     try {
       if (selectedType === "corner") {
-        const { error } = await supabase.from("corners").insert({
+        const { data: cornerData, error } = await supabase.from("corners").insert({
           user_id: user.id,
           business_name: cornerForm.business_name,
           address: cornerForm.address,
@@ -166,10 +166,19 @@ export default function ProviderRegistration() {
           latitude: cornerForm.latitude,
           longitude: cornerForm.longitude,
           logo_url: cornerForm.logo_url,
-        });
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+        }).select('id').single();
         if (error) throw error;
+        
+        // Auto-assign corner role
+        await supabase.from("user_roles").insert({
+          user_id: user.id,
+          role: 'corner'
+        });
+        
       } else if (selectedType === "riparatore") {
-        const { error } = await supabase.from("riparatori").insert({
+        const { data: riparatoreData, error } = await supabase.from("riparatori").insert({
           user_id: user.id,
           full_name: riparatoreForm.full_name,
           phone: riparatoreForm.phone,
@@ -180,10 +189,19 @@ export default function ProviderRegistration() {
           specializations: riparatoreForm.specializations,
           latitude: riparatoreForm.latitude,
           longitude: riparatoreForm.longitude,
-        });
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+        }).select('id').single();
         if (error) throw error;
+        
+        // Auto-assign riparatore role
+        await supabase.from("user_roles").insert({
+          user_id: user.id,
+          role: 'riparatore'
+        });
+        
       } else if (selectedType === "centro") {
-        const { error } = await supabase.from("centri_assistenza").insert({
+        const { data: centroData, error } = await supabase.from("centri_assistenza").insert({
           owner_user_id: user.id,
           business_name: centroForm.business_name,
           vat_number: centroForm.vat_number,
@@ -192,8 +210,16 @@ export default function ProviderRegistration() {
           email: centroForm.email,
           latitude: centroForm.latitude,
           longitude: centroForm.longitude,
-        });
+          status: 'approved',
+          approved_at: new Date().toISOString(),
+        }).select('id').single();
         if (error) throw error;
+        
+        // Auto-assign centro_admin role
+        await supabase.from("user_roles").insert({
+          user_id: user.id,
+          role: 'centro_admin'
+        });
       }
 
       setSubmitted(true);
@@ -298,17 +324,21 @@ export default function ProviderRegistration() {
           >
             <CheckCircle className="h-12 w-12 text-success" />
           </motion.div>
-          <h1 className="text-3xl font-bold mb-3">Candidatura Inviata!</h1>
+          <h1 className="text-3xl font-bold mb-3">Registrazione Completata!</h1>
           <p className="text-muted-foreground mb-8 leading-relaxed">
-            La tua richiesta è stata inviata con successo. Il nostro team la esaminerà e riceverai una notifica quando sarà approvata.
+            Il tuo account è stato attivato con successo. Puoi iniziare subito a utilizzare la piattaforma!
           </p>
           <div className="flex gap-3 justify-center">
             <Button onClick={() => navigate("/")} variant="outline" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
               Torna alla Home
             </Button>
-            <Button onClick={() => navigate("/diventa-partner")} className="gap-2">
-              Scopri di più
+            <Button onClick={() => {
+              if (selectedType === "corner") navigate("/corner");
+              else if (selectedType === "riparatore") navigate("/riparatore");
+              else if (selectedType === "centro") navigate("/centro");
+            }} className="gap-2">
+              Vai alla Dashboard
               <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
