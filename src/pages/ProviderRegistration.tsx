@@ -157,7 +157,7 @@ export default function ProviderRegistration() {
 
     try {
       if (selectedType === "corner") {
-        const { data: cornerData, error } = await supabase.from("corners").insert({
+        const { error } = await supabase.from("corners").insert({
           user_id: user.id,
           business_name: cornerForm.business_name,
           address: cornerForm.address,
@@ -168,17 +168,12 @@ export default function ProviderRegistration() {
           logo_url: cornerForm.logo_url,
           status: 'approved',
           approved_at: new Date().toISOString(),
-        }).select('id').single();
-        if (error) throw error;
-        
-        // Auto-assign corner role
-        await supabase.from("user_roles").insert({
-          user_id: user.id,
-          role: 'corner'
         });
+        if (error) throw error;
+        // Role is automatically assigned via database trigger
         
       } else if (selectedType === "riparatore") {
-        const { data: riparatoreData, error } = await supabase.from("riparatori").insert({
+        const { error } = await supabase.from("riparatori").insert({
           user_id: user.id,
           full_name: riparatoreForm.full_name,
           phone: riparatoreForm.phone,
@@ -191,17 +186,12 @@ export default function ProviderRegistration() {
           longitude: riparatoreForm.longitude,
           status: 'approved',
           approved_at: new Date().toISOString(),
-        }).select('id').single();
-        if (error) throw error;
-        
-        // Auto-assign riparatore role
-        await supabase.from("user_roles").insert({
-          user_id: user.id,
-          role: 'riparatore'
         });
+        if (error) throw error;
+        // Role is automatically assigned via database trigger
         
       } else if (selectedType === "centro") {
-        const { data: centroData, error } = await supabase.from("centri_assistenza").insert({
+        const { error } = await supabase.from("centri_assistenza").insert({
           owner_user_id: user.id,
           business_name: centroForm.business_name,
           vat_number: centroForm.vat_number,
@@ -212,14 +202,9 @@ export default function ProviderRegistration() {
           longitude: centroForm.longitude,
           status: 'approved',
           approved_at: new Date().toISOString(),
-        }).select('id').single();
-        if (error) throw error;
-        
-        // Auto-assign centro_admin role
-        await supabase.from("user_roles").insert({
-          user_id: user.id,
-          role: 'centro_admin'
         });
+        if (error) throw error;
+        // Role is automatically assigned via database trigger
       }
 
       setSubmitted(true);
