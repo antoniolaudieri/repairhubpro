@@ -62,7 +62,7 @@ export const PlatformAdminLayout = ({ children }: PlatformAdminLayoutProps) => {
   }
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background overflow-x-hidden">
         <PlatformAdminSidebar />
         <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
