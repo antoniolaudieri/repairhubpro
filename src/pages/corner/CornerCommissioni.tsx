@@ -268,11 +268,11 @@ export default function CornerCommissioni() {
                   <p className="text-sm text-white/70">Segnalazioni</p>
                 </div>
                 <div className="text-center border-x border-white/20">
-                  <p className="text-3xl md:text-4xl font-bold">€{totalCommission.toFixed(0)}</p>
+                  <p className="text-3xl md:text-4xl font-bold">€{totalCommission.toFixed(2)}</p>
                   <p className="text-sm text-white/70">Totale Mese</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl md:text-4xl font-bold text-yellow-300">€{pendingCommission.toFixed(0)}</p>
+                  <p className="text-3xl md:text-4xl font-bold text-yellow-300">€{pendingCommission.toFixed(2)}</p>
                   <p className="text-sm text-white/70">Da Richiedere</p>
                 </div>
               </div>
