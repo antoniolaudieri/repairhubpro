@@ -181,69 +181,56 @@ export default function CornerPubblicita() {
             </p>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          {/* Stats - Mobile optimized */}
+          <div className="grid grid-cols-2 gap-3">
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <Euro className="h-5 w-5 text-green-600" />
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="p-2 bg-green-100 rounded-lg w-fit">
+                    <Euro className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">€{totalRevenue.toFixed(2)}</p>
-                    <p className="text-sm text-muted-foreground">Totale</p>
+                    <p className="text-lg sm:text-2xl font-bold">€{totalRevenue.toFixed(2)}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Totale</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-200 rounded-lg">
-                    <Clock className="h-5 w-5 text-amber-700" />
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="p-2 bg-amber-200 rounded-lg w-fit">
+                    <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-amber-700">€{pendingRevenue.toFixed(2)}</p>
-                    <p className="text-sm text-amber-600/80">Da Incassare</p>
+                    <p className="text-lg sm:text-2xl font-bold text-amber-700">€{pendingRevenue.toFixed(2)}</p>
+                    <p className="text-xs sm:text-sm text-amber-600/80">Da Incassare</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-200 rounded-lg">
-                    <CheckCircle className="h-5 w-5 text-green-700" />
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="p-2 bg-green-200 rounded-lg w-fit">
+                    <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-700" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold text-green-700">€{paidRevenue.toFixed(2)}</p>
-                    <p className="text-sm text-green-600/80">Incassato</p>
+                    <p className="text-lg sm:text-2xl font-bold text-green-700">€{paidRevenue.toFixed(2)}</p>
+                    <p className="text-xs sm:text-sm text-green-600/80">Incassato</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Megaphone className="h-5 w-5 text-blue-600" />
+              <CardContent className="p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="p-2 bg-blue-100 rounded-lg w-fit">
+                    <Megaphone className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                   </div>
                   <div>
-                    <p className="text-2xl font-bold">{activeCampaigns.length}</p>
-                    <p className="text-sm text-muted-foreground">Attive</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Eye className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{totalImpressions}</p>
-                    <p className="text-sm text-muted-foreground">Impressions</p>
+                    <p className="text-lg sm:text-2xl font-bold">{activeCampaigns.length}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Attive</p>
                   </div>
                 </div>
               </CardContent>
@@ -265,16 +252,16 @@ export default function CornerPubblicita() {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {campaigns.map((item) => (
                     <motion.div
                       key={item.id}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex gap-4 p-4 border rounded-lg"
+                      className="flex flex-col sm:flex-row gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg"
                     >
                       {/* Preview */}
-                      <div className="w-32 aspect-video rounded-lg overflow-hidden flex-shrink-0">
+                      <div className="w-full sm:w-28 aspect-video rounded-lg overflow-hidden flex-shrink-0">
                         {item.campaign?.ad_type === 'image' && item.campaign?.ad_image_url ? (
                           <img src={item.campaign.ad_image_url} alt="" className="w-full h-full object-cover" />
                         ) : (
@@ -288,33 +275,33 @@ export default function CornerPubblicita() {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 flex-wrap">
-                          <div>
-                            <h3 className="font-medium">{item.campaign?.ad_title}</h3>
-                            <p className="text-sm text-muted-foreground">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                          <div className="min-w-0">
+                            <h3 className="font-medium truncate">{item.campaign?.ad_title}</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground truncate">
                               {item.campaign?.advertiser_name}
                               {item.campaign?.advertiser_company && ` · ${item.campaign.advertiser_company}`}
                             </p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5 flex-wrap">
                             {item.campaign?.status && getStatusBadge(item.campaign.status)}
                             {getPaymentBadge(item.payment_status)}
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
+                            <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                             {item.campaign?.start_date && format(new Date(item.campaign.start_date), 'dd/MM', { locale: it })} - 
                             {item.campaign?.end_date && format(new Date(item.campaign.end_date), 'dd/MM', { locale: it })}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Eye className="h-3.5 w-3.5" />
-                            {item.impressions_count} impressions
+                            <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                            {item.impressions_count} views
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between mt-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-3">
                           <span className="text-lg font-bold text-green-600">
                             +€{item.corner_revenue?.toFixed(2)}
                           </span>
@@ -324,7 +311,7 @@ export default function CornerPubblicita() {
                               size="sm"
                               onClick={() => handleRequestPayment(item)}
                               disabled={requestingPayment === item.id}
-                              className="gap-2"
+                              className="gap-2 w-full sm:w-auto"
                             >
                               {requestingPayment === item.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -336,16 +323,16 @@ export default function CornerPubblicita() {
                           )}
                           
                           {item.payment_status === 'requested' && (
-                            <span className="text-sm text-amber-600 flex items-center gap-1">
-                              <Clock className="h-4 w-4" />
-                              In attesa di pagamento
+                            <span className="text-xs sm:text-sm text-amber-600 flex items-center gap-1">
+                              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              In attesa
                             </span>
                           )}
                           
                           {item.payment_status === 'paid' && item.payment_paid_at && (
-                            <span className="text-sm text-green-600 flex items-center gap-1">
-                              <CheckCircle className="h-4 w-4" />
-                              Pagato il {format(new Date(item.payment_paid_at), 'dd/MM/yyyy', { locale: it })}
+                            <span className="text-xs sm:text-sm text-green-600 flex items-center gap-1">
+                              <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                              {format(new Date(item.payment_paid_at), 'dd/MM/yy', { locale: it })}
                             </span>
                           )}
                         </div>
