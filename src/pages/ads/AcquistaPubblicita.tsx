@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Megaphone, Building2, Mail, Phone, User, 
   Calendar, MapPin, Check, CreditCard, ArrowLeft,
-  ArrowRight, Sparkles, Image, Palette, Type, Upload, Loader2
+  ArrowRight, Sparkles, Image, Palette, Type, Upload, Loader2,
+  Tag, Percent, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,7 +39,31 @@ interface CampaignData {
   start_date: string;
   end_date: string;
   corner_ids: string[];
+  duration_package: string | null;
 }
+
+interface DurationPackage {
+  id: string;
+  label: string;
+  days: number;
+  discount: number; // percentage discount
+  badge?: string;
+}
+
+const durationPackages: DurationPackage[] = [
+  { id: '7days', label: '1 Settimana', days: 7, discount: 0 },
+  { id: '1month', label: '1 Mese', days: 30, discount: 10, badge: '-10%' },
+  { id: '3months', label: '3 Mesi', days: 90, discount: 20, badge: '-20%' },
+  { id: '1year', label: '1 Anno', days: 365, discount: 35, badge: 'Best Value -35%' },
+];
+
+// Volume discounts based on number of corners
+const getVolumeDiscount = (cornerCount: number): number => {
+  if (cornerCount >= 10) return 25;
+  if (cornerCount >= 5) return 15;
+  if (cornerCount >= 3) return 10;
+  return 0;
+};
 
 const gradientOptions = [
   'from-blue-600 via-purple-600 to-pink-600',
@@ -80,7 +105,8 @@ export default function AcquistaPubblicita() {
     ad_type: 'gradient',
     start_date: '',
     end_date: '',
-    corner_ids: initialCornerId ? [initialCornerId] : []
+    corner_ids: initialCornerId ? [initialCornerId] : [],
+    duration_package: null
   });
 
   useEffect(() => {
@@ -117,14 +143,54 @@ export default function AcquistaPubblicita() {
 
   const calculatePrice = () => {
     if (!campaignData.start_date || !campaignData.end_date || campaignData.corner_ids.length === 0) {
-      return { total: 0, weeks: 0 };
+      return { total: 0, weeks: 0, basePrice: 0, durationDiscount: 0, volumeDiscount: 0, totalDiscount: 0 };
     }
     const start = new Date(campaignData.start_date);
     const end = new Date(campaignData.end_date);
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     const weeks = Math.max(1, Math.ceil(days / 7));
-    const total = pricing.pricePerWeek * campaignData.corner_ids.length * weeks;
-    return { total, weeks };
+    
+    // Base price without discounts
+    const basePrice = pricing.pricePerWeek * campaignData.corner_ids.length * weeks;
+    
+    // Get duration discount
+    const selectedPackage = durationPackages.find(p => p.id === campaignData.duration_package);
+    const durationDiscountPercent = selectedPackage?.discount || 0;
+    
+    // Get volume discount
+    const volumeDiscountPercent = getVolumeDiscount(campaignData.corner_ids.length);
+    
+    // Calculate discounts (they stack)
+    const durationDiscount = basePrice * (durationDiscountPercent / 100);
+    const priceAfterDuration = basePrice - durationDiscount;
+    const volumeDiscount = priceAfterDuration * (volumeDiscountPercent / 100);
+    const totalDiscount = durationDiscount + volumeDiscount;
+    
+    const total = basePrice - totalDiscount;
+    
+    return { 
+      total, 
+      weeks, 
+      basePrice, 
+      durationDiscount, 
+      volumeDiscount, 
+      totalDiscount,
+      durationDiscountPercent,
+      volumeDiscountPercent
+    };
+  };
+
+  const selectDurationPackage = (pkg: DurationPackage) => {
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + pkg.days);
+    
+    setCampaignData(prev => ({
+      ...prev,
+      duration_package: pkg.id,
+      start_date: startDate.toISOString().split('T')[0],
+      end_date: endDate.toISOString().split('T')[0]
+    }));
   };
 
   const toggleCorner = (cornerId: string) => {
@@ -227,7 +293,7 @@ export default function AcquistaPubblicita() {
     }
   };
 
-  const { total, weeks } = calculatePrice();
+  const { total, weeks, basePrice, durationDiscount, volumeDiscount, totalDiscount, durationDiscountPercent, volumeDiscountPercent } = calculatePrice();
 
   if (loading) {
     return (
@@ -504,7 +570,7 @@ export default function AcquistaPubblicita() {
             </motion.div>
           )}
 
-          {/* Step 3: Corner Selection */}
+          {/* Step 3: Duration & Corner Selection */}
           {step === 3 && (
             <motion.div
               key="step3"
@@ -515,51 +581,129 @@ export default function AcquistaPubblicita() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Scegli i Corner ({campaignData.corner_ids.length} selezionati)
+                    <Calendar className="h-5 w-5" />
+                    Durata e Posizionamento
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Data Inizio *</Label>
-                      <Input
-                        type="date"
-                        value={campaignData.start_date}
-                        onChange={(e) => setCampaignData(prev => ({ ...prev, start_date: e.target.value }))}
-                        min={new Date().toISOString().split('T')[0]}
-                      />
+                <CardContent className="space-y-6">
+                  {/* Duration Packages */}
+                  <div className="space-y-3">
+                    <Label className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Scegli la Durata
+                    </Label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      {durationPackages.map((pkg) => (
+                        <button
+                          key={pkg.id}
+                          onClick={() => selectDurationPackage(pkg)}
+                          className={`relative p-4 rounded-xl border-2 text-center transition-all ${
+                            campaignData.duration_package === pkg.id
+                              ? 'border-primary bg-primary/10 shadow-lg'
+                              : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                          }`}
+                        >
+                          {pkg.badge && (
+                            <span className={`absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap ${
+                              pkg.id === '1year' 
+                                ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white' 
+                                : 'bg-green-500 text-white'
+                            }`}>
+                              {pkg.badge}
+                            </span>
+                          )}
+                          <p className="font-semibold text-lg">{pkg.label}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {pkg.days} giorni
+                          </p>
+                          {campaignData.duration_package === pkg.id && (
+                            <Check className="absolute top-2 right-2 h-4 w-4 text-primary" />
+                          )}
+                        </button>
+                      ))}
                     </div>
-                    <div className="space-y-2">
-                      <Label>Data Fine *</Label>
-                      <Input
-                        type="date"
-                        value={campaignData.end_date}
-                        onChange={(e) => setCampaignData(prev => ({ ...prev, end_date: e.target.value }))}
-                        min={campaignData.start_date || new Date().toISOString().split('T')[0]}
-                      />
+                    
+                    {/* Custom dates option */}
+                    <div className="pt-2">
+                      <p className="text-sm text-muted-foreground mb-2">Oppure scegli date personalizzate:</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Data Inizio</Label>
+                          <Input
+                            type="date"
+                            value={campaignData.start_date}
+                            onChange={(e) => setCampaignData(prev => ({ 
+                              ...prev, 
+                              start_date: e.target.value,
+                              duration_package: null 
+                            }))}
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Data Fine</Label>
+                          <Input
+                            type="date"
+                            value={campaignData.end_date}
+                            onChange={(e) => setCampaignData(prev => ({ 
+                              ...prev, 
+                              end_date: e.target.value,
+                              duration_package: null 
+                            }))}
+                            min={campaignData.start_date || new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Interactive Map for Corner Selection */}
-                  <div className="space-y-2">
-                    <Label>Seleziona Corner dalla Mappa</Label>
+                  {/* Corner Selection with Volume Discount Info */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2">
+                        <MapPin className="h-4 w-4" />
+                        Scegli i Corner ({campaignData.corner_ids.length} selezionati)
+                      </Label>
+                      {campaignData.corner_ids.length > 0 && (
+                        <span className={`text-xs px-2 py-1 rounded-full font-medium ${
+                          getVolumeDiscount(campaignData.corner_ids.length) > 0 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {getVolumeDiscount(campaignData.corner_ids.length) > 0 
+                            ? `Sconto volume: -${getVolumeDiscount(campaignData.corner_ids.length)}%` 
+                            : 'Aggiungi 3+ corner per sconti'}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Volume discount tiers */}
+                    <div className="flex gap-2 text-xs">
+                      <span className={`px-2 py-1 rounded ${campaignData.corner_ids.length >= 3 ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
+                        3+ corner: -10%
+                      </span>
+                      <span className={`px-2 py-1 rounded ${campaignData.corner_ids.length >= 5 ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
+                        5+ corner: -15%
+                      </span>
+                      <span className={`px-2 py-1 rounded ${campaignData.corner_ids.length >= 10 ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground'}`}>
+                        10+ corner: -25%
+                      </span>
+                    </div>
+
+                    {/* Interactive Map */}
                     <CornerSelectionMap 
                       corners={corners}
                       selectedIds={campaignData.corner_ids}
                       onToggle={toggleCorner}
                     />
-                  </div>
 
-                  {/* Corner List */}
-                  <div className="space-y-2">
-                    <Label>Oppure scegli dalla lista</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
+                    {/* Corner List */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-48 overflow-y-auto">
                       {corners.map((corner) => (
                         <button
                           key={corner.id}
                           onClick={() => toggleCorner(corner.id)}
-                          className={`p-4 rounded-lg border text-left transition-all ${
+                          className={`p-3 rounded-lg border text-left transition-all ${
                             campaignData.corner_ids.includes(corner.id)
                               ? 'border-primary bg-primary/10'
                               : 'border-border hover:border-primary/50'
@@ -567,15 +711,33 @@ export default function AcquistaPubblicita() {
                         >
                           <div className="flex items-start justify-between">
                             <div>
-                              <p className="font-medium">{corner.business_name}</p>
-                              <p className="text-xs text-muted-foreground mt-1">{corner.address}</p>
+                              <p className="font-medium text-sm">{corner.business_name}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">{corner.address}</p>
                             </div>
                             {campaignData.corner_ids.includes(corner.id) && (
-                              <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                              <Check className="h-4 w-4 text-primary flex-shrink-0" />
                             )}
                           </div>
                         </button>
                       ))}
+                    </div>
+
+                    {/* Select All / Deselect All */}
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setCampaignData(prev => ({ ...prev, corner_ids: corners.map(c => c.id) }))}
+                      >
+                        Seleziona Tutti
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => setCampaignData(prev => ({ ...prev, corner_ids: [] }))}
+                      >
+                        Deseleziona Tutti
+                      </Button>
                     </div>
                   </div>
 
@@ -630,10 +792,58 @@ export default function AcquistaPubblicita() {
                         </div>
                       </div>
 
+                      {/* Pricing Breakdown */}
+                      <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Tag className="h-4 w-4" />
+                          Riepilogo Prezzi
+                        </h4>
+                        <div className="text-sm space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Prezzo base</span>
+                            <span>€{basePrice.toFixed(2)}</span>
+                          </div>
+                          
+                          {durationDiscount > 0 && (
+                            <div className="flex justify-between text-green-600">
+                              <span className="flex items-center gap-1">
+                                <Percent className="h-3 w-3" />
+                                Sconto durata ({durationDiscountPercent}%)
+                              </span>
+                              <span>-€{durationDiscount.toFixed(2)}</span>
+                            </div>
+                          )}
+                          
+                          {volumeDiscount > 0 && (
+                            <div className="flex justify-between text-green-600">
+                              <span className="flex items-center gap-1">
+                                <Percent className="h-3 w-3" />
+                                Sconto volume ({volumeDiscountPercent}%)
+                              </span>
+                              <span>-€{volumeDiscount.toFixed(2)}</span>
+                            </div>
+                          )}
+                          
+                          {totalDiscount > 0 && (
+                            <div className="border-t pt-2 mt-2 flex justify-between font-medium text-green-600">
+                              <span>Risparmi</span>
+                              <span>-€{totalDiscount.toFixed(2)}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="p-4 bg-primary/10 border border-primary/20 rounded-lg">
                         <div className="flex items-center justify-between text-lg font-bold">
                           <span>Totale</span>
-                          <span className="text-primary">€{total.toFixed(2)}</span>
+                          <div className="text-right">
+                            {totalDiscount > 0 && (
+                              <span className="text-sm line-through text-muted-foreground mr-2">
+                                €{basePrice.toFixed(2)}
+                              </span>
+                            )}
+                            <span className="text-primary">€{total.toFixed(2)}</span>
+                          </div>
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           €{pricing.pricePerWeek}/corner/settimana × {campaignData.corner_ids.length} corner × {weeks} settimane
