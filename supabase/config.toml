@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.request-corner-ad-payment]
 verify_jwt = false
+
+[functions.generate-ad-text]
+verify_jwt = false
