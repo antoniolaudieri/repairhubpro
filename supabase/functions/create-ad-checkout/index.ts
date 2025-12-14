@@ -21,9 +21,11 @@ serve(async (req) => {
       ad_title,
       ad_description,
       ad_image_url,
+      ad_video_url,
       ad_gradient,
       ad_icon,
       ad_type,
+      display_seconds = 5,
       start_date,
       end_date,
       corner_ids,
@@ -57,8 +59,12 @@ serve(async (req) => {
     const days = Math.ceil((endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24));
     const weeks = Math.ceil(days / 7);
 
+    // Calculate display seconds multiplier (base 5 seconds = 1x, each extra second adds 10%)
+    const displaySecondsMultiplier = 1 + ((display_seconds - 5) * 0.10);
+
     // Calculate pricing
-    const totalPrice = pricePerCornerPerWeek * corner_ids.length * weeks;
+    const basePriceAt5Sec = pricePerCornerPerWeek * corner_ids.length * weeks;
+    const totalPrice = basePriceAt5Sec * displaySecondsMultiplier;
     const cornerRevenueTotal = totalPrice * (cornerPercentage / 100);
     const platformRevenue = totalPrice - cornerRevenueTotal;
     const cornerRevenueEach = cornerRevenueTotal / corner_ids.length;
@@ -80,7 +86,7 @@ serve(async (req) => {
         advertiser_company,
         ad_title,
         ad_description,
-        ad_image_url,
+        ad_image_url: ad_type === 'video' ? ad_video_url : ad_image_url,
         ad_gradient,
         ad_icon,
         ad_type,
@@ -134,7 +140,7 @@ serve(async (req) => {
             currency: 'eur',
             product_data: {
               name: `Campagna Pubblicitaria: ${ad_title}`,
-              description: `${corner_ids.length} Corner × ${weeks} settimane`,
+              description: `${corner_ids.length} Corner × ${weeks} settimane × ${display_seconds}s`,
             },
             unit_amount: Math.round(totalPrice * 100), // Convert to cents
           },

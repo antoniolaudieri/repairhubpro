@@ -5,7 +5,7 @@ import {
   Megaphone, Building2, Mail, Phone, User, 
   Calendar, MapPin, Check, CreditCard, ArrowLeft,
   ArrowRight, Sparkles, Image, Palette, Type, Upload, Loader2,
-  Tag, Percent, Clock
+  Tag, Percent, Clock, Video, Timer
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { CornerSelectionMap } from '@/components/ads/CornerSelectionMap';
@@ -35,7 +36,9 @@ interface CampaignData {
   ad_image_url: string;
   ad_gradient: string;
   ad_icon: string;
-  ad_type: 'gradient' | 'image';
+  ad_type: 'gradient' | 'image' | 'video';
+  ad_video_url: string;
+  display_seconds: number;
   start_date: string;
   end_date: string;
   corner_ids: string[];
@@ -64,6 +67,16 @@ const getVolumeDiscount = (cornerCount: number): number => {
   if (cornerCount >= 3) return 10;
   return 0;
 };
+
+// Display seconds pricing multiplier (base is 5 seconds = 1x)
+const getDisplaySecondsMultiplier = (seconds: number): number => {
+  // Each additional second above 5 adds 10% to the price
+  const extraSeconds = seconds - 5;
+  return 1 + (extraSeconds * 0.10);
+};
+
+const MIN_DISPLAY_SECONDS = 5;
+const MAX_DISPLAY_SECONDS = 15;
 
 const gradientOptions = [
   'from-blue-600 via-purple-600 to-pink-600',
@@ -103,6 +116,8 @@ export default function AcquistaPubblicita() {
     ad_gradient: gradientOptions[0],
     ad_icon: 'Megaphone',
     ad_type: 'gradient',
+    ad_video_url: '',
+    display_seconds: MIN_DISPLAY_SECONDS,
     start_date: '',
     end_date: '',
     corner_ids: initialCornerId ? [initialCornerId] : [],
@@ -143,15 +158,20 @@ export default function AcquistaPubblicita() {
 
   const calculatePrice = () => {
     if (!campaignData.start_date || !campaignData.end_date || campaignData.corner_ids.length === 0) {
-      return { total: 0, weeks: 0, basePrice: 0, durationDiscount: 0, volumeDiscount: 0, totalDiscount: 0 };
+      return { total: 0, weeks: 0, basePrice: 0, durationDiscount: 0, volumeDiscount: 0, totalDiscount: 0, displaySecondsExtra: 0 };
     }
     const start = new Date(campaignData.start_date);
     const end = new Date(campaignData.end_date);
     const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
     const weeks = Math.max(1, Math.ceil(days / 7));
     
-    // Base price without discounts
-    const basePrice = pricing.pricePerWeek * campaignData.corner_ids.length * weeks;
+    // Base price without discounts (at 5 seconds)
+    const basePriceAt5Sec = pricing.pricePerWeek * campaignData.corner_ids.length * weeks;
+    
+    // Apply display seconds multiplier
+    const displaySecondsMultiplier = getDisplaySecondsMultiplier(campaignData.display_seconds);
+    const basePrice = basePriceAt5Sec * displaySecondsMultiplier;
+    const displaySecondsExtra = basePrice - basePriceAt5Sec;
     
     // Get duration discount
     const selectedPackage = durationPackages.find(p => p.id === campaignData.duration_package);
@@ -176,7 +196,8 @@ export default function AcquistaPubblicita() {
       volumeDiscount, 
       totalDiscount,
       durationDiscountPercent,
-      volumeDiscountPercent
+      volumeDiscountPercent,
+      displaySecondsExtra
     };
   };
 
@@ -202,64 +223,84 @@ export default function AcquistaPubblicita() {
     }));
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Il file deve essere un\'immagine');
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('L\'immagine non può superare 5MB');
-      return;
-    }
-
-    // Validate image dimensions
-    const img = new window.Image();
-    img.src = URL.createObjectURL(file);
-    
-    img.onload = async () => {
-      URL.revokeObjectURL(img.src);
-      
-      if (img.width < MIN_IMAGE_WIDTH || img.height < MIN_IMAGE_HEIGHT) {
-        toast.error(`L'immagine deve essere almeno ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT} pixel. La tua immagine è ${img.width}x${img.height}`);
+    if (type === 'image') {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Il file deve essere un\'immagine');
         return;
       }
 
-      setUploading(true);
-      try {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `ad-${Date.now()}.${fileExt}`;
-        const filePath = `ads/${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('ad-creatives')
-          .upload(filePath, file);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('ad-creatives')
-          .getPublicUrl(filePath);
-
-        setCampaignData(prev => ({ ...prev, ad_image_url: publicUrl }));
-        toast.success('Immagine caricata con successo');
-      } catch (error: any) {
-        console.error('Upload error:', error);
-        toast.error('Errore nel caricamento dell\'immagine');
-      } finally {
-        setUploading(false);
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('L\'immagine non può superare 5MB');
+        return;
       }
-    };
 
-    img.onerror = () => {
-      URL.revokeObjectURL(img.src);
-      toast.error('Errore nel caricamento dell\'immagine');
-    };
+      // Validate image dimensions
+      const img = new window.Image();
+      img.src = URL.createObjectURL(file);
+      
+      img.onload = async () => {
+        URL.revokeObjectURL(img.src);
+        
+        if (img.width < MIN_IMAGE_WIDTH || img.height < MIN_IMAGE_HEIGHT) {
+          toast.error(`L'immagine deve essere almeno ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT} pixel. La tua immagine è ${img.width}x${img.height}`);
+          return;
+        }
+
+        await uploadFile(file, 'ad_image_url');
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(img.src);
+        toast.error('Errore nel caricamento dell\'immagine');
+      };
+    } else {
+      // Video validation
+      if (!file.type.startsWith('video/')) {
+        toast.error('Il file deve essere un video');
+        return;
+      }
+
+      // Validate file size (max 50MB for video)
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error('Il video non può superare 50MB');
+        return;
+      }
+
+      await uploadFile(file, 'ad_video_url');
+    }
+  };
+
+  const uploadFile = async (file: File, field: 'ad_image_url' | 'ad_video_url') => {
+    setUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `ad-${Date.now()}.${fileExt}`;
+      const filePath = `ads/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('ad-creatives')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('ad-creatives')
+        .getPublicUrl(filePath);
+
+      setCampaignData(prev => ({ ...prev, [field]: publicUrl }));
+      toast.success(field === 'ad_image_url' ? 'Immagine caricata con successo' : 'Video caricato con successo');
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast.error('Errore nel caricamento del file');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -293,7 +334,8 @@ export default function AcquistaPubblicita() {
     }
   };
 
-  const { total, weeks, basePrice, durationDiscount, volumeDiscount, totalDiscount, durationDiscountPercent, volumeDiscountPercent } = calculatePrice();
+  const { total, weeks, basePrice, durationDiscount, volumeDiscount, totalDiscount, durationDiscountPercent, volumeDiscountPercent, displaySecondsExtra } = calculatePrice();
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   if (loading) {
     return (
@@ -420,8 +462,8 @@ export default function AcquistaPubblicita() {
                     <Label>Tipo di annuncio</Label>
                     <RadioGroup
                       value={campaignData.ad_type}
-                      onValueChange={(value: 'gradient' | 'image') => setCampaignData(prev => ({ ...prev, ad_type: value }))}
-                      className="flex gap-4"
+                      onValueChange={(value: 'gradient' | 'image' | 'video') => setCampaignData(prev => ({ ...prev, ad_type: value }))}
+                      className="flex flex-wrap gap-4"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="gradient" id="gradient" />
@@ -435,7 +477,42 @@ export default function AcquistaPubblicita() {
                           <Image className="h-4 w-4" /> Immagine
                         </Label>
                       </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="video" id="video" />
+                        <Label htmlFor="video" className="flex items-center gap-1 cursor-pointer">
+                          <Video className="h-4 w-4" /> Video
+                        </Label>
+                      </div>
                     </RadioGroup>
+                  </div>
+
+                  {/* Display Seconds Selector */}
+                  <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2">
+                        <Timer className="h-4 w-4" />
+                        Durata visualizzazione
+                      </Label>
+                      <span className="text-lg font-bold text-primary">{campaignData.display_seconds} secondi</span>
+                    </div>
+                    <Slider
+                      value={[campaignData.display_seconds]}
+                      onValueChange={(value) => setCampaignData(prev => ({ ...prev, display_seconds: value[0] }))}
+                      min={MIN_DISPLAY_SECONDS}
+                      max={MAX_DISPLAY_SECONDS}
+                      step={1}
+                      className="w-full"
+                    />
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span>{MIN_DISPLAY_SECONDS}s (base)</span>
+                      <span>{MAX_DISPLAY_SECONDS}s (+{(MAX_DISPLAY_SECONDS - MIN_DISPLAY_SECONDS) * 10}%)</span>
+                    </div>
+                    {campaignData.display_seconds > MIN_DISPLAY_SECONDS && (
+                      <p className="text-xs text-amber-600 flex items-center gap-1">
+                        <Percent className="h-3 w-3" />
+                        +{(campaignData.display_seconds - MIN_DISPLAY_SECONDS) * 10}% sul prezzo per {campaignData.display_seconds - MIN_DISPLAY_SECONDS} secondi extra
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -488,7 +565,7 @@ export default function AcquistaPubblicita() {
                             ref={fileInputRef}
                             type="file"
                             accept="image/*"
-                            onChange={handleImageUpload}
+                            onChange={(e) => handleMediaUpload(e, 'image')}
                             className="hidden"
                           />
                           
@@ -519,13 +596,76 @@ export default function AcquistaPubblicita() {
                           )}
                         </div>
                       )}
+
+                      {campaignData.ad_type === 'video' && (
+                        <div className="space-y-3">
+                          <Label>Video Pubblicità</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Formato: MP4, MOV, WEBM. Max 50MB. <span className="font-medium text-amber-600">L'audio verrà disattivato.</span>
+                          </p>
+                          
+                          <input
+                            ref={videoInputRef}
+                            type="file"
+                            accept="video/mp4,video/mov,video/webm,video/*"
+                            onChange={(e) => handleMediaUpload(e, 'video')}
+                            className="hidden"
+                          />
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => videoInputRef.current?.click()}
+                            disabled={uploading}
+                            className="w-full"
+                          >
+                            {uploading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Caricamento...
+                              </>
+                            ) : (
+                              <>
+                                <Video className="mr-2 h-4 w-4" />
+                                {campaignData.ad_video_url ? 'Cambia video' : 'Carica video'}
+                              </>
+                            )}
+                          </Button>
+                          
+                          {campaignData.ad_video_url && (
+                            <p className="text-xs text-green-600 flex items-center gap-1">
+                              <Check className="h-3 w-3" /> Video caricato (riprodotto senza audio)
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* Preview */}
                     <div className="space-y-2">
                       <Label>Anteprima</Label>
                       <div className="aspect-video rounded-xl overflow-hidden relative">
-                        {campaignData.ad_type === 'image' && campaignData.ad_image_url ? (
+                        {campaignData.ad_type === 'video' && campaignData.ad_video_url ? (
+                          <div className="relative w-full h-full">
+                            <video 
+                              src={campaignData.ad_video_url}
+                              className="w-full h-full object-cover"
+                              autoPlay
+                              loop
+                              muted
+                              playsInline
+                            />
+                            {/* Text overlay on video */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center p-6 pointer-events-none">
+                              <div className="text-center text-white">
+                                <h3 className="text-xl font-bold mb-1 drop-shadow-lg">{campaignData.ad_title || 'Il tuo titolo'}</h3>
+                                {campaignData.ad_description && (
+                                  <p className="text-sm opacity-90 drop-shadow-md">{campaignData.ad_description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : campaignData.ad_type === 'image' && campaignData.ad_image_url ? (
                           <div className="relative w-full h-full">
                             <img 
                               src={campaignData.ad_image_url} 
@@ -786,8 +926,10 @@ export default function AcquistaPubblicita() {
                         <h4 className="font-medium">Dettagli Campagna</h4>
                         <div className="text-sm space-y-1">
                           <p><span className="text-muted-foreground">Titolo:</span> {campaignData.ad_title}</p>
+                          <p><span className="text-muted-foreground">Tipo:</span> {campaignData.ad_type === 'gradient' ? 'Gradiente' : campaignData.ad_type === 'image' ? 'Immagine' : 'Video'}</p>
                           <p><span className="text-muted-foreground">Periodo:</span> {campaignData.start_date} → {campaignData.end_date}</p>
                           <p><span className="text-muted-foreground">Durata:</span> {weeks} settimane</p>
+                          <p><span className="text-muted-foreground">Visualizzazione:</span> {campaignData.display_seconds} secondi</p>
                           <p><span className="text-muted-foreground">Corner:</span> {campaignData.corner_ids.length}</p>
                         </div>
                       </div>
@@ -800,9 +942,19 @@ export default function AcquistaPubblicita() {
                         </h4>
                         <div className="text-sm space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-muted-foreground">Prezzo base</span>
-                            <span>€{basePrice.toFixed(2)}</span>
+                            <span className="text-muted-foreground">Prezzo base ({MIN_DISPLAY_SECONDS}s)</span>
+                            <span>€{(basePrice - (displaySecondsExtra || 0)).toFixed(2)}</span>
                           </div>
+                          
+                          {displaySecondsExtra > 0 && (
+                            <div className="flex justify-between text-amber-600">
+                              <span className="flex items-center gap-1">
+                                <Timer className="h-3 w-3" />
+                                Extra {campaignData.display_seconds - MIN_DISPLAY_SECONDS}s (+{(campaignData.display_seconds - MIN_DISPLAY_SECONDS) * 10}%)
+                              </span>
+                              <span>+€{displaySecondsExtra.toFixed(2)}</span>
+                            </div>
+                          )}
                           
                           {durationDiscount > 0 && (
                             <div className="flex justify-between text-green-600">
