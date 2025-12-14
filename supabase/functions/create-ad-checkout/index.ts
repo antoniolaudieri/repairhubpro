@@ -90,6 +90,7 @@ serve(async (req) => {
         ad_gradient,
         ad_icon,
         ad_type,
+        display_seconds,
         start_date,
         end_date,
         total_price: totalPrice,
