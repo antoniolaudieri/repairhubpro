@@ -62,10 +62,10 @@ export const PlatformAdminLayout = ({ children }: PlatformAdminLayoutProps) => {
   }
 
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={true} open={true}>
       <div className="min-h-screen flex w-full bg-background overflow-x-hidden">
         <PlatformAdminSidebar />
-        <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
+        <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden w-full">
           <header className="h-14 sm:h-16 border-b bg-card/50 backdrop-blur-xl flex items-center justify-between px-3 sm:px-4 lg:px-6 sticky top-0 z-10 shadow-sm">
             <div className="flex items-center">
               <SidebarTrigger className="mr-2 sm:mr-4" />
