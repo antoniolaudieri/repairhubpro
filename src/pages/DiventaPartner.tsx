@@ -46,6 +46,7 @@ import {
   Rocket,
   Target,
   Crown,
+  Tv,
 } from "lucide-react";
 
 type ProviderType = "corner" | "riparatore" | "centro";
@@ -67,6 +68,7 @@ const centroFeatures = [
 
 const cornerFeatures = [
   { icon: TrendingUp, title: "Aumenta Scontrino", description: "Guadagna commissioni consigliando servizi di riparazione ai tuoi clienti." },
+  { icon: Tv, title: "Pubblicità DOOH", description: "Monetizza il tuo monitor vendendo spazi pubblicitari settimanali ad attività locali della tua zona." },
   { icon: Smartphone, title: "Portale Semplice", description: "Gestione semplice e funzionale attraverso un portale dedicato intuitivo." },
   { icon: ShoppingCart, title: "Pubblica Usato", description: "Aggiungi dispositivi usati nel marketplace per guadagni extra." },
   { icon: Eye, title: "Tracking Real-time", description: "I clienti seguono le riparazioni in tempo reale dalla loro dashboard." },
@@ -102,7 +104,7 @@ const providerTypes = [
     type: "corner" as const,
     title: "Corner",
     subtitle: "Punto di Raccolta",
-    description: "Sei un negozio di telefonia, tabaccheria o attività commerciale? Diventa un punto di raccolta dispositivi e guadagna segnalando riparazioni ai nostri centri partner.",
+    description: "Sei un negozio di telefonia, tabaccheria o attività commerciale? Diventa un punto di raccolta dispositivi, guadagna segnalando riparazioni e monetizza il tuo monitor con pubblicità locali.",
     icon: Store,
     color: "text-primary",
     bgColor: "bg-primary/10",
@@ -110,7 +112,7 @@ const providerTypes = [
     glowColor: "shadow-[0_0_60px_hsl(217_91%_60%/0.2)]",
     commission: "10% sul margine",
     features: cornerFeatures,
-    benefits: ["Nessun investimento iniziale", "Guadagno su ogni riparazione", "Aumenti traffico nel negozio", "Formazione e supporto inclusi"],
+    benefits: ["Nessun investimento iniziale", "Guadagno su ogni riparazione", "Guadagna dalla pubblicità locale", "Aumenti traffico nel negozio", "Formazione e supporto inclusi"],
   },
   {
     type: "riparatore" as const,
