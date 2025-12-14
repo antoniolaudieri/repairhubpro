@@ -61,26 +61,26 @@ export function CreditBalanceWidget({
 
   return (
     <>
-      <Card className={`bg-gradient-to-br ${statusConfig.gradient} border-border/50`}>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Wallet className="h-4 w-4" />
-              Credito Disponibile
+      <Card className={`bg-gradient-to-br ${statusConfig.gradient} border-border/50 h-full`}>
+        <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+          <div className="flex items-start justify-between gap-2">
+            <CardTitle className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+              <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="leading-tight">Credito Disponibile</span>
             </CardTitle>
-            <Badge className={statusConfig.color}>
-              <StatusIcon className="h-3 w-3 mr-1" />
-              {statusConfig.label}
+            <Badge className={`${statusConfig.color} text-[10px] sm:text-xs px-1.5 py-0.5 flex-shrink-0`}>
+              <StatusIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+              <span className="hidden xs:inline">{statusConfig.label}</span>
             </Badge>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-baseline gap-1">
-            <span className={`text-3xl font-bold ${creditBalance < 0 ? "text-destructive" : ""}`}>
+        <CardContent className="space-y-3 px-3 pb-3 sm:px-6 sm:pb-6 sm:space-y-4">
+          <div className="flex items-baseline gap-1 flex-wrap">
+            <span className={`text-2xl sm:text-3xl font-bold ${creditBalance < 0 ? "text-destructive" : ""}`}>
               €{creditBalance.toFixed(2)}
             </span>
             {creditBalance < warningThreshold && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-[10px] sm:text-xs text-muted-foreground">
                 (soglia: €{warningThreshold})
               </span>
             )}
@@ -88,9 +88,9 @@ export function CreditBalanceWidget({
 
           {creditBalance < 0 && (
             <div className="flex items-center gap-2 p-2 rounded-md bg-destructive/10 border border-destructive/20">
-              <TrendingDown className="h-4 w-4 text-destructive" />
-              <div className="flex-1">
-                <p className="text-xs font-medium text-destructive">Debito verso piattaforma</p>
+              <TrendingDown className="h-4 w-4 text-destructive flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] sm:text-xs font-medium text-destructive">Debito verso piattaforma</p>
                 <p className="text-sm font-bold text-destructive">€{Math.abs(creditBalance).toFixed(2)}</p>
               </div>
             </div>
@@ -98,37 +98,36 @@ export function CreditBalanceWidget({
 
           <Progress 
             value={progressValue} 
-            className={`h-2 ${paymentStatus === "suspended" ? "[&>div]:bg-destructive" : paymentStatus === "warning" ? "[&>div]:bg-warning" : "[&>div]:bg-success"}`}
+            className={`h-1.5 sm:h-2 ${paymentStatus === "suspended" ? "[&>div]:bg-destructive" : paymentStatus === "warning" ? "[&>div]:bg-warning" : "[&>div]:bg-success"}`}
           />
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col xs:flex-row gap-2">
             <Button 
               size="sm" 
               onClick={() => setShowTopupDialog(true)}
-              className="flex-1 min-w-0"
+              className="flex-1 h-8 sm:h-9 text-xs sm:text-sm"
             >
-              <Plus className="h-4 w-4 mr-1 flex-shrink-0" />
-              <span className="truncate">Ricarica</span>
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 flex-shrink-0" />
+              Ricarica
             </Button>
             <Button 
               size="sm" 
               variant="outline"
               onClick={() => setShowTransactionsDialog(true)}
-              className="flex-shrink-0"
+              className="h-8 sm:h-9 text-xs sm:text-sm"
             >
-              <span className="hidden sm:inline">Movimenti</span>
-              <span className="sm:hidden">Storico</span>
+              Movimenti
             </Button>
           </div>
 
           {paymentStatus === "suspended" && (
-            <p className="text-xs text-destructive">
-              Account sospeso per credito esaurito. Ricarica per riattivare.
+            <p className="text-[10px] sm:text-xs text-destructive leading-tight">
+              Account sospeso. Ricarica per riattivare.
             </p>
           )}
           {paymentStatus === "warning" && (
-            <p className="text-xs text-warning">
-              Saldo basso. Ricarica per evitare interruzioni del servizio.
+            <p className="text-[10px] sm:text-xs text-warning leading-tight">
+              Saldo basso. Ricarica per evitare interruzioni.
             </p>
           )}
         </CardContent>
