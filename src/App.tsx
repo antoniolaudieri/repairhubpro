@@ -6,7 +6,6 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AnimatedRoutes } from "@/components/AnimatedRoutes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { PullToRefresh } from "@/components/PullToRefresh";
 import { UpdateNotification } from "@/components/UpdateNotification";
 
 const queryClient = new QueryClient({
@@ -28,11 +27,9 @@ const App = () => (
           <Toaster />
           <Sonner />
           <UpdateNotification />
-          <PullToRefresh>
-            <BrowserRouter>
-              <AnimatedRoutes />
-            </BrowserRouter>
-          </PullToRefresh>
+          <BrowserRouter>
+            <AnimatedRoutes />
+          </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
