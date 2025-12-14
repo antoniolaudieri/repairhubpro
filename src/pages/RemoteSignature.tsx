@@ -24,6 +24,9 @@ export default function RemoteSignature() {
 
   const amount = searchParams.get("amount") || "0.00";
   const total = searchParams.get("total") || "0.00";
+  const type = searchParams.get("type");
+  const quoteId = searchParams.get("quote_id");
+  const repairRequestId = searchParams.get("repair_request_id");
 
   // Check session validity on mount
   useEffect(() => {
@@ -101,6 +104,42 @@ export default function RemoteSignature() {
     
     try {
       const signatureData = sigCanvas.current.toDataURL();
+      const signedAt = new Date().toISOString();
+      
+      // Update database if this is a quote signature
+      if (type === "quote" && quoteId) {
+        // Update quote status to accepted
+        const { error: quoteError } = await supabase
+          .from("quotes")
+          .update({
+            status: "accepted",
+            signed_at: signedAt,
+            signature_data: signatureData,
+          })
+          .eq("id", quoteId);
+
+        if (quoteError) {
+          console.error("Error updating quote:", quoteError);
+          throw new Error("Errore nell'aggiornamento del preventivo");
+        }
+
+        // Update repair request status if linked
+        if (repairRequestId) {
+          const { error: repairError } = await supabase
+            .from("repair_requests")
+            .update({
+              status: "awaiting_pickup",
+              quote_accepted_at: signedAt,
+              awaiting_pickup_at: signedAt,
+            })
+            .eq("id", repairRequestId);
+
+          if (repairError) {
+            console.error("Error updating repair request:", repairError);
+            // Don't throw - quote is already accepted
+          }
+        }
+      }
       
       // Update localStorage session
       const sessionData = localStorage.getItem(`remote-sign-${sessionId}`);
@@ -122,7 +161,7 @@ export default function RemoteSignature() {
         payload: {
           sessionId,
           signatureData,
-          signedAt: new Date().toISOString()
+          signedAt
         }
       });
       
@@ -136,7 +175,7 @@ export default function RemoteSignature() {
       
     } catch (error: any) {
       console.error("Error submitting signature:", error);
-      toast.error("Errore durante l'invio della firma");
+      toast.error(error.message || "Errore durante l'invio della firma");
     } finally {
       setIsSubmitting(false);
     }
