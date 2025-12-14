@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { AnimatedRoutes } from "@/components/AnimatedRoutes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PullToRefresh } from "@/components/PullToRefresh";
+import { UpdateNotification } from "@/components/UpdateNotification";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,6 +27,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <UpdateNotification />
           <PullToRefresh>
             <BrowserRouter>
               <AnimatedRoutes />
