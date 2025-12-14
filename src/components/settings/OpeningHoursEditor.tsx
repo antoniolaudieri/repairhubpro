@@ -13,6 +13,7 @@ export interface DayHours {
   open_pm: string;
   close_pm: string;
   closed: boolean;
+  morning_closed?: boolean;
   afternoon_closed?: boolean;
 }
 
@@ -42,6 +43,7 @@ const defaultHours: DayHours = {
   open_pm: "15:00",
   close_pm: "19:00",
   closed: false,
+  morning_closed: false,
   afternoon_closed: false,
 };
 
@@ -51,6 +53,7 @@ const saturdayHours: DayHours = {
   open_pm: "15:00",
   close_pm: "19:00",
   closed: false,
+  morning_closed: false,
   afternoon_closed: true,
 };
 
@@ -60,6 +63,7 @@ const closedHours: DayHours = {
   open_pm: "15:00",
   close_pm: "19:00",
   closed: true,
+  morning_closed: false,
   afternoon_closed: false,
 };
 
@@ -146,22 +150,34 @@ export function OpeningHoursEditor({ value, onChange }: OpeningHoursEditorProps)
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
                 {/* Mattina */}
                 <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Mattina</Label>
                   <div className="flex items-center gap-2">
-                    <Input
-                      type="time"
-                      value={hours[day].open_am}
-                      onChange={(e) => updateDay(day, "open_am", e.target.value)}
-                      className="w-24 h-8 text-sm"
+                    <Label className="text-xs text-muted-foreground">Mattina</Label>
+                    <Switch
+                      checked={!hours[day].morning_closed}
+                      onCheckedChange={(checked) => updateDay(day, "morning_closed", !checked)}
+                      className="scale-75"
                     />
-                    <span className="text-muted-foreground">-</span>
-                    <Input
-                      type="time"
-                      value={hours[day].close_am}
-                      onChange={(e) => updateDay(day, "close_am", e.target.value)}
-                      className="w-24 h-8 text-sm"
-                    />
+                    {hours[day].morning_closed && (
+                      <span className="text-xs text-muted-foreground">(chiuso)</span>
+                    )}
                   </div>
+                  {!hours[day].morning_closed && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="time"
+                        value={hours[day].open_am}
+                        onChange={(e) => updateDay(day, "open_am", e.target.value)}
+                        className="w-24 h-8 text-sm"
+                      />
+                      <span className="text-muted-foreground">-</span>
+                      <Input
+                        type="time"
+                        value={hours[day].close_am}
+                        onChange={(e) => updateDay(day, "close_am", e.target.value)}
+                        className="w-24 h-8 text-sm"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Pomeriggio */}
@@ -220,6 +236,10 @@ export function formatOpeningHoursForDisplay(hours: OpeningHours | null): string
     const shortName = dayNames[day].substring(0, 3);
     if (dayData.closed) {
       lines.push(`${shortName}: Chiuso`);
+    } else if (dayData.morning_closed && dayData.afternoon_closed) {
+      lines.push(`${shortName}: Chiuso`);
+    } else if (dayData.morning_closed) {
+      lines.push(`${shortName}: ${dayData.open_pm}-${dayData.close_pm}`);
     } else if (dayData.afternoon_closed) {
       lines.push(`${shortName}: ${dayData.open_am}-${dayData.close_am}`);
     } else {
@@ -239,8 +259,11 @@ export function formatOpeningHoursForPopup(hours: OpeningHours | null): string {
   
   const lines = dayOrder.map((day, i) => {
     const dayData = hours[day];
-    if (dayData.closed) {
+    if (dayData.closed || (dayData.morning_closed && dayData.afternoon_closed)) {
       return `<span style="color: #9ca3af;">${shortNames[i]}: Chiuso</span>`;
+    }
+    if (dayData.morning_closed) {
+      return `<span>${shortNames[i]}: ${dayData.open_pm}-${dayData.close_pm}</span>`;
     }
     if (dayData.afternoon_closed) {
       return `<span>${shortNames[i]}: ${dayData.open_am}-${dayData.close_am}</span>`;
@@ -257,7 +280,7 @@ export function formatOpeningHoursForPopup(hours: OpeningHours | null): string {
 }
 
 // Get today's opening hours
-export function getTodayHours(hours: OpeningHours | null): { open_am: string; close_am: string; open_pm: string; close_pm: string; closed: boolean; afternoon_closed?: boolean } | null {
+export function getTodayHours(hours: OpeningHours | null): { open_am: string; close_am: string; open_pm: string; close_pm: string; closed: boolean; morning_closed?: boolean; afternoon_closed?: boolean } | null {
   if (!hours) return null;
   
   const dayOfWeek = new Date().getDay();
@@ -279,7 +302,8 @@ export function getTodayHours(hours: OpeningHours | null): { open_am: string; cl
 export function formatTodayHours(hours: OpeningHours | null): string {
   const today = getTodayHours(hours);
   if (!today) return "Orari non disponibili";
-  if (today.closed) return "Chiuso oggi";
+  if (today.closed || (today.morning_closed && today.afternoon_closed)) return "Chiuso oggi";
+  if (today.morning_closed) return `${today.open_pm}-${today.close_pm}`;
   if (today.afternoon_closed) return `${today.open_am}-${today.close_am}`;
   return `${today.open_am}-${today.close_am} / ${today.open_pm}-${today.close_pm}`;
 }

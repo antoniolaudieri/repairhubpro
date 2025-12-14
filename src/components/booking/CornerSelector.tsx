@@ -325,11 +325,18 @@ export function CornerSelector({ selectedCornerId, onSelect }: CornerSelectorPro
                     {(() => {
                       const todayHours = getTodayHours(corner.opening_hours || null);
                       if (!todayHours) return null;
-                      const hoursText = todayHours.closed 
-                        ? "Chiuso" 
-                        : todayHours.afternoon_closed 
-                          ? `${todayHours.open_am}-${todayHours.close_am}`
-                          : `${todayHours.open_am}-${todayHours.close_am} / ${todayHours.open_pm}-${todayHours.close_pm}`;
+                      let hoursText = "Chiuso";
+                      if (!todayHours.closed) {
+                        if (todayHours.morning_closed && todayHours.afternoon_closed) {
+                          hoursText = "Chiuso";
+                        } else if (todayHours.morning_closed) {
+                          hoursText = `${todayHours.open_pm}-${todayHours.close_pm}`;
+                        } else if (todayHours.afternoon_closed) {
+                          hoursText = `${todayHours.open_am}-${todayHours.close_am}`;
+                        } else {
+                          hoursText = `${todayHours.open_am}-${todayHours.close_am} / ${todayHours.open_pm}-${todayHours.close_pm}`;
+                        }
+                      }
                       return (
                         <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                           <Clock className="h-3 w-3" />
