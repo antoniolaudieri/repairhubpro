@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Target, 
   TrendingUp, 
@@ -10,15 +12,20 @@ import {
   Trophy,
   Flame,
   Zap,
-  Star
+  Star,
+  Settings,
+  Check,
+  X
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, startOfDay, startOfWeek, startOfMonth, endOfDay, endOfWeek, endOfMonth, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface GoalsWidgetProps {
   centroId: string;
   monthlyGoal: number;
+  onGoalUpdate?: (newGoal: number) => void;
 }
 
 interface PeriodStats {
@@ -30,12 +37,15 @@ interface PeriodStats {
   dailyNeeded: number;
 }
 
-export const GoalsWidget = ({ centroId, monthlyGoal }: GoalsWidgetProps) => {
+export const GoalsWidget = ({ centroId, monthlyGoal, onGoalUpdate }: GoalsWidgetProps) => {
   const [dailyStats, setDailyStats] = useState<PeriodStats | null>(null);
   const [weeklyStats, setWeeklyStats] = useState<PeriodStats | null>(null);
   const [monthlyStats, setMonthlyStats] = useState<PeriodStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [streak, setStreak] = useState(0);
+  const [isEditing, setIsEditing] = useState(false);
+  const [goalInput, setGoalInput] = useState(monthlyGoal.toString());
+  const [savingGoal, setSavingGoal] = useState(false);
 
   useEffect(() => {
     if (centroId && monthlyGoal > 0) {
@@ -161,34 +171,121 @@ export const GoalsWidget = ({ centroId, monthlyGoal }: GoalsWidgetProps) => {
     }
   };
 
+  const handleSaveGoal = async () => {
+    const newGoal = parseFloat(goalInput);
+    if (isNaN(newGoal) || newGoal <= 0) {
+      toast.error("Inserisci un obiettivo valido");
+      return;
+    }
+
+    setSavingGoal(true);
+    try {
+      const { data: centro } = await supabase
+        .from("centri_assistenza")
+        .select("settings")
+        .eq("id", centroId)
+        .single();
+
+      const currentSettings = (centro?.settings as Record<string, any>) || {};
+      
+      const { error } = await supabase
+        .from("centri_assistenza")
+        .update({
+          settings: {
+            ...currentSettings,
+            monthly_goal: newGoal,
+          },
+        })
+        .eq("id", centroId);
+
+      if (error) throw error;
+
+      toast.success("Obiettivo salvato!");
+      setIsEditing(false);
+      onGoalUpdate?.(newGoal);
+    } catch (error) {
+      console.error("Error saving goal:", error);
+      toast.error("Errore nel salvataggio");
+    } finally {
+      setSavingGoal(false);
+    }
+  };
+
   const getProgressColor = (progress: number) => {
-    if (progress >= 100) return "bg-success";
+    if (progress >= 100) return "bg-emerald-500";
     if (progress >= 75) return "bg-primary";
-    if (progress >= 50) return "bg-warning";
-    return "bg-muted-foreground";
+    if (progress >= 50) return "bg-amber-500";
+    return "bg-muted-foreground/50";
   };
 
   const getMotivationalMessage = () => {
     if (!monthlyStats) return "";
     
     const progress = monthlyStats.progress;
-    if (progress >= 100) return "🎉 Obiettivo raggiunto! Sei un campione!";
-    if (progress >= 90) return "🔥 Quasi al traguardo! Continua così!";
-    if (progress >= 75) return "💪 Ottimo lavoro! Sei sulla strada giusta!";
-    if (progress >= 50) return "📈 Buon progresso! Mantieni il ritmo!";
-    if (progress >= 25) return "🚀 Buon inizio! Accelera per raggiungere l'obiettivo!";
-    return "💡 È il momento di partire forte!";
+    if (progress >= 100) return "Obiettivo raggiunto! Sei un campione!";
+    if (progress >= 90) return "Quasi al traguardo! Continua così!";
+    if (progress >= 75) return "Ottimo lavoro! Sei sulla strada giusta!";
+    if (progress >= 50) return "Buon progresso! Mantieni il ritmo!";
+    if (progress >= 25) return "Buon inizio! Accelera per raggiungere l'obiettivo!";
+    return "È il momento di partire forte!";
   };
 
+  // Empty state - allow setting goal from here
   if (monthlyGoal <= 0) {
     return (
-      <Card className="p-6 bg-gradient-to-br from-card to-muted/30">
-        <div className="text-center space-y-3">
-          <Target className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h3 className="font-semibold text-lg">Imposta i tuoi Obiettivi</h3>
-          <p className="text-sm text-muted-foreground">
-            Vai nelle impostazioni per definire il tuo obiettivo mensile di fatturato
-          </p>
+      <Card className="overflow-hidden">
+        <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+              <Target className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">Obiettivi</h3>
+              <p className="text-xs text-muted-foreground">Imposta il tuo traguardo mensile</p>
+            </div>
+          </div>
+          
+          {isEditing ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-medium text-muted-foreground">€</span>
+                <Input
+                  type="number"
+                  value={goalInput}
+                  onChange={(e) => setGoalInput(e.target.value)}
+                  placeholder="30000"
+                  className="text-lg font-semibold"
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={handleSaveGoal} 
+                  disabled={savingGoal}
+                  className="flex-1 gap-2"
+                >
+                  <Check className="h-4 w-4" />
+                  Salva
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditing(false)}
+                  className="px-3"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button 
+              onClick={() => { setGoalInput(""); setIsEditing(true); }}
+              className="w-full gap-2"
+              variant="outline"
+            >
+              <Target className="h-4 w-4" />
+              Imposta Obiettivo Mensile
+            </Button>
+          )}
         </div>
       </Card>
     );
@@ -197,185 +294,197 @@ export const GoalsWidget = ({ centroId, monthlyGoal }: GoalsWidgetProps) => {
   if (loading) {
     return (
       <Card className="p-6">
-        <div className="flex items-center justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        <div className="flex items-center justify-center py-4">
+          <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary/20 border-t-primary" />
         </div>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Motivational Header */}
-      <Card className="p-4 bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+    <Card className="overflow-hidden">
+      {/* Header with gradient matching dashboard cards */}
+      <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/20 rounded-lg">
-              <Trophy className="h-5 w-5 text-primary" />
+            <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+              <Trophy className="h-4 w-4 text-primary-foreground" />
             </div>
             <div>
-              <p className="font-medium text-foreground">{getMotivationalMessage()}</p>
-              <p className="text-xs text-muted-foreground">
-                Obiettivo mensile: €{monthlyGoal.toLocaleString('it-IT')}
-              </p>
+              <p className="text-sm font-medium text-foreground">{getMotivationalMessage()}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">
+                  Obiettivo: €{monthlyGoal.toLocaleString('it-IT')}
+                </p>
+                <button 
+                  onClick={() => { setGoalInput(monthlyGoal.toString()); setIsEditing(true); }}
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Settings className="h-3 w-3" />
+                </button>
+              </div>
             </div>
           </div>
           {streak > 0 && (
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-warning/20 rounded-full">
-              <Flame className="h-4 w-4 text-warning" />
-              <span className="text-sm font-bold text-warning">{streak}</span>
-              <span className="text-xs text-warning">giorni</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-amber-500/20 to-orange-500/20 rounded-full border border-amber-500/30">
+              <Flame className="h-3.5 w-3.5 text-amber-500" />
+              <span className="text-xs font-bold text-amber-600">{streak}gg</span>
             </div>
           )}
         </div>
-      </Card>
+      </div>
 
-      {/* Goals Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Edit mode */}
+      {isEditing && (
+        <div className="p-4 border-t bg-muted/30">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-medium text-muted-foreground">€</span>
+            <Input
+              type="number"
+              value={goalInput}
+              onChange={(e) => setGoalInput(e.target.value)}
+              placeholder="30000"
+              className="text-lg font-semibold"
+              autoFocus
+            />
+            <Button 
+              size="sm"
+              onClick={handleSaveGoal} 
+              disabled={savingGoal}
+              className="gap-1"
+            >
+              <Check className="h-4 w-4" />
+            </Button>
+            <Button 
+              size="sm"
+              variant="ghost" 
+              onClick={() => setIsEditing(false)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Goals Grid - compact design */}
+      <div className="grid grid-cols-3 divide-x divide-border">
         {/* Daily Goal */}
         {dailyStats && (
-          <Card className="p-4 relative overflow-hidden group hover:shadow-lg transition-shadow">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-blue-500/10 rounded">
-                    <Calendar className="h-4 w-4 text-blue-500" />
-                  </div>
-                  <span className="text-sm font-medium">Oggi</span>
-                </div>
-                {dailyStats.progress >= 100 && (
-                  <Star className="h-5 w-5 text-yellow-500 animate-pulse" />
-                )}
+          <div className="p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5 text-blue-500" />
+                <span className="text-xs font-medium text-muted-foreground">Oggi</span>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-2xl font-bold">
-                    €{dailyStats.revenue.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    / €{dailyStats.target.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
-                  </span>
-                </div>
-                
-                <Progress 
-                  value={dailyStats.progress} 
-                  className={`h-2 ${getProgressColor(dailyStats.progress)}`}
-                />
-                
-                <p className="text-xs text-muted-foreground">
-                  {dailyStats.progress >= 100 
-                    ? "Obiettivo raggiunto! 🎯" 
-                    : `Mancano €${dailyStats.remaining.toLocaleString('it-IT', { maximumFractionDigits: 0 })}`}
-                </p>
-              </div>
+              {dailyStats.progress >= 100 && (
+                <Star className="h-3.5 w-3.5 text-amber-500" />
+              )}
             </div>
-          </Card>
+            
+            <div>
+              <span className="text-lg font-bold text-foreground">
+                €{dailyStats.revenue.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
+              </span>
+              <span className="text-[10px] text-muted-foreground ml-1">
+                / €{dailyStats.target.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+            
+            <Progress 
+              value={dailyStats.progress} 
+              className="h-1.5"
+            />
+            
+            <p className="text-[10px] text-muted-foreground truncate">
+              {dailyStats.progress >= 100 
+                ? "Raggiunto!" 
+                : `-€${dailyStats.remaining.toLocaleString('it-IT', { maximumFractionDigits: 0 })}`}
+            </p>
+          </div>
         )}
 
         {/* Weekly Goal */}
         {weeklyStats && (
-          <Card className="p-4 relative overflow-hidden group hover:shadow-lg transition-shadow">
-            <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 to-transparent" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-green-500/10 rounded">
-                    <CalendarDays className="h-4 w-4 text-green-500" />
-                  </div>
-                  <span className="text-sm font-medium">Settimana</span>
-                </div>
-                {weeklyStats.progress >= 100 && (
-                  <Zap className="h-5 w-5 text-yellow-500 animate-pulse" />
-                )}
+          <div className="p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <CalendarDays className="h-3.5 w-3.5 text-emerald-500" />
+                <span className="text-xs font-medium text-muted-foreground">Settimana</span>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-2xl font-bold">
-                    €{weeklyStats.revenue.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    / €{weeklyStats.target.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
-                  </span>
-                </div>
-                
-                <Progress 
-                  value={weeklyStats.progress} 
-                  className={`h-2 ${getProgressColor(weeklyStats.progress)}`}
-                />
-                
-                <p className="text-xs text-muted-foreground">
-                  {weeklyStats.progress >= 100 
-                    ? "Obiettivo raggiunto! 🏆" 
-                    : `€${weeklyStats.dailyNeeded.toLocaleString('it-IT', { maximumFractionDigits: 0 })}/giorno per ${weeklyStats.daysLeft}gg`}
-                </p>
-              </div>
+              {weeklyStats.progress >= 100 && (
+                <Zap className="h-3.5 w-3.5 text-amber-500" />
+              )}
             </div>
-          </Card>
+            
+            <div>
+              <span className="text-lg font-bold text-foreground">
+                €{weeklyStats.revenue.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
+              </span>
+              <span className="text-[10px] text-muted-foreground ml-1">
+                / €{weeklyStats.target.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+            
+            <Progress 
+              value={weeklyStats.progress} 
+              className="h-1.5"
+            />
+            
+            <p className="text-[10px] text-muted-foreground truncate">
+              {weeklyStats.progress >= 100 
+                ? "Raggiunto!" 
+                : `€${weeklyStats.dailyNeeded.toLocaleString('it-IT', { maximumFractionDigits: 0 })}/g`}
+            </p>
+          </div>
         )}
 
         {/* Monthly Goal */}
         {monthlyStats && (
-          <Card className="p-4 relative overflow-hidden group hover:shadow-lg transition-shadow">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-transparent" />
-            <div className="relative">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-purple-500/10 rounded">
-                    <CalendarRange className="h-4 w-4 text-purple-500" />
-                  </div>
-                  <span className="text-sm font-medium">{format(new Date(), 'MMMM', { locale: it })}</span>
-                </div>
-                {monthlyStats.progress >= 100 && (
-                  <Trophy className="h-5 w-5 text-yellow-500 animate-pulse" />
-                )}
+          <div className="p-3 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <CalendarRange className="h-3.5 w-3.5 text-purple-500" />
+                <span className="text-xs font-medium text-muted-foreground capitalize">{format(new Date(), 'MMM', { locale: it })}</span>
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-2xl font-bold">
-                    €{monthlyStats.revenue.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    / €{monthlyStats.target.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
-                  </span>
-                </div>
-                
-                <Progress 
-                  value={monthlyStats.progress} 
-                  className={`h-2 ${getProgressColor(monthlyStats.progress)}`}
-                />
-                
-                <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>
-                    {monthlyStats.progress >= 100 
-                      ? "Campione del mese! 🥇" 
-                      : `€${monthlyStats.dailyNeeded.toLocaleString('it-IT', { maximumFractionDigits: 0 })}/giorno`}
-                  </span>
-                  <span>{monthlyStats.daysLeft} giorni rimasti</span>
-                </div>
-              </div>
+              {monthlyStats.progress >= 100 && (
+                <Trophy className="h-3.5 w-3.5 text-amber-500" />
+              )}
             </div>
-          </Card>
+            
+            <div>
+              <span className="text-lg font-bold text-foreground">
+                €{monthlyStats.revenue.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
+              </span>
+              <span className="text-[10px] text-muted-foreground ml-1">
+                / €{monthlyStats.target.toLocaleString('it-IT', { maximumFractionDigits: 0 })}
+              </span>
+            </div>
+            
+            <Progress 
+              value={monthlyStats.progress} 
+              className="h-1.5"
+            />
+            
+            <p className="text-[10px] text-muted-foreground truncate">
+              {monthlyStats.progress >= 100 
+                ? "Campione!" 
+                : `${monthlyStats.daysLeft}gg rimasti`}
+            </p>
+          </div>
         )}
       </div>
 
-      {/* Tips Card */}
-      {monthlyStats && monthlyStats.progress < 50 && (
-        <Card className="p-4 bg-muted/30 border-dashed">
-          <div className="flex items-start gap-3">
-            <TrendingUp className="h-5 w-5 text-primary mt-0.5" />
-            <div>
-              <p className="text-sm font-medium">Suggerimento</p>
-              <p className="text-xs text-muted-foreground">
-                Per raggiungere l'obiettivo, concentrati su riparazioni ad alto margine e proponi servizi aggiuntivi ai clienti.
-              </p>
-            </div>
+      {/* Tips - only show when struggling */}
+      {monthlyStats && monthlyStats.progress < 30 && (
+        <div className="px-4 py-3 border-t bg-muted/20">
+          <div className="flex items-start gap-2">
+            <TrendingUp className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              Concentrati su riparazioni ad alto margine e proponi servizi aggiuntivi.
+            </p>
           </div>
-        </Card>
+        </div>
       )}
-    </div>
+    </Card>
   );
 };
