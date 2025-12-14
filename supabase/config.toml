@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.generate-ad-text]
 verify_jwt = false
+
+[functions.fetch-rss-feed]
+verify_jwt = false
