@@ -41,6 +41,7 @@ import {
   Sparkles,
   Store,
   Building2,
+  FileText,
 } from "lucide-react";
 import { PartnersMap } from "@/components/maps/PartnersMap";
 import { supabase } from "@/integrations/supabase/client";
@@ -956,9 +957,9 @@ export default function CustomerHome() {
 
                   <div className="space-y-5">
                     {[
-                      { icon: MapPin, label: "Indirizzo", value: "Via Roma 123, 00100 Roma" },
-                      { icon: Phone, label: "Telefono", value: "+39 123 456 7890" },
+                      { icon: MapPin, label: "Indirizzo", value: "Via Alessandro Manzoni 7, 18100 Imperia IM" },
                       { icon: Mail, label: "Email", value: "info@lablinkriparo.it" },
+                      { icon: FileText, label: "P.IVA", value: "01538960087" },
                     ].map((item, idx) => (
                       <motion.div 
                         key={idx} 
@@ -1170,17 +1171,17 @@ export default function CustomerHome() {
               <div>
                 <h4 className="font-semibold mb-4">Contatti</h4>
                 <ul className="space-y-3 text-sidebar-foreground/70">
-                  <li className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    <span>+39 123 456 7890</span>
+                  <li className="flex items-start gap-2">
+                    <MapPin className="h-4 w-4 mt-0.5" />
+                    <span>Via Alessandro Manzoni 7, 18100 Imperia IM</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <Mail className="h-4 w-4" />
                     <span>info@lablinkriparo.it</span>
                   </li>
-                  <li className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 mt-0.5" />
-                    <span>Via Roma 123, 00100 Roma</span>
+                  <li className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span>P.IVA 01538960087</span>
                   </li>
                 </ul>
               </div>
