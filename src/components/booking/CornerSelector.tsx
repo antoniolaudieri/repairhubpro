@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Loader2, MapPin, Navigation, Store, Search, Check } from "lucide-react";
+import { Loader2, MapPin, Navigation, Store, Search, Check, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useGeolocation } from "@/hooks/useGeolocation";
+import { OpeningHours, formatOpeningHoursForPopup, getTodayHours } from "@/components/settings/OpeningHoursEditor";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -17,6 +18,7 @@ interface Corner {
   latitude: number | null;
   longitude: number | null;
   distance?: number;
+  opening_hours?: OpeningHours | null;
 }
 
 interface CornerSelectorProps {
@@ -57,12 +59,16 @@ export function CornerSelector({ selectedCornerId, onSelect }: CornerSelectorPro
       setLoading(true);
       const { data, error } = await supabase
         .from("corners")
-        .select("id, business_name, address, phone, latitude, longitude")
+        .select("id, business_name, address, phone, latitude, longitude, opening_hours")
         .eq("status", "approved");
 
       if (!error && data) {
-        setCorners(data);
-        setFilteredCorners(data);
+        const cornersWithHours = data.map(c => ({
+          ...c,
+          opening_hours: c.opening_hours as unknown as OpeningHours | null,
+        }));
+        setCorners(cornersWithHours);
+        setFilteredCorners(cornersWithHours);
       }
       setLoading(false);
     };
@@ -175,6 +181,7 @@ export function CornerSelector({ selectedCornerId, onSelect }: CornerSelectorPro
             `<div class="p-2">
               <strong>${corner.business_name}</strong><br/>
               <span class="text-sm text-gray-600">${corner.address}</span><br/>
+              ${corner.opening_hours ? formatOpeningHoursForPopup(corner.opening_hours) : ''}
               <button onclick="window.selectCorner('${corner.id}')" class="mt-2 px-3 py-1 bg-primary text-white rounded text-sm">
                 Seleziona
               </button>
@@ -315,6 +322,16 @@ export function CornerSelector({ selectedCornerId, onSelect }: CornerSelectorPro
                     {corner.phone && (
                       <p className="text-sm text-muted-foreground">{corner.phone}</p>
                     )}
+                    {(() => {
+                      const todayHours = getTodayHours(corner.opening_hours || null);
+                      if (!todayHours) return null;
+                      return (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                          <Clock className="h-3 w-3" />
+                          {todayHours.closed ? "Oggi: Chiuso" : `Oggi: ${todayHours.open} - ${todayHours.close}`}
+                        </p>
+                      );
+                    })()}
                   </div>
                   {corner.distance !== undefined && (
                     <Badge variant="outline" className="ml-2 shrink-0">
