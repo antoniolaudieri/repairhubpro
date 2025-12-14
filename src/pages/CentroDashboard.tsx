@@ -708,7 +708,13 @@ export default function CentroDashboard() {
             {centro && (
               <GoalsWidget 
                 centroId={centro.id} 
-                monthlyGoal={centro.settings?.monthly_goal || 0} 
+                monthlyGoal={centro.settings?.monthly_goal || 0}
+                onGoalUpdate={(newGoal) => {
+                  setCentro(prev => prev ? {
+                    ...prev,
+                    settings: { ...prev.settings, monthly_goal: newGoal }
+                  } : null);
+                }}
               />
             )}
 
