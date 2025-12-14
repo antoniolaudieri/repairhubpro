@@ -1,19 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Megaphone, Euro, Calendar, TrendingUp, Eye } from 'lucide-react';
+import { Megaphone, Euro, Calendar, TrendingUp, Eye, Send, CheckCircle, Clock, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { CornerLayout } from '@/layouts/CornerLayout';
 import { PageTransition } from '@/components/PageTransition';
+import { toast } from 'sonner';
 
 interface CampaignCorner {
   id: string;
   corner_revenue: number;
   impressions_count: number;
+  payment_status: string | null;
+  payment_requested_at: string | null;
+  payment_paid_at: string | null;
   campaign: {
     id: string;
     ad_title: string;
@@ -34,6 +39,7 @@ export default function CornerPubblicita() {
   const [campaigns, setCampaigns] = useState<CampaignCorner[]>([]);
   const [loading, setLoading] = useState(true);
   const [cornerId, setCornerId] = useState<string | null>(null);
+  const [requestingPayment, setRequestingPayment] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -43,7 +49,6 @@ export default function CornerPubblicita() {
 
   const loadCornerAndCampaigns = async () => {
     try {
-      // Get corner ID
       const { data: corner } = await supabase
         .from('corners')
         .select('id')
@@ -53,13 +58,15 @@ export default function CornerPubblicita() {
       if (!corner) return;
       setCornerId(corner.id);
 
-      // Get campaigns
       const { data, error } = await supabase
         .from('display_ad_campaign_corners')
         .select(`
           id,
           corner_revenue,
           impressions_count,
+          payment_status,
+          payment_requested_at,
+          payment_paid_at,
           campaign:display_ad_campaigns(
             id,
             ad_title,
@@ -85,9 +92,41 @@ export default function CornerPubblicita() {
     }
   };
 
+  const handleRequestPayment = async (campaignCorner: CampaignCorner) => {
+    setRequestingPayment(campaignCorner.id);
+    try {
+      const { error } = await supabase.functions.invoke('request-corner-ad-payment', {
+        body: {
+          campaign_corner_id: campaignCorner.id,
+          corner_id: cornerId,
+          campaign_id: campaignCorner.campaign?.id
+        }
+      });
+
+      if (error) throw error;
+      
+      toast.success('Richiesta pagamento inviata!', {
+        description: 'L\'admin riceverà una notifica'
+      });
+      
+      loadCornerAndCampaigns();
+    } catch (error) {
+      console.error('Error requesting payment:', error);
+      toast.error('Errore invio richiesta');
+    } finally {
+      setRequestingPayment(null);
+    }
+  };
+
   const activeCampaigns = campaigns.filter(c => c.campaign?.status === 'active');
   const completedCampaigns = campaigns.filter(c => c.campaign?.status === 'completed');
   const totalRevenue = campaigns.reduce((sum, c) => sum + (c.corner_revenue || 0), 0);
+  const pendingRevenue = campaigns
+    .filter(c => c.payment_status !== 'paid' && c.campaign?.status === 'active')
+    .reduce((sum, c) => sum + (c.corner_revenue || 0), 0);
+  const paidRevenue = campaigns
+    .filter(c => c.payment_status === 'paid')
+    .reduce((sum, c) => sum + (c.corner_revenue || 0), 0);
   const totalImpressions = campaigns.reduce((sum, c) => sum + (c.impressions_count || 0), 0);
 
   const getStatusBadge = (status: string) => {
@@ -98,6 +137,23 @@ export default function CornerPubblicita() {
     };
     const { variant, label } = variants[status] || { variant: 'outline', label: status };
     return <Badge variant={variant}>{label}</Badge>;
+  };
+
+  const getPaymentBadge = (status: string | null) => {
+    if (status === 'paid') {
+      return <Badge className="bg-green-500">Pagato</Badge>;
+    }
+    if (status === 'requested') {
+      return <Badge variant="outline" className="border-amber-500 text-amber-600">Richiesto</Badge>;
+    }
+    return <Badge variant="outline" className="border-gray-300">Da Richiedere</Badge>;
+  };
+
+  const canRequestPayment = (item: CampaignCorner) => {
+    return item.campaign?.status === 'active' && 
+           item.payment_status !== 'paid' && 
+           item.payment_status !== 'requested' &&
+           item.corner_revenue > 0;
   };
 
   if (loading) {
@@ -126,7 +182,7 @@ export default function CornerPubblicita() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-3">
@@ -135,7 +191,33 @@ export default function CornerPubblicita() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">€{totalRevenue.toFixed(2)}</p>
-                    <p className="text-sm text-muted-foreground">Guadagno Totale</p>
+                    <p className="text-sm text-muted-foreground">Totale</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-200 rounded-lg">
+                    <Clock className="h-5 w-5 text-amber-700" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-amber-700">€{pendingRevenue.toFixed(2)}</p>
+                    <p className="text-sm text-amber-600/80">Da Incassare</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-200 rounded-lg">
+                    <CheckCircle className="h-5 w-5 text-green-700" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-green-700">€{paidRevenue.toFixed(2)}</p>
+                    <p className="text-sm text-green-600/80">Incassato</p>
                   </div>
                 </div>
               </CardContent>
@@ -148,7 +230,7 @@ export default function CornerPubblicita() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{activeCampaigns.length}</p>
-                    <p className="text-sm text-muted-foreground">Campagne Attive</p>
+                    <p className="text-sm text-muted-foreground">Attive</p>
                   </div>
                 </div>
               </CardContent>
@@ -162,19 +244,6 @@ export default function CornerPubblicita() {
                   <div>
                     <p className="text-2xl font-bold">{totalImpressions}</p>
                     <p className="text-sm text-muted-foreground">Impressions</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-orange-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{completedCampaigns.length}</p>
-                    <p className="text-sm text-muted-foreground">Completate</p>
                   </div>
                 </div>
               </CardContent>
@@ -219,7 +288,7 @@ export default function CornerPubblicita() {
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start justify-between gap-2 flex-wrap">
                           <div>
                             <h3 className="font-medium">{item.campaign?.ad_title}</h3>
                             <p className="text-sm text-muted-foreground">
@@ -227,7 +296,10 @@ export default function CornerPubblicita() {
                               {item.campaign?.advertiser_company && ` · ${item.campaign.advertiser_company}`}
                             </p>
                           </div>
-                          {item.campaign?.status && getStatusBadge(item.campaign.status)}
+                          <div className="flex gap-2">
+                            {item.campaign?.status && getStatusBadge(item.campaign.status)}
+                            {getPaymentBadge(item.payment_status)}
+                          </div>
                         </div>
                         
                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
@@ -242,10 +314,40 @@ export default function CornerPubblicita() {
                           </span>
                         </div>
 
-                        <div className="mt-2">
+                        <div className="flex items-center justify-between mt-3">
                           <span className="text-lg font-bold text-green-600">
                             +€{item.corner_revenue?.toFixed(2)}
                           </span>
+                          
+                          {canRequestPayment(item) && (
+                            <Button
+                              size="sm"
+                              onClick={() => handleRequestPayment(item)}
+                              disabled={requestingPayment === item.id}
+                              className="gap-2"
+                            >
+                              {requestingPayment === item.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="h-4 w-4" />
+                              )}
+                              Richiedi Pagamento
+                            </Button>
+                          )}
+                          
+                          {item.payment_status === 'requested' && (
+                            <span className="text-sm text-amber-600 flex items-center gap-1">
+                              <Clock className="h-4 w-4" />
+                              In attesa di pagamento
+                            </span>
+                          )}
+                          
+                          {item.payment_status === 'paid' && item.payment_paid_at && (
+                            <span className="text-sm text-green-600 flex items-center gap-1">
+                              <CheckCircle className="h-4 w-4" />
+                              Pagato il {format(new Date(item.payment_paid_at), 'dd/MM/yyyy', { locale: it })}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </motion.div>

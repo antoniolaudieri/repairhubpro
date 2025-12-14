@@ -817,6 +817,9 @@ export type Database = {
           created_at: string
           id: string
           impressions_count: number
+          payment_paid_at: string | null
+          payment_requested_at: string | null
+          payment_status: string | null
         }
         Insert: {
           campaign_id: string
@@ -825,6 +828,9 @@ export type Database = {
           created_at?: string
           id?: string
           impressions_count?: number
+          payment_paid_at?: string | null
+          payment_requested_at?: string | null
+          payment_status?: string | null
         }
         Update: {
           campaign_id?: string
@@ -833,6 +839,9 @@ export type Database = {
           created_at?: string
           id?: string
           impressions_count?: number
+          payment_paid_at?: string | null
+          payment_requested_at?: string | null
+          payment_status?: string | null
         }
         Relationships: [
           {
