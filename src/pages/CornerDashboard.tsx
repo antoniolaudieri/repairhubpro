@@ -207,7 +207,7 @@ export default function CornerDashboard() {
     .reduce((sum, r) => sum + (r.corner_gestione_fee || 15), 0);
     
   const totalRepairCommissions = commissions.reduce((sum, c) => sum + (c.corner_commission || 0), 0);
-  const totalEarnings = totalRepairCommissions + gestioneFeesTotal + adRevenue;
+  const totalEarnings = totalRepairCommissions + adRevenue;
 
   const stats = {
     totalRequests: requests.length,
@@ -395,8 +395,8 @@ export default function CornerDashboard() {
                 <p className="text-xs text-white/70">Completate</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-                <p className="text-2xl md:text-3xl font-bold">€{stats.gestioneFeesTotal}</p>
-                <p className="text-xs text-white/70">Fee Gestione</p>
+                <p className="text-2xl md:text-3xl font-bold">€{stats.adRevenue.toFixed(0)}</p>
+                <p className="text-xs text-white/70">Pubblicità</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
                 <p className="text-2xl md:text-3xl font-bold">€{stats.thisMonthCommissions.toFixed(0)}</p>
