@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { CornerSelectionMap } from '@/components/ads/CornerSelectionMap';
 
 interface Corner {
   id: string;
@@ -459,11 +460,22 @@ export default function AcquistaPubblicita() {
                       <Label>Anteprima</Label>
                       <div className="aspect-video rounded-xl overflow-hidden relative">
                         {campaignData.ad_type === 'image' && campaignData.ad_image_url ? (
-                          <img 
-                            src={campaignData.ad_image_url} 
-                            alt="Preview"
-                            className="w-full h-full object-cover"
-                          />
+                          <div className="relative w-full h-full">
+                            <img 
+                              src={campaignData.ad_image_url} 
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
+                            {/* Text overlay on image */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center p-6">
+                              <div className="text-center text-white">
+                                <h3 className="text-xl font-bold mb-1 drop-shadow-lg">{campaignData.ad_title || 'Il tuo titolo'}</h3>
+                                {campaignData.ad_description && (
+                                  <p className="text-sm opacity-90 drop-shadow-md">{campaignData.ad_description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         ) : (
                           <div className={`w-full h-full bg-gradient-to-br ${campaignData.ad_gradient} flex items-center justify-center p-4`}>
                             <div className="text-center text-white">
@@ -529,28 +541,42 @@ export default function AcquistaPubblicita() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-80 overflow-y-auto">
-                    {corners.map((corner) => (
-                      <button
-                        key={corner.id}
-                        onClick={() => toggleCorner(corner.id)}
-                        className={`p-4 rounded-lg border text-left transition-all ${
-                          campaignData.corner_ids.includes(corner.id)
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <p className="font-medium">{corner.business_name}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{corner.address}</p>
+                  {/* Interactive Map for Corner Selection */}
+                  <div className="space-y-2">
+                    <Label>Seleziona Corner dalla Mappa</Label>
+                    <CornerSelectionMap 
+                      corners={corners}
+                      selectedIds={campaignData.corner_ids}
+                      onToggle={toggleCorner}
+                    />
+                  </div>
+
+                  {/* Corner List */}
+                  <div className="space-y-2">
+                    <Label>Oppure scegli dalla lista</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto">
+                      {corners.map((corner) => (
+                        <button
+                          key={corner.id}
+                          onClick={() => toggleCorner(corner.id)}
+                          className={`p-4 rounded-lg border text-left transition-all ${
+                            campaignData.corner_ids.includes(corner.id)
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-medium">{corner.business_name}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{corner.address}</p>
+                            </div>
+                            {campaignData.corner_ids.includes(corner.id) && (
+                              <Check className="h-5 w-5 text-primary flex-shrink-0" />
+                            )}
                           </div>
-                          {campaignData.corner_ids.includes(corner.id) && (
-                            <Check className="h-5 w-5 text-primary flex-shrink-0" />
-                          )}
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      ))}
+                    </div>
                   </div>
 
                   {corners.length === 0 && (
@@ -620,11 +646,22 @@ export default function AcquistaPubblicita() {
                       <Label>Anteprima Pubblicità</Label>
                       <div className="aspect-video rounded-xl overflow-hidden">
                         {campaignData.ad_type === 'image' && campaignData.ad_image_url ? (
-                          <img 
-                            src={campaignData.ad_image_url} 
-                            alt="Preview"
-                            className="w-full h-full object-cover"
-                          />
+                          <div className="relative w-full h-full">
+                            <img 
+                              src={campaignData.ad_image_url} 
+                              alt="Preview"
+                              className="w-full h-full object-cover"
+                            />
+                            {/* Text overlay on image */}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center p-4">
+                              <div className="text-center text-white">
+                                <h3 className="text-lg font-bold drop-shadow-lg">{campaignData.ad_title}</h3>
+                                {campaignData.ad_description && (
+                                  <p className="text-sm opacity-90 mt-1 drop-shadow-md">{campaignData.ad_description}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
                         ) : (
                           <div className={`w-full h-full bg-gradient-to-br ${campaignData.ad_gradient} flex items-center justify-center p-4`}>
                             <div className="text-center text-white">
