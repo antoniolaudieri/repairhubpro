@@ -25,14 +25,23 @@ const navigationRoute = new NavigationRoute(handler, {
 });
 registerRoute(navigationRoute);
 
+// Listen for SKIP_WAITING message from the app to update immediately
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW] Received SKIP_WAITING, activating new version...');
+    self.skipWaiting();
+  }
+});
+
 // Force immediate activation - CRITICAL for iOS
 self.addEventListener('install', () => {
-  console.log('[SW] Installing...');
-  self.skipWaiting();
+  console.log('[SW] Installing new version...');
+  // Don't skip waiting automatically - let the app control this
+  // self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('[SW] Activating...');
+  console.log('[SW] Activating new version...');
   event.waitUntil(
     Promise.all([
       self.clients.claim(),
