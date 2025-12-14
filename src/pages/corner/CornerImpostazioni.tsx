@@ -1197,8 +1197,10 @@ export default function CornerImpostazioni() {
                         <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
                           <strong>Feed consigliati:</strong><br/>
                           • ANSA: https://www.ansa.it/sito/ansait_rss.xml<br/>
-                          • Sky TG24: https://tg24.sky.it/rss/tg24_cronaca.xml<br/>
-                          • Il Post: https://www.ilpost.it/feed/
+                          • Rai News: https://www.rainews.it/rss/ultimora<br/>
+                          • Gazzetta Sport: https://www.gazzetta.it/dynamic-feed/rss/section/last.xml<br/>
+                          • Corriere: https://xml2.corriereobjects.it/rss/homepage.xml<br/>
+                          • Repubblica: https://www.repubblica.it/rss/homepage/rss2.0.xml
                         </div>
                       </div>
                     )}
