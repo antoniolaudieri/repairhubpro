@@ -4,8 +4,8 @@ import { PageTransition } from "@/components/PageTransition";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
 import { LocationPicker } from "@/components/maps/LocationPicker";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { DymoPrinterSettings } from "@/components/settings/DymoPrinterSettings";
@@ -17,7 +17,10 @@ import { LabelFormat } from "@/utils/labelTemplates";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Settings, MapPin, Save, Loader2, Upload, Store, X, Image as ImageIcon, Monitor, Plus, Trash2, Edit, ExternalLink, Copy, QrCode } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  Settings, MapPin, Save, Loader2, Upload, Store, X, Image as ImageIcon, Monitor, Plus, Trash2, Edit, ExternalLink, Copy, QrCode, Eye, Play, Pause, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Megaphone, Smartphone, Wrench, Shield, Cpu, Tablet, Zap, Star
+} from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 interface CornerSettings {
@@ -38,6 +41,60 @@ interface CornerData {
   settings: CornerSettings | null;
 }
 
+const getIconComponent = (iconName: string) => {
+  const icons: Record<string, any> = {
+    smartphone: Smartphone,
+    wrench: Wrench,
+    shield: Shield,
+    cpu: Cpu,
+    tablet: Tablet,
+    monitor: Monitor,
+    zap: Zap,
+    star: Star,
+  };
+  return icons[iconName] || Smartphone;
+};
+
+// Default advertisements for preview
+const defaultAdvertisements: DisplayAd[] = [
+  {
+    id: "default-1",
+    title: "Punto di Raccolta",
+    description: "Lascia qui il tuo dispositivo per la riparazione",
+    icon: "smartphone",
+    gradient: "from-blue-500 to-cyan-500",
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center",
+    titleFont: "font-sans",
+    descriptionFont: "font-sans"
+  },
+  {
+    id: "default-2",
+    title: "Ritiro Gratuito",
+    description: "Il centro di assistenza ritirerà il tuo dispositivo",
+    icon: "wrench",
+    gradient: "from-green-500 to-emerald-500",
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center",
+    titleFont: "font-sans",
+    descriptionFont: "font-sans"
+  },
+  {
+    id: "default-3",
+    title: "Tracciamento Live",
+    description: "Segui lo stato della riparazione in tempo reale",
+    icon: "cpu",
+    gradient: "from-purple-500 to-pink-500",
+    type: "gradient",
+    textAlign: "center",
+    textPosition: "center",
+    titleFont: "font-sans",
+    descriptionFont: "font-sans"
+  }
+];
+
 export default function CornerImpostazioni() {
   const { user } = useAuth();
   const [corner, setCorner] = useState<CornerData | null>(null);
@@ -56,9 +113,23 @@ export default function CornerImpostazioni() {
   
   // Display settings
   const [displayAds, setDisplayAds] = useState<DisplayAd[]>([]);
-  const [slideInterval, setSlideInterval] = useState(5000);
+  const [slideInterval, setSlideInterval] = useState(5); // seconds
   const [editingAd, setEditingAd] = useState<DisplayAd | null>(null);
-  const [showQRCode, setShowQRCode] = useState(false);
+  const [previewAdIndex, setPreviewAdIndex] = useState(0);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(true);
+  
+  // Preview ads rotation
+  const previewAds = displayAds.length > 0 ? displayAds : defaultAdvertisements;
+  
+  useEffect(() => {
+    if (!isPreviewPlaying || previewAds.length <= 1) return;
+    
+    const interval = setInterval(() => {
+      setPreviewAdIndex((prev) => (prev + 1) % previewAds.length);
+    }, slideInterval * 1000);
+    
+    return () => clearInterval(interval);
+  }, [isPreviewPlaying, previewAds.length, slideInterval]);
   
   // Track original values for change detection
   const [originalValues, setOriginalValues] = useState<{
@@ -145,8 +216,9 @@ export default function CornerImpostazioni() {
       if (settings?.display_ads) {
         setDisplayAds(settings.display_ads);
       }
+      // slide_interval is stored in ms, convert to seconds for the UI
       if (settings?.slide_interval) {
-        setSlideInterval(settings.slide_interval);
+        setSlideInterval(settings.slide_interval / 1000);
       }
       
       // Store original values for change detection
@@ -246,7 +318,7 @@ export default function CornerImpostazioni() {
     try {
       const newSettings: CornerSettings = {
         display_ads: displayAds,
-        slide_interval: slideInterval,
+        slide_interval: slideInterval * 1000, // Convert seconds to ms for storage
       };
       
       const { error } = await supabase
@@ -437,140 +509,416 @@ export default function CornerImpostazioni() {
             </CardContent>
           </Card>
 
-          {/* Display Settings */}
+          {/* Display URL and QR */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Monitor className="h-5 w-5 text-primary" />
-                Display Esterno
+                <Monitor className="h-5 w-5" />
+                Link Display Cliente
               </CardTitle>
               <CardDescription>
-                Configura le pubblicità da mostrare sul display esterno per i clienti
+                Usa questo link per aprire il display cliente su un dispositivo esterno (tablet, monitor).
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Display URL */}
+            <CardContent className="space-y-4">
               {corner && (
-                <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                <>
+                  {/* QR Code */}
+                  <div className="flex justify-center">
+                    <div className="p-4 bg-white rounded-xl border-2 border-primary/20 shadow-lg">
+                      <QRCodeSVG 
+                        value={`${window.location.origin}/display/corner/${corner.id}`}
+                        size={150}
+                        level="H"
+                        includeMargin={true}
+                      />
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-center text-muted-foreground">
+                    Scansiona il QR code con il dispositivo dedicato
+                  </p>
+
+                  {/* URL Display */}
+                  <div className="p-3 bg-muted rounded-lg">
+                    <p className="text-xs text-muted-foreground mb-1">URL Display:</p>
+                    <p className="text-xs font-mono break-all">
+                      {window.location.origin}/display/corner/{corner.id}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/display/corner/${corner.id}`);
+                        toast.success("Link copiato!");
+                      }}
+                    >
+                      <Copy className="h-4 w-4 mr-2" />
+                      Copia Link
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => window.open(`/display/corner/${corner.id}`, '_blank')}
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Apri Display
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Live Preview */}
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                Anteprima Live Display
+              </CardTitle>
+              <CardDescription>
+                Ecco come appare il display cliente con le tue pubblicità
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              {/* Preview Container - simulates display aspect ratio */}
+              <div className="relative bg-slate-900 aspect-video max-h-[300px] overflow-hidden">
+                <AnimatePresence mode="wait">
+                  {previewAds.length > 0 && (
+                    <motion.div
+                      key={previewAdIndex}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.4 }}
+                      className="absolute inset-0"
+                    >
+                    {(() => {
+                      const currentAd = previewAds[previewAdIndex];
+                      const IconComponent = getIconComponent(currentAd.icon);
+                      
+                      const imagePositionClass = {
+                        center: 'object-center',
+                        top: 'object-top',
+                        bottom: 'object-bottom'
+                      }[currentAd.imagePosition || 'center'];
+                      
+                      const textAlignClass = {
+                        left: 'text-left items-start',
+                        center: 'text-center items-center',
+                        right: 'text-right items-end'
+                      }[currentAd.textAlign || 'center'];
+                      
+                      const textPositionClass = {
+                        bottom: 'justify-end pb-6',
+                        center: 'justify-center',
+                        top: 'justify-start pt-6'
+                      }[currentAd.textPosition || 'bottom'];
+                      
+                      if (currentAd.type === 'image' && currentAd.imageUrl) {
+                        return (
+                          <div className="relative h-full">
+                            <img 
+                              src={currentAd.imageUrl} 
+                              alt={currentAd.title}
+                              className={`w-full h-full object-cover ${imagePositionClass}`}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                            <div className={`absolute inset-0 flex flex-col px-6 ${textAlignClass} ${textPositionClass}`}>
+                              <h3 className={`text-2xl font-bold text-white ${currentAd.titleFont || 'font-sans'}`}>
+                                {currentAd.title || "Titolo"}
+                              </h3>
+                              <p className={`text-sm text-white/80 mt-1 ${currentAd.descriptionFont || 'font-sans'}`}>
+                                {currentAd.description || "Descrizione"}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <div className={`h-full bg-gradient-to-br ${currentAd.gradient} flex flex-col text-white p-6 ${textAlignClass} ${textPositionClass}`}>
+                          <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-4">
+                            <IconComponent className="h-8 w-8 text-white" />
+                          </div>
+                          <h3 className={`text-2xl font-bold ${currentAd.titleFont || 'font-sans'}`}>
+                            {currentAd.title || "Titolo"}
+                          </h3>
+                          <p className={`text-sm text-white/80 mt-2 ${currentAd.descriptionFont || 'font-sans'}`}>
+                            {currentAd.description || "Descrizione"}
+                          </p>
+                        </div>
+                      );
+                    })()}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
+                {/* Preview Controls Overlay */}
+                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
                   <div className="flex items-center justify-between">
-                    <Label className="text-sm font-medium">Link Display</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const url = `${window.location.origin}/display/corner/${corner.id}`;
-                          navigator.clipboard.writeText(url);
-                          toast.success("Link copiato!");
-                        }}
+                    {/* Slide indicators */}
+                    <div className="flex gap-1.5">
+                      {previewAds.map((_, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setPreviewAdIndex(idx)}
+                          className={`w-2 h-2 rounded-full transition-all ${
+                            idx === previewAdIndex ? "bg-white scale-125" : "bg-white/40 hover:bg-white/60"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Playback controls */}
+                    <div className="flex items-center gap-1">
+                      {/* Timing selector */}
+                      <select
+                        value={slideInterval}
+                        onChange={(e) => setSlideInterval(Number(e.target.value))}
+                        className="h-6 text-[10px] bg-white/20 text-white border-0 rounded px-1 focus:ring-0 cursor-pointer"
                       >
-                        <Copy className="h-4 w-4 mr-1" />
-                        Copia
+                        <option value={3} className="text-black">3s</option>
+                        <option value={5} className="text-black">5s</option>
+                        <option value={7} className="text-black">7s</option>
+                        <option value={10} className="text-black">10s</option>
+                        <option value={15} className="text-black">15s</option>
+                      </select>
+                      
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white hover:bg-white/20"
+                        onClick={() => setPreviewAdIndex(prev => (prev - 1 + previewAds.length) % previewAds.length)}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
                       </Button>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowQRCode(!showQRCode)}
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white hover:bg-white/20"
+                        onClick={() => setIsPreviewPlaying(!isPreviewPlaying)}
                       >
-                        <QrCode className="h-4 w-4 mr-1" />
-                        QR
+                        {isPreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                       </Button>
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.open(`/display/corner/${corner.id}`, '_blank')}
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white hover:bg-white/20"
+                        onClick={() => setPreviewAdIndex(prev => (prev + 1) % previewAds.length)}
                       >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        Apri
+                        <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                  <code className="text-xs text-muted-foreground block truncate">
-                    {window.location.origin}/display/corner/{corner.id}
-                  </code>
-                  {showQRCode && (
-                    <div className="flex justify-center p-4 bg-white rounded-lg">
-                      <QRCodeSVG value={`${window.location.origin}/display/corner/${corner.id}`} size={150} />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Slide Interval */}
-              <div className="space-y-3">
-                <Label>Intervallo Slide: {slideInterval / 1000}s</Label>
-                <Slider
-                  value={[slideInterval]}
-                  onValueChange={(value) => setSlideInterval(value[0])}
-                  min={3000}
-                  max={15000}
-                  step={1000}
-                />
-              </div>
-
-              {/* Ads List */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label>Slide Pubblicità ({displayAds.length})</Label>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const newAd: DisplayAd = {
-                        id: `ad-${Date.now()}`,
-                        title: "Nuova Slide",
-                        description: "Descrizione della slide",
-                        gradient: "from-orange-500 to-amber-500",
-                        icon: "smartphone",
-                        type: "gradient",
-                        textAlign: "center",
-                        textPosition: "center"
-                      };
-                      setDisplayAds([...displayAds, newAd]);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Aggiungi
-                  </Button>
                 </div>
                 
-                {displayAds.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    Nessuna slide configurata. Verranno usate le slide predefinite.
-                  </p>
-                ) : (
-                  <div className="space-y-2">
-                    {displayAds.map((ad) => (
-                      <div key={ad.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${ad.gradient} flex items-center justify-center shrink-0`}>
-                          {ad.imageUrl ? (
-                            <img src={ad.imageUrl} alt="" className="w-full h-full object-cover rounded-lg" />
+                {/* Badge */}
+                <div className="absolute top-3 left-3">
+                  <span className={`text-xs px-2 py-1 rounded-full backdrop-blur ${displayAds.length > 0 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                    {displayAds.length > 0 ? `${displayAds.length} slide personalizzate` : 'Slide predefinite'}
+                  </span>
+                </div>
+                
+                {/* Logos - Bottom Right Corner */}
+                <div className="absolute bottom-2 right-2 flex items-center gap-2">
+                  {/* Corner Logo */}
+                  {logoUrl && (
+                    <div className="h-6 w-6 rounded overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20">
+                      <img 
+                        src={logoUrl} 
+                        alt={corner?.business_name}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Platform Logo */}
+                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30 backdrop-blur-sm">
+                    <Wrench className="h-2.5 w-2.5 text-white/70" />
+                    <span className="text-[8px] font-medium text-white/70">Powered by LabLinkRiparo</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Display Ads Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Megaphone className="h-5 w-5" />
+                Pubblicità Display
+              </CardTitle>
+              <CardDescription>
+                Personalizza le pubblicità mostrate in modalità standby sul display cliente. Usa le frecce per riordinarle.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {displayAds.length === 0 && (
+                <div className="text-center py-8 border-2 border-dashed rounded-lg space-y-3">
+                  <Megaphone className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Nessuna pubblicità personalizzata</p>
+                    <p className="text-xs text-muted-foreground/70">Verranno mostrate le pubblicità predefinite sul display cliente</p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid gap-3">
+                {displayAds.map((ad, index) => {
+                  const IconComponent = getIconComponent(ad.icon);
+                  return (
+                    <div 
+                      key={ad.id} 
+                      className="border rounded-lg overflow-hidden bg-card hover:border-primary/50 transition-colors group"
+                    >
+                      <div className="flex">
+                        {/* Drag Handle & Order Controls */}
+                        <div className="flex flex-col items-center justify-center px-2 bg-muted/30 border-r gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            disabled={index === 0}
+                            onClick={() => {
+                              if (index > 0) {
+                                const newAds = [...displayAds];
+                                [newAds[index - 1], newAds[index]] = [newAds[index], newAds[index - 1]];
+                                setDisplayAds(newAds);
+                              }
+                            }}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                          </Button>
+                          <div className="text-xs font-bold text-muted-foreground">{index + 1}</div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            disabled={index === displayAds.length - 1}
+                            onClick={() => {
+                              if (index < displayAds.length - 1) {
+                                const newAds = [...displayAds];
+                                [newAds[index], newAds[index + 1]] = [newAds[index + 1], newAds[index]];
+                                setDisplayAds(newAds);
+                              }
+                            }}
+                          >
+                            <ChevronDown className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        {/* Preview */}
+                        <div className="relative w-40 h-24 flex-shrink-0">
+                          {ad.type === 'image' && ad.imageUrl ? (
+                            <div className="relative h-full">
+                              <img 
+                                src={ad.imageUrl} 
+                                alt={ad.title} 
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                            </div>
                           ) : (
-                            <Monitor className="h-5 w-5 text-white" />
+                            <div className={`h-full bg-gradient-to-br ${ad.gradient} flex items-center justify-center`}>
+                              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
+                                <IconComponent className="h-5 w-5 text-white" />
+                              </div>
+                            </div>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{ad.title}</p>
-                          <p className="text-xs text-muted-foreground truncate">{ad.description}</p>
+                        
+                        {/* Info */}
+                        <div className="flex-1 p-3 flex flex-col justify-center min-w-0">
+                          <p className="font-semibold text-sm truncate">{ad.title || "Senza titolo"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{ad.description || "Nessuna descrizione"}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${ad.type === 'image' ? 'bg-blue-500/10 text-blue-600' : 'bg-purple-500/10 text-purple-600'}`}>
+                              {ad.type === 'image' ? 'Immagine' : 'Gradiente'}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => setEditingAd(ad)}>
+                        
+                        {/* Actions */}
+                        <div className="flex items-center gap-1 pr-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setEditingAd(ad)}
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="text-destructive"
-                            onClick={() => setDisplayAds(displayAds.filter(a => a.id !== ad.id))}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setDisplayAds(prev => prev.filter(a => a.id !== ad.id))}
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    const newAd: DisplayAd = {
+                      id: `ad-${Date.now()}`,
+                      title: "",
+                      description: "",
+                      gradient: "from-blue-500 to-cyan-500",
+                      icon: "smartphone",
+                      type: "gradient"
+                    };
+                    setEditingAd(newAd);
+                  }}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Aggiungi Pubblicità
+                </Button>
+                
+                {displayAds.length === 0 && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      // Copy default ads as custom ones with new IDs
+                      const copiedAds = defaultAdvertisements.map(ad => ({
+                        ...ad,
+                        id: `ad-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+                      }));
+                      setDisplayAds(copiedAds);
+                      toast.success("Slide predefinite copiate! Ora puoi modificarle.");
+                    }}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Copia Predefinite
+                  </Button>
                 )}
               </div>
+              
+              <p className="text-xs text-muted-foreground text-center">
+                Le pubblicità verranno mostrate a rotazione ogni {slideInterval} secondi sul display cliente.
+                <br />
+                {displayAds.length === 0 ? (
+                  <span className="text-amber-600">⚠️ Clicca "Copia Predefinite" per modificare le slide o "Aggiungi" per crearne di nuove.</span>
+                ) : (
+                  <span className="text-green-600">✓ {displayAds.length} slide personalizzate configurate</span>
+                )}
+              </p>
             </CardContent>
           </Card>
 
@@ -581,7 +929,13 @@ export default function CornerImpostazioni() {
               open={!!editingAd}
               onClose={() => setEditingAd(null)}
               onSave={(updatedAd) => {
-                setDisplayAds(displayAds.map(a => a.id === updatedAd.id ? updatedAd : a));
+                // Check if it's a new ad or an existing one
+                const existingIndex = displayAds.findIndex(a => a.id === updatedAd.id);
+                if (existingIndex >= 0) {
+                  setDisplayAds(displayAds.map(a => a.id === updatedAd.id ? updatedAd : a));
+                } else {
+                  setDisplayAds([...displayAds, updatedAd]);
+                }
                 setEditingAd(null);
               }}
               cornerId={corner.id}
