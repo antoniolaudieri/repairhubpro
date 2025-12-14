@@ -808,6 +808,86 @@ export default function CustomerHome() {
       {/* Used Devices Carousel */}
       <UsedDevicesCarousel />
 
+      {/* DOOH Advertising Promo Section */}
+      <section className="py-16 sm:py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-warning/5 via-transparent to-orange-500/5" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-10"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              whileInView={{ scale: 1 }}
+              viewport={{ once: true }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-warning/10 border border-warning/20 mb-6"
+            >
+              <Monitor className="h-4 w-4 text-warning" />
+              <span className="text-sm font-medium text-warning">Pubblicità Locale</span>
+            </motion.div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+              Promuovi la tua <span className="text-warning">Attività</span> sui nostri Monitor
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Hai un negozio, bar o attività locale? Sfrutta i monitor presenti nei nostri Corner partner 
+              per pubblicizzare le tue offerte e raggiungere clienti reali nella tua zona.
+            </p>
+          </motion.div>
+
+          {/* Benefits Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
+            {[
+              { icon: Monitor, title: "Monitor in Negozi", desc: "Visibilità in punti strategici" },
+              { icon: Sparkles, title: "Promuovi Sconti", desc: "Offerte e promozioni locali" },
+              { icon: MapPin, title: "Targeting Locale", desc: "Scegli i Corner della tua zona" },
+              { icon: Clock, title: "Flessibilità", desc: "Da 1 settimana a 1 anno" },
+            ].map((item, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: idx * 0.1 }}
+                whileHover={{ y: -5 }}
+              >
+                <Card className="p-5 glass-card border-warning/20 hover:border-warning/40 transition-all text-center">
+                  <motion.div 
+                    className="p-3 bg-warning/10 rounded-xl w-fit mx-auto mb-3"
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    <item.icon className="h-7 w-7 text-warning" />
+                  </motion.div>
+                  <h3 className="font-semibold text-foreground mb-1">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground">{item.desc}</p>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* CTA Button */}
+          <motion.div 
+            className="text-center"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+          >
+            <Button 
+              size="lg" 
+              onClick={() => navigate("/ads/acquista")}
+              className="bg-gradient-to-r from-warning to-orange-500 hover:from-warning/90 hover:to-orange-500/90 text-warning-foreground shadow-lg hover:shadow-xl transition-all"
+            >
+              <Store className="h-5 w-5 mr-2" />
+              Promuovi la tua Attività
+              <ArrowRight className="h-5 w-5 ml-2" />
+            </Button>
+          </motion.div>
+        </div>
+      </section>
+
       {/* Services Section - Bento Grid */}
       <section className="py-20 sm:py-28 relative">
         <div className="absolute inset-0 bg-muted/30" />
