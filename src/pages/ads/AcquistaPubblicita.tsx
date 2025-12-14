@@ -43,6 +43,12 @@ interface CampaignData {
   end_date: string;
   corner_ids: string[];
   duration_package: string | null;
+  // New styling options
+  ad_font: string;
+  ad_title_color: string;
+  ad_description_color: string;
+  ad_bg_color: string;
+  ad_emoji: string;
 }
 
 interface DurationPackage {
@@ -89,6 +95,19 @@ const gradientOptions = [
 
 const iconOptions = ['Megaphone', 'Sparkles', 'Gift', 'Star', 'Heart', 'Zap'];
 
+const fontOptions = [
+  { id: 'sans', label: 'Sans', className: 'font-sans' },
+  { id: 'serif', label: 'Serif', className: 'font-serif' },
+  { id: 'mono', label: 'Mono', className: 'font-mono' },
+];
+
+const emojiOptions = ['', '🔥', '⭐', '💥', '🎁', '💰', '🛒', '📱', '✨', '🚀', '❤️', '👍', '🎉', '💎', '🏷️', '⚡'];
+
+const colorPresets = [
+  '#ffffff', '#000000', '#ef4444', '#f97316', '#eab308', 
+  '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899'
+];
+
 export default function AcquistaPubblicita() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -121,7 +140,13 @@ export default function AcquistaPubblicita() {
     start_date: '',
     end_date: '',
     corner_ids: initialCornerId ? [initialCornerId] : [],
-    duration_package: null
+    duration_package: null,
+    // New styling options
+    ad_font: 'sans',
+    ad_title_color: '#ffffff',
+    ad_description_color: '#ffffff',
+    ad_bg_color: '',
+    ad_emoji: ''
   });
 
   useEffect(() => {
@@ -535,10 +560,110 @@ export default function AcquistaPubblicita() {
                         />
                       </div>
 
+                      {/* Emoji Selector */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4" />
+                          Emoji
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                          {emojiOptions.map((emoji) => (
+                            <button
+                              key={emoji || 'none'}
+                              onClick={() => setCampaignData(prev => ({ ...prev, ad_emoji: emoji }))}
+                              className={`w-10 h-10 text-xl rounded-lg border-2 transition-all flex items-center justify-center ${
+                                campaignData.ad_emoji === emoji 
+                                  ? 'border-primary bg-primary/10' 
+                                  : 'border-muted hover:border-muted-foreground/50'
+                              }`}
+                            >
+                              {emoji || '✕'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Font Selector */}
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Type className="h-4 w-4" />
+                          Font
+                        </Label>
+                        <div className="flex gap-2">
+                          {fontOptions.map((font) => (
+                            <button
+                              key={font.id}
+                              onClick={() => setCampaignData(prev => ({ ...prev, ad_font: font.id }))}
+                              className={`flex-1 px-3 py-2 rounded-lg border-2 transition-all ${font.className} ${
+                                campaignData.ad_font === font.id 
+                                  ? 'border-primary bg-primary/10' 
+                                  : 'border-muted hover:border-muted-foreground/50'
+                              }`}
+                            >
+                              {font.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Color Controls */}
+                      <div className="space-y-3 p-3 bg-muted/30 rounded-lg border">
+                        <Label className="flex items-center gap-2 mb-2">
+                          <Palette className="h-4 w-4" />
+                          Colori Testo
+                        </Label>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Titolo</Label>
+                            <div className="flex gap-1.5 flex-wrap">
+                              {colorPresets.slice(0, 5).map((color) => (
+                                <button
+                                  key={`title-${color}`}
+                                  onClick={() => setCampaignData(prev => ({ ...prev, ad_title_color: color }))}
+                                  className={`w-6 h-6 rounded border-2 transition-all ${
+                                    campaignData.ad_title_color === color ? 'ring-2 ring-primary ring-offset-1' : 'border-muted'
+                                  }`}
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                              <input
+                                type="color"
+                                value={campaignData.ad_title_color}
+                                onChange={(e) => setCampaignData(prev => ({ ...prev, ad_title_color: e.target.value }))}
+                                className="w-6 h-6 rounded cursor-pointer"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Descrizione</Label>
+                            <div className="flex gap-1.5 flex-wrap">
+                              {colorPresets.slice(0, 5).map((color) => (
+                                <button
+                                  key={`desc-${color}`}
+                                  onClick={() => setCampaignData(prev => ({ ...prev, ad_description_color: color }))}
+                                  className={`w-6 h-6 rounded border-2 transition-all ${
+                                    campaignData.ad_description_color === color ? 'ring-2 ring-primary ring-offset-1' : 'border-muted'
+                                  }`}
+                                  style={{ backgroundColor: color }}
+                                />
+                              ))}
+                              <input
+                                type="color"
+                                value={campaignData.ad_description_color}
+                                onChange={(e) => setCampaignData(prev => ({ ...prev, ad_description_color: e.target.value }))}
+                                className="w-6 h-6 rounded cursor-pointer"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                       {campaignData.ad_type === 'gradient' && (
                         <>
                           <div className="space-y-2">
-                            <Label>Gradiente</Label>
+                            <Label>Gradiente Sfondo</Label>
                             <div className="grid grid-cols-3 gap-2">
                               {gradientOptions.map((gradient) => (
                                 <button
@@ -657,10 +782,23 @@ export default function AcquistaPubblicita() {
                             />
                             {/* Text overlay on video */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center p-6 pointer-events-none">
-                              <div className="text-center text-white">
-                                <h3 className="text-xl font-bold mb-1 drop-shadow-lg">{campaignData.ad_title || 'Il tuo titolo'}</h3>
+                              <div className={`text-center ${fontOptions.find(f => f.id === campaignData.ad_font)?.className || 'font-sans'}`}>
+                                {campaignData.ad_emoji && (
+                                  <span className="text-4xl mb-2 block">{campaignData.ad_emoji}</span>
+                                )}
+                                <h3 
+                                  className="text-xl font-bold mb-1 drop-shadow-lg"
+                                  style={{ color: campaignData.ad_title_color }}
+                                >
+                                  {campaignData.ad_title || 'Il tuo titolo'}
+                                </h3>
                                 {campaignData.ad_description && (
-                                  <p className="text-sm opacity-90 drop-shadow-md">{campaignData.ad_description}</p>
+                                  <p 
+                                    className="text-sm drop-shadow-md"
+                                    style={{ color: campaignData.ad_description_color, opacity: 0.9 }}
+                                  >
+                                    {campaignData.ad_description}
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -674,21 +812,48 @@ export default function AcquistaPubblicita() {
                             />
                             {/* Text overlay on image */}
                             <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end justify-center p-6">
-                              <div className="text-center text-white">
-                                <h3 className="text-xl font-bold mb-1 drop-shadow-lg">{campaignData.ad_title || 'Il tuo titolo'}</h3>
+                              <div className={`text-center ${fontOptions.find(f => f.id === campaignData.ad_font)?.className || 'font-sans'}`}>
+                                {campaignData.ad_emoji && (
+                                  <span className="text-4xl mb-2 block">{campaignData.ad_emoji}</span>
+                                )}
+                                <h3 
+                                  className="text-xl font-bold mb-1 drop-shadow-lg"
+                                  style={{ color: campaignData.ad_title_color }}
+                                >
+                                  {campaignData.ad_title || 'Il tuo titolo'}
+                                </h3>
                                 {campaignData.ad_description && (
-                                  <p className="text-sm opacity-90 drop-shadow-md">{campaignData.ad_description}</p>
+                                  <p 
+                                    className="text-sm drop-shadow-md"
+                                    style={{ color: campaignData.ad_description_color, opacity: 0.9 }}
+                                  >
+                                    {campaignData.ad_description}
+                                  </p>
                                 )}
                               </div>
                             </div>
                           </div>
                         ) : (
                           <div className={`w-full h-full bg-gradient-to-br ${campaignData.ad_gradient} flex items-center justify-center p-4`}>
-                            <div className="text-center text-white">
-                              <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-80" />
-                              <h3 className="text-xl font-bold mb-2">{campaignData.ad_title || 'Il tuo titolo'}</h3>
+                            <div className={`text-center ${fontOptions.find(f => f.id === campaignData.ad_font)?.className || 'font-sans'}`}>
+                              {campaignData.ad_emoji ? (
+                                <span className="text-5xl mb-3 block">{campaignData.ad_emoji}</span>
+                              ) : (
+                                <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-80" style={{ color: campaignData.ad_title_color }} />
+                              )}
+                              <h3 
+                                className="text-xl font-bold mb-2"
+                                style={{ color: campaignData.ad_title_color }}
+                              >
+                                {campaignData.ad_title || 'Il tuo titolo'}
+                              </h3>
                               {campaignData.ad_description && (
-                                <p className="text-sm opacity-80">{campaignData.ad_description}</p>
+                                <p 
+                                  className="text-sm"
+                                  style={{ color: campaignData.ad_description_color, opacity: 0.8 }}
+                                >
+                                  {campaignData.ad_description}
+                                </p>
                               )}
                             </div>
                           </div>
