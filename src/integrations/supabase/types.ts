@@ -863,10 +863,14 @@ export type Database = {
       display_ad_campaigns: {
         Row: {
           ad_description: string | null
+          ad_description_color: string | null
+          ad_emoji: string | null
+          ad_font: string | null
           ad_gradient: string | null
           ad_icon: string | null
           ad_image_url: string | null
           ad_title: string
+          ad_title_color: string | null
           ad_type: string
           advertiser_company: string | null
           advertiser_email: string
@@ -890,10 +894,14 @@ export type Database = {
         }
         Insert: {
           ad_description?: string | null
+          ad_description_color?: string | null
+          ad_emoji?: string | null
+          ad_font?: string | null
           ad_gradient?: string | null
           ad_icon?: string | null
           ad_image_url?: string | null
           ad_title: string
+          ad_title_color?: string | null
           ad_type?: string
           advertiser_company?: string | null
           advertiser_email: string
@@ -917,10 +925,14 @@ export type Database = {
         }
         Update: {
           ad_description?: string | null
+          ad_description_color?: string | null
+          ad_emoji?: string | null
+          ad_font?: string | null
           ad_gradient?: string | null
           ad_icon?: string | null
           ad_image_url?: string | null
           ad_title?: string
+          ad_title_color?: string | null
           ad_type?: string
           advertiser_company?: string | null
           advertiser_email?: string

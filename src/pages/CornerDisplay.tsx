@@ -60,6 +60,11 @@ interface DisplayAd {
   textPosition?: 'bottom' | 'center' | 'top';
   titleFont?: string;
   descriptionFont?: string;
+  // New styling options
+  fontFamily?: string;
+  titleColor?: string;
+  descriptionColor?: string;
+  emoji?: string;
 }
 
 const defaultAdvertisements: DisplayAd[] = [
@@ -220,7 +225,12 @@ export default function CornerDisplay() {
           imageUrl: campaign.ad_image_url,
           type: campaign.ad_type === 'image' ? 'image' : 'gradient',
           textAlign: 'center' as const,
-          textPosition: 'center' as const
+          textPosition: 'center' as const,
+          // New styling options from campaign
+          fontFamily: campaign.ad_font || 'sans',
+          titleColor: campaign.ad_title_color || '#ffffff',
+          descriptionColor: campaign.ad_description_color || '#ffffff',
+          emoji: campaign.ad_emoji || ''
         };
       });
     
@@ -448,6 +458,13 @@ export default function CornerDisplay() {
       top: 'justify-start pt-12'
     }[currentAd.textPosition || 'bottom'];
     
+    // Font family mapping
+    const fontFamilyClass = {
+      sans: 'font-sans',
+      serif: 'font-serif',
+      mono: 'font-mono'
+    }[currentAd.fontFamily || 'sans'] || 'font-sans';
+    
     // QR code URL for advertising purchase
     const qrUrl = `${window.location.origin}/ads/acquista?corner=${cornerId}`;
     
@@ -534,11 +551,22 @@ export default function CornerDisplay() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
                   <div className={`absolute inset-0 flex flex-col px-10 ${textAlignClass} ${textPositionClass}`}>
+                    {currentAd.emoji && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{ delay: 0.2, type: "spring" }}
+                        className="text-6xl md:text-8xl mb-4"
+                      >
+                        {currentAd.emoji}
+                      </motion.span>
+                    )}
                     <motion.h1 
                       initial={{ y: 30, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.3 }}
-                      className={`text-4xl md:text-6xl font-bold text-white drop-shadow-lg ${currentAd.titleFont || 'font-sans'}`}
+                      className={`text-4xl md:text-6xl font-bold drop-shadow-lg ${fontFamilyClass}`}
+                      style={{ color: currentAd.titleColor || '#ffffff' }}
                     >
                       {currentAd.title}
                     </motion.h1>
@@ -546,7 +574,8 @@ export default function CornerDisplay() {
                       initial={{ y: 30, opacity: 0 }}
                       animate={{ y: 0, opacity: 1 }}
                       transition={{ delay: 0.4 }}
-                      className={`text-xl md:text-2xl text-white/80 mt-3 ${currentAd.descriptionFont || 'font-sans'}`}
+                      className={`text-xl md:text-2xl mt-3 ${fontFamilyClass}`}
+                      style={{ color: currentAd.descriptionColor || '#ffffff', opacity: 0.8 }}
                     >
                       {currentAd.description}
                     </motion.p>
@@ -559,23 +588,35 @@ export default function CornerDisplay() {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
                 <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
                 
-                <div className={`text-white space-y-8 flex flex-col ${textAlignClass} relative z-10`}>
-                  <motion.div
-                    initial={{ scale: 0, rotate: -180 }}
-                    animate={{ scale: 1, rotate: 0 }}
-                    transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                    className="w-28 h-28 rounded-3xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-xl border border-white/20"
-                  >
-                    {(() => {
-                      const IconComponent = getIconComponent(currentAd.icon);
-                      return <IconComponent className="h-14 w-14 text-white" />;
-                    })()}
-                  </motion.div>
+                <div className={`space-y-8 flex flex-col ${textAlignClass} relative z-10`}>
+                  {currentAd.emoji ? (
+                    <motion.span
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                      className="text-7xl md:text-8xl"
+                    >
+                      {currentAd.emoji}
+                    </motion.span>
+                  ) : (
+                    <motion.div
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                      className="w-28 h-28 rounded-3xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-xl border border-white/20"
+                    >
+                      {(() => {
+                        const IconComponent = getIconComponent(currentAd.icon);
+                        return <IconComponent className="h-14 w-14" style={{ color: currentAd.titleColor || '#ffffff' }} />;
+                      })()}
+                    </motion.div>
+                  )}
                   <motion.h1 
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.3 }}
-                    className={`text-4xl md:text-6xl font-bold drop-shadow-lg ${currentAd.titleFont || 'font-sans'}`}
+                    className={`text-4xl md:text-6xl font-bold drop-shadow-lg ${fontFamilyClass}`}
+                    style={{ color: currentAd.titleColor || '#ffffff' }}
                   >
                     {currentAd.title}
                   </motion.h1>
@@ -583,7 +624,8 @@ export default function CornerDisplay() {
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.4 }}
-                    className={`text-xl md:text-2xl text-white/80 ${currentAd.descriptionFont || 'font-sans'}`}
+                    className={`text-xl md:text-2xl ${fontFamilyClass}`}
+                    style={{ color: currentAd.descriptionColor || '#ffffff', opacity: 0.8 }}
                   >
                     {currentAd.description}
                   </motion.p>
