@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CentroLayout } from "@/layouts/CentroLayout";
@@ -14,6 +14,8 @@ import { DymoPrinterSettings } from "@/components/settings/DymoPrinterSettings";
 import { LabelFormat } from "@/utils/labelTemplates";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { OpeningHoursEditor, OpeningHours } from "@/components/settings/OpeningHoursEditor";
+import { UnsavedChangesDialog } from "@/components/settings/UnsavedChangesDialog";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { 
   Settings,
   Building2,
@@ -207,6 +209,10 @@ export default function CentroImpostazioni() {
   
   // Opening Hours State
   const [openingHours, setOpeningHours] = useState<OpeningHours | null>(null);
+  
+  // Track original values for change detection
+  const [originalValues, setOriginalValues] = useState<string>("");
+  
   // Preview ads rotation
   const previewAds = displayAds.length > 0 ? displayAds : defaultAdvertisements;
   
@@ -287,6 +293,29 @@ export default function CentroImpostazioni() {
     notes: "",
   });
 
+  // Detect unsaved changes (placed after formData is defined)
+  const hasChanges = useMemo(() => {
+    if (!centro || !originalValues) return false;
+    const currentValues = JSON.stringify({
+      formData,
+      latitude,
+      longitude,
+      openingHours,
+      disableDiagnosticFee,
+      displayAds,
+      slideInterval,
+      smtpEnabled,
+      smtpConfig,
+      dymoEnabled,
+      dymoPrinter,
+      dymoLabelFormat,
+      monthlyGoal,
+    });
+    return currentValues !== originalValues;
+  }, [formData, latitude, longitude, openingHours, disableDiagnosticFee, displayAds, slideInterval, smtpEnabled, smtpConfig, dymoEnabled, dymoPrinter, dymoLabelFormat, monthlyGoal, originalValues, centro]);
+
+  const { showDialog, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasChanges);
+
   const fetchData = async () => {
     if (!user) return;
 
@@ -354,6 +383,30 @@ export default function CentroImpostazioni() {
         vat_number: centroData.vat_number || "",
         notes: centroData.notes || "",
       });
+
+      // Store original values for change detection
+      setOriginalValues(JSON.stringify({
+        formData: {
+          business_name: centroData.business_name || "",
+          address: centroData.address || "",
+          phone: centroData.phone || "",
+          email: centroData.email || "",
+          vat_number: centroData.vat_number || "",
+          notes: centroData.notes || "",
+        },
+        latitude: centroData.latitude,
+        longitude: centroData.longitude,
+        openingHours: centroData.opening_hours,
+        disableDiagnosticFee: settings?.disable_diagnostic_fee || false,
+        displayAds: settings?.display_ads || [],
+        slideInterval: settings?.slide_interval ? settings.slide_interval / 1000 : 5,
+        smtpEnabled: settings?.smtp_config?.enabled || false,
+        smtpConfig: settings?.smtp_config ? { ...settings.smtp_config, password: settings.smtp_config.password ? "••••••••" : "" } : null,
+        dymoEnabled: settings?.dymo_config?.enabled || false,
+        dymoPrinter: settings?.dymo_config?.printer_name || null,
+        dymoLabelFormat: settings?.dymo_config?.label_format || '30252',
+        monthlyGoal: settings?.monthly_goal || 0,
+      }));
     } catch (error: any) {
       console.error("Error fetching data:", error);
       toast.error("Errore nel caricamento dei dati");
@@ -1646,6 +1699,18 @@ export default function CentroImpostazioni() {
               {isSaving ? "Salvataggio..." : "Salva Modifiche"}
             </Button>
           </div>
+
+          {/* Unsaved Changes Dialog */}
+          <UnsavedChangesDialog
+            open={showDialog}
+            onSave={async () => {
+              await handleSave();
+              confirmNavigation();
+            }}
+            onDiscard={confirmNavigation}
+            onCancel={cancelNavigation}
+            isSaving={isSaving}
+          />
         </div>
       </PageTransition>
     </CentroLayout>

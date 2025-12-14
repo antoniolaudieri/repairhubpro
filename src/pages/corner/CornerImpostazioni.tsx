@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { CornerLayout } from "@/layouts/CornerLayout";
 import { PageTransition } from "@/components/PageTransition";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import { LocationPicker } from "@/components/maps/LocationPicker";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { DymoPrinterSettings } from "@/components/settings/DymoPrinterSettings";
 import { OpeningHoursEditor, OpeningHours, defaultOpeningHours } from "@/components/settings/OpeningHoursEditor";
+import { UnsavedChangesDialog } from "@/components/settings/UnsavedChangesDialog";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { LabelFormat } from "@/utils/labelTemplates";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,6 +44,29 @@ export default function CornerImpostazioni() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [openingHours, setOpeningHours] = useState<OpeningHours | null>(null);
+  
+  // Track original values for change detection
+  const [originalValues, setOriginalValues] = useState<{
+    address: string;
+    latitude: number | null;
+    longitude: number | null;
+    logoUrl: string | null;
+    openingHours: string;
+  } | null>(null);
+
+  // Detect unsaved changes
+  const hasChanges = useMemo(() => {
+    if (!originalValues || !corner) return false;
+    return (
+      address !== originalValues.address ||
+      latitude !== originalValues.latitude ||
+      longitude !== originalValues.longitude ||
+      logoUrl !== originalValues.logoUrl ||
+      JSON.stringify(openingHours) !== originalValues.openingHours
+    );
+  }, [address, latitude, longitude, logoUrl, openingHours, originalValues, corner]);
+
+  const { showDialog, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasChanges);
   // Dymo state (stored in localStorage for Corner)
   const [dymoEnabled, setDymoEnabled] = useState(() => {
     const saved = localStorage.getItem('corner_dymo_enabled');
@@ -94,6 +119,15 @@ export default function CornerImpostazioni() {
       setLongitude(data.longitude);
       setLogoUrl(data.logo_url);
       setOpeningHours(data.opening_hours as unknown as OpeningHours | null);
+      
+      // Store original values for change detection
+      setOriginalValues({
+        address: data.address || "",
+        latitude: data.latitude,
+        longitude: data.longitude,
+        logoUrl: data.logo_url,
+        openingHours: JSON.stringify(data.opening_hours),
+      });
     } catch (error) {
       console.error("Error fetching corner data:", error);
       toast.error("Errore nel caricamento dei dati");
@@ -192,6 +226,15 @@ export default function CornerImpostazioni() {
         .eq("id", corner.id);
 
       if (error) throw error;
+
+      // Update original values after successful save
+      setOriginalValues({
+        address,
+        latitude,
+        longitude,
+        logoUrl,
+        openingHours: JSON.stringify(openingHours),
+      });
 
       toast.success("Impostazioni salvate con successo");
     } catch (error) {
@@ -385,6 +428,18 @@ export default function CornerImpostazioni() {
               Salva Modifiche
             </Button>
           </div>
+
+          {/* Unsaved Changes Dialog */}
+          <UnsavedChangesDialog
+            open={showDialog}
+            onSave={async () => {
+              await handleSave();
+              confirmNavigation();
+            }}
+            onDiscard={confirmNavigation}
+            onCancel={cancelNavigation}
+            isSaving={isSaving}
+          />
         </div>
       </PageTransition>
     </CornerLayout>
