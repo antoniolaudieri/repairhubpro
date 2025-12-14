@@ -355,18 +355,18 @@ export default function AdminPubblicita() {
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* Stats Cards - Mobile optimized */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
           <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-amber-500/20 rounded-xl">
-                  <Clock className="h-6 w-6 text-amber-600" />
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-3 bg-amber-500/20 rounded-lg sm:rounded-xl w-fit">
+                  <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-amber-600" />
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-amber-700">{stats.pending}</p>
-                  <p className="text-sm text-amber-600/80">In Attesa</p>
+                  <p className="text-xl sm:text-3xl font-bold text-amber-700">{stats.pending}</p>
+                  <p className="text-xs sm:text-sm text-amber-600/80">In Attesa</p>
                 </div>
               </div>
             </CardContent>
@@ -375,14 +375,14 @@ export default function AdminPubblicita() {
         
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-green-500/20 rounded-xl">
-                  <Megaphone className="h-6 w-6 text-green-600" />
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-3 bg-green-500/20 rounded-lg sm:rounded-xl w-fit">
+                  <Megaphone className="h-4 w-4 sm:h-6 sm:w-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-green-700">{stats.active}</p>
-                  <p className="text-sm text-green-600/80">Attive</p>
+                  <p className="text-xl sm:text-3xl font-bold text-green-700">{stats.active}</p>
+                  <p className="text-xs sm:text-sm text-green-600/80">Attive</p>
                 </div>
               </div>
             </CardContent>
@@ -391,14 +391,14 @@ export default function AdminPubblicita() {
         
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-500/20 rounded-xl">
-                  <Euro className="h-6 w-6 text-blue-600" />
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-3 bg-blue-500/20 rounded-lg sm:rounded-xl w-fit">
+                  <Euro className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-blue-700">€{stats.totalRevenue.toFixed(0)}</p>
-                  <p className="text-sm text-blue-600/80">Ricavi</p>
+                  <p className="text-xl sm:text-3xl font-bold text-blue-700">€{stats.totalRevenue.toFixed(0)}</p>
+                  <p className="text-xs sm:text-sm text-blue-600/80">Ricavi</p>
                 </div>
               </div>
             </CardContent>
@@ -407,14 +407,14 @@ export default function AdminPubblicita() {
         
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-purple-500/20 rounded-xl">
-                  <TrendingUp className="h-6 w-6 text-purple-600" />
+            <CardContent className="p-3 sm:pt-6 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                <div className="p-2 sm:p-3 bg-purple-500/20 rounded-lg sm:rounded-xl w-fit">
+                  <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-3xl font-bold text-purple-700">€{stats.cornerPayout.toFixed(0)}</p>
-                  <p className="text-sm text-purple-600/80">Payout Corner</p>
+                  <p className="text-xl sm:text-3xl font-bold text-purple-700">€{stats.cornerPayout.toFixed(0)}</p>
+                  <p className="text-xs sm:text-sm text-purple-600/80">Payout</p>
                 </div>
               </div>
             </CardContent>
@@ -423,27 +423,27 @@ export default function AdminPubblicita() {
       </div>
 
       <Tabs defaultValue="campaigns" className="space-y-4">
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="campaigns" className="data-[state=active]:bg-background">
-            <Megaphone className="h-4 w-4 mr-2" />
-            Campagne
+        <TabsList className="bg-muted/50 p-1 w-full flex-wrap h-auto gap-1">
+          <TabsTrigger value="campaigns" className="data-[state=active]:bg-background flex-1 sm:flex-none text-xs sm:text-sm">
+            <Megaphone className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Campagne</span>
           </TabsTrigger>
-          <TabsTrigger value="payments" className="data-[state=active]:bg-background relative">
-            <CreditCard className="h-4 w-4 mr-2" />
-            Pagamenti Corner
+          <TabsTrigger value="payments" className="data-[state=active]:bg-background relative flex-1 sm:flex-none text-xs sm:text-sm">
+            <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Pagamenti</span>
             {campaigns.flatMap(c => c.corners || []).filter(cc => cc.payment_status === 'requested').length > 0 && (
-              <Badge className="ml-2 bg-amber-500" variant="default">
+              <Badge className="ml-1 sm:ml-2 bg-amber-500 text-xs px-1.5" variant="default">
                 {campaigns.flatMap(c => c.corners || []).filter(cc => cc.payment_status === 'requested').length}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="pricing" className="data-[state=active]:bg-background">
-            <Euro className="h-4 w-4 mr-2" />
-            Tariffe Base
+          <TabsTrigger value="pricing" className="data-[state=active]:bg-background flex-1 sm:flex-none text-xs sm:text-sm">
+            <Euro className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Tariffe</span>
           </TabsTrigger>
-          <TabsTrigger value="discounts" className="data-[state=active]:bg-background">
-            <Percent className="h-4 w-4 mr-2" />
-            Sconti
+          <TabsTrigger value="discounts" className="data-[state=active]:bg-background flex-1 sm:flex-none text-xs sm:text-sm">
+            <Percent className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Sconti</span>
           </TabsTrigger>
         </TabsList>
 
@@ -644,27 +644,27 @@ export default function AdminPubblicita() {
 
                 return (
                   <div className="space-y-6">
-                    {/* Stats */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
-                        <AlertCircle className="h-6 w-6 text-amber-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-amber-700">{pendingPayments.length}</p>
-                        <p className="text-sm text-amber-600">Da Pagare</p>
-                        <p className="text-lg font-semibold text-amber-800 mt-1">
-                          €{pendingPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(2)}
+                    {/* Stats - Mobile optimized */}
+                    <div className="grid grid-cols-3 gap-2 sm:gap-4">
+                      <div className="p-2 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                        <AlertCircle className="h-4 w-4 sm:h-6 sm:w-6 text-amber-600 mx-auto mb-1 sm:mb-2" />
+                        <p className="text-lg sm:text-2xl font-bold text-amber-700">{pendingPayments.length}</p>
+                        <p className="text-xs sm:text-sm text-amber-600">Da Pagare</p>
+                        <p className="text-sm sm:text-lg font-semibold text-amber-800 mt-1">
+                          €{pendingPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(0)}
                         </p>
                       </div>
-                      <div className="p-4 bg-gray-50 border rounded-lg text-center">
-                        <Clock className="h-6 w-6 text-gray-500 mx-auto mb-2" />
-                        <p className="text-2xl font-bold">{unpaidPayments.length}</p>
-                        <p className="text-sm text-muted-foreground">Non Richiesti</p>
+                      <div className="p-2 sm:p-4 bg-gray-50 border rounded-lg text-center">
+                        <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-gray-500 mx-auto mb-1 sm:mb-2" />
+                        <p className="text-lg sm:text-2xl font-bold">{unpaidPayments.length}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Non Rich.</p>
                       </div>
-                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                        <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-green-700">{paidPayments.length}</p>
-                        <p className="text-sm text-green-600">Pagati</p>
-                        <p className="text-lg font-semibold text-green-800 mt-1">
-                          €{paidPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(2)}
+                      <div className="p-2 sm:p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                        <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 text-green-600 mx-auto mb-1 sm:mb-2" />
+                        <p className="text-lg sm:text-2xl font-bold text-green-700">{paidPayments.length}</p>
+                        <p className="text-xs sm:text-sm text-green-600">Pagati</p>
+                        <p className="text-sm sm:text-lg font-semibold text-green-800 mt-1">
+                          €{paidPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(0)}
                         </p>
                       </div>
                     </div>
@@ -681,33 +681,33 @@ export default function AdminPubblicita() {
                             key={payment.id}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg"
+                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg"
                           >
-                            <div className="flex items-center gap-4">
-                              <div className="p-2 bg-amber-200 rounded-full">
-                                <Store className="h-5 w-5 text-amber-700" />
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-amber-200 rounded-full flex-shrink-0">
+                                <Store className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700" />
                               </div>
-                              <div>
-                                <p className="font-medium">{payment.corner?.business_name}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {payment.campaign.ad_title} · {payment.corner?.email}
+                              <div className="min-w-0">
+                                <p className="font-medium text-sm sm:text-base truncate">{payment.corner?.business_name}</p>
+                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                                  {payment.campaign.ad_title}
                                 </p>
                                 {payment.payment_requested_at && (
                                   <p className="text-xs text-amber-600">
-                                    Richiesto il {format(new Date(payment.payment_requested_at), 'dd/MM/yyyy HH:mm', { locale: it })}
+                                    {format(new Date(payment.payment_requested_at), 'dd/MM/yy HH:mm', { locale: it })}
                                   </p>
                                 )}
                               </div>
                             </div>
-                            <div className="flex items-center gap-4">
-                              <span className="text-xl font-bold text-amber-700">€{payment.corner_revenue?.toFixed(2)}</span>
+                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
+                              <span className="text-lg sm:text-xl font-bold text-amber-700">€{payment.corner_revenue?.toFixed(2)}</span>
                               <Button 
                                 size="sm" 
                                 className="bg-green-600 hover:bg-green-700"
                                 onClick={() => handleMarkAsPaid(payment.id)}
                               >
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Segna Pagato
+                                <CheckCircle className="h-4 w-4 sm:mr-1" />
+                                <span className="hidden sm:inline">Segna Pagato</span>
                               </Button>
                             </div>
                           </motion.div>
