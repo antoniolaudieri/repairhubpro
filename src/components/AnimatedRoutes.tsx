@@ -69,6 +69,7 @@ import DiventaPartner from "@/pages/DiventaPartner";
 // Ads pages
 import AcquistaPubblicita from "@/pages/ads/AcquistaPubblicita";
 import SuccessoPubblicita from "@/pages/ads/SuccessoPubblicita";
+import TrackQr from "@/pages/ads/TrackQr";
 // Corner pages
 import CornerPubblicita from "@/pages/corner/CornerPubblicita";
 
@@ -87,6 +88,7 @@ export const AnimatedRoutes = () => {
         {/* Public Ads Routes */}
         <Route path="/ads/acquista" element={<PageTransition><AcquistaPubblicita /></PageTransition>} />
         <Route path="/ads/successo" element={<PageTransition><SuccessoPubblicita /></PageTransition>} />
+        <Route path="/ads/qr" element={<TrackQr />} />
         
         <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />

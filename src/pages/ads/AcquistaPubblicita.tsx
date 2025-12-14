@@ -5,7 +5,7 @@ import {
   Megaphone, Building2, Mail, Phone, User, 
   Calendar, MapPin, Check, CreditCard, ArrowLeft,
   ArrowRight, Sparkles, Image, Palette, Type, Upload, Loader2,
-  Tag, Percent, Clock, Video, Timer
+  Tag, Percent, Clock, Video, Timer, Link, QrCode, Building
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,12 +43,19 @@ interface CampaignData {
   end_date: string;
   corner_ids: string[];
   duration_package: string | null;
-  // New styling options
+  // Styling options
   ad_font: string;
   ad_title_color: string;
   ad_description_color: string;
   ad_bg_color: string;
   ad_emoji: string;
+  // Enhanced features
+  countdown_enabled: boolean;
+  countdown_end_date: string;
+  countdown_text: string;
+  company_logo_url: string;
+  qr_enabled: boolean;
+  qr_destination_url: string;
 }
 
 interface DurationPackage {
@@ -120,6 +127,7 @@ export default function AcquistaPubblicita() {
   const [uploading, setUploading] = useState(false);
   const [pricing, setPricing] = useState({ pricePerWeek: 5, cornerPercentage: 50 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
 
   const MIN_IMAGE_WIDTH = 1200;
   const MIN_IMAGE_HEIGHT = 675;
@@ -141,12 +149,19 @@ export default function AcquistaPubblicita() {
     end_date: '',
     corner_ids: initialCornerId ? [initialCornerId] : [],
     duration_package: null,
-    // New styling options
+    // Styling options
     ad_font: 'sans',
     ad_title_color: '#ffffff',
     ad_description_color: '#ffffff',
     ad_bg_color: '',
-    ad_emoji: ''
+    ad_emoji: '',
+    // Enhanced features
+    countdown_enabled: false,
+    countdown_end_date: '',
+    countdown_text: 'Offerta valida ancora',
+    company_logo_url: '',
+    qr_enabled: false,
+    qr_destination_url: ''
   });
 
   useEffect(() => {
@@ -301,7 +316,7 @@ export default function AcquistaPubblicita() {
     }
   };
 
-  const uploadFile = async (file: File, field: 'ad_image_url' | 'ad_video_url') => {
+  const uploadFile = async (file: File, field: 'ad_image_url' | 'ad_video_url' | 'company_logo_url') => {
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
@@ -319,13 +334,35 @@ export default function AcquistaPubblicita() {
         .getPublicUrl(filePath);
 
       setCampaignData(prev => ({ ...prev, [field]: publicUrl }));
-      toast.success(field === 'ad_image_url' ? 'Immagine caricata con successo' : 'Video caricato con successo');
+      const messages: Record<string, string> = {
+        ad_image_url: 'Immagine caricata con successo',
+        ad_video_url: 'Video caricato con successo',
+        company_logo_url: 'Logo caricato con successo'
+      };
+      toast.success(messages[field]);
     } catch (error: any) {
       console.error('Upload error:', error);
       toast.error('Errore nel caricamento del file');
     } finally {
       setUploading(false);
     }
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Il file deve essere un\'immagine');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Il logo non può superare 2MB');
+      return;
+    }
+
+    await uploadFile(file, 'company_logo_url');
   };
 
   const handleSubmit = async () => {
@@ -764,6 +801,126 @@ export default function AcquistaPubblicita() {
                           )}
                         </div>
                       )}
+
+                      {/* Enhanced Features Section */}
+                      <div className="space-y-4 p-4 bg-gradient-to-br from-primary/5 to-primary/10 rounded-xl border border-primary/20">
+                        <h4 className="font-semibold flex items-center gap-2 text-primary">
+                          <Sparkles className="h-4 w-4" />
+                          Funzionalità Avanzate
+                        </h4>
+
+                        {/* Company Logo Upload */}
+                        <div className="space-y-2">
+                          <Label className="flex items-center gap-2">
+                            <Building className="h-4 w-4" />
+                            Logo Azienda
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Mostra il tuo logo nell'annuncio. Max 2MB.
+                          </p>
+                          <input
+                            ref={logoInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleLogoUpload}
+                            className="hidden"
+                          />
+                          <div className="flex gap-2 items-center">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => logoInputRef.current?.click()}
+                              disabled={uploading}
+                            >
+                              {uploading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Upload className="mr-2 h-4 w-4" />
+                                  {campaignData.company_logo_url ? 'Cambia' : 'Carica'}
+                                </>
+                              )}
+                            </Button>
+                            {campaignData.company_logo_url && (
+                              <div className="flex items-center gap-2">
+                                <img src={campaignData.company_logo_url} alt="Logo" className="h-8 w-8 object-contain rounded" />
+                                <Check className="h-4 w-4 text-green-500" />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Countdown Timer */}
+                        <div className="space-y-3 pt-3 border-t border-border/50">
+                          <div className="flex items-center justify-between">
+                            <Label className="flex items-center gap-2">
+                              <Timer className="h-4 w-4" />
+                              Countdown Timer
+                            </Label>
+                            <Button
+                              type="button"
+                              variant={campaignData.countdown_enabled ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCampaignData(prev => ({ ...prev, countdown_enabled: !prev.countdown_enabled }))}
+                            >
+                              {campaignData.countdown_enabled ? 'Attivo' : 'Disattivo'}
+                            </Button>
+                          </div>
+                          {campaignData.countdown_enabled && (
+                            <div className="space-y-3 pl-4 border-l-2 border-primary/30">
+                              <div className="space-y-1">
+                                <Label className="text-xs">Data/ora fine offerta</Label>
+                                <Input
+                                  type="datetime-local"
+                                  value={campaignData.countdown_end_date}
+                                  onChange={(e) => setCampaignData(prev => ({ ...prev, countdown_end_date: e.target.value }))}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">Testo countdown</Label>
+                                <Input
+                                  value={campaignData.countdown_text}
+                                  onChange={(e) => setCampaignData(prev => ({ ...prev, countdown_text: e.target.value }))}
+                                  placeholder="Offerta valida ancora"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* QR Code Link */}
+                        <div className="space-y-3 pt-3 border-t border-border/50">
+                          <div className="flex items-center justify-between">
+                            <Label className="flex items-center gap-2">
+                              <QrCode className="h-4 w-4" />
+                              QR Code Tracciato
+                            </Label>
+                            <Button
+                              type="button"
+                              variant={campaignData.qr_enabled ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setCampaignData(prev => ({ ...prev, qr_enabled: !prev.qr_enabled }))}
+                            >
+                              {campaignData.qr_enabled ? 'Attivo' : 'Disattivo'}
+                            </Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Mostra un QR code nell'annuncio. Traccia le scansioni per vedere quanti clienti interagiscono.
+                          </p>
+                          {campaignData.qr_enabled && (
+                            <div className="space-y-1 pl-4 border-l-2 border-primary/30">
+                              <Label className="text-xs">URL destinazione (sito web o link sconto)</Label>
+                              <Input
+                                type="url"
+                                value={campaignData.qr_destination_url}
+                                onChange={(e) => setCampaignData(prev => ({ ...prev, qr_destination_url: e.target.value }))}
+                                placeholder="https://www.tuosito.it/sconto"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Preview */}
