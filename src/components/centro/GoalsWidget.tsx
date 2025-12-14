@@ -474,15 +474,89 @@ export const GoalsWidget = ({ centroId, monthlyGoal, onGoalUpdate }: GoalsWidget
         )}
       </div>
 
-      {/* Tips - only show when struggling */}
-      {monthlyStats && monthlyStats.progress < 30 && (
-        <div className="px-4 py-3 border-t bg-muted/20">
-          <div className="flex items-start gap-2">
-            <TrendingUp className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              Concentrati su riparazioni ad alto margine e proponi servizi aggiuntivi.
-            </p>
+      {/* Dynamic Tips - always show */}
+      {monthlyStats && dailyStats && (
+        <div className="px-4 py-3 border-t bg-muted/20 space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <TrendingUp className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-xs font-medium text-foreground">Suggerimenti per raggiungere l'obiettivo</span>
           </div>
+          
+          {(() => {
+            const suggestions: { icon: React.ReactNode; text: string; priority: number }[] = [];
+            const dailyNeeded = monthlyStats.dailyNeeded;
+            const remaining = monthlyStats.remaining;
+            const daysLeft = monthlyStats.daysLeft;
+            const progress = monthlyStats.progress;
+            const avgRepairValue = 80; // Stima valore medio riparazione
+            const avgServiceValue = 15; // Stima valore medio servizio aggiuntivo
+            
+            // Calcola quante riparazioni servono
+            const repairsNeeded = Math.ceil(remaining / avgRepairValue);
+            const repairsPerDay = Math.ceil(repairsNeeded / Math.max(daysLeft, 1));
+            
+            // Suggerimento basato su urgenza
+            if (progress >= 100) {
+              suggestions.push({
+                icon: <Trophy className="h-3 w-3 text-amber-500" />,
+                text: "Obiettivo raggiunto! Punta a superarlo del 10% per un margine extra.",
+                priority: 1
+              });
+            } else if (progress >= 80) {
+              suggestions.push({
+                icon: <Star className="h-3 w-3 text-green-500" />,
+                text: `Sei al ${Math.round(progress)}%! Mancano solo €${remaining.toLocaleString('it-IT', { maximumFractionDigits: 0 })} (~${Math.ceil(remaining / avgRepairValue)} riparazioni).`,
+                priority: 1
+              });
+            } else if (progress >= 50) {
+              suggestions.push({
+                icon: <Zap className="h-3 w-3 text-amber-500" />,
+                text: `Completa ${repairsPerDay} riparazion${repairsPerDay === 1 ? 'e' : 'i'} al giorno per raggiungere €${monthlyStats.target.toLocaleString('it-IT', { maximumFractionDigits: 0 })}.`,
+                priority: 1
+              });
+            } else if (progress >= 30) {
+              suggestions.push({
+                icon: <TrendingUp className="h-3 w-3 text-orange-500" />,
+                text: `Intensifica il ritmo: servono ~€${dailyNeeded.toLocaleString('it-IT', { maximumFractionDigits: 0 })}/giorno (${repairsPerDay} riparazioni).`,
+                priority: 1
+              });
+            } else {
+              suggestions.push({
+                icon: <Flame className="h-3 w-3 text-rose-500" />,
+                text: `Focus massimo: €${dailyNeeded.toLocaleString('it-IT', { maximumFractionDigits: 0 })}/giorno per recuperare. Proponi servizi aggiuntivi su ogni riparazione.`,
+                priority: 1
+              });
+            }
+            
+            // Suggerimenti tattici basati sulla situazione
+            if (progress < 80 && daysLeft <= 10) {
+              suggestions.push({
+                icon: <Calendar className="h-3 w-3 text-purple-500" />,
+                text: `${daysLeft} giorni rimasti: contatta clienti con riparazioni in sospeso e proponi ritiro.`,
+                priority: 2
+              });
+            }
+            
+            if (dailyStats.progress < 50 && new Date().getHours() >= 14) {
+              const remainingToday = dailyStats.remaining;
+              suggestions.push({
+                icon: <Zap className="h-3 w-3 text-blue-500" />,
+                text: `Oggi mancano €${remainingToday.toLocaleString('it-IT', { maximumFractionDigits: 0 })}. Proponi pellicole, backup o pulizia software.`,
+                priority: 3
+              });
+            }
+            
+            // Ordina per priorità e mostra max 2 suggerimenti
+            return suggestions
+              .sort((a, b) => a.priority - b.priority)
+              .slice(0, 2)
+              .map((s, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="mt-0.5 shrink-0">{s.icon}</div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{s.text}</p>
+                </div>
+              ));
+          })()}
         </div>
       )}
     </Card>
