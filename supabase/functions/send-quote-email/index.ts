@@ -85,7 +85,7 @@ serve(async (req) => {
     
     // Build the signing URL
     const origin = req.headers.get("origin") || "https://lablinkriparo.lovable.app";
-    const signUrl = `${origin}/remote-signature/${sessionId}?type=quote&quote_id=${quote_id}&repair_request_id=${repair_request_id}&total=${quote.total_cost}`;
+    const signUrl = `${origin}/firma-remota/${sessionId}?type=quote&quote_id=${quote_id}&repair_request_id=${repair_request_id}&total=${quote.total_cost}`;
 
     // Format device name
     const deviceName = [quote.device_brand, quote.device_model].filter(Boolean).join(" ") || quote.device_type;
