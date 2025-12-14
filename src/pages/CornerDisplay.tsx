@@ -24,6 +24,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
+import { CountdownTimer } from "@/components/ads/CountdownTimer";
 
 type DisplayMode = "standby" | "confirm_data" | "completed";
 
@@ -60,13 +61,21 @@ interface DisplayAd {
   textPosition?: 'bottom' | 'center' | 'top';
   titleFont?: string;
   descriptionFont?: string;
-  // New styling options
+  // Styling options
   fontFamily?: string;
   titleColor?: string;
   descriptionColor?: string;
   emoji?: string;
   // Duration in milliseconds for this specific ad
   displayMs?: number;
+  // Enhanced features
+  campaignId?: string;
+  countdownEnabled?: boolean;
+  countdownEndDate?: string;
+  countdownText?: string;
+  companyLogoUrl?: string;
+  qrEnabled?: boolean;
+  qrDestinationUrl?: string;
 }
 
 const defaultAdvertisements: DisplayAd[] = [
@@ -188,7 +197,13 @@ export default function CornerDisplay() {
           display_seconds,
           status,
           start_date,
-          end_date
+          end_date,
+          countdown_enabled,
+          countdown_end_date,
+          countdown_text,
+          company_logo_url,
+          qr_enabled,
+          qr_destination_url
         )
       `)
       .eq("corner_id", cornerId);
@@ -225,6 +240,7 @@ export default function CornerDisplay() {
         const campaign = c.display_ad_campaigns;
         return {
           id: `paid-${campaign.id}`,
+          campaignId: campaign.id,
           title: campaign.ad_title,
           description: campaign.ad_description || "",
           gradient: campaign.ad_gradient || "from-blue-600 via-blue-500 to-cyan-400",
@@ -233,13 +249,20 @@ export default function CornerDisplay() {
           type: campaign.ad_type === 'image' ? 'image' : 'gradient',
           textAlign: 'center' as const,
           textPosition: 'center' as const,
-          // New styling options from campaign
+          // Styling options from campaign
           fontFamily: campaign.ad_font || 'sans',
           titleColor: campaign.ad_title_color || '#ffffff',
           descriptionColor: campaign.ad_description_color || '#ffffff',
           emoji: campaign.ad_emoji || '',
           // Duration in milliseconds for this ad
-          displayMs: (campaign.display_seconds || 5) * 1000
+          displayMs: (campaign.display_seconds || 5) * 1000,
+          // Enhanced features
+          countdownEnabled: campaign.countdown_enabled || false,
+          countdownEndDate: campaign.countdown_end_date,
+          countdownText: campaign.countdown_text || 'Offerta valida ancora',
+          companyLogoUrl: campaign.company_logo_url,
+          qrEnabled: campaign.qr_enabled || false,
+          qrDestinationUrl: campaign.qr_destination_url
         };
       });
     
@@ -644,6 +667,54 @@ export default function CornerDisplay() {
                   </motion.p>
                 </div>
               </Card>
+            )}
+            
+            {/* Enhanced Features Overlay for paid ads */}
+            {currentAd.campaignId && (currentAd.companyLogoUrl || currentAd.countdownEnabled || currentAd.qrEnabled) && (
+              <div className="absolute inset-0 pointer-events-none">
+                {/* Company Logo - Top Left */}
+                {currentAd.companyLogoUrl && (
+                  <motion.div
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.5 }}
+                    className="absolute top-6 left-6 bg-white/90 backdrop-blur-sm rounded-xl p-3 shadow-xl"
+                  >
+                    <img 
+                      src={currentAd.companyLogoUrl} 
+                      alt="Logo" 
+                      className="h-12 md:h-16 w-auto object-contain"
+                    />
+                  </motion.div>
+                )}
+                
+                {/* Countdown Timer - Top Right */}
+                {currentAd.countdownEnabled && currentAd.countdownEndDate && (
+                  <div className="absolute top-6 right-6">
+                    <CountdownTimer 
+                      endDate={currentAd.countdownEndDate}
+                      text={currentAd.countdownText}
+                    />
+                  </div>
+                )}
+                
+                {/* QR Code - Bottom Right */}
+                {currentAd.qrEnabled && currentAd.qrDestinationUrl && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.6 }}
+                    className="absolute bottom-6 right-6 bg-white p-4 rounded-2xl shadow-2xl"
+                  >
+                    <QRCodeSVG 
+                      value={`${window.location.origin}/ads/qr?campaign=${currentAd.campaignId}&corner=${cornerId}&url=${encodeURIComponent(currentAd.qrDestinationUrl)}`}
+                      size={100}
+                      level="H"
+                    />
+                    <p className="text-xs text-center mt-2 text-gray-600 font-medium">Scansiona</p>
+                  </motion.div>
+                )}
+              </div>
             )}
             
             {/* Ad indicators */}

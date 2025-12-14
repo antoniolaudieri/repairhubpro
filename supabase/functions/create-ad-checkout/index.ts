@@ -30,7 +30,14 @@ serve(async (req) => {
       end_date,
       corner_ids,
       success_url,
-      cancel_url
+      cancel_url,
+      // New fields for enhanced ads
+      countdown_enabled = false,
+      countdown_end_date,
+      countdown_text = 'Offerta valida ancora',
+      company_logo_url,
+      qr_enabled = false,
+      qr_destination_url
     } = await req.json();
 
     console.log('[create-ad-checkout] Creating checkout for:', { 
@@ -96,7 +103,14 @@ serve(async (req) => {
         total_price: totalPrice,
         platform_revenue: platformRevenue,
         corner_revenue_total: cornerRevenueTotal,
-        status: 'pending_payment'
+        status: 'pending_payment',
+        // Enhanced ad features
+        countdown_enabled,
+        countdown_end_date: countdown_enabled ? countdown_end_date : null,
+        countdown_text,
+        company_logo_url,
+        qr_enabled,
+        qr_destination_url: qr_enabled ? qr_destination_url : null
       })
       .select()
       .single();

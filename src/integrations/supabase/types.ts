@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_qr_scans: {
+        Row: {
+          campaign_id: string
+          corner_id: string | null
+          id: string
+          ip_hash: string | null
+          referrer: string | null
+          scanned_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          campaign_id: string
+          corner_id?: string | null
+          id?: string
+          ip_hash?: string | null
+          referrer?: string | null
+          scanned_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          corner_id?: string | null
+          id?: string
+          ip_hash?: string | null
+          referrer?: string | null
+          scanned_at?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_qr_scans_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "display_ad_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_qr_scans_corner_id_fkey"
+            columns: ["corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       additional_services: {
         Row: {
           created_at: string
@@ -878,13 +923,19 @@ export type Database = {
           advertiser_phone: string | null
           approved_at: string | null
           approved_by: string | null
+          company_logo_url: string | null
           corner_revenue_total: number
+          countdown_enabled: boolean | null
+          countdown_end_date: string | null
+          countdown_text: string | null
           created_at: string
           display_seconds: number
           end_date: string
           id: string
           paid_at: string | null
           platform_revenue: number
+          qr_destination_url: string | null
+          qr_enabled: boolean | null
           rejected_reason: string | null
           start_date: string
           status: string
@@ -910,13 +961,19 @@ export type Database = {
           advertiser_phone?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          company_logo_url?: string | null
           corner_revenue_total?: number
+          countdown_enabled?: boolean | null
+          countdown_end_date?: string | null
+          countdown_text?: string | null
           created_at?: string
           display_seconds?: number
           end_date: string
           id?: string
           paid_at?: string | null
           platform_revenue?: number
+          qr_destination_url?: string | null
+          qr_enabled?: boolean | null
           rejected_reason?: string | null
           start_date: string
           status?: string
@@ -942,13 +999,19 @@ export type Database = {
           advertiser_phone?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          company_logo_url?: string | null
           corner_revenue_total?: number
+          countdown_enabled?: boolean | null
+          countdown_end_date?: string | null
+          countdown_text?: string | null
           created_at?: string
           display_seconds?: number
           end_date?: string
           id?: string
           paid_at?: string | null
           platform_revenue?: number
+          qr_destination_url?: string | null
+          qr_enabled?: boolean | null
           rejected_reason?: string | null
           start_date?: string
           status?: string
