@@ -38,6 +38,7 @@ import { PendingJobOffersBanner } from "@/components/centro/PendingJobOffersBann
 import { PrepaidCommissionsHistory } from "@/components/centro/PrepaidCommissionsHistory";
 import { GamificationWidget } from "@/components/centro/GamificationWidget";
 import { GoalsWidget } from "@/components/centro/GoalsWidget";
+import { MaintenanceWidget } from "@/components/centro/MaintenanceWidget";
 
 interface CentroSettings {
   monthly_goal?: number;
@@ -718,7 +719,8 @@ export default function CentroDashboard() {
               />
             )}
 
-            {/* Forfeiture Warning Alert */}
+            {/* Predictive Maintenance Widget */}
+            {centro && <MaintenanceWidget centroId={centro.id} />}
             {forfeitureWarnings.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
