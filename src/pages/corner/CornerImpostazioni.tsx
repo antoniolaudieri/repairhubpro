@@ -27,6 +27,7 @@ interface TickerMessage {
   id: string;
   text: string;
   emoji?: string;
+  source?: string;
 }
 
 interface CornerSettings {
@@ -35,6 +36,8 @@ interface CornerSettings {
   ticker_enabled?: boolean;
   ticker_speed?: number;
   ticker_messages?: TickerMessage[];
+  ticker_rss_url?: string;
+  ticker_rss_enabled?: boolean;
 }
 
 interface CornerData {
@@ -137,6 +140,9 @@ export default function CornerImpostazioni() {
   ]);
   const [newTickerText, setNewTickerText] = useState("");
   const [newTickerEmoji, setNewTickerEmoji] = useState("");
+  const [tickerRssUrl, setTickerRssUrl] = useState("");
+  const [tickerRssEnabled, setTickerRssEnabled] = useState(false);
+  const [testingRss, setTestingRss] = useState(false);
   
   // Preview ads rotation
   const previewAds = displayAds.length > 0 ? displayAds : defaultAdvertisements;
@@ -163,6 +169,8 @@ export default function CornerImpostazioni() {
     tickerEnabled: boolean;
     tickerSpeed: number;
     tickerMessages: string;
+    tickerRssUrl: string;
+    tickerRssEnabled: boolean;
   } | null>(null);
 
   // Detect unsaved changes
@@ -178,7 +186,9 @@ export default function CornerImpostazioni() {
       slideInterval !== originalValues.slideInterval ||
       tickerEnabled !== originalValues.tickerEnabled ||
       tickerSpeed !== originalValues.tickerSpeed ||
-      JSON.stringify(tickerMessages) !== originalValues.tickerMessages
+      JSON.stringify(tickerMessages) !== originalValues.tickerMessages ||
+      tickerRssUrl !== originalValues.tickerRssUrl ||
+      tickerRssEnabled !== originalValues.tickerRssEnabled
     );
   }, [address, latitude, longitude, logoUrl, openingHours, displayAds, slideInterval, tickerEnabled, tickerSpeed, tickerMessages, originalValues, corner]);
 
@@ -257,6 +267,12 @@ export default function CornerImpostazioni() {
       if (settings?.ticker_messages && settings.ticker_messages.length > 0) {
         setTickerMessages(settings.ticker_messages);
       }
+      if (settings?.ticker_rss_url) {
+        setTickerRssUrl(settings.ticker_rss_url);
+      }
+      if (typeof settings?.ticker_rss_enabled === 'boolean') {
+        setTickerRssEnabled(settings.ticker_rss_enabled);
+      }
       
       // Store original values for change detection
       setOriginalValues({
@@ -270,6 +286,8 @@ export default function CornerImpostazioni() {
         tickerEnabled: settings?.ticker_enabled ?? true,
         tickerSpeed: settings?.ticker_speed ?? 50,
         tickerMessages: JSON.stringify(settings?.ticker_messages || []),
+        tickerRssUrl: settings?.ticker_rss_url || "",
+        tickerRssEnabled: settings?.ticker_rss_enabled ?? false,
       });
     } catch (error) {
       console.error("Error fetching corner data:", error);
@@ -362,6 +380,8 @@ export default function CornerImpostazioni() {
         ticker_enabled: tickerEnabled,
         ticker_speed: tickerSpeed,
         ticker_messages: tickerMessages,
+        ticker_rss_url: tickerRssUrl,
+        ticker_rss_enabled: tickerRssEnabled,
       };
       
       const { error } = await supabase
@@ -391,6 +411,8 @@ export default function CornerImpostazioni() {
         tickerEnabled,
         tickerSpeed,
         tickerMessages: JSON.stringify(tickerMessages),
+        tickerRssUrl,
+        tickerRssEnabled,
       });
 
       toast.success("Impostazioni salvate con successo");
@@ -1116,6 +1138,70 @@ export default function CornerImpostazioni() {
                       <Plus className="h-4 w-4 mr-1" />
                       Aggiungi
                     </Button>
+                  </div>
+                  
+                  {/* RSS Feed Section */}
+                  <div className="border-t pt-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">📡</span>
+                        <Label>Feed RSS Notizie</Label>
+                      </div>
+                      <Button
+                        variant={tickerRssEnabled ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setTickerRssEnabled(!tickerRssEnabled)}
+                      >
+                        {tickerRssEnabled ? "✅ Attivo" : "Disattivato"}
+                      </Button>
+                    </div>
+                    
+                    {tickerRssEnabled && (
+                      <div className="space-y-3">
+                        <div className="flex gap-2">
+                          <Input
+                            value={tickerRssUrl}
+                            onChange={(e) => setTickerRssUrl(e.target.value)}
+                            placeholder="https://esempio.it/feed.rss"
+                            className="flex-1"
+                          />
+                          <Button
+                            variant="secondary"
+                            disabled={!tickerRssUrl.trim() || testingRss}
+                            onClick={async () => {
+                              if (!tickerRssUrl.trim()) return;
+                              setTestingRss(true);
+                              try {
+                                const { data, error } = await supabase.functions.invoke('fetch-rss-feed', {
+                                  body: { feedUrl: tickerRssUrl, maxItems: 3 }
+                                });
+                                if (error) throw error;
+                                if (data.success && data.items?.length > 0) {
+                                  toast.success(`✅ Feed valido: "${data.feedTitle}" - ${data.items.length} notizie trovate`);
+                                } else {
+                                  toast.error("Nessuna notizia trovata nel feed");
+                                }
+                              } catch (err) {
+                                toast.error("Errore nel caricamento del feed RSS");
+                              } finally {
+                                setTestingRss(false);
+                              }
+                            }}
+                          >
+                            {testingRss ? <Loader2 className="h-4 w-4 animate-spin" /> : "Testa Feed"}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          📰 Le notizie dal feed RSS verranno aggiunte automaticamente al ticker. Funziona con la maggior parte dei siti di notizie (es. ANSA, Repubblica, ecc.)
+                        </p>
+                        <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded">
+                          <strong>Feed consigliati:</strong><br/>
+                          • ANSA: https://www.ansa.it/sito/ansait_rss.xml<br/>
+                          • Sky TG24: https://tg24.sky.it/rss/tg24_cronaca.xml<br/>
+                          • Il Post: https://www.ilpost.it/feed/
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <p className="text-xs text-muted-foreground">

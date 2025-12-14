@@ -224,13 +224,15 @@ export default function CornerDisplay() {
       setCornerLogo(data.logo_url);
       setCornerName(data.business_name || "");
       
-      if (data.settings) {
+    if (data.settings) {
         const settings = data.settings as { 
           display_ads?: DisplayAd[]; 
           slide_interval?: number;
           ticker_enabled?: boolean;
           ticker_speed?: number;
           ticker_messages?: TickerMessage[];
+          ticker_rss_url?: string;
+          ticker_rss_enabled?: boolean;
         };
         if (settings.display_ads && settings.display_ads.length > 0) {
           customAds = settings.display_ads;
@@ -242,16 +244,36 @@ export default function CornerDisplay() {
         if (settings.ticker_speed) {
           setTickerSpeed(settings.ticker_speed);
         }
+        
+        // Start with custom messages or defaults
+        let allTickerMessages: TickerMessage[] = [];
         if (settings.ticker_messages && settings.ticker_messages.length > 0) {
-          setTickerMessages(settings.ticker_messages);
+          allTickerMessages = [...settings.ticker_messages];
         } else {
-          // Default ticker messages
-          setTickerMessages([
+          allTickerMessages = [
             { id: '1', text: 'Benvenuto! Riparazioni veloci e garantite', emoji: '👋' },
             { id: '2', text: 'Preventivi gratuiti su tutti i dispositivi', emoji: '💰' },
             { id: '3', text: 'Tecnici certificati e ricambi originali', emoji: '✅' },
-          ]);
+          ];
         }
+        
+        // Fetch RSS feed if enabled
+        if (settings.ticker_rss_enabled && settings.ticker_rss_url) {
+          try {
+            const { data: rssData } = await supabase.functions.invoke('fetch-rss-feed', {
+              body: { feedUrl: settings.ticker_rss_url, maxItems: 5 }
+            });
+            if (rssData?.success && rssData?.items?.length > 0) {
+              allTickerMessages = [...allTickerMessages, ...rssData.items];
+              console.log('[CornerDisplay] Loaded RSS items:', rssData.items.length);
+            }
+          } catch (rssError) {
+            console.error('[CornerDisplay] Error fetching RSS:', rssError);
+          }
+        }
+        
+        setTickerMessages(allTickerMessages);
+        
         if (settings.slide_interval) {
           setSlideInterval(settings.slide_interval);
         }
