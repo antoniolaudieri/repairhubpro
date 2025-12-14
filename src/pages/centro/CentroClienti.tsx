@@ -383,11 +383,12 @@ export default function CentroClienti() {
                 </Card>
               </motion.div>
             ) : (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredCustomers.map((customer, index) => {
                   const stats = customerStats[customer.id] || { repairCount: 0, totalSpent: 0 };
                   const customerAnalytics = analyticsMap[customer.id];
                   const isVip = customerAnalytics ? customerAnalytics.score >= 80 : stats.totalSpent >= 200;
+                  const isAtRisk = customerAnalytics ? customerAnalytics.score < 50 : false;
                   const isNew = (Date.now() - new Date(customer.created_at).getTime()) / (1000 * 60 * 60 * 24) <= 7;
                   
                   return (
@@ -402,36 +403,68 @@ export default function CentroClienti() {
                       <Card
                         className={`
                           group relative overflow-hidden cursor-pointer 
-                          border-border/50 hover:border-primary/30 
-                          bg-card/50 hover:bg-card 
-                          shadow-sm hover:shadow-xl 
-                          transition-all duration-300
-                          ${isVip ? 'ring-1 ring-amber-500/20' : ''}
+                          border-0 
+                          bg-gradient-to-br from-card via-card to-muted/30
+                          shadow-md hover:shadow-2xl 
+                          transition-all duration-500 ease-out
+                          hover:-translate-y-1
+                          ${isVip ? 'ring-2 ring-amber-400/40 shadow-amber-500/10' : ''}
+                          ${isAtRisk ? 'ring-2 ring-destructive/30 shadow-destructive/10' : ''}
                         `}
                         onClick={() => navigate(`/centro/clienti/${customer.id}`)}
                       >
-                        {/* Decorative gradient on hover */}
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {/* Top accent bar */}
+                        <div className={`
+                          absolute top-0 left-0 right-0 h-1 
+                          ${isVip 
+                            ? 'bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500' 
+                            : isAtRisk 
+                              ? 'bg-gradient-to-r from-destructive/60 via-destructive to-destructive/60'
+                              : 'bg-gradient-to-r from-primary/40 via-primary to-primary/40'
+                          }
+                          opacity-0 group-hover:opacity-100 transition-opacity duration-300
+                        `} />
+                        
+                        {/* Background pattern */}
+                        <div className="absolute inset-0 opacity-[0.02] group-hover:opacity-[0.04] transition-opacity">
+                          <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-primary blur-3xl translate-x-20 -translate-y-20" />
+                          <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-primary blur-3xl -translate-x-16 translate-y-16" />
+                        </div>
                         
                         <div className="relative p-5">
-                          {/* Header */}
-                          <div className="flex items-start gap-4 mb-4">
-                            <div className={`
-                              h-14 w-14 rounded-2xl flex items-center justify-center flex-shrink-0
-                              transition-transform group-hover:scale-105
-                              ${isVip 
-                                ? 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-lg shadow-amber-500/20' 
-                                : 'bg-gradient-to-br from-primary/20 to-primary/5'
-                              }
-                            `}>
-                              <span className={`text-xl font-bold ${isVip ? 'text-white' : 'text-primary'}`}>
-                                {customer.name.charAt(0).toUpperCase()}
-                              </span>
+                          {/* Header with Avatar */}
+                          <div className="flex items-start gap-4 mb-5">
+                            <div className="relative">
+                              <div className={`
+                                h-16 w-16 rounded-2xl flex items-center justify-center flex-shrink-0
+                                transition-all duration-300 group-hover:scale-105 group-hover:rotate-3
+                                shadow-lg
+                                ${isVip 
+                                  ? 'bg-gradient-to-br from-amber-400 via-orange-400 to-amber-500 shadow-amber-500/30' 
+                                  : isAtRisk
+                                    ? 'bg-gradient-to-br from-destructive/80 to-destructive shadow-destructive/20'
+                                    : 'bg-gradient-to-br from-primary/90 to-primary shadow-primary/20'
+                                }
+                              `}>
+                                <span className="text-2xl font-bold text-primary-foreground">
+                                  {customer.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              {isVip && (
+                                <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-amber-400 flex items-center justify-center shadow-lg animate-pulse">
+                                  <Sparkles className="h-3 w-3 text-amber-900" />
+                                </div>
+                              )}
+                              {isNew && !isVip && (
+                                <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
+                                  <Plus className="h-3 w-3 text-white" />
+                                </div>
+                              )}
                             </div>
                             
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold text-foreground truncate text-lg group-hover:text-primary transition-colors">
+                            <div className="flex-1 min-w-0 pt-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <h3 className="font-bold text-foreground text-lg group-hover:text-primary transition-colors duration-300 truncate">
                                   {customer.name}
                                 </h3>
                                 {customerAnalytics && (
@@ -442,7 +475,7 @@ export default function CentroClienti() {
                                   />
                                 )}
                               </div>
-                              <div className="flex items-center gap-2 mt-1">
+                              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                                 {customerAnalytics && (
                                   <CustomerReturnPrediction
                                     predictedReturn={customerAnalytics.predictedReturn}
@@ -451,57 +484,53 @@ export default function CentroClienti() {
                                     repairCount={customerAnalytics.repairCount}
                                   />
                                 )}
-                                {isNew && (
-                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-green-500/10 text-green-600 border-green-500/20">
-                                    NUOVO
-                                  </Badge>
-                                )}
                               </div>
                             </div>
                           </div>
 
-                          {/* Stats Row */}
-                          <div className="flex items-center gap-3 mb-4">
-                            <Badge 
-                              variant="secondary" 
-                              className={`
-                                gap-1.5 font-semibold
-                                ${stats.repairCount > 0 
-                                  ? 'bg-primary/10 text-primary border-primary/20' 
-                                  : 'bg-muted text-muted-foreground'
-                                }
-                              `}
-                            >
-                              <Wrench className="h-3 w-3" />
-                              {stats.repairCount} {stats.repairCount === 1 ? 'riparazione' : 'riparazioni'}
-                            </Badge>
-                            <Badge 
-                              variant="secondary" 
-                              className={`
-                                gap-1.5 font-semibold
-                                ${stats.totalSpent > 0 
-                                  ? 'bg-green-500/10 text-green-600 border-green-500/20' 
-                                  : 'bg-muted text-muted-foreground'
-                                }
-                              `}
-                            >
-                              <Euro className="h-3 w-3" />
+                          {/* Stats Pills */}
+                          <div className="flex items-center gap-2 mb-5 flex-wrap">
+                            <div className={`
+                              inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                              transition-all duration-300
+                              ${stats.repairCount > 0 
+                                ? 'bg-primary/10 text-primary ring-1 ring-primary/20' 
+                                : 'bg-muted text-muted-foreground'
+                              }
+                            `}>
+                              <Wrench className="h-3.5 w-3.5" />
+                              {stats.repairCount} {stats.repairCount === 1 ? 'lavoro' : 'lavori'}
+                            </div>
+                            <div className={`
+                              inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
+                              transition-all duration-300
+                              ${stats.totalSpent > 0 
+                                ? 'bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20' 
+                                : 'bg-muted text-muted-foreground'
+                              }
+                            `}>
+                              <Euro className="h-3.5 w-3.5" />
                               €{stats.totalSpent.toFixed(0)}
-                            </Badge>
+                            </div>
+                            {isNew && (
+                              <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20">
+                                NUOVO
+                              </div>
+                            )}
                           </div>
 
-                          {/* Contact Info */}
-                          <div className="space-y-1.5 mb-4">
+                          {/* Contact Actions */}
+                          <div className="space-y-2 mb-5">
                             {customer.email && (
                               <a 
                                 href={`mailto:${customer.email}`}
                                 onClick={(e) => e.stopPropagation()}
-                                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/60 transition-all group/link"
+                                className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-blue-500/10 border border-transparent hover:border-blue-500/20 transition-all duration-300 group/link"
                               >
-                                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center group-hover/link:bg-blue-500/20 transition-colors">
-                                  <Mail className="h-4 w-4 text-blue-500" />
+                                <div className="h-9 w-9 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover/link:bg-blue-500 group-hover/link:shadow-lg group-hover/link:shadow-blue-500/20 transition-all duration-300">
+                                  <Mail className="h-4 w-4 text-blue-500 group-hover/link:text-white transition-colors" />
                                 </div>
-                                <span className="text-sm truncate text-muted-foreground group-hover/link:text-foreground transition-colors">
+                                <span className="text-sm truncate text-muted-foreground group-hover/link:text-foreground transition-colors font-medium">
                                   {customer.email}
                                 </span>
                               </a>
@@ -509,28 +538,43 @@ export default function CentroClienti() {
                             <a 
                               href={`tel:${customer.phone}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-muted/60 transition-all group/link"
+                              className="flex items-center gap-3 p-3 rounded-xl bg-muted/30 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/20 transition-all duration-300 group/link"
                             >
-                              <div className="h-8 w-8 rounded-lg bg-green-500/10 flex items-center justify-center group-hover/link:bg-green-500/20 transition-colors">
-                                <Phone className="h-4 w-4 text-green-500" />
+                              <div className="h-9 w-9 rounded-xl bg-emerald-500/10 flex items-center justify-center group-hover/link:bg-emerald-500 group-hover/link:shadow-lg group-hover/link:shadow-emerald-500/20 transition-all duration-300">
+                                <Phone className="h-4 w-4 text-emerald-500 group-hover/link:text-white transition-colors" />
                               </div>
-                              <span className="text-sm font-medium text-foreground">
+                              <span className="text-sm font-semibold text-foreground">
                                 {customer.phone}
                               </span>
                             </a>
                           </div>
 
-                          {/* Footer */}
-                          <div className="pt-4 border-t border-border/50 flex items-center justify-between">
-                            <span className="text-xs text-muted-foreground">
-                              {stats.totalSpent === 0 && "Nessuna spesa"}
-                              {stats.totalSpent > 0 && stats.totalSpent < 100 && "Cliente occasionale"}
-                              {stats.totalSpent >= 100 && stats.totalSpent < 200 && "Cliente abituale"}
-                              {stats.totalSpent >= 200 && "Cliente VIP ⭐"}
-                            </span>
-                            <div className="flex items-center gap-1 text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                              <span>Dettagli</span>
-                              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                          {/* Footer with CTA */}
+                          <div className="pt-4 border-t border-border/30 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {isVip && (
+                                <span className="text-xs font-medium text-amber-600 flex items-center gap-1">
+                                  <Sparkles className="h-3 w-3" />
+                                  Cliente VIP
+                                </span>
+                              )}
+                              {isAtRisk && !isVip && (
+                                <span className="text-xs font-medium text-destructive flex items-center gap-1">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  A Rischio
+                                </span>
+                              )}
+                              {!isVip && !isAtRisk && (
+                                <span className="text-xs text-muted-foreground">
+                                  {stats.totalSpent === 0 && "Nuovo contatto"}
+                                  {stats.totalSpent > 0 && stats.totalSpent < 100 && "Cliente occasionale"}
+                                  {stats.totalSpent >= 100 && stats.totalSpent < 200 && "Cliente abituale"}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-primary text-sm font-semibold opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+                              <span>Apri</span>
+                              <ArrowRight className="h-4 w-4" />
                             </div>
                           </div>
                         </div>
