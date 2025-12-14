@@ -66,7 +66,7 @@ export default function CornerImpostazioni() {
     );
   }, [address, latitude, longitude, logoUrl, openingHours, originalValues, corner]);
 
-  const { showDialog, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasChanges);
+  const { showDialog, closeDialog } = useUnsavedChanges(hasChanges);
   // Dymo state (stored in localStorage for Corner)
   const [dymoEnabled, setDymoEnabled] = useState(() => {
     const saved = localStorage.getItem('corner_dymo_enabled');
@@ -434,10 +434,10 @@ export default function CornerImpostazioni() {
             open={showDialog}
             onSave={async () => {
               await handleSave();
-              confirmNavigation();
+              closeDialog();
             }}
-            onDiscard={confirmNavigation}
-            onCancel={cancelNavigation}
+            onDiscard={closeDialog}
+            onCancel={closeDialog}
             isSaving={isSaving}
           />
         </div>
