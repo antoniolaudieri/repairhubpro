@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { supabase } from "@/integrations/supabase/client";
 import { Store, Building2, Loader2 } from "lucide-react";
+import { OpeningHours, formatOpeningHoursForPopup } from "@/components/settings/OpeningHoursEditor";
 
 // Fix for default marker icon
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -49,6 +50,7 @@ interface Partner {
   phone?: string;
   email?: string;
   logo_url?: string | null;
+  opening_hours?: OpeningHours | null;
 }
 
 export function PartnersMap() {
@@ -64,13 +66,13 @@ export function PartnersMap() {
         const [cornersRes, centriRes] = await Promise.all([
           supabase
             .from("corners")
-            .select("id, business_name, address, latitude, longitude, phone")
+            .select("id, business_name, address, latitude, longitude, phone, opening_hours")
             .eq("status", "approved")
             .not("latitude", "is", null)
             .not("longitude", "is", null),
           supabase
             .from("centri_assistenza")
-            .select("id, business_name, address, latitude, longitude, phone, email, logo_url")
+            .select("id, business_name, address, latitude, longitude, phone, email, logo_url, opening_hours")
             .eq("status", "approved")
             .not("latitude", "is", null)
             .not("longitude", "is", null),
@@ -84,6 +86,7 @@ export function PartnersMap() {
           longitude: c.longitude!,
           type: 'corner' as const,
           phone: c.phone,
+          opening_hours: c.opening_hours as unknown as OpeningHours | null,
         }));
 
         const centri: Partner[] = (centriRes.data || []).map((c) => ({
@@ -96,6 +99,7 @@ export function PartnersMap() {
           phone: c.phone,
           email: c.email,
           logo_url: c.logo_url,
+          opening_hours: c.opening_hours as unknown as OpeningHours | null,
         }));
 
         setPartners([...corners, ...centri]);
@@ -192,6 +196,7 @@ export function PartnersMap() {
               <div style="font-size: 11px; color: #3b82f6; font-weight: 600;">🔧 Riparazioni professionali</div>
               <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">Smartphone, tablet, PC e altri dispositivi</div>
             </div>
+            ${formatOpeningHoursForPopup(partner.opening_hours || null)}
           </div>
         `;
       } else {
@@ -221,6 +226,7 @@ export function PartnersMap() {
               <div style="font-size: 11px; color: #d97706; font-weight: 600;">📦 Punto Consegna & Ritiro</div>
               <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">Lascia qui il tuo dispositivo per la riparazione</div>
             </div>
+            ${formatOpeningHoursForPopup(partner.opening_hours || null)}
           </div>
         `;
       }
