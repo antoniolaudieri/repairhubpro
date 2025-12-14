@@ -2,16 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Megaphone, Check, X, Eye, Calendar, MapPin, Euro, 
-  Clock, Building2, Mail, TrendingUp, Settings
+  Clock, Building2, Mail, TrendingUp, Settings, TestTube,
+  Percent, Timer, Play, Pause, Trash2, Video, Image, Palette
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Slider } from '@/components/ui/slider';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -43,7 +46,26 @@ interface Campaign {
 interface PricingSettings {
   ad_price_per_corner_per_week: number;
   ad_corner_revenue_percentage: number;
+  ad_duration_discount_1month: number;
+  ad_duration_discount_3months: number;
+  ad_duration_discount_1year: number;
+  ad_volume_discount_3corners: number;
+  ad_volume_discount_5corners: number;
+  ad_volume_discount_10corners: number;
+  ad_display_seconds_extra_rate: number;
 }
+
+const defaultPricing: PricingSettings = {
+  ad_price_per_corner_per_week: 5,
+  ad_corner_revenue_percentage: 50,
+  ad_duration_discount_1month: 10,
+  ad_duration_discount_3months: 20,
+  ad_duration_discount_1year: 35,
+  ad_volume_discount_3corners: 10,
+  ad_volume_discount_5corners: 15,
+  ad_volume_discount_10corners: 25,
+  ad_display_seconds_extra_rate: 10
+};
 
 export default function AdminPubblicita() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -51,11 +73,11 @@ export default function AdminPubblicita() {
   const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [showRejectDialog, setShowRejectDialog] = useState(false);
-  const [pricing, setPricing] = useState<PricingSettings>({
-    ad_price_per_corner_per_week: 5,
-    ad_corner_revenue_percentage: 50
-  });
+  const [showTestModeDialog, setShowTestModeDialog] = useState(false);
+  const [testModeEnabled, setTestModeEnabled] = useState(false);
+  const [pricing, setPricing] = useState<PricingSettings>(defaultPricing);
   const [savingPricing, setSavingPricing] = useState(false);
+  const [activeTab, setActiveTab] = useState('all');
 
   useEffect(() => {
     loadData();
@@ -63,7 +85,6 @@ export default function AdminPubblicita() {
 
   const loadData = async () => {
     try {
-      // Load campaigns with corners
       const { data: campaignsData, error } = await supabase
         .from('display_ad_campaigns')
         .select(`
@@ -82,17 +103,21 @@ export default function AdminPubblicita() {
       // Load pricing settings
       const { data: settings } = await supabase
         .from('platform_settings')
-        .select('key, value')
-        .in('key', ['ad_price_per_corner_per_week', 'ad_corner_revenue_percentage']);
+        .select('key, value');
 
       if (settings) {
-        const pricePerWeek = settings.find(s => s.key === 'ad_price_per_corner_per_week')?.value || 5;
-        const cornerPercentage = settings.find(s => s.key === 'ad_corner_revenue_percentage')?.value || 50;
-        setPricing({
-          ad_price_per_corner_per_week: pricePerWeek,
-          ad_corner_revenue_percentage: cornerPercentage
+        const newPricing = { ...defaultPricing };
+        settings.forEach(s => {
+          if (s.key in newPricing) {
+            (newPricing as any)[s.key] = s.value;
+          }
         });
+        setPricing(newPricing);
       }
+
+      // Check test mode
+      const testModeSetting = settings?.find(s => s.key === 'ad_test_mode_enabled');
+      setTestModeEnabled(testModeSetting?.value === 1);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Errore caricamento dati');
@@ -101,18 +126,24 @@ export default function AdminPubblicita() {
     }
   };
 
-  const handleApprove = async (campaign: Campaign) => {
+  const handleApprove = async (campaign: Campaign, skipPayment = false) => {
     try {
+      const updateData: any = {
+        status: 'active',
+        approved_at: new Date().toISOString()
+      };
+      
+      if (skipPayment) {
+        updateData.paid_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('display_ad_campaigns')
-        .update({
-          status: 'active',
-          approved_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', campaign.id);
 
       if (error) throw error;
-      toast.success('Campagna approvata');
+      toast.success(skipPayment ? 'Campagna approvata (modalità test)' : 'Campagna approvata');
       loadData();
     } catch (error) {
       console.error('Error approving campaign:', error);
@@ -144,18 +175,67 @@ export default function AdminPubblicita() {
     }
   };
 
+  const handleDelete = async (campaign: Campaign) => {
+    if (!confirm('Sei sicuro di voler eliminare questa campagna?')) return;
+    
+    try {
+      // Delete corner assignments first
+      await supabase
+        .from('display_ad_campaign_corners')
+        .delete()
+        .eq('campaign_id', campaign.id);
+
+      const { error } = await supabase
+        .from('display_ad_campaigns')
+        .delete()
+        .eq('id', campaign.id);
+
+      if (error) throw error;
+      toast.success('Campagna eliminata');
+      loadData();
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      toast.error('Errore eliminazione');
+    }
+  };
+
+  const handleToggleStatus = async (campaign: Campaign) => {
+    const newStatus = campaign.status === 'active' ? 'paused' : 'active';
+    try {
+      const { error } = await supabase
+        .from('display_ad_campaigns')
+        .update({ status: newStatus })
+        .eq('id', campaign.id);
+
+      if (error) throw error;
+      toast.success(newStatus === 'active' ? 'Campagna riattivata' : 'Campagna in pausa');
+      loadData();
+    } catch (error) {
+      console.error('Error toggling status:', error);
+      toast.error('Errore aggiornamento');
+    }
+  };
+
   const handleSavePricing = async () => {
     setSavingPricing(true);
     try {
-      await supabase
-        .from('platform_settings')
-        .update({ value: pricing.ad_price_per_corner_per_week })
-        .eq('key', 'ad_price_per_corner_per_week');
+      const updates = Object.entries(pricing).map(([key, value]) => ({
+        key,
+        value,
+        label: key.replace(/_/g, ' ').replace('ad ', ''),
+        description: ''
+      }));
 
-      await supabase
-        .from('platform_settings')
-        .update({ value: pricing.ad_corner_revenue_percentage })
-        .eq('key', 'ad_corner_revenue_percentage');
+      for (const update of updates) {
+        await supabase
+          .from('platform_settings')
+          .upsert({ 
+            key: update.key, 
+            value: update.value,
+            label: update.label,
+            description: update.description
+          }, { onConflict: 'key' });
+      }
 
       toast.success('Tariffe aggiornate');
     } catch (error) {
@@ -166,20 +246,56 @@ export default function AdminPubblicita() {
     }
   };
 
+  const handleToggleTestMode = async () => {
+    try {
+      await supabase
+        .from('platform_settings')
+        .upsert({ 
+          key: 'ad_test_mode_enabled', 
+          value: testModeEnabled ? 0 : 1,
+          label: 'Test Mode Pubblicità',
+          description: 'Abilita approvazione manuale senza pagamento'
+        }, { onConflict: 'key' });
+
+      setTestModeEnabled(!testModeEnabled);
+      toast.success(testModeEnabled ? 'Modalità test disabilitata' : 'Modalità test abilitata');
+    } catch (error) {
+      console.error('Error toggling test mode:', error);
+      toast.error('Errore');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string }> = {
-      pending_payment: { variant: 'outline', label: 'Attesa Pagamento' },
-      pending_approval: { variant: 'secondary', label: 'Da Approvare' },
-      active: { variant: 'default', label: 'Attiva' },
+    const variants: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string; className?: string }> = {
+      pending_payment: { variant: 'outline', label: 'Attesa Pagamento', className: 'border-yellow-500 text-yellow-600' },
+      pending_approval: { variant: 'secondary', label: 'Da Approvare', className: 'bg-amber-100 text-amber-800' },
+      active: { variant: 'default', label: 'Attiva', className: 'bg-green-500' },
+      paused: { variant: 'outline', label: 'In Pausa', className: 'border-blue-500 text-blue-600' },
       completed: { variant: 'outline', label: 'Completata' },
       rejected: { variant: 'destructive', label: 'Rifiutata' }
     };
-    const { variant, label } = variants[status] || { variant: 'outline', label: status };
-    return <Badge variant={variant}>{label}</Badge>;
+    const { variant, label, className } = variants[status] || { variant: 'outline', label: status };
+    return <Badge variant={variant} className={className}>{label}</Badge>;
   };
 
+  const getAdTypeIcon = (type: string) => {
+    switch (type) {
+      case 'video': return <Video className="h-3.5 w-3.5" />;
+      case 'image': return <Image className="h-3.5 w-3.5" />;
+      default: return <Palette className="h-3.5 w-3.5" />;
+    }
+  };
+
+  const filteredCampaigns = campaigns.filter(c => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'pending') return c.status === 'pending_payment' || c.status === 'pending_approval';
+    if (activeTab === 'active') return c.status === 'active';
+    if (activeTab === 'completed') return c.status === 'completed' || c.status === 'rejected';
+    return true;
+  });
+
   const stats = {
-    pending: campaigns.filter(c => c.status === 'pending_approval').length,
+    pending: campaigns.filter(c => c.status === 'pending_approval' || c.status === 'pending_payment').length,
     active: campaigns.filter(c => c.status === 'active').length,
     totalRevenue: campaigns.filter(c => c.status === 'active' || c.status === 'completed')
       .reduce((sum, c) => sum + (c.platform_revenue || 0), 0),
@@ -197,215 +313,570 @@ export default function AdminPubblicita() {
 
   return (
     <div className="space-y-6">
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.pending}</p>
-                <p className="text-sm text-muted-foreground">Da Approvare</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Megaphone className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{stats.active}</p>
-                <p className="text-sm text-muted-foreground">Campagne Attive</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Euro className="h-5 w-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">€{stats.totalRevenue.toFixed(2)}</p>
-                <p className="text-sm text-muted-foreground">Ricavo Piattaforma</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">€{stats.cornerPayout.toFixed(2)}</p>
-                <p className="text-sm text-muted-foreground">Payout Corner</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Header with Test Mode */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Megaphone className="h-6 w-6 text-primary" />
+            Gestione Pubblicità
+          </h1>
+          <p className="text-muted-foreground">Gestisci campagne, tariffe e sconti</p>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          {testModeEnabled && (
+            <Badge variant="outline" className="bg-amber-50 border-amber-300 text-amber-700 gap-1">
+              <TestTube className="h-3 w-3" />
+              Modalità Test Attiva
+            </Badge>
+          )}
+          <Button 
+            variant={testModeEnabled ? "default" : "outline"}
+            size="sm"
+            onClick={handleToggleTestMode}
+            className={testModeEnabled ? "bg-amber-500 hover:bg-amber-600" : ""}
+          >
+            <TestTube className="h-4 w-4 mr-1" />
+            {testModeEnabled ? 'Disabilita Test' : 'Abilita Test'}
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="campaigns">
-        <TabsList>
-          <TabsTrigger value="campaigns">Campagne</TabsTrigger>
-          <TabsTrigger value="settings">Tariffe</TabsTrigger>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+          <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-amber-500/20 rounded-xl">
+                  <Clock className="h-6 w-6 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-amber-700">{stats.pending}</p>
+                  <p className="text-sm text-amber-600/80">In Attesa</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-green-500/20 rounded-xl">
+                  <Megaphone className="h-6 w-6 text-green-600" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-green-700">{stats.active}</p>
+                  <p className="text-sm text-green-600/80">Attive</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-blue-500/20 rounded-xl">
+                  <Euro className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-blue-700">€{stats.totalRevenue.toFixed(0)}</p>
+                  <p className="text-sm text-blue-600/80">Ricavi</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+          <Card className="bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-purple-500/20 rounded-xl">
+                  <TrendingUp className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-3xl font-bold text-purple-700">€{stats.cornerPayout.toFixed(0)}</p>
+                  <p className="text-sm text-purple-600/80">Payout Corner</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      <Tabs defaultValue="campaigns" className="space-y-4">
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="campaigns" className="data-[state=active]:bg-background">
+            <Megaphone className="h-4 w-4 mr-2" />
+            Campagne
+          </TabsTrigger>
+          <TabsTrigger value="pricing" className="data-[state=active]:bg-background">
+            <Euro className="h-4 w-4 mr-2" />
+            Tariffe Base
+          </TabsTrigger>
+          <TabsTrigger value="discounts" className="data-[state=active]:bg-background">
+            <Percent className="h-4 w-4 mr-2" />
+            Sconti
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="campaigns" className="space-y-4">
-          {campaigns.length === 0 ? (
+          {/* Filter Tabs */}
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { id: 'all', label: 'Tutte', count: campaigns.length },
+              { id: 'pending', label: 'In Attesa', count: stats.pending },
+              { id: 'active', label: 'Attive', count: stats.active },
+              { id: 'completed', label: 'Completate', count: campaigns.filter(c => c.status === 'completed' || c.status === 'rejected').length }
+            ].map(tab => (
+              <Button
+                key={tab.id}
+                variant={activeTab === tab.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => setActiveTab(tab.id)}
+                className="gap-2"
+              >
+                {tab.label}
+                <Badge variant="secondary" className="ml-1">{tab.count}</Badge>
+              </Button>
+            ))}
+          </div>
+
+          {filteredCampaigns.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center text-muted-foreground">
-                Nessuna campagna pubblicitaria
+                <Megaphone className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                <p>Nessuna campagna in questa categoria</p>
               </CardContent>
             </Card>
           ) : (
-            campaigns.map((campaign) => (
-              <motion.div
-                key={campaign.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <Card className={campaign.status === 'pending_approval' ? 'border-yellow-500' : ''}>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-col md:flex-row gap-4">
-                      {/* Preview */}
-                      <div className="w-full md:w-48 aspect-video rounded-lg overflow-hidden flex-shrink-0">
-                        {campaign.ad_type === 'image' && campaign.ad_image_url ? (
-                          <img src={campaign.ad_image_url} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className={`w-full h-full bg-gradient-to-br ${campaign.ad_gradient} flex items-center justify-center p-2`}>
-                            <p className="text-white text-xs font-medium text-center">{campaign.ad_title}</p>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div>
-                            <h3 className="font-semibold">{campaign.ad_title}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {campaign.advertiser_name} 
-                              {campaign.advertiser_company && ` · ${campaign.advertiser_company}`}
-                            </p>
-                          </div>
-                          {getStatusBadge(campaign.status)}
-                        </div>
-
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mb-3">
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {format(new Date(campaign.start_date), 'dd/MM', { locale: it })} - {format(new Date(campaign.end_date), 'dd/MM', { locale: it })}
-                          </div>
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <MapPin className="h-3.5 w-3.5" />
-                            {campaign.corners?.length || 0} Corner
-                          </div>
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Euro className="h-3.5 w-3.5" />
-                            €{campaign.total_price?.toFixed(2)}
-                          </div>
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            <Mail className="h-3.5 w-3.5" />
-                            {campaign.advertiser_email}
+            <div className="space-y-3">
+              {filteredCampaigns.map((campaign, index) => (
+                <motion.div
+                  key={campaign.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <Card className={`overflow-hidden transition-all hover:shadow-md ${
+                    campaign.status === 'pending_approval' ? 'border-l-4 border-l-amber-500' :
+                    campaign.status === 'pending_payment' ? 'border-l-4 border-l-yellow-400' :
+                    campaign.status === 'active' ? 'border-l-4 border-l-green-500' : ''
+                  }`}>
+                    <CardContent className="p-4">
+                      <div className="flex flex-col md:flex-row gap-4">
+                        {/* Preview */}
+                        <div className="w-full md:w-40 aspect-video rounded-lg overflow-hidden flex-shrink-0 relative group">
+                          {campaign.ad_type === 'video' && campaign.ad_image_url ? (
+                            <video src={campaign.ad_image_url} className="w-full h-full object-cover" muted loop />
+                          ) : campaign.ad_type === 'image' && campaign.ad_image_url ? (
+                            <img src={campaign.ad_image_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className={`w-full h-full bg-gradient-to-br ${campaign.ad_gradient} flex items-center justify-center p-2`}>
+                              <p className="text-white text-xs font-medium text-center line-clamp-2">{campaign.ad_title}</p>
+                            </div>
+                          )}
+                          <div className="absolute top-1 left-1">
+                            <Badge variant="secondary" className="text-xs gap-1 bg-black/50 text-white border-0">
+                              {getAdTypeIcon(campaign.ad_type)}
+                              {campaign.ad_type}
+                            </Badge>
                           </div>
                         </div>
 
-                        {campaign.status === 'pending_approval' && (
-                          <div className="flex gap-2">
-                            <Button size="sm" onClick={() => handleApprove(campaign)}>
-                              <Check className="h-4 w-4 mr-1" /> Approva
-                            </Button>
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div>
+                              <h3 className="font-semibold text-lg">{campaign.ad_title}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                {campaign.advertiser_name} 
+                                {campaign.advertiser_company && ` · ${campaign.advertiser_company}`}
+                              </p>
+                            </div>
+                            {getStatusBadge(campaign.status)}
+                          </div>
+
+                          <div className="flex flex-wrap gap-3 text-sm mb-3">
+                            <div className="flex items-center gap-1.5 text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {format(new Date(campaign.start_date), 'dd MMM', { locale: it })} - {format(new Date(campaign.end_date), 'dd MMM', { locale: it })}
+                            </div>
+                            <div className="flex items-center gap-1.5 text-muted-foreground bg-muted/50 px-2 py-1 rounded">
+                              <MapPin className="h-3.5 w-3.5" />
+                              {campaign.corners?.length || 0} Corner
+                            </div>
+                            <div className="flex items-center gap-1.5 font-medium bg-primary/10 text-primary px-2 py-1 rounded">
+                              <Euro className="h-3.5 w-3.5" />
+                              €{campaign.total_price?.toFixed(2)}
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex flex-wrap gap-2">
+                            {(campaign.status === 'pending_approval' || (testModeEnabled && campaign.status === 'pending_payment')) && (
+                              <>
+                                <Button 
+                                  size="sm" 
+                                  onClick={() => handleApprove(campaign, testModeEnabled && campaign.status === 'pending_payment')}
+                                  className="bg-green-600 hover:bg-green-700"
+                                >
+                                  <Check className="h-4 w-4 mr-1" /> 
+                                  {testModeEnabled && campaign.status === 'pending_payment' ? 'Approva (Test)' : 'Approva'}
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => {
+                                    setSelectedCampaign(campaign);
+                                    setShowRejectDialog(true);
+                                  }}
+                                >
+                                  <X className="h-4 w-4 mr-1" /> Rifiuta
+                                </Button>
+                              </>
+                            )}
+                            
+                            {campaign.status === 'active' && (
+                              <Button size="sm" variant="outline" onClick={() => handleToggleStatus(campaign)}>
+                                <Pause className="h-4 w-4 mr-1" /> Pausa
+                              </Button>
+                            )}
+                            
+                            {campaign.status === 'paused' && (
+                              <Button size="sm" variant="outline" onClick={() => handleToggleStatus(campaign)}>
+                                <Play className="h-4 w-4 mr-1" /> Riattiva
+                              </Button>
+                            )}
+                            
                             <Button 
                               size="sm" 
-                              variant="destructive"
-                              onClick={() => {
-                                setSelectedCampaign(campaign);
-                                setShowRejectDialog(true);
-                              }}
+                              variant="ghost" 
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => handleDelete(campaign)}
                             >
-                              <X className="h-4 w-4 mr-1" /> Rifiuta
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
-                        )}
 
-                        {campaign.rejected_reason && (
-                          <p className="text-sm text-red-600 mt-2">
-                            Motivo rifiuto: {campaign.rejected_reason}
-                          </p>
-                        )}
+                          {campaign.rejected_reason && (
+                            <p className="text-sm text-red-600 mt-2 bg-red-50 px-2 py-1 rounded">
+                              Motivo rifiuto: {campaign.rejected_reason}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
           )}
         </TabsContent>
 
-        <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Tariffe Pubblicitarie
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Prezzo per Corner/Settimana (€)</Label>
-                  <Input
-                    type="number"
-                    min={1}
-                    value={pricing.ad_price_per_corner_per_week}
-                    onChange={(e) => setPricing(prev => ({ ...prev, ad_price_per_corner_per_week: Number(e.target.value) }))}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Prezzo base per mostrare una pubblicità su un Corner per una settimana
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Percentuale Corner (%)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={pricing.ad_corner_revenue_percentage}
-                    onChange={(e) => setPricing(prev => ({ ...prev, ad_corner_revenue_percentage: Number(e.target.value) }))}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Percentuale del ricavo riconosciuta al Corner ospitante
-                  </p>
-                </div>
-              </div>
+        <TabsContent value="pricing">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Euro className="h-5 w-5 text-primary" />
+                  Tariffe Base
+                </CardTitle>
+                <CardDescription>Configura i prezzi base per le campagne pubblicitarie</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-base">Prezzo per Corner/Settimana</Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number"
+                        min={1}
+                        value={pricing.ad_price_per_corner_per_week}
+                        onChange={(e) => setPricing(prev => ({ ...prev, ad_price_per_corner_per_week: Number(e.target.value) }))}
+                        className="w-32"
+                      />
+                      <span className="text-2xl font-bold text-primary">€{pricing.ad_price_per_corner_per_week}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Prezzo base per mostrare una pubblicità su un Corner per 7 giorni (5 secondi)
+                    </p>
+                  </div>
 
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h4 className="font-medium mb-2">Esempio di calcolo</h4>
-                <p className="text-sm text-muted-foreground">
-                  Campagna su 3 Corner per 2 settimane = 3 × 2 × €{pricing.ad_price_per_corner_per_week} = <strong>€{(3 * 2 * pricing.ad_price_per_corner_per_week).toFixed(2)}</strong>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  • Ricavo Piattaforma: €{((3 * 2 * pricing.ad_price_per_corner_per_week) * (100 - pricing.ad_corner_revenue_percentage) / 100).toFixed(2)} ({100 - pricing.ad_corner_revenue_percentage}%)
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  • Payout Corner: €{((3 * 2 * pricing.ad_price_per_corner_per_week) * pricing.ad_corner_revenue_percentage / 100).toFixed(2)} ({pricing.ad_corner_revenue_percentage}%)
-                </p>
-              </div>
+                  <div className="space-y-2">
+                    <Label className="text-base">Quota Corner</Label>
+                    <div className="flex items-center gap-3">
+                      <Slider
+                        value={[pricing.ad_corner_revenue_percentage]}
+                        onValueChange={(v) => setPricing(prev => ({ ...prev, ad_corner_revenue_percentage: v[0] }))}
+                        min={0}
+                        max={100}
+                        step={5}
+                        className="flex-1"
+                      />
+                      <span className="text-2xl font-bold text-primary w-16">{pricing.ad_corner_revenue_percentage}%</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Percentuale del ricavo riconosciuta al Corner ospitante
+                    </p>
+                  </div>
 
-              <Button onClick={handleSavePricing} disabled={savingPricing}>
-                {savingPricing ? 'Salvataggio...' : 'Salva Tariffe'}
-              </Button>
-            </CardContent>
-          </Card>
+                  <div className="space-y-2">
+                    <Label className="text-base">Costo Extra per Secondo</Label>
+                    <div className="flex items-center gap-3">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={50}
+                        value={pricing.ad_display_seconds_extra_rate}
+                        onChange={(e) => setPricing(prev => ({ ...prev, ad_display_seconds_extra_rate: Number(e.target.value) }))}
+                        className="w-32"
+                      />
+                      <span className="text-lg font-bold text-primary">+{pricing.ad_display_seconds_extra_rate}% /sec</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Ogni secondo oltre i 5 base aumenta il prezzo di questa percentuale
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  Simulatore Prezzi
+                </CardTitle>
+                <CardDescription>Calcola il prezzo di una campagna esempio</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4 p-4 bg-gradient-to-br from-muted/50 to-muted rounded-xl">
+                  <div className="text-center mb-4">
+                    <p className="text-sm text-muted-foreground">Esempio: 5 Corner × 4 settimane × 10 secondi</p>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Base (5s)</span>
+                      <span>5 × 4 × €{pricing.ad_price_per_corner_per_week} = €{(5 * 4 * pricing.ad_price_per_corner_per_week).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-amber-600">
+                      <span>Extra secondi (+5s × {pricing.ad_display_seconds_extra_rate}%)</span>
+                      <span>+€{((5 * 4 * pricing.ad_price_per_corner_per_week) * (5 * pricing.ad_display_seconds_extra_rate / 100)).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600">
+                      <span>Sconto volume (5+ corner: -{pricing.ad_volume_discount_5corners}%)</span>
+                      <span>-€{(((5 * 4 * pricing.ad_price_per_corner_per_week) * 1.5) * pricing.ad_volume_discount_5corners / 100).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600">
+                      <span>Sconto durata (1 mese: -{pricing.ad_duration_discount_1month}%)</span>
+                      <span>-€{(((5 * 4 * pricing.ad_price_per_corner_per_week) * 1.5 * 0.85) * pricing.ad_duration_discount_1month / 100).toFixed(2)}</span>
+                    </div>
+                    <div className="border-t pt-2 flex justify-between font-bold text-lg">
+                      <span>Totale Cliente</span>
+                      <span className="text-primary">
+                        €{(
+                          (5 * 4 * pricing.ad_price_per_corner_per_week) * 
+                          (1 + (5 * pricing.ad_display_seconds_extra_rate / 100)) * 
+                          (1 - pricing.ad_volume_discount_5corners / 100) * 
+                          (1 - pricing.ad_duration_discount_1month / 100)
+                        ).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mt-4 pt-4 border-t">
+                    <div className="text-center p-2 bg-background rounded-lg">
+                      <p className="text-xs text-muted-foreground">Piattaforma</p>
+                      <p className="font-bold text-blue-600">
+                        €{(
+                          ((5 * 4 * pricing.ad_price_per_corner_per_week) * 
+                          (1 + (5 * pricing.ad_display_seconds_extra_rate / 100)) * 
+                          (1 - pricing.ad_volume_discount_5corners / 100) * 
+                          (1 - pricing.ad_duration_discount_1month / 100)) *
+                          (100 - pricing.ad_corner_revenue_percentage) / 100
+                        ).toFixed(2)}
+                      </p>
+                    </div>
+                    <div className="text-center p-2 bg-background rounded-lg">
+                      <p className="text-xs text-muted-foreground">Corner (totale)</p>
+                      <p className="font-bold text-purple-600">
+                        €{(
+                          ((5 * 4 * pricing.ad_price_per_corner_per_week) * 
+                          (1 + (5 * pricing.ad_display_seconds_extra_rate / 100)) * 
+                          (1 - pricing.ad_volume_discount_5corners / 100) * 
+                          (1 - pricing.ad_duration_discount_1month / 100)) *
+                          pricing.ad_corner_revenue_percentage / 100
+                        ).toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-4">
+            <Button onClick={handleSavePricing} disabled={savingPricing} size="lg">
+              {savingPricing ? 'Salvataggio...' : 'Salva Tariffe'}
+            </Button>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="discounts">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Sconti Durata
+                </CardTitle>
+                <CardDescription>Sconti applicati in base alla durata della campagna</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">1 Mese (30 giorni)</p>
+                      <p className="text-xs text-muted-foreground">Campagne mensili</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={pricing.ad_duration_discount_1month}
+                        onChange={(e) => setPricing(prev => ({ ...prev, ad_duration_discount_1month: Number(e.target.value) }))}
+                        className="w-20 text-center"
+                      />
+                      <span className="text-lg font-bold text-green-600">%</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">3 Mesi (90 giorni)</p>
+                      <p className="text-xs text-muted-foreground">Campagne trimestrali</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={pricing.ad_duration_discount_3months}
+                        onChange={(e) => setPricing(prev => ({ ...prev, ad_duration_discount_3months: Number(e.target.value) }))}
+                        className="w-20 text-center"
+                      />
+                      <span className="text-lg font-bold text-green-600">%</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg">
+                    <div>
+                      <p className="font-medium flex items-center gap-2">
+                        1 Anno (365 giorni)
+                        <Badge className="bg-amber-500">Best Value</Badge>
+                      </p>
+                      <p className="text-xs text-muted-foreground">Campagne annuali</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={pricing.ad_duration_discount_1year}
+                        onChange={(e) => setPricing(prev => ({ ...prev, ad_duration_discount_1year: Number(e.target.value) }))}
+                        className="w-20 text-center"
+                      />
+                      <span className="text-lg font-bold text-green-600">%</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  Sconti Volume
+                </CardTitle>
+                <CardDescription>Sconti applicati in base al numero di Corner selezionati</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">3+ Corner</p>
+                      <p className="text-xs text-muted-foreground">Campagne multi-location</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={pricing.ad_volume_discount_3corners}
+                        onChange={(e) => setPricing(prev => ({ ...prev, ad_volume_discount_3corners: Number(e.target.value) }))}
+                        className="w-20 text-center"
+                      />
+                      <span className="text-lg font-bold text-green-600">%</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">5+ Corner</p>
+                      <p className="text-xs text-muted-foreground">Campagne regionali</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={pricing.ad_volume_discount_5corners}
+                        onChange={(e) => setPricing(prev => ({ ...prev, ad_volume_discount_5corners: Number(e.target.value) }))}
+                        className="w-20 text-center"
+                      />
+                      <span className="text-lg font-bold text-green-600">%</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+                    <div>
+                      <p className="font-medium flex items-center gap-2">
+                        10+ Corner
+                        <Badge className="bg-purple-500">Network</Badge>
+                      </p>
+                      <p className="text-xs text-muted-foreground">Campagne nazionali</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={pricing.ad_volume_discount_10corners}
+                        onChange={(e) => setPricing(prev => ({ ...prev, ad_volume_discount_10corners: Number(e.target.value) }))}
+                        className="w-20 text-center"
+                      />
+                      <span className="text-lg font-bold text-green-600">%</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-4">
+            <Button onClick={handleSavePricing} disabled={savingPricing} size="lg">
+              {savingPricing ? 'Salvataggio...' : 'Salva Sconti'}
+            </Button>
+          </div>
         </TabsContent>
       </Tabs>
 
@@ -414,6 +885,9 @@ export default function AdminPubblicita() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rifiuta Campagna</DialogTitle>
+            <DialogDescription>
+              Specifica il motivo del rifiuto. L'inserzionista riceverà questa comunicazione.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
