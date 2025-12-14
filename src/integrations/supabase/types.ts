@@ -809,6 +809,132 @@ export type Database = {
           },
         ]
       }
+      display_ad_campaign_corners: {
+        Row: {
+          campaign_id: string
+          corner_id: string
+          corner_revenue: number
+          created_at: string
+          id: string
+          impressions_count: number
+        }
+        Insert: {
+          campaign_id: string
+          corner_id: string
+          corner_revenue?: number
+          created_at?: string
+          id?: string
+          impressions_count?: number
+        }
+        Update: {
+          campaign_id?: string
+          corner_id?: string
+          corner_revenue?: number
+          created_at?: string
+          id?: string
+          impressions_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "display_ad_campaign_corners_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "display_ad_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "display_ad_campaign_corners_corner_id_fkey"
+            columns: ["corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      display_ad_campaigns: {
+        Row: {
+          ad_description: string | null
+          ad_gradient: string | null
+          ad_icon: string | null
+          ad_image_url: string | null
+          ad_title: string
+          ad_type: string
+          advertiser_company: string | null
+          advertiser_email: string
+          advertiser_name: string
+          advertiser_phone: string | null
+          approved_at: string | null
+          approved_by: string | null
+          corner_revenue_total: number
+          created_at: string
+          end_date: string
+          id: string
+          paid_at: string | null
+          platform_revenue: number
+          rejected_reason: string | null
+          start_date: string
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          total_price: number
+          updated_at: string
+        }
+        Insert: {
+          ad_description?: string | null
+          ad_gradient?: string | null
+          ad_icon?: string | null
+          ad_image_url?: string | null
+          ad_title: string
+          ad_type?: string
+          advertiser_company?: string | null
+          advertiser_email: string
+          advertiser_name: string
+          advertiser_phone?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          corner_revenue_total?: number
+          created_at?: string
+          end_date: string
+          id?: string
+          paid_at?: string | null
+          platform_revenue?: number
+          rejected_reason?: string | null
+          start_date: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          total_price?: number
+          updated_at?: string
+        }
+        Update: {
+          ad_description?: string | null
+          ad_gradient?: string | null
+          ad_icon?: string | null
+          ad_image_url?: string | null
+          ad_title?: string
+          ad_type?: string
+          advertiser_company?: string | null
+          advertiser_email?: string
+          advertiser_name?: string
+          advertiser_phone?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          corner_revenue_total?: number
+          created_at?: string
+          end_date?: string
+          id?: string
+          paid_at?: string | null
+          platform_revenue?: number
+          rejected_reason?: string | null
+          start_date?: string
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          total_price?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       feedback: {
         Row: {
           comment: string | null
