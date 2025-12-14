@@ -25,6 +25,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
 import { CountdownTimer } from "@/components/ads/CountdownTimer";
+import { ScrollingTicker } from "@/components/display/ScrollingTicker";
+
+interface TickerMessage {
+  id: string;
+  text: string;
+  emoji?: string;
+}
 
 type DisplayMode = "standby" | "confirm_data" | "completed";
 
@@ -137,6 +144,9 @@ export default function CornerDisplay() {
   const [cornerLogo, setCornerLogo] = useState<string | null>(null);
   const [cornerName, setCornerName] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [tickerMessages, setTickerMessages] = useState<TickerMessage[]>([]);
+  const [tickerEnabled, setTickerEnabled] = useState(true);
+  const [tickerSpeed, setTickerSpeed] = useState(50);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const toggleFullscreen = useCallback(async () => {
@@ -218,9 +228,29 @@ export default function CornerDisplay() {
         const settings = data.settings as { 
           display_ads?: DisplayAd[]; 
           slide_interval?: number;
+          ticker_enabled?: boolean;
+          ticker_speed?: number;
+          ticker_messages?: TickerMessage[];
         };
         if (settings.display_ads && settings.display_ads.length > 0) {
           customAds = settings.display_ads;
+        }
+        // Ticker settings
+        if (typeof settings.ticker_enabled === 'boolean') {
+          setTickerEnabled(settings.ticker_enabled);
+        }
+        if (settings.ticker_speed) {
+          setTickerSpeed(settings.ticker_speed);
+        }
+        if (settings.ticker_messages && settings.ticker_messages.length > 0) {
+          setTickerMessages(settings.ticker_messages);
+        } else {
+          // Default ticker messages
+          setTickerMessages([
+            { id: '1', text: 'Benvenuto! Riparazioni veloci e garantite', emoji: '👋' },
+            { id: '2', text: 'Preventivi gratuiti su tutti i dispositivi', emoji: '💰' },
+            { id: '3', text: 'Tecnici certificati e ricambi originali', emoji: '✅' },
+          ]);
         }
         if (settings.slide_interval) {
           setSlideInterval(settings.slide_interval);
@@ -977,6 +1007,16 @@ export default function CornerDisplay() {
             </motion.div>
           </motion.div>
         </motion.div>
+      )}
+
+      {/* Scrolling Ticker - always visible at bottom */}
+      {tickerEnabled && tickerMessages.length > 0 && (
+        <ScrollingTicker 
+          messages={tickerMessages} 
+          speed={tickerSpeed}
+          backgroundColor="rgba(0,0,0,0.85)"
+          textColor="#ffffff"
+        />
       )}
     </div>
   );

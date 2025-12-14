@@ -23,9 +23,18 @@ import {
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
+interface TickerMessage {
+  id: string;
+  text: string;
+  emoji?: string;
+}
+
 interface CornerSettings {
   display_ads?: DisplayAd[];
   slide_interval?: number;
+  ticker_enabled?: boolean;
+  ticker_speed?: number;
+  ticker_messages?: TickerMessage[];
 }
 
 interface CornerData {
@@ -118,6 +127,17 @@ export default function CornerImpostazioni() {
   const [previewAdIndex, setPreviewAdIndex] = useState(0);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(true);
   
+  // Ticker settings
+  const [tickerEnabled, setTickerEnabled] = useState(true);
+  const [tickerSpeed, setTickerSpeed] = useState(50);
+  const [tickerMessages, setTickerMessages] = useState<TickerMessage[]>([
+    { id: '1', text: 'Benvenuto! Riparazioni veloci e garantite', emoji: '👋' },
+    { id: '2', text: 'Preventivi gratuiti su tutti i dispositivi', emoji: '💰' },
+    { id: '3', text: 'Tecnici certificati e ricambi originali', emoji: '✅' },
+  ]);
+  const [newTickerText, setNewTickerText] = useState("");
+  const [newTickerEmoji, setNewTickerEmoji] = useState("");
+  
   // Preview ads rotation
   const previewAds = displayAds.length > 0 ? displayAds : defaultAdvertisements;
   
@@ -140,6 +160,9 @@ export default function CornerImpostazioni() {
     openingHours: string;
     displayAds: string;
     slideInterval: number;
+    tickerEnabled: boolean;
+    tickerSpeed: number;
+    tickerMessages: string;
   } | null>(null);
 
   // Detect unsaved changes
@@ -152,9 +175,13 @@ export default function CornerImpostazioni() {
       logoUrl !== originalValues.logoUrl ||
       JSON.stringify(openingHours) !== originalValues.openingHours ||
       JSON.stringify(displayAds) !== originalValues.displayAds ||
-      slideInterval !== originalValues.slideInterval
+      slideInterval !== originalValues.slideInterval ||
+      tickerEnabled !== originalValues.tickerEnabled ||
+      tickerSpeed !== originalValues.tickerSpeed ||
+      JSON.stringify(tickerMessages) !== originalValues.tickerMessages
     );
-  }, [address, latitude, longitude, logoUrl, openingHours, displayAds, slideInterval, originalValues, corner]);
+  }, [address, latitude, longitude, logoUrl, openingHours, displayAds, slideInterval, tickerEnabled, tickerSpeed, tickerMessages, originalValues, corner]);
+
 
   const { showDialog, closeDialog } = useUnsavedChanges(hasChanges);
   // Dymo state (stored in localStorage for Corner)
@@ -220,6 +247,16 @@ export default function CornerImpostazioni() {
       if (settings?.slide_interval) {
         setSlideInterval(settings.slide_interval / 1000);
       }
+      // Ticker settings
+      if (typeof settings?.ticker_enabled === 'boolean') {
+        setTickerEnabled(settings.ticker_enabled);
+      }
+      if (settings?.ticker_speed) {
+        setTickerSpeed(settings.ticker_speed);
+      }
+      if (settings?.ticker_messages && settings.ticker_messages.length > 0) {
+        setTickerMessages(settings.ticker_messages);
+      }
       
       // Store original values for change detection
       setOriginalValues({
@@ -230,6 +267,9 @@ export default function CornerImpostazioni() {
         openingHours: JSON.stringify(data.opening_hours),
         displayAds: JSON.stringify(settings?.display_ads || []),
         slideInterval: settings?.slide_interval || 5000,
+        tickerEnabled: settings?.ticker_enabled ?? true,
+        tickerSpeed: settings?.ticker_speed ?? 50,
+        tickerMessages: JSON.stringify(settings?.ticker_messages || []),
       });
     } catch (error) {
       console.error("Error fetching corner data:", error);
@@ -319,6 +359,9 @@ export default function CornerImpostazioni() {
       const newSettings: CornerSettings = {
         display_ads: displayAds,
         slide_interval: slideInterval * 1000, // Convert seconds to ms for storage
+        ticker_enabled: tickerEnabled,
+        ticker_speed: tickerSpeed,
+        ticker_messages: tickerMessages,
       };
       
       const { error } = await supabase
@@ -345,6 +388,9 @@ export default function CornerImpostazioni() {
         openingHours: JSON.stringify(openingHours),
         displayAds: JSON.stringify(displayAds),
         slideInterval,
+        tickerEnabled,
+        tickerSpeed,
+        tickerMessages: JSON.stringify(tickerMessages),
       });
 
       toast.success("Impostazioni salvate con successo");
@@ -941,6 +987,144 @@ export default function CornerImpostazioni() {
               cornerId={corner.id}
             />
           )}
+
+          {/* Scrolling Ticker Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span className="text-xl">📜</span>
+                Feed a Scorrimento
+              </CardTitle>
+              <CardDescription>
+                Configura i messaggi che scorrono nella barra in basso del display
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Toggle and Speed */}
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex items-center gap-3">
+                  <Button
+                    variant={tickerEnabled ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setTickerEnabled(!tickerEnabled)}
+                  >
+                    {tickerEnabled ? "✅ Attivo" : "❌ Disattivato"}
+                  </Button>
+                </div>
+                
+                {tickerEnabled && (
+                  <div className="flex-1 space-y-2">
+                    <Label className="text-sm">Velocità scorrimento</Label>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted-foreground">🐢 Lento</span>
+                      <Slider
+                        value={[tickerSpeed]}
+                        onValueChange={([v]) => setTickerSpeed(v)}
+                        min={20}
+                        max={100}
+                        step={5}
+                        className="flex-1"
+                      />
+                      <span className="text-xs text-muted-foreground">🐇 Veloce</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {tickerEnabled && (
+                <>
+                  {/* Messages List */}
+                  <div className="space-y-2">
+                    <Label>Messaggi</Label>
+                    <div className="space-y-2">
+                      {tickerMessages.map((msg, index) => (
+                        <div key={msg.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                          <span className="text-xl w-8 text-center">{msg.emoji || "💬"}</span>
+                          <Input
+                            value={msg.text}
+                            onChange={(e) => {
+                              const newMessages = [...tickerMessages];
+                              newMessages[index] = { ...msg, text: e.target.value };
+                              setTickerMessages(newMessages);
+                            }}
+                            className="flex-1"
+                            placeholder="Testo del messaggio..."
+                          />
+                          <Input
+                            value={msg.emoji || ""}
+                            onChange={(e) => {
+                              const newMessages = [...tickerMessages];
+                              newMessages[index] = { ...msg, emoji: e.target.value };
+                              setTickerMessages(newMessages);
+                            }}
+                            className="w-16 text-center"
+                            placeholder="🔥"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => setTickerMessages(prev => prev.filter((_, i) => i !== index))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Add new message */}
+                  <div className="flex gap-2">
+                    <Input
+                      value={newTickerEmoji}
+                      onChange={(e) => setNewTickerEmoji(e.target.value)}
+                      className="w-16 text-center"
+                      placeholder="🔥"
+                    />
+                    <Input
+                      value={newTickerText}
+                      onChange={(e) => setNewTickerText(e.target.value)}
+                      className="flex-1"
+                      placeholder="Aggiungi un nuovo messaggio..."
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newTickerText.trim()) {
+                          setTickerMessages([...tickerMessages, {
+                            id: `ticker-${Date.now()}`,
+                            text: newTickerText.trim(),
+                            emoji: newTickerEmoji || undefined
+                          }]);
+                          setNewTickerText("");
+                          setNewTickerEmoji("");
+                        }
+                      }}
+                    />
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        if (newTickerText.trim()) {
+                          setTickerMessages([...tickerMessages, {
+                            id: `ticker-${Date.now()}`,
+                            text: newTickerText.trim(),
+                            emoji: newTickerEmoji || undefined
+                          }]);
+                          setNewTickerText("");
+                          setNewTickerEmoji("");
+                        }
+                      }}
+                      disabled={!newTickerText.trim()}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Aggiungi
+                    </Button>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground">
+                    💡 I messaggi scorreranno continuamente in basso sul display Corner. Usa emoji per attirare l'attenzione!
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Opening Hours */}
           <OpeningHoursEditor
