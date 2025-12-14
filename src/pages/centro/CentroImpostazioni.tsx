@@ -54,7 +54,9 @@ import {
   CheckCircle2,
   XCircle,
   Info,
-  HelpCircle
+  HelpCircle,
+  Target,
+  Euro
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Switch } from "@/components/ui/switch";
@@ -85,6 +87,7 @@ interface CentroSettings {
   slide_interval?: number;
   smtp_config?: SmtpConfig;
   dymo_config?: DymoConfig;
+  monthly_goal?: number;
   [key: string]: boolean | string | number | DisplayAd[] | SmtpConfig | DymoConfig | undefined;
 }
 
@@ -196,6 +199,9 @@ export default function CentroImpostazioni() {
   const [dymoEnabled, setDymoEnabled] = useState(false);
   const [dymoPrinter, setDymoPrinter] = useState<string | null>(null);
   const [dymoLabelFormat, setDymoLabelFormat] = useState<LabelFormat>('30252');
+  
+  // Goals Configuration State
+  const [monthlyGoal, setMonthlyGoal] = useState<number>(0);
 
   // Preview ads rotation
   const previewAds = displayAds.length > 0 ? displayAds : defaultAdvertisements;
@@ -311,6 +317,9 @@ export default function CentroImpostazioni() {
         setDymoLabelFormat(settings.dymo_config.label_format || '30252');
       }
       
+      // Load Goals config
+      setMonthlyGoal(settings?.monthly_goal || 0);
+      
       setCentro({
         id: centroData.id,
         business_name: centroData.business_name,
@@ -374,6 +383,7 @@ export default function CentroImpostazioni() {
           printer_name: dymoPrinter,
           label_format: dymoLabelFormat,
         },
+        monthly_goal: monthlyGoal,
       };
       
       const { error } = await supabase
@@ -778,6 +788,67 @@ export default function CentroImpostazioni() {
                   onCheckedChange={setDisableDiagnosticFee}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Monthly Revenue Goal */}
+          <Card className="border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-transparent">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5 text-emerald-500" />
+                Obiettivo Mensile
+              </CardTitle>
+              <CardDescription>
+                Imposta il tuo obiettivo di fatturato mensile per monitorare i progressi
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                  <Label htmlFor="monthlyGoal">Obiettivo Fatturato Mensile (€)</Label>
+                  <div className="relative mt-1.5">
+                    <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="monthlyGoal"
+                      type="number"
+                      value={monthlyGoal || ""}
+                      onChange={(e) => setMonthlyGoal(Number(e.target.value))}
+                      placeholder="Es. 10000"
+                      className="pl-9"
+                      min={0}
+                      step={500}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {monthlyGoal > 0 && (
+                <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Giornaliero</p>
+                      <p className="text-lg font-bold text-emerald-600">
+                        €{Math.round(monthlyGoal / 22).toLocaleString('it-IT')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Settimanale</p>
+                      <p className="text-lg font-bold text-emerald-600">
+                        €{Math.round(monthlyGoal / 4).toLocaleString('it-IT')}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground mb-1">Mensile</p>
+                      <p className="text-lg font-bold text-emerald-600">
+                        €{monthlyGoal.toLocaleString('it-IT')}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center mt-3">
+                    I tuoi progressi appariranno nella Dashboard
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

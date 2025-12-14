@@ -37,6 +37,12 @@ import { CreditStatusBanner } from "@/components/credit/CreditStatusBanner";
 import { PendingJobOffersBanner } from "@/components/centro/PendingJobOffersBanner";
 import { PrepaidCommissionsHistory } from "@/components/centro/PrepaidCommissionsHistory";
 import { GamificationWidget } from "@/components/centro/GamificationWidget";
+import { GoalsWidget } from "@/components/centro/GoalsWidget";
+
+interface CentroSettings {
+  monthly_goal?: number;
+  [key: string]: any;
+}
 
 interface Centro {
   id: string;
@@ -45,6 +51,7 @@ interface Centro {
   credit_balance: number;
   credit_warning_threshold: number;
   payment_status: string;
+  settings?: CentroSettings | null;
 }
 
 interface RecentRepair {
@@ -125,12 +132,15 @@ export default function CentroDashboard() {
       // Fetch centro profile first
       const { data: centroData, error: centroError } = await supabase
         .from("centri_assistenza")
-        .select("id, business_name, status, credit_balance, credit_warning_threshold, payment_status")
+        .select("id, business_name, status, credit_balance, credit_warning_threshold, payment_status, settings")
         .eq("owner_user_id", user.id)
         .single();
 
       if (centroError) throw centroError;
-      setCentro(centroData);
+      setCentro({
+        ...centroData,
+        settings: centroData.settings as CentroSettings | null
+      });
 
       if (centroData && centroData.status === "approved") {
         await Promise.all([
@@ -693,6 +703,14 @@ export default function CentroDashboard() {
 
             {/* Pending Job Offers from Corners */}
             {centro && <PendingJobOffersBanner centroId={centro.id} />}
+
+            {/* Goals Widget */}
+            {centro && (
+              <GoalsWidget 
+                centroId={centro.id} 
+                monthlyGoal={centro.settings?.monthly_goal || 0} 
+              />
+            )}
 
             {/* Forfeiture Warning Alert */}
             {forfeitureWarnings.length > 0 && (
