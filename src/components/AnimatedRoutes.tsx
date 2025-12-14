@@ -62,6 +62,7 @@ import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import NotFound from "@/pages/NotFound";
 import RemoteSignature from "@/pages/RemoteSignature";
 import CustomerDisplay from "@/pages/CustomerDisplay";
+import CornerDisplay from "@/pages/CornerDisplay";
 import Install from "@/pages/Install";
 import DiventaPartner from "@/pages/DiventaPartner";
 
@@ -73,6 +74,9 @@ export const AnimatedRoutes = () => {
         
         {/* Public Customer Display for external monitor */}
         <Route path="/display/:centroId" element={<PageTransition><CustomerDisplay /></PageTransition>} />
+        
+        {/* Public Corner Display for external monitor */}
+        <Route path="/display/corner/:cornerId" element={<PageTransition><CornerDisplay /></PageTransition>} />
         
         <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
