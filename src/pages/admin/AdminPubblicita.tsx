@@ -221,12 +221,17 @@ export default function AdminPubblicita() {
   const handleToggleStatus = async (campaign: Campaign) => {
     const newStatus = campaign.status === 'active' ? 'paused' : 'active';
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('display_ad_campaigns')
-        .update({ status: newStatus })
-        .eq('id', campaign.id);
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', campaign.id)
+        .select();
 
       if (error) throw error;
+      if (!data || data.length === 0) {
+        toast.error('Errore: campagna non aggiornata');
+        return;
+      }
       toast.success(newStatus === 'active' ? 'Campagna riattivata' : 'Campagna in pausa');
       loadData();
     } catch (error) {
