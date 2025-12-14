@@ -51,6 +51,7 @@ export default function CornerDashboard() {
   const [requests, setRequests] = useState<any[]>([]);
   const [commissions, setCommissions] = useState<any[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState(0);
+  const [adRevenue, setAdRevenue] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [weeklyData, setWeeklyData] = useState<ChartData[]>([]);
 
@@ -100,6 +101,15 @@ export default function CornerDashboard() {
           .eq("status", "pending");
 
         setPendingAppointments(count || 0);
+
+        // Fetch advertising revenue
+        const { data: adRevenueData } = await supabase
+          .from("display_ad_campaign_corners")
+          .select("corner_revenue")
+          .eq("corner_id", cornerData.id);
+
+        const totalAdRevenue = adRevenueData?.reduce((sum, item) => sum + (item.corner_revenue || 0), 0) || 0;
+        setAdRevenue(totalAdRevenue);
 
         // Load weekly chart data
         await loadWeeklyData(cornerData.id);
@@ -196,11 +206,16 @@ export default function CornerDashboard() {
     .filter(r => r.corner_gestione_fee_enabled && r.corner_gestione_fee_collected)
     .reduce((sum, r) => sum + (r.corner_gestione_fee || 15), 0);
     
+  const totalRepairCommissions = commissions.reduce((sum, c) => sum + (c.corner_commission || 0), 0);
+  const totalEarnings = totalRepairCommissions + gestioneFeesTotal + adRevenue;
+
   const stats = {
     totalRequests: requests.length,
     pendingRequests: requests.filter((r) => r.status === "pending" || r.status === "dispatched" || r.status === "assigned").length,
     completedRequests: requests.filter((r) => r.status === "delivered" || r.status === "completed").length,
-    totalCommissions: commissions.reduce((sum, c) => sum + (c.corner_commission || 0), 0),
+    totalCommissions: totalRepairCommissions,
+    totalEarnings,
+    adRevenue,
     thisMonthCommissions: commissions
       .filter(c => {
         const date = new Date(c.created_at);
@@ -242,7 +257,8 @@ export default function CornerDashboard() {
     },
     {
       title: "Guadagni Totali",
-      value: `€${stats.totalCommissions.toFixed(2)}`,
+      value: `€${stats.totalEarnings.toFixed(2)}`,
+      subtitle: stats.adRevenue > 0 ? `incl. €${stats.adRevenue.toFixed(2)} pubblicità` : undefined,
       icon: TrendingUp,
       gradient: "from-violet-500 to-purple-500",
       bgLight: "bg-gradient-to-br from-violet-500/15 to-purple-500/10",
@@ -415,6 +431,9 @@ export default function CornerDashboard() {
                     <div className="min-w-0 flex-1">
                       <p className="text-xl md:text-2xl font-bold text-foreground leading-none">{card.value}</p>
                       <p className="text-[10px] md:text-xs text-muted-foreground mt-1">{card.title}</p>
+                      {(card as any).subtitle && (
+                        <p className="text-[9px] text-primary/70 mt-0.5">{(card as any).subtitle}</p>
+                      )}
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100" />
                   </div>
