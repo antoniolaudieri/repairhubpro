@@ -50,7 +50,8 @@ interface DisplayAdEditorProps {
   open: boolean;
   onClose: () => void;
   onSave: (ad: DisplayAd) => void;
-  centroId: string;
+  centroId?: string;
+  cornerId?: string;
 }
 
 const defaultGradients = [
@@ -86,7 +87,7 @@ const getIconComponent = (iconName: string) => {
   return found?.icon || Smartphone;
 };
 
-export function DisplayAdEditor({ ad, open, onClose, onSave, centroId }: DisplayAdEditorProps) {
+export function DisplayAdEditor({ ad, open, onClose, onSave, centroId, cornerId }: DisplayAdEditorProps) {
   const [editedAd, setEditedAd] = useState<DisplayAd>({
     ...ad,
     imagePosition: ad.imagePosition || 'center',
@@ -116,7 +117,9 @@ export function DisplayAdEditor({ ad, open, onClose, onSave, centroId }: Display
     try {
       const fileExt = file.name.split('.').pop();
       const timestamp = Date.now();
-      const fileName = `display-ads/${centroId}/${editedAd.id}-${timestamp}.${fileExt}`;
+      const entityId = centroId || cornerId;
+      const entityType = cornerId ? 'corner' : 'centro';
+      const fileName = `display-ads/${entityType}/${entityId}/${editedAd.id}-${timestamp}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('centro-logos')

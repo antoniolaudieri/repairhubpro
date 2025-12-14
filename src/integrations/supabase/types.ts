@@ -505,6 +505,7 @@ export type Database = {
           opening_hours: Json | null
           payment_status: string | null
           phone: string
+          settings: Json | null
           status: string
           updated_at: string
           user_id: string
@@ -528,6 +529,7 @@ export type Database = {
           opening_hours?: Json | null
           payment_status?: string | null
           phone: string
+          settings?: Json | null
           status?: string
           updated_at?: string
           user_id: string
@@ -551,6 +553,7 @@ export type Database = {
           opening_hours?: Json | null
           payment_status?: string | null
           phone?: string
+          settings?: Json | null
           status?: string
           updated_at?: string
           user_id?: string

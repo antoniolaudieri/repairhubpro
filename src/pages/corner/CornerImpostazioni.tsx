@@ -5,17 +5,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import { LocationPicker } from "@/components/maps/LocationPicker";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { DymoPrinterSettings } from "@/components/settings/DymoPrinterSettings";
 import { OpeningHoursEditor, OpeningHours, defaultOpeningHours } from "@/components/settings/OpeningHoursEditor";
 import { UnsavedChangesDialog } from "@/components/settings/UnsavedChangesDialog";
+import { DisplayAdEditor, DisplayAd } from "@/components/centro/DisplayAdEditor";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { LabelFormat } from "@/utils/labelTemplates";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Settings, MapPin, Save, Loader2, Upload, Store, X, Image as ImageIcon } from "lucide-react";
+import { Settings, MapPin, Save, Loader2, Upload, Store, X, Image as ImageIcon, Monitor, Plus, Trash2, Edit, ExternalLink, Copy, QrCode } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+
+interface CornerSettings {
+  display_ads?: DisplayAd[];
+  slide_interval?: number;
+}
 
 interface CornerData {
   id: string;
@@ -27,6 +35,7 @@ interface CornerData {
   longitude: number | null;
   logo_url: string | null;
   opening_hours: OpeningHours | null;
+  settings: CornerSettings | null;
 }
 
 export default function CornerImpostazioni() {
@@ -45,6 +54,12 @@ export default function CornerImpostazioni() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [openingHours, setOpeningHours] = useState<OpeningHours | null>(null);
   
+  // Display settings
+  const [displayAds, setDisplayAds] = useState<DisplayAd[]>([]);
+  const [slideInterval, setSlideInterval] = useState(5000);
+  const [editingAd, setEditingAd] = useState<DisplayAd | null>(null);
+  const [showQRCode, setShowQRCode] = useState(false);
+  
   // Track original values for change detection
   const [originalValues, setOriginalValues] = useState<{
     address: string;
@@ -52,6 +67,8 @@ export default function CornerImpostazioni() {
     longitude: number | null;
     logoUrl: string | null;
     openingHours: string;
+    displayAds: string;
+    slideInterval: number;
   } | null>(null);
 
   // Detect unsaved changes
@@ -62,9 +79,11 @@ export default function CornerImpostazioni() {
       latitude !== originalValues.latitude ||
       longitude !== originalValues.longitude ||
       logoUrl !== originalValues.logoUrl ||
-      JSON.stringify(openingHours) !== originalValues.openingHours
+      JSON.stringify(openingHours) !== originalValues.openingHours ||
+      JSON.stringify(displayAds) !== originalValues.displayAds ||
+      slideInterval !== originalValues.slideInterval
     );
-  }, [address, latitude, longitude, logoUrl, openingHours, originalValues, corner]);
+  }, [address, latitude, longitude, logoUrl, openingHours, displayAds, slideInterval, originalValues, corner]);
 
   const { showDialog, closeDialog } = useUnsavedChanges(hasChanges);
   // Dymo state (stored in localStorage for Corner)
@@ -104,7 +123,7 @@ export default function CornerImpostazioni() {
     try {
       const { data, error } = await supabase
         .from("corners")
-        .select("id, business_name, address, phone, email, latitude, longitude, logo_url, opening_hours")
+        .select("id, business_name, address, phone, email, latitude, longitude, logo_url, opening_hours, settings")
         .eq("user_id", user?.id)
         .single();
 
@@ -113,12 +132,22 @@ export default function CornerImpostazioni() {
       setCorner({
         ...data,
         opening_hours: data.opening_hours as unknown as OpeningHours | null,
+        settings: data.settings as unknown as CornerSettings | null,
       });
       setAddress(data.address || "");
       setLatitude(data.latitude);
       setLongitude(data.longitude);
       setLogoUrl(data.logo_url);
       setOpeningHours(data.opening_hours as unknown as OpeningHours | null);
+      
+      // Load display settings
+      const settings = data.settings as unknown as CornerSettings | null;
+      if (settings?.display_ads) {
+        setDisplayAds(settings.display_ads);
+      }
+      if (settings?.slide_interval) {
+        setSlideInterval(settings.slide_interval);
+      }
       
       // Store original values for change detection
       setOriginalValues({
@@ -127,6 +156,8 @@ export default function CornerImpostazioni() {
         longitude: data.longitude,
         logoUrl: data.logo_url,
         openingHours: JSON.stringify(data.opening_hours),
+        displayAds: JSON.stringify(settings?.display_ads || []),
+        slideInterval: settings?.slide_interval || 5000,
       });
     } catch (error) {
       console.error("Error fetching corner data:", error);
@@ -213,6 +244,11 @@ export default function CornerImpostazioni() {
 
     setIsSaving(true);
     try {
+      const newSettings: CornerSettings = {
+        display_ads: displayAds,
+        slide_interval: slideInterval,
+      };
+      
       const { error } = await supabase
         .from("corners")
         .update({
@@ -221,6 +257,7 @@ export default function CornerImpostazioni() {
           longitude,
           logo_url: logoUrl,
           opening_hours: openingHours as any,
+          settings: newSettings as any,
           updated_at: new Date().toISOString(),
         })
         .eq("id", corner.id);
@@ -234,6 +271,8 @@ export default function CornerImpostazioni() {
         longitude,
         logoUrl,
         openingHours: JSON.stringify(openingHours),
+        displayAds: JSON.stringify(displayAds),
+        slideInterval,
       });
 
       toast.success("Impostazioni salvate con successo");
@@ -397,6 +436,157 @@ export default function CornerImpostazioni() {
 
             </CardContent>
           </Card>
+
+          {/* Display Settings */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="h-5 w-5 text-primary" />
+                Display Esterno
+              </CardTitle>
+              <CardDescription>
+                Configura le pubblicità da mostrare sul display esterno per i clienti
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Display URL */}
+              {corner && (
+                <div className="p-4 bg-muted/50 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Link Display</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          const url = `${window.location.origin}/display/corner/${corner.id}`;
+                          navigator.clipboard.writeText(url);
+                          toast.success("Link copiato!");
+                        }}
+                      >
+                        <Copy className="h-4 w-4 mr-1" />
+                        Copia
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowQRCode(!showQRCode)}
+                      >
+                        <QrCode className="h-4 w-4 mr-1" />
+                        QR
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(`/display/corner/${corner.id}`, '_blank')}
+                      >
+                        <ExternalLink className="h-4 w-4 mr-1" />
+                        Apri
+                      </Button>
+                    </div>
+                  </div>
+                  <code className="text-xs text-muted-foreground block truncate">
+                    {window.location.origin}/display/corner/{corner.id}
+                  </code>
+                  {showQRCode && (
+                    <div className="flex justify-center p-4 bg-white rounded-lg">
+                      <QRCodeSVG value={`${window.location.origin}/display/corner/${corner.id}`} size={150} />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Slide Interval */}
+              <div className="space-y-3">
+                <Label>Intervallo Slide: {slideInterval / 1000}s</Label>
+                <Slider
+                  value={[slideInterval]}
+                  onValueChange={(value) => setSlideInterval(value[0])}
+                  min={3000}
+                  max={15000}
+                  step={1000}
+                />
+              </div>
+
+              {/* Ads List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Slide Pubblicità ({displayAds.length})</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newAd: DisplayAd = {
+                        id: `ad-${Date.now()}`,
+                        title: "Nuova Slide",
+                        description: "Descrizione della slide",
+                        gradient: "from-orange-500 to-amber-500",
+                        icon: "smartphone",
+                        type: "gradient",
+                        textAlign: "center",
+                        textPosition: "center"
+                      };
+                      setDisplayAds([...displayAds, newAd]);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Aggiungi
+                  </Button>
+                </div>
+                
+                {displayAds.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nessuna slide configurata. Verranno usate le slide predefinite.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {displayAds.map((ad) => (
+                      <div key={ad.id} className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                        <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${ad.gradient} flex items-center justify-center shrink-0`}>
+                          {ad.imageUrl ? (
+                            <img src={ad.imageUrl} alt="" className="w-full h-full object-cover rounded-lg" />
+                          ) : (
+                            <Monitor className="h-5 w-5 text-white" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{ad.title}</p>
+                          <p className="text-xs text-muted-foreground truncate">{ad.description}</p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => setEditingAd(ad)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="text-destructive"
+                            onClick={() => setDisplayAds(displayAds.filter(a => a.id !== ad.id))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Display Ad Editor Dialog */}
+          {editingAd && corner && (
+            <DisplayAdEditor
+              ad={editingAd}
+              open={!!editingAd}
+              onClose={() => setEditingAd(null)}
+              onSave={(updatedAd) => {
+                setDisplayAds(displayAds.map(a => a.id === updatedAd.id ? updatedAd : a));
+                setEditingAd(null);
+              }}
+              cornerId={corner.id}
+            />
+          )}
 
           {/* Opening Hours */}
           <OpeningHoursEditor
