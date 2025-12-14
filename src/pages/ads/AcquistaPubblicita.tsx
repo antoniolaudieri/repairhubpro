@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Megaphone, Building2, Mail, Phone, User, 
   Calendar, MapPin, Check, CreditCard, ArrowLeft,
-  ArrowRight, Sparkles, Image, Palette, Type
+  ArrowRight, Sparkles, Image, Palette, Type, Upload, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -59,7 +59,12 @@ export default function AcquistaPubblicita() {
   const [corners, setCorners] = useState<Corner[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [pricing, setPricing] = useState({ pricePerWeek: 5, cornerPercentage: 50 });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const MIN_IMAGE_WIDTH = 1200;
+  const MIN_IMAGE_HEIGHT = 675;
   
   const [campaignData, setCampaignData] = useState<CampaignData>({
     advertiser_name: '',
@@ -128,6 +133,66 @@ export default function AcquistaPubblicita() {
         ? prev.corner_ids.filter(id => id !== cornerId)
         : [...prev.corner_ids, cornerId]
     }));
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Il file deve essere un\'immagine');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('L\'immagine non può superare 5MB');
+      return;
+    }
+
+    // Validate image dimensions
+    const img = new window.Image();
+    img.src = URL.createObjectURL(file);
+    
+    img.onload = async () => {
+      URL.revokeObjectURL(img.src);
+      
+      if (img.width < MIN_IMAGE_WIDTH || img.height < MIN_IMAGE_HEIGHT) {
+        toast.error(`L'immagine deve essere almeno ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT} pixel. La tua immagine è ${img.width}x${img.height}`);
+        return;
+      }
+
+      setUploading(true);
+      try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `ad-${Date.now()}.${fileExt}`;
+        const filePath = `ads/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('ad-creatives')
+          .upload(filePath, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('ad-creatives')
+          .getPublicUrl(filePath);
+
+        setCampaignData(prev => ({ ...prev, ad_image_url: publicUrl }));
+        toast.success('Immagine caricata con successo');
+      } catch (error: any) {
+        console.error('Upload error:', error);
+        toast.error('Errore nel caricamento dell\'immagine');
+      } finally {
+        setUploading(false);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      toast.error('Errore nel caricamento dell\'immagine');
+    };
   };
 
   const handleSubmit = async () => {
@@ -346,13 +411,45 @@ export default function AcquistaPubblicita() {
                       )}
 
                       {campaignData.ad_type === 'image' && (
-                        <div className="space-y-2">
-                          <Label>URL Immagine</Label>
-                          <Input
-                            value={campaignData.ad_image_url}
-                            onChange={(e) => setCampaignData(prev => ({ ...prev, ad_image_url: e.target.value }))}
-                            placeholder="https://esempio.it/immagine.jpg"
+                        <div className="space-y-3">
+                          <Label>Immagine Pubblicità</Label>
+                          <p className="text-xs text-muted-foreground">
+                            Dimensione minima: {MIN_IMAGE_WIDTH}x{MIN_IMAGE_HEIGHT} pixel (16:9). Max 5MB.
+                          </p>
+                          
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageUpload}
+                            className="hidden"
                           />
+                          
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={uploading}
+                            className="w-full"
+                          >
+                            {uploading ? (
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Caricamento...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="mr-2 h-4 w-4" />
+                                {campaignData.ad_image_url ? 'Cambia immagine' : 'Carica immagine'}
+                              </>
+                            )}
+                          </Button>
+                          
+                          {campaignData.ad_image_url && (
+                            <p className="text-xs text-green-600 flex items-center gap-1">
+                              <Check className="h-3 w-3" /> Immagine caricata
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
