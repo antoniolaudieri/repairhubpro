@@ -144,9 +144,13 @@ export default function CornerDisplay() {
   const [cornerLogo, setCornerLogo] = useState<string | null>(null);
   const [cornerName, setCornerName] = useState<string>("");
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
-  const [tickerMessages, setTickerMessages] = useState<TickerMessage[]>([]);
+  const [tickerMessages, setTickerMessages] = useState<TickerMessage[]>([
+    { id: 'default-1', text: 'Benvenuto! Riparazioni veloci e garantite', emoji: '👋' },
+    { id: 'default-2', text: 'Preventivi gratuiti su tutti i dispositivi', emoji: '💰' },
+    { id: 'default-3', text: 'Tecnici certificati e ricambi originali', emoji: '✅' },
+  ]);
   const [tickerEnabled, setTickerEnabled] = useState(true);
-  const [tickerSpeed, setTickerSpeed] = useState(50);
+  const [tickerSpeed, setTickerSpeed] = useState(30);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const toggleFullscreen = useCallback(async () => {
@@ -826,6 +830,16 @@ export default function CornerDisplay() {
             <p className="text-xs text-white/50">Powered by LabLinkRiparo</p>
           </div>
         </motion.div>
+        
+        {/* Scrolling Ticker */}
+        {tickerEnabled && tickerMessages.length > 0 && (
+          <ScrollingTicker 
+            messages={tickerMessages} 
+            speed={tickerSpeed}
+            backgroundColor="rgba(0,0,0,0.9)"
+            textColor="#ffffff"
+          />
+        )}
       </div>
     );
   }
@@ -880,6 +894,16 @@ export default function CornerDisplay() {
             <Sparkles className="h-5 w-5" />
             <p className="text-lg">Riceverai presto un preventivo</p>
           </motion.div>
+          
+          {/* Scrolling Ticker */}
+          {tickerEnabled && tickerMessages.length > 0 && (
+            <ScrollingTicker 
+              messages={tickerMessages} 
+              speed={tickerSpeed}
+              backgroundColor="rgba(0,0,0,0.9)"
+              textColor="#ffffff"
+            />
+          )}
         </motion.div>
       </div>
     );
