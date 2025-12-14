@@ -2369,6 +2369,7 @@ export type Database = {
       }
       get_user_centro_id: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
+      is_campaign_active: { Args: { _campaign_id: string }; Returns: boolean }
       is_centro_collaborator: {
         Args: { _centro_id: string; _user_id: string }
         Returns: boolean
