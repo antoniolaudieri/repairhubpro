@@ -1,24 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { useBlocker } from "react-router-dom";
 
 export function useUnsavedChanges(hasChanges: boolean) {
   const [showDialog, setShowDialog] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<(() => void) | null>(null);
 
-  // Block navigation when there are unsaved changes
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasChanges && currentLocation.pathname !== nextLocation.pathname
-  );
-
-  useEffect(() => {
-    if (blocker.state === "blocked") {
-      setShowDialog(true);
-      setPendingNavigation(() => () => blocker.proceed());
-    }
-  }, [blocker]);
-
-  // Also handle browser back/refresh
+  // Handle browser back/refresh with beforeunload
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasChanges) {
@@ -31,25 +16,23 @@ export function useUnsavedChanges(hasChanges: boolean) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasChanges]);
 
-  const confirmNavigation = useCallback(() => {
-    setShowDialog(false);
-    if (pendingNavigation) {
-      pendingNavigation();
-      setPendingNavigation(null);
+  const promptIfUnsaved = useCallback(() => {
+    if (hasChanges) {
+      setShowDialog(true);
+      return true; // Has unsaved changes
     }
-  }, [pendingNavigation]);
+    return false; // No unsaved changes
+  }, [hasChanges]);
 
-  const cancelNavigation = useCallback(() => {
+  const closeDialog = useCallback(() => {
     setShowDialog(false);
-    setPendingNavigation(null);
-    if (blocker.state === "blocked") {
-      blocker.reset();
-    }
-  }, [blocker]);
+  }, []);
 
   return {
     showDialog,
-    confirmNavigation,
-    cancelNavigation,
+    setShowDialog,
+    promptIfUnsaved,
+    closeDialog,
+    hasChanges,
   };
 }

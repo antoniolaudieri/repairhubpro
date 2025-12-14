@@ -314,7 +314,7 @@ export default function CentroImpostazioni() {
     return currentValues !== originalValues;
   }, [formData, latitude, longitude, openingHours, disableDiagnosticFee, displayAds, slideInterval, smtpEnabled, smtpConfig, dymoEnabled, dymoPrinter, dymoLabelFormat, monthlyGoal, originalValues, centro]);
 
-  const { showDialog, confirmNavigation, cancelNavigation } = useUnsavedChanges(hasChanges);
+  const { showDialog, closeDialog } = useUnsavedChanges(hasChanges);
 
   const fetchData = async () => {
     if (!user) return;
@@ -1705,10 +1705,10 @@ export default function CentroImpostazioni() {
             open={showDialog}
             onSave={async () => {
               await handleSave();
-              confirmNavigation();
+              closeDialog();
             }}
-            onDiscard={confirmNavigation}
-            onCancel={cancelNavigation}
+            onDiscard={closeDialog}
+            onCancel={closeDialog}
             isSaving={isSaving}
           />
         </div>
