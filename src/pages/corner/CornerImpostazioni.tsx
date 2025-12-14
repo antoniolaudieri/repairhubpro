@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { LocationPicker } from "@/components/maps/LocationPicker";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { DymoPrinterSettings } from "@/components/settings/DymoPrinterSettings";
+import { OpeningHoursEditor, OpeningHours, defaultOpeningHours } from "@/components/settings/OpeningHoursEditor";
 import { LabelFormat } from "@/utils/labelTemplates";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,7 @@ interface CornerData {
   latitude: number | null;
   longitude: number | null;
   logo_url: string | null;
+  opening_hours: OpeningHours | null;
 }
 
 export default function CornerImpostazioni() {
@@ -39,7 +41,7 @@ export default function CornerImpostazioni() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
-
+  const [openingHours, setOpeningHours] = useState<OpeningHours | null>(null);
   // Dymo state (stored in localStorage for Corner)
   const [dymoEnabled, setDymoEnabled] = useState(() => {
     const saved = localStorage.getItem('corner_dymo_enabled');
@@ -77,17 +79,21 @@ export default function CornerImpostazioni() {
     try {
       const { data, error } = await supabase
         .from("corners")
-        .select("id, business_name, address, phone, email, latitude, longitude, logo_url")
+        .select("id, business_name, address, phone, email, latitude, longitude, logo_url, opening_hours")
         .eq("user_id", user?.id)
         .single();
 
       if (error) throw error;
 
-      setCorner(data);
+      setCorner({
+        ...data,
+        opening_hours: data.opening_hours as unknown as OpeningHours | null,
+      });
       setAddress(data.address || "");
       setLatitude(data.latitude);
       setLongitude(data.longitude);
       setLogoUrl(data.logo_url);
+      setOpeningHours(data.opening_hours as unknown as OpeningHours | null);
     } catch (error) {
       console.error("Error fetching corner data:", error);
       toast.error("Errore nel caricamento dei dati");
@@ -180,6 +186,7 @@ export default function CornerImpostazioni() {
           latitude,
           longitude,
           logo_url: logoUrl,
+          opening_hours: openingHours as any,
           updated_at: new Date().toISOString(),
         })
         .eq("id", corner.id);
@@ -358,6 +365,12 @@ export default function CornerImpostazioni() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Opening Hours */}
+          <OpeningHoursEditor
+            value={openingHours}
+            onChange={setOpeningHours}
+          />
 
           {/* Dymo Printer Settings */}
           <DymoPrinterSettings

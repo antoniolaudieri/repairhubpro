@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { OpeningHours, formatOpeningHoursForPopup } from "@/components/settings/OpeningHoursEditor";
 
 // Fix default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -20,6 +21,7 @@ interface Corner {
   longitude: number | null;
   status: string;
   distance?: number;
+  opening_hours?: OpeningHours | null;
 }
 
 interface InviteStatus {
@@ -231,6 +233,7 @@ export function PartnerDiscoveryMap({
               🚗 ${corner.distance.toFixed(1)} km da te
             </div>
           ` : ""}
+          ${corner.opening_hours ? formatOpeningHoursForPopup(corner.opening_hours) : ""}
           ${statusBadge}
         </div>
       `);

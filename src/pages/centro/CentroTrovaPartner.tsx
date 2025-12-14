@@ -41,6 +41,7 @@ import { motion } from "framer-motion";
 import { PartnerDiscoveryMap } from "@/components/centro/PartnerDiscoveryMap";
 import { PartnershipInviteDialog } from "@/components/centro/PartnershipInviteDialog";
 import { SavedShopsList } from "@/components/centro/SavedShopsList";
+import { OpeningHours } from "@/components/settings/OpeningHoursEditor";
 
 interface Corner {
   id: string;
@@ -52,6 +53,7 @@ interface Corner {
   longitude: number | null;
   status: string;
   distance?: number;
+  opening_hours?: OpeningHours | null;
 }
 
 interface InviteStatus {
@@ -136,15 +138,18 @@ export default function CentroTrovaPartner() {
         // Load all corners (approved + pending) to expand network opportunities
         const { data: cornersData, error: cornersError } = await supabase
           .from("corners")
-          .select("id, business_name, address, phone, email, latitude, longitude, status")
+          .select("id, business_name, address, phone, email, latitude, longitude, status, opening_hours")
           .in("status", ["approved", "pending"]);
 
         if (cornersError) throw cornersError;
 
         // Calculate distances if centro has location
-        let cornersWithDistance = cornersData || [];
+        let cornersWithDistance: Corner[] = (cornersData || []).map(c => ({
+          ...c,
+          opening_hours: c.opening_hours as unknown as OpeningHours | null,
+        }));
         if (centro.latitude && centro.longitude) {
-          cornersWithDistance = cornersData?.map(corner => ({
+          cornersWithDistance = cornersWithDistance.map(corner => ({
             ...corner,
             distance: corner.latitude && corner.longitude 
               ? calculateDistance(
@@ -154,7 +159,7 @@ export default function CentroTrovaPartner() {
                   corner.longitude
                 )
               : undefined
-          })).sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity)) || [];
+          })).sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
         }
 
         setCorners(cornersWithDistance);

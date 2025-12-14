@@ -13,6 +13,7 @@ import { DisplayAdEditor, DisplayAd } from "@/components/centro/DisplayAdEditor"
 import { DymoPrinterSettings } from "@/components/settings/DymoPrinterSettings";
 import { LabelFormat } from "@/utils/labelTemplates";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
+import { OpeningHoursEditor, OpeningHours } from "@/components/settings/OpeningHoursEditor";
 import { 
   Settings,
   Building2,
@@ -104,6 +105,7 @@ interface Centro {
   notes: string | null;
   logo_url: string | null;
   settings: CentroSettings | null;
+  opening_hours: OpeningHours | null;
 }
 
 const getIconComponent = (iconName: string) => {
@@ -202,7 +204,9 @@ export default function CentroImpostazioni() {
   
   // Goals Configuration State
   const [monthlyGoal, setMonthlyGoal] = useState<number>(0);
-
+  
+  // Opening Hours State
+  const [openingHours, setOpeningHours] = useState<OpeningHours | null>(null);
   // Preview ads rotation
   const previewAds = displayAds.length > 0 ? displayAds : defaultAdvertisements;
   
@@ -320,6 +324,9 @@ export default function CentroImpostazioni() {
       // Load Goals config
       setMonthlyGoal(settings?.monthly_goal || 0);
       
+      // Load Opening Hours
+      setOpeningHours(centroData.opening_hours as unknown as OpeningHours | null);
+      
       setCentro({
         id: centroData.id,
         business_name: centroData.business_name,
@@ -333,6 +340,7 @@ export default function CentroImpostazioni() {
         notes: centroData.notes,
         logo_url: centroData.logo_url,
         settings: settings,
+        opening_hours: centroData.opening_hours as unknown as OpeningHours | null,
       });
       
       setLatitude(centroData.latitude);
@@ -397,6 +405,7 @@ export default function CentroImpostazioni() {
           notes: formData.notes || null,
           latitude,
           longitude,
+          opening_hours: openingHours as any,
           settings: newSettings as any,
         })
         .eq("id", centro.id);
@@ -1613,6 +1622,12 @@ export default function CentroImpostazioni() {
               />
             </CardContent>
           </Card>
+
+          {/* Opening Hours */}
+          <OpeningHoursEditor
+            value={openingHours}
+            onChange={setOpeningHours}
+          />
 
           {/* Dymo Printer Settings */}
           <DymoPrinterSettings

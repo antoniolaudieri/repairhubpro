@@ -132,6 +132,7 @@ export type Database = {
           logo_url: string | null
           longitude: number | null
           notes: string | null
+          opening_hours: Json | null
           owner_user_id: string
           payment_status: string | null
           phone: string
@@ -156,6 +157,7 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           notes?: string | null
+          opening_hours?: Json | null
           owner_user_id: string
           payment_status?: string | null
           phone: string
@@ -180,6 +182,7 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           notes?: string | null
+          opening_hours?: Json | null
           owner_user_id?: string
           payment_status?: string | null
           phone?: string
@@ -499,6 +502,7 @@ export type Database = {
           logo_url: string | null
           longitude: number | null
           notes: string | null
+          opening_hours: Json | null
           payment_status: string | null
           phone: string
           status: string
@@ -521,6 +525,7 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           notes?: string | null
+          opening_hours?: Json | null
           payment_status?: string | null
           phone: string
           status?: string
@@ -543,6 +548,7 @@ export type Database = {
           logo_url?: string | null
           longitude?: number | null
           notes?: string | null
+          opening_hours?: Json | null
           payment_status?: string | null
           phone?: string
           status?: string
