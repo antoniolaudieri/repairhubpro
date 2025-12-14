@@ -252,5 +252,19 @@ All colors MUST be HSL.
       linear-gradient(90deg, hsl(var(--border) / 0.3) 1px, transparent 1px);
     background-size: 40px 40px;
   }
+
+  /* Scrolling ticker animation */
+  @keyframes scroll-ticker {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-scroll-ticker {
+    animation: scroll-ticker linear infinite;
+  }
 }
 
