@@ -32,7 +32,7 @@ export function ScrollingTicker({
 
   return (
     <div 
-      className="fixed bottom-16 left-0 right-0 z-[9999] overflow-hidden"
+      className="fixed bottom-0 left-0 right-0 z-[9999] overflow-hidden"
       style={{ backgroundColor }}
     >
       <div className="relative h-12 flex items-center">

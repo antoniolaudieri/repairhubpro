@@ -812,7 +812,7 @@ export default function CornerDisplay() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="fixed bottom-5 right-5 flex items-center gap-3 bg-white/5 backdrop-blur-xl rounded-2xl px-5 py-3 border border-white/10"
+          className="fixed bottom-16 right-5 flex items-center gap-3 bg-white/5 backdrop-blur-xl rounded-2xl px-5 py-3 border border-white/10"
         >
           {cornerLogo ? (
             <img 
