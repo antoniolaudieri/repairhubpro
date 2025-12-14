@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
 import { CountdownTimer } from "@/components/ads/CountdownTimer";
 import { ScrollingTicker } from "@/components/display/ScrollingTicker";
+import { DisplayUsedDevicesStrip } from "@/components/display/DisplayUsedDevicesStrip";
 
 interface TickerMessage {
   id: string;
@@ -578,9 +579,12 @@ export default function CornerDisplay() {
     const qrUrl = `${window.location.origin}/ads/acquista?corner=${cornerId}`;
     
     return (
-      <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6 overflow-hidden">
+      <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6 pt-32 overflow-hidden">
         <ConnectionIndicator />
         <FullscreenButton />
+        
+        {/* Used Devices Carousel Strip */}
+        {cornerId && <DisplayUsedDevicesStrip cornerId={cornerId} />}
         
         {/* Animated background elements */}
         <div className="absolute inset-0 overflow-hidden">
