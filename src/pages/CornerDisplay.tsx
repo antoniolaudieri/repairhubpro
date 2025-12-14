@@ -288,6 +288,19 @@ export default function CornerDisplay() {
     fetchCornerData();
   }, [fetchCornerData]);
 
+  // Polling fallback - refresh every 30 seconds to catch any missed realtime updates
+  // This is needed because RLS policies may prevent unauthenticated users from receiving realtime events
+  useEffect(() => {
+    if (!cornerId) return;
+    
+    const pollInterval = setInterval(() => {
+      console.log('[CornerDisplay] Polling for campaign updates...');
+      fetchCornerData();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [cornerId, fetchCornerData]);
+
   // Real-time subscription for campaign updates - auto-refresh when campaigns are modified
   useEffect(() => {
     if (!cornerId) return;
