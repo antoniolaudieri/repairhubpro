@@ -966,6 +966,97 @@ export type Database = {
         }
         Relationships: []
       }
+      maintenance_predictions: {
+        Row: {
+          centro_id: string
+          completed_at: string | null
+          confidence_score: number | null
+          created_at: string
+          customer_id: string
+          device_id: string | null
+          dismiss_reason: string | null
+          dismissed_at: string | null
+          due_date: string | null
+          estimated_cost: number | null
+          id: string
+          notified_at: string | null
+          predicted_issue: string
+          prediction_type: string
+          reasoning: string | null
+          recommended_action: string | null
+          scheduled_for: string | null
+          status: string
+          updated_at: string
+          urgency: string
+        }
+        Insert: {
+          centro_id: string
+          completed_at?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          customer_id: string
+          device_id?: string | null
+          dismiss_reason?: string | null
+          dismissed_at?: string | null
+          due_date?: string | null
+          estimated_cost?: number | null
+          id?: string
+          notified_at?: string | null
+          predicted_issue: string
+          prediction_type: string
+          reasoning?: string | null
+          recommended_action?: string | null
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Update: {
+          centro_id?: string
+          completed_at?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          customer_id?: string
+          device_id?: string | null
+          dismiss_reason?: string | null
+          dismissed_at?: string | null
+          due_date?: string | null
+          estimated_cost?: number | null
+          id?: string
+          notified_at?: string | null
+          predicted_issue?: string
+          prediction_type?: string
+          reasoning?: string | null
+          recommended_action?: string | null
+          scheduled_for?: string | null
+          status?: string
+          updated_at?: string
+          urgency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_predictions_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_predictions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_predictions_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           created_at: string

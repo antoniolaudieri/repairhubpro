@@ -23,6 +23,7 @@ import { useCustomerDisplay } from "@/hooks/useCustomerDisplay";
 import { TopupRequestDialog } from "@/components/credit/TopupRequestDialog";
 import { PrintLabelButton } from "@/components/repair/PrintLabelButton";
 import { GoalsSuggestionBanner } from "@/components/centro/GoalsSuggestionBanner";
+import { MaintenanceSuggestionBanner } from "@/components/centro/MaintenanceSuggestionBanner";
 
 export default function CentroNuovoRitiro() {
   const navigate = useNavigate();
@@ -832,7 +833,15 @@ export default function CentroNuovoRitiro() {
     switch (currentStep) {
       case 0:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4">
+            {/* Show maintenance suggestions if customer selected */}
+            {existingCustomerId && (
+              <MaintenanceSuggestionBanner 
+                customerId={existingCustomerId}
+                customerName={customerData.name}
+              />
+            )}
+            
             {!isNewCustomer ? (
               <CustomerSearch
                 onSelectCustomer={handleSelectCustomer}

@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.customer-analytics-agent]
 verify_jwt = false
+
+[functions.generate-maintenance-predictions]
+verify_jwt = false

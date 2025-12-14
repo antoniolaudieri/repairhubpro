@@ -21,6 +21,7 @@ import { QuoteDialog } from "@/components/quotes/QuoteDialog";
 import { OrderSparePartDialog } from "@/components/customers/OrderSparePartDialog";
 import { OrderDetailDialog } from "@/components/customers/OrderDetailDialog";
 import { CustomerDeviceInterests } from "@/components/centro/CustomerDeviceInterests";
+import { PredictiveMaintenanceCard } from "@/components/centro/PredictiveMaintenanceCard";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -97,6 +98,21 @@ export default function CentroClienteDetail() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [hasAccount, setHasAccount] = useState<boolean | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
+  const [centroId, setCentroId] = useState<string | null>(null);
+
+  // Fetch centro ID on mount
+  useEffect(() => {
+    const fetchCentroId = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from("centri_assistenza")
+        .select("id")
+        .eq("owner_user_id", user.id)
+        .single();
+      if (data) setCentroId(data.id);
+    };
+    fetchCentroId();
+  }, [user]);
 
   const checkCustomerAccount = async (email: string) => {
     try {
@@ -444,7 +460,17 @@ export default function CentroClienteDetail() {
             <CustomerCharts devices={devices} allRepairs={allRepairs} />
           </motion.div>
 
-          {/* Contact & Devices Grid */}
+          {/* Predictive Maintenance AI */}
+          {centroId && (
+            <motion.div variants={itemVariants}>
+              <PredictiveMaintenanceCard
+                customerId={id!}
+                centroId={centroId}
+                devices={devices.map(d => ({ id: d.id, device_type: d.device_type, brand: d.brand, model: d.model }))}
+              />
+            </motion.div>
+          )}
+
           {/* Device Interests */}
           <motion.div variants={itemVariants}>
             <CustomerDeviceInterests 
