@@ -48,7 +48,7 @@ interface Campaign {
     payment_status: string | null;
     payment_requested_at: string | null;
     payment_paid_at: string | null;
-    corner?: { business_name: string; email: string } 
+    corner?: { business_name: string; email: string; phone: string; address: string } 
   }[];
 }
 
@@ -105,7 +105,7 @@ export default function AdminPubblicita() {
             payment_status,
             payment_requested_at,
             payment_paid_at,
-            corner:corners(business_name, email)
+            corner:corners(business_name, email, phone, address)
           )
         `)
         .order('created_at', { ascending: false });
@@ -651,20 +651,23 @@ export default function AdminPubblicita() {
                         <p className="text-lg sm:text-2xl font-bold text-amber-700">{pendingPayments.length}</p>
                         <p className="text-xs sm:text-sm text-amber-600">Da Pagare</p>
                         <p className="text-sm sm:text-lg font-semibold text-amber-800 mt-1">
-                          €{pendingPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(0)}
+                          €{pendingPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(2)}
                         </p>
                       </div>
                       <div className="p-2 sm:p-4 bg-gray-50 border rounded-lg text-center">
                         <Clock className="h-4 w-4 sm:h-6 sm:w-6 text-gray-500 mx-auto mb-1 sm:mb-2" />
                         <p className="text-lg sm:text-2xl font-bold">{unpaidPayments.length}</p>
                         <p className="text-xs sm:text-sm text-muted-foreground">Non Rich.</p>
+                        <p className="text-sm sm:text-lg font-semibold text-muted-foreground mt-1">
+                          €{unpaidPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(2)}
+                        </p>
                       </div>
                       <div className="p-2 sm:p-4 bg-green-50 border border-green-200 rounded-lg text-center">
                         <CheckCircle className="h-4 w-4 sm:h-6 sm:w-6 text-green-600 mx-auto mb-1 sm:mb-2" />
                         <p className="text-lg sm:text-2xl font-bold text-green-700">{paidPayments.length}</p>
                         <p className="text-xs sm:text-sm text-green-600">Pagati</p>
                         <p className="text-sm sm:text-lg font-semibold text-green-800 mt-1">
-                          €{paidPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(0)}
+                          €{paidPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -681,34 +684,49 @@ export default function AdminPubblicita() {
                             key={payment.id}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg"
+                            className="p-3 sm:p-4 bg-amber-50 border border-amber-200 rounded-lg space-y-3"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="p-2 bg-amber-200 rounded-full flex-shrink-0">
-                                <Store className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium text-sm sm:text-base truncate">{payment.corner?.business_name}</p>
-                                <p className="text-xs sm:text-sm text-muted-foreground truncate">
-                                  {payment.campaign.ad_title}
-                                </p>
-                                {payment.payment_requested_at && (
-                                  <p className="text-xs text-amber-600">
-                                    {format(new Date(payment.payment_requested_at), 'dd/MM/yy HH:mm', { locale: it })}
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                              <div className="flex items-start gap-3">
+                                <div className="p-2 bg-amber-200 rounded-full flex-shrink-0 mt-1">
+                                  <Store className="h-4 w-4 sm:h-5 sm:w-5 text-amber-700" />
+                                </div>
+                                <div className="min-w-0 space-y-1">
+                                  <p className="font-semibold text-sm sm:text-base">{payment.corner?.business_name}</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground">
+                                    Campagna: {payment.campaign.ad_title}
                                   </p>
-                                )}
+                                  {/* Billing info */}
+                                  <div className="text-xs space-y-0.5 text-muted-foreground bg-white/50 p-2 rounded border">
+                                    <p className="flex items-center gap-1.5">
+                                      <Mail className="h-3 w-3" />
+                                      <span className="font-medium">{payment.corner?.email}</span>
+                                    </p>
+                                    {payment.corner?.phone && (
+                                      <p>Tel: {payment.corner.phone}</p>
+                                    )}
+                                    {payment.corner?.address && (
+                                      <p className="truncate">Ind: {payment.corner.address}</p>
+                                    )}
+                                  </div>
+                                  {payment.payment_requested_at && (
+                                    <p className="text-xs text-amber-600">
+                                      Richiesto il {format(new Date(payment.payment_requested_at), 'dd/MM/yy HH:mm', { locale: it })}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
-                              <span className="text-lg sm:text-xl font-bold text-amber-700">€{payment.corner_revenue?.toFixed(2)}</span>
-                              <Button 
-                                size="sm" 
-                                className="bg-green-600 hover:bg-green-700"
-                                onClick={() => handleMarkAsPaid(payment.id)}
-                              >
-                                <CheckCircle className="h-4 w-4 sm:mr-1" />
-                                <span className="hidden sm:inline">Segna Pagato</span>
-                              </Button>
+                              <div className="flex items-center justify-between sm:flex-col sm:items-end gap-2">
+                                <span className="text-lg sm:text-xl font-bold text-amber-700">€{payment.corner_revenue?.toFixed(2)}</span>
+                                <Button 
+                                  size="sm" 
+                                  className="bg-green-600 hover:bg-green-700"
+                                  onClick={() => handleMarkAsPaid(payment.id)}
+                                >
+                                  <CheckCircle className="h-4 w-4 sm:mr-1" />
+                                  <span className="hidden sm:inline">Segna Pagato</span>
+                                </Button>
+                              </div>
                             </div>
                           </motion.div>
                         ))}
