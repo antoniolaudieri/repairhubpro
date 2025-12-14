@@ -352,17 +352,6 @@ export default function CornerImpostazioni() {
                 </div>
               </div>
 
-              {/* Save Button */}
-              <div className="flex justify-end pt-4">
-                <Button onClick={handleSave} disabled={isSaving}>
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
-                  Salva Modifiche
-                </Button>
-              </div>
             </CardContent>
           </Card>
 
@@ -384,6 +373,18 @@ export default function CornerImpostazioni() {
 
           {/* Push Notifications */}
           <PushNotificationSettings />
+
+          {/* Save Button - Global */}
+          <div className="flex justify-end sticky bottom-4 pt-4">
+            <Button onClick={handleSave} disabled={isSaving} size="lg" className="shadow-lg">
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Salva Modifiche
+            </Button>
+          </div>
         </div>
       </PageTransition>
     </CornerLayout>
