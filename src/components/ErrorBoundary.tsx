@@ -1,6 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw, Trash2 } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -9,25 +9,54 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  errorInfo: string | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
+    errorInfo: null,
   };
 
-  public static getDerivedStateFromError(error: Error): State {
+  public static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error("ErrorBoundary caught an error:", error, errorInfo);
+    this.setState({ errorInfo: errorInfo.componentStack || null });
   }
 
   private handleReload = () => {
-    // Clear any cached state and reload
     window.location.reload();
+  };
+
+  private handleClearAndReload = async () => {
+    try {
+      // Clear all caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+      }
+      
+      // Clear localStorage auth data
+      const keysToRemove = Object.keys(localStorage).filter(key => 
+        key.includes('supabase') || key.includes('auth')
+      );
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      
+      // Unregister service workers
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+      }
+    } catch (e) {
+      console.error('Clear cache error:', e);
+    }
+    
+    // Hard reload
+    window.location.href = '/';
   };
 
   public render() {
@@ -44,10 +73,32 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-muted-foreground text-sm">
               Si è verificato un errore. Prova a ricaricare l'applicazione.
             </p>
-            <Button onClick={this.handleReload} className="gap-2">
-              <RefreshCw className="h-4 w-4" />
-              Ricarica App
-            </Button>
+            
+            <div className="flex flex-col gap-2">
+              <Button onClick={this.handleReload} className="gap-2 w-full">
+                <RefreshCw className="h-4 w-4" />
+                Ricarica App
+              </Button>
+              
+              <Button 
+                onClick={this.handleClearAndReload} 
+                variant="outline" 
+                className="gap-2 w-full"
+              >
+                <Trash2 className="h-4 w-4" />
+                Cancella Cache e Riprova
+              </Button>
+            </div>
+            
+            {process.env.NODE_ENV === 'development' && this.state.error && (
+              <details className="text-left mt-4 p-3 bg-muted rounded-lg text-xs">
+                <summary className="cursor-pointer font-medium">Dettagli errore</summary>
+                <pre className="mt-2 whitespace-pre-wrap text-destructive overflow-auto max-h-40">
+                  {this.state.error.toString()}
+                  {this.state.errorInfo}
+                </pre>
+              </details>
+            )}
           </div>
         </div>
       );
