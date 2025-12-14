@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { 
   Megaphone, Check, X, Eye, Calendar, MapPin, Euro, 
   Clock, Building2, Mail, TrendingUp, Settings, TestTube,
-  Percent, Timer, Play, Pause, Trash2, Video, Image, Palette
+  Percent, Timer, Play, Pause, Trash2, Video, Image, Palette,
+  CreditCard, CheckCircle, AlertCircle, Store
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -40,7 +41,15 @@ interface Campaign {
   approved_at: string | null;
   rejected_reason: string | null;
   created_at: string;
-  corners?: { corner_id: string; corner_revenue: number; corner?: { business_name: string } }[];
+  corners?: { 
+    id: string;
+    corner_id: string; 
+    corner_revenue: number; 
+    payment_status: string | null;
+    payment_requested_at: string | null;
+    payment_paid_at: string | null;
+    corner?: { business_name: string; email: string } 
+  }[];
 }
 
 interface PricingSettings {
@@ -90,9 +99,13 @@ export default function AdminPubblicita() {
         .select(`
           *,
           corners:display_ad_campaign_corners(
+            id,
             corner_id,
             corner_revenue,
-            corner:corners(business_name)
+            payment_status,
+            payment_requested_at,
+            payment_paid_at,
+            corner:corners(business_name, email)
           )
         `)
         .order('created_at', { ascending: false });
@@ -415,6 +428,15 @@ export default function AdminPubblicita() {
             <Megaphone className="h-4 w-4 mr-2" />
             Campagne
           </TabsTrigger>
+          <TabsTrigger value="payments" className="data-[state=active]:bg-background relative">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Pagamenti Corner
+            {campaigns.flatMap(c => c.corners || []).filter(cc => cc.payment_status === 'requested').length > 0 && (
+              <Badge className="ml-2 bg-amber-500" variant="default">
+                {campaigns.flatMap(c => c.corners || []).filter(cc => cc.payment_status === 'requested').length}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="pricing" className="data-[state=active]:bg-background">
             <Euro className="h-4 w-4 mr-2" />
             Tariffe Base
@@ -577,6 +599,167 @@ export default function AdminPubblicita() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="payments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Pagamenti ai Corner
+              </CardTitle>
+              <CardDescription>Gestisci le richieste di pagamento dai Corner per le pubblicità</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const allCornerPayments = campaigns
+                  .filter(c => c.status === 'active' || c.status === 'completed')
+                  .flatMap(c => (c.corners || []).map(cc => ({
+                    ...cc,
+                    campaign: c
+                  })));
+                
+                const pendingPayments = allCornerPayments.filter(p => p.payment_status === 'requested');
+                const paidPayments = allCornerPayments.filter(p => p.payment_status === 'paid');
+                const unpaidPayments = allCornerPayments.filter(p => !p.payment_status || p.payment_status === 'pending');
+
+                const handleMarkAsPaid = async (cornerCampaignId: string) => {
+                  try {
+                    const { error } = await supabase
+                      .from('display_ad_campaign_corners')
+                      .update({
+                        payment_status: 'paid',
+                        payment_paid_at: new Date().toISOString()
+                      })
+                      .eq('id', cornerCampaignId);
+
+                    if (error) throw error;
+                    toast.success('Pagamento confermato');
+                    loadData();
+                  } catch (error) {
+                    console.error('Error marking as paid:', error);
+                    toast.error('Errore aggiornamento');
+                  }
+                };
+
+                return (
+                  <div className="space-y-6">
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-center">
+                        <AlertCircle className="h-6 w-6 text-amber-600 mx-auto mb-2" />
+                        <p className="text-2xl font-bold text-amber-700">{pendingPayments.length}</p>
+                        <p className="text-sm text-amber-600">Da Pagare</p>
+                        <p className="text-lg font-semibold text-amber-800 mt-1">
+                          €{pendingPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="p-4 bg-gray-50 border rounded-lg text-center">
+                        <Clock className="h-6 w-6 text-gray-500 mx-auto mb-2" />
+                        <p className="text-2xl font-bold">{unpaidPayments.length}</p>
+                        <p className="text-sm text-muted-foreground">Non Richiesti</p>
+                      </div>
+                      <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                        <CheckCircle className="h-6 w-6 text-green-600 mx-auto mb-2" />
+                        <p className="text-2xl font-bold text-green-700">{paidPayments.length}</p>
+                        <p className="text-sm text-green-600">Pagati</p>
+                        <p className="text-lg font-semibold text-green-800 mt-1">
+                          €{paidPayments.reduce((sum, p) => sum + (p.corner_revenue || 0), 0).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Pending Payments */}
+                    {pendingPayments.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="font-semibold flex items-center gap-2 text-amber-700">
+                          <AlertCircle className="h-4 w-4" />
+                          Richieste di Pagamento ({pendingPayments.length})
+                        </h3>
+                        {pendingPayments.map((payment) => (
+                          <motion.div
+                            key={payment.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg"
+                          >
+                            <div className="flex items-center gap-4">
+                              <div className="p-2 bg-amber-200 rounded-full">
+                                <Store className="h-5 w-5 text-amber-700" />
+                              </div>
+                              <div>
+                                <p className="font-medium">{payment.corner?.business_name}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {payment.campaign.ad_title} · {payment.corner?.email}
+                                </p>
+                                {payment.payment_requested_at && (
+                                  <p className="text-xs text-amber-600">
+                                    Richiesto il {format(new Date(payment.payment_requested_at), 'dd/MM/yyyy HH:mm', { locale: it })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <span className="text-xl font-bold text-amber-700">€{payment.corner_revenue?.toFixed(2)}</span>
+                              <Button 
+                                size="sm" 
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={() => handleMarkAsPaid(payment.id)}
+                              >
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Segna Pagato
+                              </Button>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Paid Payments History */}
+                    {paidPayments.length > 0 && (
+                      <div className="space-y-3">
+                        <h3 className="font-semibold flex items-center gap-2 text-green-700">
+                          <CheckCircle className="h-4 w-4" />
+                          Pagamenti Effettuati ({paidPayments.length})
+                        </h3>
+                        <div className="space-y-2">
+                          {paidPayments.slice(0, 10).map((payment) => (
+                            <div
+                              key={payment.id}
+                              className="flex items-center justify-between p-3 bg-green-50 border border-green-100 rounded-lg"
+                            >
+                              <div className="flex items-center gap-3">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <div>
+                                  <p className="font-medium text-sm">{payment.corner?.business_name}</p>
+                                  <p className="text-xs text-muted-foreground">{payment.campaign.ad_title}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <span className="font-semibold text-green-700">€{payment.corner_revenue?.toFixed(2)}</span>
+                                {payment.payment_paid_at && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {format(new Date(payment.payment_paid_at), 'dd/MM/yyyy', { locale: it })}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {pendingPayments.length === 0 && paidPayments.length === 0 && unpaidPayments.length === 0 && (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <CreditCard className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                        <p>Nessun pagamento da gestire</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="pricing">
