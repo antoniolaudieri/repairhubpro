@@ -467,6 +467,7 @@ export default function CentroClienteDetail() {
                 customerId={id!}
                 centroId={centroId}
                 devices={devices.map(d => ({ id: d.id, device_type: d.device_type, brand: d.brand, model: d.model }))}
+                customerPhone={customer?.phone}
               />
             </motion.div>
           )}
