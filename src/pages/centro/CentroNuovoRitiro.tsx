@@ -22,6 +22,7 @@ import { RepairChecklistDialog } from "@/components/checklist";
 import { useCustomerDisplay } from "@/hooks/useCustomerDisplay";
 import { TopupRequestDialog } from "@/components/credit/TopupRequestDialog";
 import { PrintLabelButton } from "@/components/repair/PrintLabelButton";
+import { GoalsSuggestionBanner } from "@/components/centro/GoalsSuggestionBanner";
 
 export default function CentroNuovoRitiro() {
   const navigate = useNavigate();
@@ -1231,6 +1232,14 @@ export default function CentroNuovoRitiro() {
           </div>
           
           <div className="p-4 pb-32 max-w-2xl mx-auto">
+            {/* Goals Suggestion Banner */}
+            {centroId && (
+              <GoalsSuggestionBanner 
+                centroId={centroId} 
+                estimatedRevenue={netProfit}
+              />
+            )}
+            
             <Card className="p-4">
               <NewRepairWizard
                 steps={wizardSteps}
