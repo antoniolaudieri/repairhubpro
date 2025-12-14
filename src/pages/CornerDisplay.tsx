@@ -150,100 +150,147 @@ export default function CornerDisplay() {
   }, []);
 
   // Fetch corner data and active paid ads
-  useEffect(() => {
+  const fetchCornerData = useCallback(async () => {
     if (!cornerId) return;
     
-    const fetchCornerData = async () => {
-      // Fetch corner settings
-      const { data } = await supabase
-        .from("corners")
-        .select("settings, logo_url, business_name")
-        .eq("id", cornerId)
-        .single();
+    // Fetch corner settings
+    const { data } = await supabase
+      .from("corners")
+      .select("settings, logo_url, business_name")
+      .eq("id", cornerId)
+      .single();
+    
+    // Fetch active paid campaigns for this corner
+    const today = new Date().toISOString().split('T')[0];
+    const { data: campaigns } = await supabase
+      .from("display_ad_campaign_corners")
+      .select(`
+        campaign_id,
+        display_ad_campaigns!inner (
+          id,
+          ad_title,
+          ad_description,
+          ad_image_url,
+          ad_gradient,
+          ad_icon,
+          ad_type,
+          status,
+          start_date,
+          end_date
+        )
+      `)
+      .eq("corner_id", cornerId);
+    
+    // Process corner settings for custom ads
+    let customAds: DisplayAd[] = [];
+    if (data) {
+      setCornerLogo(data.logo_url);
+      setCornerName(data.business_name || "");
       
-      // Fetch active paid campaigns for this corner
-      const today = new Date().toISOString().split('T')[0];
-      const { data: campaigns } = await supabase
-        .from("display_ad_campaign_corners")
-        .select(`
-          campaign_id,
-          display_ad_campaigns!inner (
-            id,
-            ad_title,
-            ad_description,
-            ad_image_url,
-            ad_gradient,
-            ad_icon,
-            ad_type,
-            status,
-            start_date,
-            end_date
-          )
-        `)
-        .eq("corner_id", cornerId);
-      
-      // Process corner settings for custom ads
-      let customAds: DisplayAd[] = [];
-      if (data) {
-        setCornerLogo(data.logo_url);
-        setCornerName(data.business_name || "");
-        
-        if (data.settings) {
-          const settings = data.settings as { 
-            display_ads?: DisplayAd[]; 
-            slide_interval?: number;
-          };
-          if (settings.display_ads && settings.display_ads.length > 0) {
-            customAds = settings.display_ads;
-          }
-          if (settings.slide_interval) {
-            setSlideInterval(settings.slide_interval);
-          }
+      if (data.settings) {
+        const settings = data.settings as { 
+          display_ads?: DisplayAd[]; 
+          slide_interval?: number;
+        };
+        if (settings.display_ads && settings.display_ads.length > 0) {
+          customAds = settings.display_ads;
+        }
+        if (settings.slide_interval) {
+          setSlideInterval(settings.slide_interval);
         }
       }
-      
-      // Process paid campaigns
-      const paidAds: DisplayAd[] = (campaigns || [])
-        .filter((c: any) => {
-          const campaign = c.display_ad_campaigns;
-          return campaign.status === 'active' && 
-                 campaign.start_date <= today && 
-                 campaign.end_date >= today;
-        })
-        .map((c: any) => {
-          const campaign = c.display_ad_campaigns;
-          return {
-            id: `paid-${campaign.id}`,
-            title: campaign.ad_title,
-            description: campaign.ad_description || "",
-            gradient: campaign.ad_gradient || "from-blue-600 via-blue-500 to-cyan-400",
-            icon: campaign.ad_icon || "megaphone",
-            imageUrl: campaign.ad_image_url,
-            type: campaign.ad_type === 'image' ? 'image' : 'gradient',
-            textAlign: 'center' as const,
-            textPosition: 'center' as const
-          };
-        });
-      
-      // Build "Spazio Disponibile" QR promo slide
-      const qrPromoSlide: DisplayAd = {
-        id: "qr-promo",
-        title: "Vuoi pubblicizzarti qui?",
-        description: "Scansiona il QR per acquistare uno spazio pubblicitario",
-        gradient: "from-amber-600 via-orange-500 to-red-500",
-        icon: "megaphone",
-        type: "qr_promo",
-        textAlign: "center",
-        textPosition: "center"
-      };
-      
-      // Combine: custom ads + paid ads + QR promo
-      const allAds = customAds.length > 0 ? customAds : defaultAdvertisements;
-      setAdvertisements([...allAds, ...paidAds, qrPromoSlide]);
+    }
+    
+    // Process paid campaigns
+    const paidAds: DisplayAd[] = (campaigns || [])
+      .filter((c: any) => {
+        const campaign = c.display_ad_campaigns;
+        return campaign.status === 'active' && 
+               campaign.start_date <= today && 
+               campaign.end_date >= today;
+      })
+      .map((c: any) => {
+        const campaign = c.display_ad_campaigns;
+        return {
+          id: `paid-${campaign.id}`,
+          title: campaign.ad_title,
+          description: campaign.ad_description || "",
+          gradient: campaign.ad_gradient || "from-blue-600 via-blue-500 to-cyan-400",
+          icon: campaign.ad_icon || "megaphone",
+          imageUrl: campaign.ad_image_url,
+          type: campaign.ad_type === 'image' ? 'image' : 'gradient',
+          textAlign: 'center' as const,
+          textPosition: 'center' as const
+        };
+      });
+    
+    // Build "Spazio Disponibile" QR promo slide
+    const qrPromoSlide: DisplayAd = {
+      id: "qr-promo",
+      title: "Vuoi pubblicizzarti qui?",
+      description: "Scansiona il QR per acquistare uno spazio pubblicitario",
+      gradient: "from-amber-600 via-orange-500 to-red-500",
+      icon: "megaphone",
+      type: "qr_promo",
+      textAlign: "center",
+      textPosition: "center"
     };
     
-    fetchCornerData();
+    // Combine: custom ads + paid ads + QR promo
+    const allAds = customAds.length > 0 ? customAds : defaultAdvertisements;
+    setAdvertisements([...allAds, ...paidAds, qrPromoSlide]);
+    setCurrentAdIndex(0);
   }, [cornerId]);
+
+  useEffect(() => {
+    fetchCornerData();
+  }, [fetchCornerData]);
+
+  // Real-time subscription for campaign updates - auto-refresh when campaigns are activated
+  useEffect(() => {
+    if (!cornerId) return;
+
+    console.log('[CornerDisplay] Setting up real-time campaign subscription');
+    
+    const channel = supabase
+      .channel('display-ad-campaigns-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'display_ad_campaigns'
+        },
+        (payload) => {
+          console.log('[CornerDisplay] Campaign updated:', payload);
+          // Refresh ads when any campaign is updated (e.g., status changed to 'active')
+          fetchCornerData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'display_ad_campaign_corners'
+        },
+        (payload) => {
+          console.log('[CornerDisplay] New campaign corner assignment:', payload);
+          // @ts-ignore - payload.new contains the new row
+          if (payload.new?.corner_id === cornerId) {
+            fetchCornerData();
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[CornerDisplay] Campaign subscription status:', status);
+      });
+
+    return () => {
+      console.log('[CornerDisplay] Removing campaign subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [cornerId, fetchCornerData]);
 
   // Advertisement rotation
   useEffect(() => {
