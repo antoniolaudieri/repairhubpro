@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
+import { FeatureShowcase } from "@/components/partner/FeatureShowcase";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -438,8 +439,15 @@ export default function DiventaPartner() {
               </Card>
             </motion.div>
           </div>
+        </div>
+      </section>
 
-          {/* Partner Types Section */}
+      {/* Feature Showcase Section */}
+      <FeatureShowcase />
+
+      {/* Partner Types Section */}
+      <section className="py-24 relative">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div id="partner-types" className="mb-24">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
