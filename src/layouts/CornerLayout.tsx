@@ -14,7 +14,8 @@ import {
   Handshake,
   Settings,
   CalendarCheck,
-  Package
+  Package,
+  Megaphone
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CornerNotificationCenter } from "@/components/corner/CornerNotificationCenter";
@@ -32,6 +33,7 @@ const navItems = [
   { to: "/corner/segnalazioni", icon: List, label: "Le Mie Segnalazioni" },
   { to: "/corner/usato", icon: Package, label: "Usato" },
   { to: "/corner/commissioni", icon: DollarSign, label: "Commissioni" },
+  { to: "/corner/pubblicita", icon: Megaphone, label: "Pubblicità" },
   { to: "/corner/partnership", icon: Handshake, label: "Partnership" },
   { to: "/corner/impostazioni", icon: Settings, label: "Impostazioni" },
 ];
