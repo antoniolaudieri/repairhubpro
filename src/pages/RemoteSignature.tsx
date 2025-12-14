@@ -22,8 +22,8 @@ export default function RemoteSignature() {
   const [alreadySigned, setAlreadySigned] = useState(false);
   const [privacyConsent, setPrivacyConsent] = useState(false);
 
-  const amount = searchParams.get("amount") || "0.00";
   const total = searchParams.get("total") || "0.00";
+  const amount = searchParams.get("amount") || total; // Default to total if amount not specified
   const type = searchParams.get("type");
   const quoteId = searchParams.get("quote_id");
   const repairRequestId = searchParams.get("repair_request_id");
@@ -104,41 +104,28 @@ export default function RemoteSignature() {
     
     try {
       const signatureData = sigCanvas.current.toDataURL();
-      const signedAt = new Date().toISOString();
       
-      // Update database if this is a quote signature
+      // Update database via edge function (bypasses RLS for public access)
       if (type === "quote" && quoteId) {
-        // Update quote status to accepted
-        const { error: quoteError } = await supabase
-          .from("quotes")
-          .update({
-            status: "accepted",
-            signed_at: signedAt,
+        const { data, error } = await supabase.functions.invoke("accept-quote-signature", {
+          body: {
+            quote_id: quoteId,
+            repair_request_id: repairRequestId,
             signature_data: signatureData,
-          })
-          .eq("id", quoteId);
+            session_id: sessionId,
+          },
+        });
 
-        if (quoteError) {
-          console.error("Error updating quote:", quoteError);
+        if (error) {
+          console.error("Error calling accept-quote-signature:", error);
           throw new Error("Errore nell'aggiornamento del preventivo");
         }
 
-        // Update repair request status if linked
-        if (repairRequestId) {
-          const { error: repairError } = await supabase
-            .from("repair_requests")
-            .update({
-              status: "awaiting_pickup",
-              quote_accepted_at: signedAt,
-              awaiting_pickup_at: signedAt,
-            })
-            .eq("id", repairRequestId);
-
-          if (repairError) {
-            console.error("Error updating repair request:", repairError);
-            // Don't throw - quote is already accepted
-          }
+        if (!data?.success) {
+          throw new Error(data?.error || "Errore nell'aggiornamento del preventivo");
         }
+
+        console.log("Quote accepted successfully:", data);
       }
       
       // Update localStorage session
@@ -155,6 +142,7 @@ export default function RemoteSignature() {
       const channel = supabase.channel(`signature-${sessionId}`);
       await channel.subscribe();
       
+      const signedAt = new Date().toISOString();
       await channel.send({
         type: 'broadcast',
         event: 'signature_completed',
