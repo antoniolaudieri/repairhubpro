@@ -406,7 +406,7 @@ export default function AdminPubblicita() {
                   <Euro className="h-4 w-4 sm:h-6 sm:w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-xl sm:text-3xl font-bold text-blue-700">€{stats.totalRevenue.toFixed(0)}</p>
+                  <p className="text-xl sm:text-3xl font-bold text-blue-700">€{stats.totalRevenue.toFixed(2)}</p>
                   <p className="text-xs sm:text-sm text-blue-600/80">Ricavi</p>
                 </div>
               </div>
@@ -422,7 +422,7 @@ export default function AdminPubblicita() {
                   <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-xl sm:text-3xl font-bold text-purple-700">€{stats.cornerPayout.toFixed(0)}</p>
+                  <p className="text-xl sm:text-3xl font-bold text-purple-700">€{stats.cornerPayout.toFixed(2)}</p>
                   <p className="text-xs sm:text-sm text-purple-600/80">Payout</p>
                 </div>
               </div>

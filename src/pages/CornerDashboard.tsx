@@ -395,11 +395,11 @@ export default function CornerDashboard() {
                 <p className="text-xs text-white/70">Completate</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-                <p className="text-2xl md:text-3xl font-bold">€{stats.adRevenue.toFixed(0)}</p>
+                <p className="text-2xl md:text-3xl font-bold">€{stats.adRevenue.toFixed(2)}</p>
                 <p className="text-xs text-white/70">Pubblicità</p>
               </div>
               <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center">
-                <p className="text-2xl md:text-3xl font-bold">€{stats.thisMonthCommissions.toFixed(0)}</p>
+                <p className="text-2xl md:text-3xl font-bold">€{stats.thisMonthCommissions.toFixed(2)}</p>
                 <p className="text-xs text-white/70">Commissioni</p>
               </div>
             </div>
