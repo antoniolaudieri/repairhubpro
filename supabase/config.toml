@@ -65,3 +65,12 @@ verify_jwt = false
 
 [functions.generate-maintenance-predictions]
 verify_jwt = false
+
+[functions.create-ad-checkout]
+verify_jwt = false
+
+[functions.stripe-ad-webhook]
+verify_jwt = false
+
+[functions.confirm-ad-payment]
+verify_jwt = false

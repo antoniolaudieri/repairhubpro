@@ -59,12 +59,18 @@ import AdminCrediti from "@/pages/admin/AdminCrediti";
 import AdminCommissioni from "@/pages/admin/AdminCommissioni";
 import AdminFatturazione from "@/pages/admin/AdminFatturazione";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
+import AdminPubblicita from "@/pages/admin/AdminPubblicita";
 import NotFound from "@/pages/NotFound";
 import RemoteSignature from "@/pages/RemoteSignature";
 import CustomerDisplay from "@/pages/CustomerDisplay";
 import CornerDisplay from "@/pages/CornerDisplay";
 import Install from "@/pages/Install";
 import DiventaPartner from "@/pages/DiventaPartner";
+// Ads pages
+import AcquistaPubblicita from "@/pages/ads/AcquistaPubblicita";
+import SuccessoPubblicita from "@/pages/ads/SuccessoPubblicita";
+// Corner pages
+import CornerPubblicita from "@/pages/corner/CornerPubblicita";
 
 export const AnimatedRoutes = () => {
   return (
@@ -77,6 +83,10 @@ export const AnimatedRoutes = () => {
         
         {/* Public Corner Display for external monitor */}
         <Route path="/display/corner/:cornerId" element={<PageTransition><CornerDisplay /></PageTransition>} />
+        
+        {/* Public Ads Routes */}
+        <Route path="/ads/acquista" element={<PageTransition><AcquistaPubblicita /></PageTransition>} />
+        <Route path="/ads/successo" element={<PageTransition><SuccessoPubblicita /></PageTransition>} />
         
         <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
@@ -170,6 +180,14 @@ export const AnimatedRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/pubblicita"
+          element={
+            <ProtectedRoute>
+              <AdminPubblicita />
+            </ProtectedRoute>
+          }
+        />
         {/* Legacy route redirect */}
         <Route
           path="/platform-admin"
@@ -258,6 +276,14 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCorner>
               <CornerUsato />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/corner/pubblicita"
+          element={
+            <ProtectedRoute requireCorner>
+              <CornerPubblicita />
             </ProtectedRoute>
           }
         />

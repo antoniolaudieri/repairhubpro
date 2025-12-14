@@ -17,10 +17,13 @@ import {
   Minimize,
   Sparkles,
   ClipboardCheck,
-  Store
+  Store,
+  QrCode,
+  Megaphone
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
+import { QRCodeSVG } from "qrcode.react";
 
 type DisplayMode = "standby" | "confirm_data" | "completed";
 
@@ -51,7 +54,7 @@ interface DisplayAd {
   gradient: string;
   icon: string;
   imageUrl?: string;
-  type?: 'gradient' | 'image';
+  type?: 'gradient' | 'image' | 'qr_promo';
   imagePosition?: 'center' | 'top' | 'bottom';
   textAlign?: 'left' | 'center' | 'right';
   textPosition?: 'bottom' | 'center' | 'top';
@@ -146,17 +149,41 @@ export default function CornerDisplay() {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Fetch corner data
+  // Fetch corner data and active paid ads
   useEffect(() => {
     if (!cornerId) return;
     
     const fetchCornerData = async () => {
+      // Fetch corner settings
       const { data } = await supabase
         .from("corners")
         .select("settings, logo_url, business_name")
         .eq("id", cornerId)
         .single();
       
+      // Fetch active paid campaigns for this corner
+      const today = new Date().toISOString().split('T')[0];
+      const { data: campaigns } = await supabase
+        .from("display_ad_campaign_corners")
+        .select(`
+          campaign_id,
+          display_ad_campaigns!inner (
+            id,
+            ad_title,
+            ad_description,
+            ad_image_url,
+            ad_gradient,
+            ad_icon,
+            ad_type,
+            status,
+            start_date,
+            end_date
+          )
+        `)
+        .eq("corner_id", cornerId);
+      
+      // Process corner settings for custom ads
+      let customAds: DisplayAd[] = [];
       if (data) {
         setCornerLogo(data.logo_url);
         setCornerName(data.business_name || "");
@@ -167,13 +194,52 @@ export default function CornerDisplay() {
             slide_interval?: number;
           };
           if (settings.display_ads && settings.display_ads.length > 0) {
-            setAdvertisements(settings.display_ads);
+            customAds = settings.display_ads;
           }
           if (settings.slide_interval) {
             setSlideInterval(settings.slide_interval);
           }
         }
       }
+      
+      // Process paid campaigns
+      const paidAds: DisplayAd[] = (campaigns || [])
+        .filter((c: any) => {
+          const campaign = c.display_ad_campaigns;
+          return campaign.status === 'active' && 
+                 campaign.start_date <= today && 
+                 campaign.end_date >= today;
+        })
+        .map((c: any) => {
+          const campaign = c.display_ad_campaigns;
+          return {
+            id: `paid-${campaign.id}`,
+            title: campaign.ad_title,
+            description: campaign.ad_description || "",
+            gradient: campaign.ad_gradient || "from-blue-600 via-blue-500 to-cyan-400",
+            icon: campaign.ad_icon || "megaphone",
+            imageUrl: campaign.ad_image_url,
+            type: campaign.ad_type === 'image' ? 'image' : 'gradient',
+            textAlign: 'center' as const,
+            textPosition: 'center' as const
+          };
+        });
+      
+      // Build "Spazio Disponibile" QR promo slide
+      const qrPromoSlide: DisplayAd = {
+        id: "qr-promo",
+        title: "Vuoi pubblicizzarti qui?",
+        description: "Scansiona il QR per acquistare uno spazio pubblicitario",
+        gradient: "from-amber-600 via-orange-500 to-red-500",
+        icon: "megaphone",
+        type: "qr_promo",
+        textAlign: "center",
+        textPosition: "center"
+      };
+      
+      // Combine: custom ads + paid ads + QR promo
+      const allAds = customAds.length > 0 ? customAds : defaultAdvertisements;
+      setAdvertisements([...allAds, ...paidAds, qrPromoSlide]);
     };
     
     fetchCornerData();
@@ -315,6 +381,7 @@ export default function CornerDisplay() {
   if (mode === "standby") {
     const currentAd = advertisements[currentAdIndex];
     const isImageAd = currentAd.type === 'image' && currentAd.imageUrl;
+    const isQrPromo = currentAd.type === 'qr_promo';
     
     const imagePositionClass = {
       center: 'object-center',
@@ -333,6 +400,9 @@ export default function CornerDisplay() {
       center: 'justify-center',
       top: 'justify-start pt-12'
     }[currentAd.textPosition || 'bottom'];
+    
+    // QR code URL for advertising purchase
+    const qrUrl = `${window.location.origin}/ads/acquista?corner=${cornerId}`;
     
     return (
       <div ref={containerRef} className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-6 overflow-hidden">
@@ -354,7 +424,60 @@ export default function CornerDisplay() {
             transition={{ duration: 0.6, ease: "easeOut" }}
             className="max-w-4xl w-full relative z-10"
           >
-            {isImageAd ? (
+            {isQrPromo ? (
+              // QR Promo Slide - "Spazio Disponibile"
+              <Card className={`p-12 md:p-16 bg-gradient-to-br ${currentAd.gradient} border-0 shadow-2xl rounded-3xl overflow-hidden relative`}>
+                {/* Decorative elements */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+                
+                <div className="text-white flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16 relative z-10">
+                  {/* Left side - Text */}
+                  <div className="space-y-6 text-center md:text-left">
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+                      className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm px-6 py-3 rounded-full border border-white/20"
+                    >
+                      <Megaphone className="h-6 w-6" />
+                      <span className="text-lg font-semibold">Spazio Disponibile</span>
+                    </motion.div>
+                    <motion.h1 
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="text-4xl md:text-5xl font-bold drop-shadow-lg"
+                    >
+                      {currentAd.title}
+                    </motion.h1>
+                    <motion.p 
+                      initial={{ y: 20, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{ delay: 0.4 }}
+                      className="text-xl md:text-2xl text-white/80"
+                    >
+                      {currentAd.description}
+                    </motion.p>
+                  </div>
+                  
+                  {/* Right side - QR Code */}
+                  <motion.div
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+                    className="bg-white p-6 rounded-3xl shadow-2xl"
+                  >
+                    <QRCodeSVG 
+                      value={qrUrl}
+                      size={200}
+                      level="H"
+                      includeMargin={false}
+                    />
+                  </motion.div>
+                </div>
+              </Card>
+            ) : isImageAd ? (
               <Card className="border-0 shadow-2xl overflow-hidden rounded-3xl">
                 <div className="relative aspect-video">
                   <img 

@@ -14,6 +14,7 @@ import {
   Package,
   ShoppingCart,
   FileText,
+  Megaphone,
   BookOpen,
   Calendar
 } from "lucide-react";
@@ -48,6 +49,7 @@ const adminMenuItems = [
   { title: "Crediti", url: "/admin/crediti", icon: Euro },
   { title: "Commissioni", url: "/admin/commissioni", icon: Settings2 },
   { title: "Fatturazione", url: "/admin/fatturazione", icon: Receipt },
+  { title: "Pubblicità", url: "/admin/pubblicita", icon: Megaphone },
   { title: "Analytics", url: "/admin/analytics", icon: BarChart3 },
 ];
 
