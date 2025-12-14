@@ -288,44 +288,48 @@ export default function CornerDisplay() {
     fetchCornerData();
   }, [fetchCornerData]);
 
-  // Real-time subscription for campaign updates - auto-refresh when campaigns are activated
+  // Real-time subscription for campaign updates - auto-refresh when campaigns are modified
   useEffect(() => {
     if (!cornerId) return;
 
-    console.log('[CornerDisplay] Setting up real-time campaign subscription');
+    console.log('[CornerDisplay] Setting up real-time campaign subscription for corner:', cornerId);
     
     const channel = supabase
-      .channel('display-ad-campaigns-updates')
+      .channel(`display-ad-campaigns-${cornerId}`)
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'display_ad_campaigns'
         },
         (payload) => {
-          console.log('[CornerDisplay] Campaign updated:', payload);
-          // Refresh ads when any campaign is updated (e.g., status changed to 'active')
+          console.log('[CornerDisplay] Campaign change detected:', payload.eventType, payload);
+          // Refresh ads when any campaign is modified (status change, blocked, approved, etc.)
           fetchCornerData();
         }
       )
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*', // Listen to all events
           schema: 'public',
           table: 'display_ad_campaign_corners'
         },
         (payload) => {
-          console.log('[CornerDisplay] New campaign corner assignment:', payload);
-          // @ts-ignore - payload.new contains the new row
-          if (payload.new?.corner_id === cornerId) {
+          console.log('[CornerDisplay] Campaign corner assignment change:', payload.eventType, payload);
+          // @ts-ignore - payload.new/old contains the row data
+          const relevantCornerId = payload.new?.corner_id || payload.old?.corner_id;
+          if (relevantCornerId === cornerId) {
             fetchCornerData();
           }
         }
       )
       .subscribe((status) => {
         console.log('[CornerDisplay] Campaign subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('[CornerDisplay] Real-time subscription active - display will auto-update');
+        }
       });
 
     return () => {
