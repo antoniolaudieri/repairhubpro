@@ -8,9 +8,12 @@ import { Clock, Copy } from "lucide-react";
 import { toast } from "sonner";
 
 export interface DayHours {
-  open: string;
-  close: string;
+  open_am: string;
+  close_am: string;
+  open_pm: string;
+  close_pm: string;
   closed: boolean;
+  afternoon_closed?: boolean;
 }
 
 export interface OpeningHours {
@@ -34,15 +37,30 @@ const dayNames: Record<keyof OpeningHours, string> = {
 };
 
 const defaultHours: DayHours = {
-  open: "09:00",
-  close: "18:00",
+  open_am: "09:00",
+  close_am: "13:00",
+  open_pm: "15:00",
+  close_pm: "19:00",
   closed: false,
+  afternoon_closed: false,
 };
 
-const defaultClosedHours: DayHours = {
-  open: "09:00",
-  close: "18:00",
+const saturdayHours: DayHours = {
+  open_am: "09:00",
+  close_am: "13:00",
+  open_pm: "15:00",
+  close_pm: "19:00",
+  closed: false,
+  afternoon_closed: true,
+};
+
+const closedHours: DayHours = {
+  open_am: "09:00",
+  close_am: "13:00",
+  open_pm: "15:00",
+  close_pm: "19:00",
   closed: true,
+  afternoon_closed: false,
 };
 
 export const defaultOpeningHours: OpeningHours = {
@@ -51,8 +69,8 @@ export const defaultOpeningHours: OpeningHours = {
   wednesday: { ...defaultHours },
   thursday: { ...defaultHours },
   friday: { ...defaultHours },
-  saturday: { open: "09:00", close: "13:00", closed: false },
-  sunday: { ...defaultClosedHours },
+  saturday: { ...saturdayHours },
+  sunday: { ...closedHours },
 };
 
 interface OpeningHoursEditorProps {
@@ -84,16 +102,6 @@ export function OpeningHoursEditor({ value, onChange }: OpeningHoursEditorProps)
     toast.success("Orari copiati ai giorni feriali");
   };
 
-  const copyToAll = (sourceDay: keyof OpeningHours) => {
-    const allDays: (keyof OpeningHours)[] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
-    const newHours = { ...hours };
-    allDays.forEach((day) => {
-      newHours[day] = { ...hours[sourceDay] };
-    });
-    onChange(newHours);
-    toast.success("Orari copiati a tutti i giorni");
-  };
-
   return (
     <Card>
       <CardHeader>
@@ -102,57 +110,91 @@ export function OpeningHoursEditor({ value, onChange }: OpeningHoursEditorProps)
           Orari di Apertura
         </CardTitle>
         <CardDescription>
-          Imposta gli orari di apertura visibili ai clienti sulla mappa
+          Imposta gli orari di apertura (mattina e pomeriggio) visibili ai clienti
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {(Object.keys(dayNames) as (keyof OpeningHours)[]).map((day, index) => (
-          <div key={day} className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
-            <div className="w-24 flex-shrink-0">
-              <Label className="font-medium">{dayNames[day]}</Label>
-            </div>
-            
-            <div className="flex items-center gap-2 flex-1">
-              <Switch
-                checked={!hours[day].closed}
-                onCheckedChange={(checked) => updateDay(day, "closed", !checked)}
-              />
-              <span className="text-sm text-muted-foreground w-16">
-                {hours[day].closed ? "Chiuso" : "Aperto"}
-              </span>
+          <div key={day} className="space-y-2 py-3 border-b border-border/50 last:border-0">
+            <div className="flex items-center justify-between">
+              <Label className="font-medium text-base">{dayNames[day]}</Label>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={!hours[day].closed}
+                  onCheckedChange={(checked) => updateDay(day, "closed", !checked)}
+                />
+                <span className="text-sm text-muted-foreground w-16">
+                  {hours[day].closed ? "Chiuso" : "Aperto"}
+                </span>
+                {index === 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => copyToWeekdays(day)}
+                    className="text-xs h-7 px-2"
+                    title="Copia a Lun-Ven"
+                  >
+                    <Copy className="h-3 w-3 mr-1" />
+                    Lun-Ven
+                  </Button>
+                )}
+              </div>
             </div>
 
             {!hours[day].closed && (
-              <div className="flex items-center gap-2">
-                <Input
-                  type="time"
-                  value={hours[day].open}
-                  onChange={(e) => updateDay(day, "open", e.target.value)}
-                  className="w-28"
-                />
-                <span className="text-muted-foreground">-</span>
-                <Input
-                  type="time"
-                  value={hours[day].close}
-                  onChange={(e) => updateDay(day, "close", e.target.value)}
-                  className="w-28"
-                />
-              </div>
-            )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pl-2">
+                {/* Mattina */}
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Mattina</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      value={hours[day].open_am}
+                      onChange={(e) => updateDay(day, "open_am", e.target.value)}
+                      className="w-24 h-8 text-sm"
+                    />
+                    <span className="text-muted-foreground">-</span>
+                    <Input
+                      type="time"
+                      value={hours[day].close_am}
+                      onChange={(e) => updateDay(day, "close_am", e.target.value)}
+                      className="w-24 h-8 text-sm"
+                    />
+                  </div>
+                </div>
 
-            {index === 0 && (
-              <div className="flex gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => copyToWeekdays(day)}
-                  className="text-xs h-7 px-2"
-                  title="Copia a Lun-Ven"
-                >
-                  <Copy className="h-3 w-3 mr-1" />
-                  Lun-Ven
-                </Button>
+                {/* Pomeriggio */}
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground">Pomeriggio</Label>
+                    <Switch
+                      checked={!hours[day].afternoon_closed}
+                      onCheckedChange={(checked) => updateDay(day, "afternoon_closed", !checked)}
+                      className="scale-75"
+                    />
+                    {hours[day].afternoon_closed && (
+                      <span className="text-xs text-muted-foreground">(chiuso)</span>
+                    )}
+                  </div>
+                  {!hours[day].afternoon_closed && (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="time"
+                        value={hours[day].open_pm}
+                        onChange={(e) => updateDay(day, "open_pm", e.target.value)}
+                        className="w-24 h-8 text-sm"
+                      />
+                      <span className="text-muted-foreground">-</span>
+                      <Input
+                        type="time"
+                        value={hours[day].close_pm}
+                        onChange={(e) => updateDay(day, "close_pm", e.target.value)}
+                        className="w-24 h-8 text-sm"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -178,8 +220,10 @@ export function formatOpeningHoursForDisplay(hours: OpeningHours | null): string
     const shortName = dayNames[day].substring(0, 3);
     if (dayData.closed) {
       lines.push(`${shortName}: Chiuso`);
+    } else if (dayData.afternoon_closed) {
+      lines.push(`${shortName}: ${dayData.open_am}-${dayData.close_am}`);
     } else {
-      lines.push(`${shortName}: ${dayData.open}-${dayData.close}`);
+      lines.push(`${shortName}: ${dayData.open_am}-${dayData.close_am} / ${dayData.open_pm}-${dayData.close_pm}`);
     }
   });
   
@@ -198,19 +242,22 @@ export function formatOpeningHoursForPopup(hours: OpeningHours | null): string {
     if (dayData.closed) {
       return `<span style="color: #9ca3af;">${shortNames[i]}: Chiuso</span>`;
     }
-    return `<span>${shortNames[i]}: ${dayData.open}-${dayData.close}</span>`;
+    if (dayData.afternoon_closed) {
+      return `<span>${shortNames[i]}: ${dayData.open_am}-${dayData.close_am}</span>`;
+    }
+    return `<span>${shortNames[i]}: ${dayData.open_am}-${dayData.close_am} / ${dayData.open_pm}-${dayData.close_pm}</span>`;
   });
   
   return `<div style="font-size: 11px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e7eb;">
     <strong style="display: block; margin-bottom: 4px;">🕐 Orari:</strong>
-    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 8px;">
+    <div style="display: grid; grid-template-columns: 1fr; gap: 2px;">
       ${lines.join("")}
     </div>
   </div>`;
 }
 
 // Get today's opening hours
-export function getTodayHours(hours: OpeningHours | null): { open: string; close: string; closed: boolean } | null {
+export function getTodayHours(hours: OpeningHours | null): { open_am: string; close_am: string; open_pm: string; close_pm: string; closed: boolean; afternoon_closed?: boolean } | null {
   if (!hours) return null;
   
   const dayOfWeek = new Date().getDay();
@@ -226,4 +273,13 @@ export function getTodayHours(hours: OpeningHours | null): { open: string; close
   
   const today = dayMap[dayOfWeek];
   return hours[today] || null;
+}
+
+// Format today's hours for display
+export function formatTodayHours(hours: OpeningHours | null): string {
+  const today = getTodayHours(hours);
+  if (!today) return "Orari non disponibili";
+  if (today.closed) return "Chiuso oggi";
+  if (today.afternoon_closed) return `${today.open_am}-${today.close_am}`;
+  return `${today.open_am}-${today.close_am} / ${today.open_pm}-${today.close_pm}`;
 }
