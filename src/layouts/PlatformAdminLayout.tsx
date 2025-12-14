@@ -62,7 +62,7 @@ export const PlatformAdminLayout = ({ children }: PlatformAdminLayoutProps) => {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full bg-background overflow-x-hidden">
         <PlatformAdminSidebar />
         <div className="flex-1 flex flex-col min-w-0 overflow-x-hidden">
@@ -88,7 +88,7 @@ export const PlatformAdminLayout = ({ children }: PlatformAdminLayoutProps) => {
               </Badge>
             )}
           </header>
-          <main className="flex-1 bg-gradient-to-br from-background via-background to-muted/20 overflow-x-hidden">
+          <main className="flex-1 bg-gradient-to-br from-background via-background to-muted/20 overflow-x-hidden p-3 sm:p-4 lg:p-6">
             {children}
           </main>
         </div>
