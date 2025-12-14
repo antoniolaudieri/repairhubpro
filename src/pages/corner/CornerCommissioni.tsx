@@ -12,6 +12,7 @@ import { it } from "date-fns/locale";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { PageTransition } from "@/components/PageTransition";
+import { sendPushNotification, getCentroUserId } from "@/services/pushNotificationService";
 
 interface Commission {
   id: string;
@@ -115,12 +116,43 @@ export default function CornerCommissioni() {
   };
 
   const handleRequestPayment = async (commission: Commission) => {
+    if (!commission.centro_id) {
+      toast.error("Centro non trovato per questa commissione");
+      return;
+    }
+
     setRequestingPayment(commission.id);
     try {
+      // Get Corner name for notification
+      const { data: corner } = await supabase
+        .from("corners")
+        .select("business_name")
+        .eq("id", cornerId)
+        .single();
+
+      const cornerName = corner?.business_name || "Corner";
+
+      // Get Centro user_id for push notification
+      const centroUserId = await getCentroUserId(commission.centro_id);
+
+      if (centroUserId) {
+        await sendPushNotification([centroUserId], {
+          title: "💰 Richiesta Pagamento Commissione",
+          body: `${cornerName} richiede il pagamento di €${commission.corner_commission?.toFixed(2)} per la commissione maturata.`,
+          data: {
+            url: "/centro/commissioni",
+            type: "commission_payment_request",
+            commissionId: commission.id,
+            cornerId: cornerId,
+          },
+        });
+      }
+
       toast.success(`Richiesta di pagamento inviata a ${commission.centro_name}`, {
         description: `Importo: €${commission.corner_commission?.toFixed(2)}`
       });
     } catch (error) {
+      console.error("Error requesting payment:", error);
       toast.error("Errore nell'invio della richiesta");
     } finally {
       setRequestingPayment(null);
