@@ -65,6 +65,8 @@ interface DisplayAd {
   titleColor?: string;
   descriptionColor?: string;
   emoji?: string;
+  // Duration in milliseconds for this specific ad
+  displayMs?: number;
 }
 
 const defaultAdvertisements: DisplayAd[] = [
@@ -179,6 +181,11 @@ export default function CornerDisplay() {
           ad_gradient,
           ad_icon,
           ad_type,
+          ad_font,
+          ad_title_color,
+          ad_description_color,
+          ad_emoji,
+          display_seconds,
           status,
           start_date,
           end_date
@@ -230,7 +237,9 @@ export default function CornerDisplay() {
           fontFamily: campaign.ad_font || 'sans',
           titleColor: campaign.ad_title_color || '#ffffff',
           descriptionColor: campaign.ad_description_color || '#ffffff',
-          emoji: campaign.ad_emoji || ''
+          emoji: campaign.ad_emoji || '',
+          // Duration in milliseconds for this ad
+          displayMs: (campaign.display_seconds || 5) * 1000
         };
       });
     
@@ -302,16 +311,20 @@ export default function CornerDisplay() {
     };
   }, [cornerId, fetchCornerData]);
 
-  // Advertisement rotation
+  // Advertisement rotation with dynamic duration per ad
   useEffect(() => {
-    if (mode !== "standby") return;
+    if (mode !== "standby" || advertisements.length === 0) return;
     
-    const interval = setInterval(() => {
+    // Get duration for current ad (use ad-specific duration or fallback to global slideInterval)
+    const currentAd = advertisements[currentAdIndex];
+    const duration = currentAd?.displayMs || slideInterval;
+    
+    const timeout = setTimeout(() => {
       setCurrentAdIndex((prev) => (prev + 1) % advertisements.length);
-    }, slideInterval);
+    }, duration);
 
-    return () => clearInterval(interval);
-  }, [mode, advertisements.length, slideInterval]);
+    return () => clearTimeout(timeout);
+  }, [mode, advertisements, currentAdIndex, slideInterval]);
 
   // Realtime channel for display communication
   useEffect(() => {

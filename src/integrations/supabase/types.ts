@@ -880,6 +880,7 @@ export type Database = {
           approved_by: string | null
           corner_revenue_total: number
           created_at: string
+          display_seconds: number
           end_date: string
           id: string
           paid_at: string | null
@@ -911,6 +912,7 @@ export type Database = {
           approved_by?: string | null
           corner_revenue_total?: number
           created_at?: string
+          display_seconds?: number
           end_date: string
           id?: string
           paid_at?: string | null
@@ -942,6 +944,7 @@ export type Database = {
           approved_by?: string | null
           corner_revenue_total?: number
           created_at?: string
+          display_seconds?: number
           end_date?: string
           id?: string
           paid_at?: string | null
