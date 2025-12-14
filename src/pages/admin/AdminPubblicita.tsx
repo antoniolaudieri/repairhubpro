@@ -20,6 +20,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { PlatformAdminLayout } from '@/layouts/PlatformAdminLayout';
 
 interface Campaign {
   id: string;
@@ -323,13 +324,16 @@ export default function AdminPubblicita() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-      </div>
+      <PlatformAdminLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+        </div>
+      </PlatformAdminLayout>
     );
   }
 
   return (
+    <PlatformAdminLayout>
     <div className="space-y-6">
       {/* Header with Test Mode */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1174,5 +1178,6 @@ export default function AdminPubblicita() {
         </DialogContent>
       </Dialog>
     </div>
+    </PlatformAdminLayout>
   );
 }
