@@ -7,6 +7,8 @@ import {
   ArrowRight, Sparkles, Image, Palette, Type, Upload, Loader2,
   Tag, Percent, Clock, Video, Timer, Link, QrCode, Building
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { CountdownTimer } from '@/components/ads/CountdownTimer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1013,6 +1015,40 @@ export default function AcquistaPubblicita() {
                                 </p>
                               )}
                             </div>
+                          </div>
+                        )}
+                        
+                        {/* Company Logo - Top Left */}
+                        {campaignData.company_logo_url && (
+                          <div className="absolute top-3 left-3 z-10">
+                            <img 
+                              src={campaignData.company_logo_url} 
+                              alt="Logo" 
+                              className="h-10 w-auto object-contain bg-white/90 rounded-lg p-1 shadow-lg"
+                            />
+                          </div>
+                        )}
+                        
+                        {/* Countdown Timer - Top Right */}
+                        {campaignData.countdown_enabled && campaignData.countdown_end_date && (
+                          <div className="absolute top-3 right-3 z-10">
+                            <CountdownTimer 
+                              endDate={campaignData.countdown_end_date} 
+                              text={campaignData.countdown_text}
+                              className="scale-75 origin-top-right"
+                            />
+                          </div>
+                        )}
+                        
+                        {/* QR Code - Bottom Right */}
+                        {campaignData.qr_enabled && campaignData.qr_destination_url && (
+                          <div className="absolute bottom-3 right-3 z-10 bg-white p-2 rounded-lg shadow-lg">
+                            <QRCodeSVG 
+                              value={campaignData.qr_destination_url}
+                              size={60}
+                              level="M"
+                            />
+                            <p className="text-[8px] text-center text-gray-600 mt-1">Scansiona</p>
                           </div>
                         )}
                       </div>
