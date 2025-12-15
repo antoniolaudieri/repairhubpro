@@ -24,6 +24,8 @@ import { TopupRequestDialog } from "@/components/credit/TopupRequestDialog";
 import { PrintLabelButton } from "@/components/repair/PrintLabelButton";
 import { GoalsSuggestionBanner } from "@/components/centro/GoalsSuggestionBanner";
 import { MaintenanceSuggestionBanner } from "@/components/centro/MaintenanceSuggestionBanner";
+import { IntakeLoyaltyBanner } from "@/components/loyalty/IntakeLoyaltyBanner";
+import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
 
 export default function CentroNuovoRitiro() {
   const navigate = useNavigate();
@@ -79,6 +81,16 @@ export default function CentroNuovoRitiro() {
     listenForCustomerResponses 
   } = useCustomerDisplay(centroId);
   const sessionIdRef = useRef<string>(`session-${Date.now()}`);
+
+  // Loyalty card hook - check customer benefits
+  const { benefits: loyaltyBenefits, loading: loyaltyLoading } = useLoyaltyCard(existingCustomerId, centroId);
+
+  // Auto-apply loyalty diagnostic fee when customer with card is selected
+  useEffect(() => {
+    if (!loyaltyLoading && loyaltyBenefits.hasActiveCard && !isFeeDisabledBySettings) {
+      setDiagnosticFee(loyaltyBenefits.diagnosticFee);
+    }
+  }, [loyaltyBenefits.hasActiveCard, loyaltyBenefits.diagnosticFee, loyaltyLoading, isFeeDisabledBySettings]);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -832,8 +844,22 @@ export default function CentroNuovoRitiro() {
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
+        const estimatedForLoyalty = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) 
+          + selectedServices.reduce((sum, s) => sum + s.price, 0) 
+          + laborCost;
         return (
           <div className="space-y-4">
+            {/* Show loyalty proposal/status if customer selected */}
+            {existingCustomerId && (
+              <IntakeLoyaltyBanner
+                customerId={existingCustomerId}
+                centroId={centroId}
+                customerEmail={customerData.email}
+                estimatedCost={estimatedForLoyalty}
+                onDiagnosticFeeChange={isFeeDisabledBySettings ? undefined : setDiagnosticFee}
+              />
+            )}
+            
             {/* Show maintenance suggestions if customer selected */}
             {existingCustomerId && (
               <MaintenanceSuggestionBanner 
