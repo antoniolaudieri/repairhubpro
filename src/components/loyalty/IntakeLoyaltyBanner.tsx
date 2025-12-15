@@ -1,11 +1,13 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Gift, Check, ArrowRight, Sparkles } from "lucide-react";
+import { CreditCard, Gift, Check, ArrowRight, Sparkles, QrCode, Loader2, ExternalLink } from "lucide-react";
 import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { QRCodeSVG } from "qrcode.react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface IntakeLoyaltyBannerProps {
   customerId: string | null;
@@ -22,9 +24,42 @@ export function IntakeLoyaltyBanner({
   estimatedCost = 0,
   onDiagnosticFeeChange,
 }: IntakeLoyaltyBannerProps) {
-  const { benefits, loading, createCheckout, activateWithBonifico } = useLoyaltyCard(customerId, centroId);
+  const { benefits, loading, createCheckout, activateWithBonifico, refresh } = useLoyaltyCard(customerId, centroId);
   const [showProposalDialog, setShowProposalDialog] = useState(false);
+  const [showQrDialog, setShowQrDialog] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
+  const [loyaltyCardId, setLoyaltyCardId] = useState<string | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
+
+  // Poll for payment completion
+  useEffect(() => {
+    if (!loyaltyCardId || !showQrDialog) return;
+
+    setIsPolling(true);
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('loyalty_cards')
+        .select('status')
+        .eq('id', loyaltyCardId)
+        .single();
+
+      if (data?.status === 'active') {
+        clearInterval(interval);
+        setIsPolling(false);
+        setShowQrDialog(false);
+        setShowProposalDialog(false);
+        toast.success("Tessera fedeltà attivata con successo!");
+        onDiagnosticFeeChange?.(10);
+        refresh();
+      }
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+      setIsPolling(false);
+    };
+  }, [loyaltyCardId, showQrDialog, onDiagnosticFeeChange, refresh]);
 
   if (loading || !customerId) return null;
 
@@ -39,9 +74,10 @@ export function IntakeLoyaltyBanner({
     setProcessing(false);
     
     if (result?.url) {
-      window.open(result.url, '_blank');
+      setCheckoutUrl(result.url);
+      setLoyaltyCardId(result.loyalty_card_id);
       setShowProposalDialog(false);
-      toast.success("Pagamento Stripe aperto in nuova finestra");
+      setShowQrDialog(true);
     } else {
       toast.error("Errore nella creazione del pagamento");
     }
@@ -55,7 +91,6 @@ export function IntakeLoyaltyBanner({
     if (success) {
       toast.success("Tessera fedeltà attivata con bonifico!");
       setShowProposalDialog(false);
-      // Apply the reduced diagnostic fee
       onDiagnosticFeeChange?.(10);
     } else {
       toast.error("Errore nell'attivazione");
@@ -150,6 +185,7 @@ export function IntakeLoyaltyBanner({
         </div>
       </Card>
 
+      {/* Proposal Dialog */}
       <Dialog open={showProposalDialog} onOpenChange={setShowProposalDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -187,11 +223,16 @@ export function IntakeLoyaltyBanner({
             
             <div className="space-y-2">
               <Button 
-                className="w-full" 
+                className="w-full gap-2" 
                 onClick={handleStripeCheckout}
                 disabled={processing}
               >
-                {processing ? "Elaborazione..." : "💳 Paga con Carta (€30)"}
+                {processing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <QrCode className="h-4 w-4" />
+                )}
+                {processing ? "Generazione QR..." : "💳 Genera QR Pagamento (€30)"}
               </Button>
               
               <Button 
@@ -206,6 +247,66 @@ export function IntakeLoyaltyBanner({
               <p className="text-xs text-center text-muted-foreground">
                 Commissione piattaforma: €1.50 (5%)
               </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* QR Code Payment Dialog */}
+      <Dialog open={showQrDialog} onOpenChange={setShowQrDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 justify-center">
+              <QrCode className="h-5 w-5 text-primary" />
+              Scansiona per Pagare
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Il cliente può scansionare il QR con il telefono per completare il pagamento
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center gap-4 py-4">
+            {checkoutUrl && (
+              <div className="p-4 bg-white rounded-xl shadow-lg">
+                <QRCodeSVG 
+                  value={checkoutUrl} 
+                  size={200}
+                  level="H"
+                  includeMargin
+                />
+              </div>
+            )}
+            
+            <div className="text-center space-y-1">
+              <p className="text-2xl font-bold">€30,00</p>
+              <p className="text-sm text-muted-foreground">Tessera Fedeltà Annuale</p>
+            </div>
+
+            {isPolling && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                In attesa del pagamento...
+              </div>
+            )}
+
+            <div className="flex gap-2 w-full">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex-1 gap-1"
+                onClick={() => checkoutUrl && window.open(checkoutUrl, '_blank')}
+              >
+                <ExternalLink className="h-3 w-3" />
+                Apri Link
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="flex-1"
+                onClick={() => setShowQrDialog(false)}
+              >
+                Annulla
+              </Button>
             </div>
           </div>
         </DialogContent>
