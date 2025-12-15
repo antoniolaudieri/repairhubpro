@@ -63,43 +63,29 @@ const handler = async (req: Request): Promise<Response> => {
     const testHtml = `
       <!DOCTYPE html>
       <html>
-      <head>
-        <meta charset="utf-8">
-      </head>
+      <head><meta charset="utf-8"></head>
       <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f4f4f5; margin: 0; padding: 20px;">
         <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
           <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 30px; text-align: center;">
             <h1 style="color: white; margin: 0; font-size: 24px;">✅ Test SMTP Riuscito!</h1>
           </div>
           <div style="padding: 30px;">
-            <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
-              La configurazione SMTP del tuo Centro è funzionante.
-            </p>
+            <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">La configurazione SMTP del tuo Centro è funzionante.</p>
             <div style="background: #f9fafb; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
               <p style="margin: 0 0 8px; color: #6b7280; font-size: 12px;">CONFIGURAZIONE:</p>
-              <p style="margin: 4px 0; color: #374151; font-size: 14px;">
-                <strong>Server:</strong> ${config.host}:${config.port}
-              </p>
-              <p style="margin: 4px 0; color: #374151; font-size: 14px;">
-                <strong>Mittente:</strong> ${config.from_name} &lt;${config.from_email}&gt;
-              </p>
-              <p style="margin: 4px 0; color: #374151; font-size: 14px;">
-                <strong>TLS:</strong> ${config.secure ? 'Attivo' : 'Disattivo'}
-              </p>
+              <p style="margin: 4px 0; color: #374151; font-size: 14px;"><strong>Server:</strong> ${config.host}:${config.port}</p>
+              <p style="margin: 4px 0; color: #374151; font-size: 14px;"><strong>Mittente:</strong> ${config.from_name} &lt;${config.from_email}&gt;</p>
+              <p style="margin: 4px 0; color: #374151; font-size: 14px;"><strong>TLS:</strong> ${config.secure ? 'Attivo' : 'Disattivo'}</p>
             </div>
-            <p style="font-size: 14px; color: #6b7280;">
-              D'ora in poi, tutte le email ai clienti verranno inviate da questo indirizzo.
-            </p>
+            <p style="font-size: 14px; color: #6b7280;">D'ora in poi, tutte le email ai clienti verranno inviate da questo indirizzo.</p>
           </div>
           <div style="background-color: #f9fafb; padding: 16px; border-top: 1px solid #e5e7eb; text-align: center;">
-            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-              Email inviata tramite LabLinkRiparo
-            </p>
+            <p style="margin: 0; font-size: 12px; color: #9ca3af;">Email inviata tramite LabLinkRiparo</p>
           </div>
         </div>
       </body>
       </html>
-    `;
+    `.replace(/\n\s*/g, '').replace(/>\s+</g, '><').trim();
 
     await client.send({
       from: `${config.from_name || 'Test'} <${config.from_email}>`,

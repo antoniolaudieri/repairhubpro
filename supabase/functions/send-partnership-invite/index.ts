@@ -196,7 +196,7 @@ serve(async (req: Request): Promise<Response> => {
   </table>
 </body>
 </html>
-    `;
+    `.replace(/\n\s*/g, '').replace(/>\s+</g, '><').trim();
 
     // Send email using send-email-smtp function (with Centro SMTP support if sender is centro)
     const centroId = fromType === "centro" ? fromId : null;
