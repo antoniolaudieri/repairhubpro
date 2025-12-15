@@ -90,7 +90,7 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
   customer_welcome_no_loyalty: {
     id: "customer_welcome_no_loyalty",
     name: "Benvenuto Cliente (senza Tessera)",
-    description: "Email inviata ai nuovi clienti senza tessera fedeltà - include promozione tessera",
+    description: "Email inviata ai nuovi clienti senza tessera fedeltà - include promozione tessera con link acquisto",
     subject: "Benvenuto su {{shop_name}} - Scopri i vantaggi esclusivi!",
     html: `<!DOCTYPE html>
 <html>
@@ -111,7 +111,7 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
     <p><strong>Password:</strong> {{password}}</p>
   </div>
   
-  <!-- LOYALTY CARD PROMOTION -->
+  <!-- LOYALTY CARD PROMOTION WITH DIRECT PURCHASE -->
   <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); padding: 24px; border-radius: 12px; margin: 24px 0; color: #78350f;">
     <h3 style="margin: 0 0 12px 0; font-size: 20px;">🎉 Attiva la Tessera Fedeltà!</h3>
     <p style="margin: 0 0 16px 0;">Con soli <strong>€30/anno</strong> ottieni vantaggi esclusivi:</p>
@@ -120,7 +120,9 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
       <li><strong>10% di sconto</strong> su tutte le riparazioni</li>
       <li><strong>Fino a 3 dispositivi</strong> coperti per un anno</li>
     </ul>
-    <p style="margin: 0; font-size: 14px;">Chiedi al bancone al tuo prossimo ritiro o attivala direttamente dalla tua area personale!</p>
+    <div style="text-align: center; margin-top: 20px;">
+      <a href="{{loyalty_url}}" style="display: inline-block; background: #78350f; color: #fef3c7; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">💳 Attiva Ora - €30/anno</a>
+    </div>
   </div>
   
   <p style="background: #fef3c7; padding: 12px; border-radius: 6px;">
@@ -139,7 +141,7 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
   </p>
 </body>
 </html>`,
-    variables: ["shop_name", "logo_url", "customer_name", "customer_email", "password", "login_url", "shop_address", "shop_phone", "shop_email"]
+    variables: ["shop_name", "logo_url", "customer_name", "customer_email", "password", "login_url", "loyalty_url", "shop_address", "shop_phone", "shop_email"]
   },
   loyalty_welcome: {
     id: "loyalty_welcome",
@@ -400,6 +402,7 @@ export default function EmailTemplateEditor({
       password: "12345678",
       login_url: "#",
       dashboard_url: "#",
+      loyalty_url: "#",
       shop_address: "Via Roma 123, Milano",
       shop_phone: "+39 02 1234567",
       shop_email: "info@example.com",

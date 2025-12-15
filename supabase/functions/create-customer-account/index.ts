@@ -14,7 +14,7 @@ interface EmailTemplate {
   variables: string[];
 }
 
-// Default email template for customers without loyalty card (promotes loyalty card)
+// Default email template for customers without loyalty card (promotes loyalty card with direct purchase link)
 const DEFAULT_WELCOME_NO_LOYALTY = `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -61,16 +61,22 @@ const DEFAULT_WELCOME_NO_LOYALTY = `<!DOCTYPE html>
                 </table>
               </div>
 
-              <!-- LOYALTY CARD PROMOTION -->
-              <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); padding: 24px; border-radius: 12px; margin: 24px 0; color: #78350f;">
-                <h3 style="margin: 0 0 12px 0; font-size: 20px;">🎉 Attiva la Tessera Fedeltà!</h3>
-                <p style="margin: 0 0 16px 0;">Con soli <strong>€30/anno</strong> ottieni vantaggi esclusivi:</p>
-                <ul style="margin: 0 0 16px 0; padding-left: 20px;">
+              <!-- LOYALTY CARD PROMOTION WITH DIRECT PURCHASE -->
+              <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); padding: 24px; border-radius: 12px; margin: 24px 0;">
+                <h3 style="margin: 0 0 12px 0; font-size: 20px; color: #78350f;">🎉 Attiva la Tessera Fedeltà!</h3>
+                <p style="margin: 0 0 16px 0; color: #78350f;">Con soli <strong>€30/anno</strong> ottieni vantaggi esclusivi:</p>
+                <ul style="margin: 0 0 16px 0; padding-left: 20px; color: #78350f;">
                   <li style="margin-bottom: 8px;"><strong>Diagnosi a €10</strong> invece di €15 (risparmio €5)</li>
                   <li style="margin-bottom: 8px;"><strong>10% di sconto</strong> su tutte le riparazioni</li>
                   <li style="margin-bottom: 8px;"><strong>Fino a 3 dispositivi</strong> coperti per un anno</li>
                 </ul>
-                <p style="margin: 0; font-size: 14px;">Chiedi al bancone al tuo prossimo ritiro o attivala direttamente dalla tua area personale!</p>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center">
+                      <a href="{{loyalty_url}}" style="display: inline-block; background: #78350f; color: #fef3c7; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 16px;">💳 Attiva Ora - €30/anno</a>
+                    </td>
+                  </tr>
+                </table>
               </div>
               
               <p style="color: #71717a; font-size: 13px; margin: 0 0 24px 0; padding: 12px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
@@ -289,8 +295,9 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Check if customer has active loyalty card with this Centro
+    // Check if customer has active loyalty card with this Centro and get customer_id
     let hasLoyaltyCard = false;
+    let customerId: string | null = null;
     if (centroId) {
       // First find customer by email
       const { data: customers } = await supabaseAdmin
@@ -299,6 +306,7 @@ Deno.serve(async (req) => {
         .eq('email', email);
 
       if (customers && customers.length > 0) {
+        customerId = customers[0].id;
         const customerIds = customers.map(c => c.id);
         
         // Check for active loyalty cards
@@ -384,6 +392,11 @@ Deno.serve(async (req) => {
       : `<p style="color: #71717a; font-size: 12px; margin: 0 0 8px 0;">Questa email è stata inviata automaticamente da ${shopName}.</p>
         <p style="color: #a1a1aa; font-size: 11px; margin: 0;">© ${new Date().getFullYear()} ${shopName} - Gestionale Riparazioni</p>`;
 
+    // Build loyalty card purchase URL
+    const loyaltyUrl = customerId && centroId
+      ? `${appUrl}/attiva-tessera?customer_id=${customerId}&centro_id=${centroId}&email=${encodeURIComponent(email)}&centro=${encodeURIComponent(shopName)}`
+      : `${appUrl}/auth`;
+
     // Replace variables in template
     let emailHtml = templateHtml
       .replace(/\{\{shop_name\}\}/g, shopName)
@@ -392,6 +405,7 @@ Deno.serve(async (req) => {
       .replace(/\{\{customer_email\}\}/g, email)
       .replace(/\{\{password\}\}/g, defaultPassword)
       .replace(/\{\{login_url\}\}/g, loginUrl)
+      .replace(/\{\{loyalty_url\}\}/g, loyaltyUrl)
       .replace(/\{\{shop_address\}\}/g, shopAddress)
       .replace(/\{\{shop_phone\}\}/g, shopPhone)
       .replace(/\{\{shop_email\}\}/g, shopEmail)
