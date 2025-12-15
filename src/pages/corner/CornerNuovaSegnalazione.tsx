@@ -60,8 +60,9 @@ export default function CornerNuovaSegnalazione() {
   // Gestione fee
   const [gestioneFeeEnabled, setGestioneFeeEnabled] = useState(true);
   const [cornerCommissionRate, setCornerCommissionRate] = useState(10);
+  const [directToCentroMultiplier, setDirectToCentroMultiplier] = useState(50); // percentage of commission for direct to centro
   
-  // Direct to Centro (customer goes directly, halved commission)
+  // Direct to Centro (customer goes directly, reduced commission)
   const [directToCentro, setDirectToCentro] = useState(false);
 
   const [customerData, setCustomerData] = useState({
@@ -83,8 +84,8 @@ export default function CornerNuovaSegnalazione() {
     initial_condition: "",
   });
 
-  // Calculate corner earnings from gestione fee (HALF commission if direct to centro)
-  const effectiveCommissionRate = directToCentro ? cornerCommissionRate / 2 : cornerCommissionRate;
+  // Calculate corner earnings from gestione fee (reduced commission if direct to centro)
+  const effectiveCommissionRate = directToCentro ? (cornerCommissionRate * directToCentroMultiplier / 100) : cornerCommissionRate;
   const cornerGestioneEarnings = gestioneFeeEnabled 
     ? (GESTIONE_FEE_AMOUNT * effectiveCommissionRate / 100)
     : 0;
@@ -97,7 +98,7 @@ export default function CornerNuovaSegnalazione() {
       // Fetch corner
       const { data: cornerData } = await supabase
         .from("corners")
-        .select("id, payment_status, commission_rate")
+        .select("id, payment_status, commission_rate, direct_to_centro_multiplier")
         .eq("user_id", user.id)
         .maybeSingle();
       
@@ -107,6 +108,10 @@ export default function CornerNuovaSegnalazione() {
         // Use corner's individual commission rate if set, otherwise use default
         if (cornerData.commission_rate) {
           setCornerCommissionRate(cornerData.commission_rate);
+        }
+        // Use corner's individual direct multiplier if set
+        if (cornerData.direct_to_centro_multiplier != null) {
+          setDirectToCentroMultiplier(cornerData.direct_to_centro_multiplier);
         }
       }
       
@@ -739,7 +744,7 @@ export default function CornerNuovaSegnalazione() {
                 <div className="flex items-start gap-2 p-2 bg-blue-500/10 rounded-lg">
                   <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
                   <p className="text-xs text-blue-700 dark:text-blue-400">
-                    La tua commissione sarà dimezzata ({cornerCommissionRate}% → {effectiveCommissionRate}%) perché il cliente va direttamente in laboratorio.
+                    La tua commissione sarà ridotta al {directToCentroMultiplier}% ({cornerCommissionRate}% → {effectiveCommissionRate.toFixed(1)}%) perché il cliente va direttamente in laboratorio.
                   </p>
                 </div>
               )}
@@ -771,8 +776,8 @@ export default function CornerNuovaSegnalazione() {
                   </div>
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground">
-                      Tua commissione ({effectiveCommissionRate}%)
-                      {directToCentro && <span className="text-xs ml-1">(dimezzata)</span>}
+                      Tua commissione ({effectiveCommissionRate.toFixed(1)}%)
+                      {directToCentro && <span className="text-xs ml-1">(ridotta al {directToCentroMultiplier}%)</span>}
                     </span>
                     <Badge className="bg-emerald-500 text-white">
                       €{cornerGestioneEarnings.toFixed(2)}
