@@ -110,32 +110,33 @@ export default function CustomerDashboard() {
 
   const fetchCustomerData = async () => {
     try {
-      // Trova il cliente tramite email
-      const { data: customerData } = await supabase
+      // Trova TUTTI i record cliente con questa email (potrebbero essercene più di uno)
+      const { data: customerRecords } = await supabase
         .from("customers")
         .select("id")
-        .eq("email", user?.email)
-        .maybeSingle();
+        .eq("email", user?.email);
 
-      if (!customerData) {
+      if (!customerRecords || customerRecords.length === 0) {
         setLoading(false);
         return;
       }
 
-      // Carica preventivi
+      const customerIds = customerRecords.map(c => c.id);
+
+      // Carica preventivi da tutti i record cliente
       const { data: quotesData } = await supabase
         .from("quotes")
         .select("*")
-        .eq("customer_id", customerData.id)
+        .in("customer_id", customerIds)
         .order("created_at", { ascending: false });
 
       setQuotes((quotesData as any) || []);
 
-      // Trova i dispositivi del cliente
+      // Trova i dispositivi da tutti i record cliente
       const { data: devices } = await supabase
         .from("devices")
         .select("id")
-        .eq("customer_id", customerData.id);
+        .in("customer_id", customerIds);
 
       if (!devices || devices.length === 0) {
         setLoading(false);
