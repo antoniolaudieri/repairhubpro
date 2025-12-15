@@ -30,6 +30,34 @@ interface TickerMessage {
   source?: string;
 }
 
+interface ActiveCampaign {
+  id: string;
+  ad_title: string;
+  ad_description: string | null;
+  ad_image_url: string | null;
+  ad_gradient: string | null;
+  ad_icon: string | null;
+  ad_emoji: string | null;
+  ad_font: string | null;
+  ad_title_color: string | null;
+  ad_description_color: string | null;
+  company_logo_url: string | null;
+  advertiser_company: string | null;
+  display_seconds: number;
+  qr_enabled: boolean;
+  qr_destination_url: string | null;
+  countdown_enabled: boolean;
+  countdown_end_date: string | null;
+  countdown_text: string | null;
+}
+
+// Unified playlist item (either custom ad or campaign)
+interface PlaylistItem {
+  id: string;
+  type: 'custom' | 'campaign';
+  data: DisplayAd | ActiveCampaign;
+}
+
 interface CornerSettings {
   display_ads?: DisplayAd[];
   slide_interval?: number;
@@ -38,6 +66,7 @@ interface CornerSettings {
   ticker_messages?: TickerMessage[];
   ticker_rss_url?: string;
   ticker_rss_enabled?: boolean;
+  ad_playlist_order?: string[]; // IDs of ads/campaigns in display order
 }
 
 interface CornerData {
@@ -125,6 +154,8 @@ export default function CornerImpostazioni() {
   
   // Display settings
   const [displayAds, setDisplayAds] = useState<DisplayAd[]>([]);
+  const [activeCampaigns, setActiveCampaigns] = useState<ActiveCampaign[]>([]);
+  const [playlist, setPlaylist] = useState<PlaylistItem[]>([]);
   const [slideInterval, setSlideInterval] = useState(5); // seconds
   const [editingAd, setEditingAd] = useState<DisplayAd | null>(null);
   const [previewAdIndex, setPreviewAdIndex] = useState(0);
@@ -274,6 +305,89 @@ export default function CornerImpostazioni() {
         setTickerRssEnabled(settings.ticker_rss_enabled);
       }
       
+      // Fetch active advertising campaigns for this corner
+      const { data: campaignsData } = await supabase
+        .from("display_ad_campaign_corners")
+        .select(`
+          campaign_id,
+          display_ad_campaigns (
+            id,
+            ad_title,
+            ad_description,
+            ad_image_url,
+            ad_gradient,
+            ad_icon,
+            ad_emoji,
+            ad_font,
+            ad_title_color,
+            ad_description_color,
+            company_logo_url,
+            advertiser_company,
+            display_seconds,
+            qr_enabled,
+            qr_destination_url,
+            countdown_enabled,
+            countdown_end_date,
+            countdown_text,
+            status,
+            start_date,
+            end_date
+          )
+        `)
+        .eq("corner_id", data.id);
+      
+      // Filter only active campaigns (status=active and within date range)
+      const now = new Date().toISOString();
+      const activeCampaignsData = (campaignsData || [])
+        .map(c => c.display_ad_campaigns)
+        .filter((campaign: any) => 
+          campaign && 
+          campaign.status === 'active' && 
+          campaign.start_date <= now && 
+          campaign.end_date >= now
+        ) as ActiveCampaign[];
+      
+      setActiveCampaigns(activeCampaignsData);
+      
+      // Build initial playlist based on saved order or default
+      const savedOrder = settings?.ad_playlist_order;
+      const customAdsItems: PlaylistItem[] = (settings?.display_ads || []).map(ad => ({
+        id: `custom-${ad.id}`,
+        type: 'custom' as const,
+        data: ad
+      }));
+      const campaignItems: PlaylistItem[] = activeCampaignsData.map(c => ({
+        id: `campaign-${c.id}`,
+        type: 'campaign' as const,
+        data: c
+      }));
+      
+      if (savedOrder && savedOrder.length > 0) {
+        // Restore saved order
+        const allItems = [...customAdsItems, ...campaignItems];
+        const orderedPlaylist: PlaylistItem[] = [];
+        savedOrder.forEach(id => {
+          const item = allItems.find(i => i.id === id);
+          if (item) orderedPlaylist.push(item);
+        });
+        // Add any new items not in saved order
+        allItems.forEach(item => {
+          if (!orderedPlaylist.find(p => p.id === item.id)) {
+            orderedPlaylist.push(item);
+          }
+        });
+        setPlaylist(orderedPlaylist);
+      } else {
+        // Default: alternate custom ads and campaigns
+        const interleavedPlaylist: PlaylistItem[] = [];
+        const maxLen = Math.max(customAdsItems.length, campaignItems.length);
+        for (let i = 0; i < maxLen; i++) {
+          if (i < customAdsItems.length) interleavedPlaylist.push(customAdsItems[i]);
+          if (i < campaignItems.length) interleavedPlaylist.push(campaignItems[i]);
+        }
+        setPlaylist(interleavedPlaylist);
+      }
+      
       // Store original values for change detection
       setOriginalValues({
         address: data.address || "",
@@ -382,6 +496,7 @@ export default function CornerImpostazioni() {
         ticker_messages: tickerMessages,
         ticker_rss_url: tickerRssUrl,
         ticker_rss_enabled: tickerRssEnabled,
+        ad_playlist_order: playlist.map(p => p.id), // Save playlist order
       };
       
       const { error } = await supabase
@@ -826,119 +941,201 @@ export default function CornerImpostazioni() {
               </CardTitle>
               <CardDescription>
                 Personalizza le pubblicità mostrate in modalità standby sul display cliente. Usa le frecce per riordinarle.
+                {activeCampaigns.length > 0 && (
+                  <span className="block mt-1 text-amber-600">
+                    📢 Hai {activeCampaigns.length} inserti pubblicitari attivi da inserzionisti
+                  </span>
+                )}
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {displayAds.length === 0 && (
-                <div className="text-center py-8 border-2 border-dashed rounded-lg space-y-3">
-                  <Megaphone className="h-12 w-12 mx-auto text-muted-foreground/50" />
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Nessuna pubblicità personalizzata</p>
-                    <p className="text-xs text-muted-foreground/70">Verranno mostrate le pubblicità predefinite sul display cliente</p>
+            <CardContent className="space-y-6">
+              {/* Playlist Section */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold flex items-center gap-2">
+                    <Play className="h-4 w-4" />
+                    Ordine di Riproduzione
+                  </h4>
+                  <span className="text-xs text-muted-foreground">
+                    {playlist.length} slide totali
+                  </span>
+                </div>
+                
+                {playlist.length === 0 && displayAds.length === 0 && activeCampaigns.length === 0 && (
+                  <div className="text-center py-8 border-2 border-dashed rounded-lg space-y-3">
+                    <Megaphone className="h-12 w-12 mx-auto text-muted-foreground/50" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Nessuna pubblicità configurata</p>
+                      <p className="text-xs text-muted-foreground/70">Verranno mostrate le pubblicità predefinite sul display cliente</p>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="grid gap-2">
+                  {playlist.map((item, index) => {
+                    const isCustom = item.type === 'custom';
+                    const customAd = isCustom ? item.data as DisplayAd : null;
+                    const campaign = !isCustom ? item.data as ActiveCampaign : null;
+                    const IconComponent = isCustom && customAd ? getIconComponent(customAd.icon) : null;
+                    
+                    return (
+                      <div 
+                        key={item.id} 
+                        className={`border rounded-lg overflow-hidden bg-card hover:border-primary/50 transition-colors group ${
+                          !isCustom ? 'border-amber-500/50 bg-amber-500/5' : ''
+                        }`}
+                      >
+                        <div className="flex">
+                          {/* Order Controls */}
+                          <div className="flex flex-col items-center justify-center px-2 bg-muted/30 border-r gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              disabled={index === 0}
+                              onClick={() => {
+                                if (index > 0) {
+                                  const newPlaylist = [...playlist];
+                                  [newPlaylist[index - 1], newPlaylist[index]] = [newPlaylist[index], newPlaylist[index - 1]];
+                                  setPlaylist(newPlaylist);
+                                }
+                              }}
+                            >
+                              <ChevronUp className="h-4 w-4" />
+                            </Button>
+                            <div className="text-xs font-bold text-muted-foreground">{index + 1}</div>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              disabled={index === playlist.length - 1}
+                              onClick={() => {
+                                if (index < playlist.length - 1) {
+                                  const newPlaylist = [...playlist];
+                                  [newPlaylist[index], newPlaylist[index + 1]] = [newPlaylist[index + 1], newPlaylist[index]];
+                                  setPlaylist(newPlaylist);
+                                }
+                              }}
+                            >
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          
+                          {/* Preview */}
+                          <div className="relative w-32 h-20 flex-shrink-0">
+                            {isCustom && customAd ? (
+                              customAd.type === 'image' && customAd.imageUrl ? (
+                                <div className="relative h-full">
+                                  <img 
+                                    src={customAd.imageUrl} 
+                                    alt={customAd.title} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                                </div>
+                              ) : (
+                                <div className={`h-full bg-gradient-to-br ${customAd.gradient} flex items-center justify-center`}>
+                                  {IconComponent && (
+                                    <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center">
+                                      <IconComponent className="h-4 w-4 text-white" />
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            ) : campaign ? (
+                              campaign.ad_image_url ? (
+                                <div className="relative h-full">
+                                  <img 
+                                    src={campaign.ad_image_url} 
+                                    alt={campaign.ad_title} 
+                                    className="w-full h-full object-cover"
+                                  />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                                </div>
+                              ) : (
+                                <div className={`h-full bg-gradient-to-br ${campaign.ad_gradient || 'from-amber-500 to-orange-500'} flex items-center justify-center`}>
+                                  <span className="text-2xl">{campaign.ad_emoji || '📢'}</span>
+                                </div>
+                              )
+                            ) : null}
+                          </div>
+                          
+                          {/* Info */}
+                          <div className="flex-1 p-2 flex flex-col justify-center min-w-0">
+                            <p className="font-semibold text-sm truncate">
+                              {isCustom ? (customAd?.title || "Senza titolo") : (campaign?.ad_title || "Inserto")}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {isCustom ? (customAd?.description || "Nessuna descrizione") : (campaign?.ad_description || campaign?.advertiser_company || "Pubblicità")}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                isCustom 
+                                  ? 'bg-blue-500/10 text-blue-600' 
+                                  : 'bg-amber-500/10 text-amber-600'
+                              }`}>
+                                {isCustom ? '🏠 Tua' : '📢 Inserto'}
+                              </span>
+                              {!isCustom && campaign && (
+                                <span className="text-xs text-muted-foreground">
+                                  {campaign.display_seconds}s
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 pr-2">
+                            {isCustom && customAd && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => setEditingAd(customAd)}
+                                >
+                                  <Edit className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive hover:text-destructive"
+                                  onClick={() => {
+                                    setDisplayAds(prev => prev.filter(a => a.id !== customAd.id));
+                                    setPlaylist(prev => prev.filter(p => p.id !== item.id));
+                                  }}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            )}
+                            {!isCustom && (
+                              <span className="text-xs text-amber-600 px-2">
+                                A pagamento
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Active Campaigns Info */}
+              {activeCampaigns.length > 0 && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <Megaphone className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                    <div className="text-xs text-amber-700 dark:text-amber-400">
+                      <p className="font-medium">Inserti pubblicitari attivi: {activeCampaigns.length}</p>
+                      <p className="mt-1">Gli inserti sono pubblicità a pagamento di inserzionisti esterni. Puoi riordinarli nella playlist per alternarli con le tue slide personalizzate.</p>
+                    </div>
                   </div>
                 </div>
               )}
               
-              <div className="grid gap-3">
-                {displayAds.map((ad, index) => {
-                  const IconComponent = getIconComponent(ad.icon);
-                  return (
-                    <div 
-                      key={ad.id} 
-                      className="border rounded-lg overflow-hidden bg-card hover:border-primary/50 transition-colors group"
-                    >
-                      <div className="flex">
-                        {/* Drag Handle & Order Controls */}
-                        <div className="flex flex-col items-center justify-center px-2 bg-muted/30 border-r gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            disabled={index === 0}
-                            onClick={() => {
-                              if (index > 0) {
-                                const newAds = [...displayAds];
-                                [newAds[index - 1], newAds[index]] = [newAds[index], newAds[index - 1]];
-                                setDisplayAds(newAds);
-                              }
-                            }}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                          </Button>
-                          <div className="text-xs font-bold text-muted-foreground">{index + 1}</div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            disabled={index === displayAds.length - 1}
-                            onClick={() => {
-                              if (index < displayAds.length - 1) {
-                                const newAds = [...displayAds];
-                                [newAds[index], newAds[index + 1]] = [newAds[index + 1], newAds[index]];
-                                setDisplayAds(newAds);
-                              }
-                            }}
-                          >
-                            <ChevronDown className="h-4 w-4" />
-                          </Button>
-                        </div>
-                        
-                        {/* Preview */}
-                        <div className="relative w-40 h-24 flex-shrink-0">
-                          {ad.type === 'image' && ad.imageUrl ? (
-                            <div className="relative h-full">
-                              <img 
-                                src={ad.imageUrl} 
-                                alt={ad.title} 
-                                className="w-full h-full object-cover"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                            </div>
-                          ) : (
-                            <div className={`h-full bg-gradient-to-br ${ad.gradient} flex items-center justify-center`}>
-                              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
-                                <IconComponent className="h-5 w-5 text-white" />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Info */}
-                        <div className="flex-1 p-3 flex flex-col justify-center min-w-0">
-                          <p className="font-semibold text-sm truncate">{ad.title || "Senza titolo"}</p>
-                          <p className="text-xs text-muted-foreground truncate">{ad.description || "Nessuna descrizione"}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${ad.type === 'image' ? 'bg-blue-500/10 text-blue-600' : 'bg-purple-500/10 text-purple-600'}`}>
-                              {ad.type === 'image' ? 'Immagine' : 'Gradiente'}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* Actions */}
-                        <div className="flex items-center gap-1 pr-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setEditingAd(ad)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => setDisplayAds(prev => prev.filter(a => a.id !== ad.id))}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              
+              {/* Add Custom Ad Buttons */}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
@@ -969,6 +1166,13 @@ export default function CornerImpostazioni() {
                         id: `ad-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
                       }));
                       setDisplayAds(copiedAds);
+                      // Also add to playlist
+                      const newPlaylistItems: PlaylistItem[] = copiedAds.map(ad => ({
+                        id: `custom-${ad.id}`,
+                        type: 'custom' as const,
+                        data: ad
+                      }));
+                      setPlaylist(prev => [...newPlaylistItems, ...prev.filter(p => p.type === 'campaign')]);
                       toast.success("Slide predefinite copiate! Ora puoi modificarle.");
                     }}
                   >
@@ -981,10 +1185,10 @@ export default function CornerImpostazioni() {
               <p className="text-xs text-muted-foreground text-center">
                 Le pubblicità verranno mostrate a rotazione ogni {slideInterval} secondi sul display cliente.
                 <br />
-                {displayAds.length === 0 ? (
+                {playlist.length === 0 ? (
                   <span className="text-amber-600">⚠️ Clicca "Copia Predefinite" per modificare le slide o "Aggiungi" per crearne di nuove.</span>
                 ) : (
-                  <span className="text-green-600">✓ {displayAds.length} slide personalizzate configurate</span>
+                  <span className="text-green-600">✓ {playlist.filter(p => p.type === 'custom').length} slide personalizzate + {playlist.filter(p => p.type === 'campaign').length} inserti configurati</span>
                 )}
               </p>
             </CardContent>
@@ -1001,8 +1205,25 @@ export default function CornerImpostazioni() {
                 const existingIndex = displayAds.findIndex(a => a.id === updatedAd.id);
                 if (existingIndex >= 0) {
                   setDisplayAds(displayAds.map(a => a.id === updatedAd.id ? updatedAd : a));
+                  // Also update in playlist
+                  setPlaylist(prev => prev.map(p => 
+                    p.id === `custom-${updatedAd.id}` 
+                      ? { ...p, data: updatedAd } 
+                      : p
+                  ));
                 } else {
                   setDisplayAds([...displayAds, updatedAd]);
+                  // Add to playlist at the end of custom ads (before campaigns)
+                  const newPlaylistItem: PlaylistItem = {
+                    id: `custom-${updatedAd.id}`,
+                    type: 'custom',
+                    data: updatedAd
+                  };
+                  setPlaylist(prev => {
+                    const customItems = prev.filter(p => p.type === 'custom');
+                    const campaignItems = prev.filter(p => p.type === 'campaign');
+                    return [...customItems, newPlaylistItem, ...campaignItems];
+                  });
                 }
                 setEditingAd(null);
               }}
