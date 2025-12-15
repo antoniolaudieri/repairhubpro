@@ -111,6 +111,10 @@ export function IntakeSignatureStep({
   const potentialDiagnosticSavings = baseDiagnosticFee === 15 ? 5 : 0;
   const totalPotentialSavings = potentialLaborSavings + potentialServicesSavings + potentialDiagnosticSavings;
   
+  // Calculate what the total would be WITH the loyalty card
+  const currentTotalForLoyalty = partsTotal + laborTotal + servicesTotal + baseDiagnosticFee;
+  const loyaltyDiscountedTotal = partsTotal + (laborTotal * 0.90) + (servicesTotal * 0.90) + 10; // €10 diagnostic fee with loyalty
+  
   // Poll for loyalty payment completion
   useEffect(() => {
     if (!loyaltyCardId || !showLoyaltyQrDialog) return;
@@ -440,8 +444,23 @@ export function IntakeSignatureStep({
                 <div className="flex items-center gap-2 flex-wrap mb-2">
                   <span className="font-semibold text-amber-700 dark:text-amber-400">Risparmia con la Tessera Fedeltà!</span>
                   <Badge className="bg-green-500 text-white text-xs">
-                    -€{totalPotentialSavings.toFixed(0)} su questo ritiro
+                    -€{totalPotentialSavings.toFixed(2)} su questo ritiro
                   </Badge>
+                </div>
+                
+                {/* Show total comparison */}
+                <div className="p-3 rounded-lg bg-background/80 border border-green-500/30 mb-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="text-center">
+                      <p className="text-[10px] text-muted-foreground uppercase">Ora</p>
+                      <p className="text-lg font-bold text-muted-foreground line-through">€{currentTotalForLoyalty.toFixed(2)}</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-green-500" />
+                    <div className="text-center">
+                      <p className="text-[10px] text-green-600 uppercase font-medium">Con Tessera</p>
+                      <p className="text-xl font-bold text-green-600">€{loyaltyDiscountedTotal.toFixed(2)}</p>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2 text-xs mb-3">
