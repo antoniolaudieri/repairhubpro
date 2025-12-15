@@ -162,6 +162,7 @@ interface RepairDetail {
     serial_number: string | null;
   };
   customer: {
+    id: string;
     name: string;
     phone: string;
     email: string | null;
@@ -238,6 +239,7 @@ export default function RepairDetail() {
             imei,
             serial_number,
             customer:customers (
+              id,
               name,
               phone,
               email,
@@ -841,7 +843,15 @@ export default function RepairDetail() {
                 </h1>
                 <p className="text-muted-foreground flex items-center gap-2 mt-1">
                   <User className="h-4 w-4" />
-                  <span className="font-medium">{repair.customer.name}</span>
+                  <span 
+                    className="font-medium text-primary hover:underline cursor-pointer"
+                    onClick={() => {
+                      const isCentroRoute = location.pathname.startsWith('/centro');
+                      navigate(isCentroRoute ? `/centro/clienti/${repair.customer.id}` : `/customers/${repair.customer.id}`);
+                    }}
+                  >
+                    {repair.customer.name}
+                  </span>
                   <span className="text-border">•</span>
                   <span className="text-sm">{repair.device.device_type}</span>
                 </p>
