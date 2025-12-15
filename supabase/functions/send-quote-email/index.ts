@@ -237,6 +237,10 @@ serve(async (req) => {
         to: customer.email,
         subject: `Preventivo Riparazione ${deviceName} - €${quote.total_cost.toFixed(2)}`,
         html: emailHtml,
+        // For logging communications
+        customer_id: customer.id,
+        template_name: "quote_sent",
+        metadata: { quote_id, repair_request_id, total: quote.total_cost },
       }),
     });
 
