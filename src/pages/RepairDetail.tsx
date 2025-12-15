@@ -127,6 +127,14 @@ interface CentroInfo {
   email: string;
   vat_number: string | null;
   logo_url: string | null;
+  settings: {
+    email_templates?: {
+      repair_status_update?: {
+        subject: string;
+        html: string;
+      };
+    };
+  } | null;
 }
 
 interface RepairDetail {
@@ -279,12 +287,15 @@ export default function RepairDetail() {
       if (data.device?.customer?.centro_id) {
         const { data: centro } = await supabase
           .from("centri_assistenza")
-          .select("business_name, address, phone, email, vat_number, logo_url")
+          .select("business_name, address, phone, email, vat_number, logo_url, settings")
           .eq("id", data.device.customer.centro_id)
           .single();
         
         if (centro) {
-          centroData = centro;
+          centroData = {
+            ...centro,
+            settings: centro.settings as CentroInfo['settings']
+          };
         }
       }
 
@@ -517,7 +528,6 @@ export default function RepairDetail() {
     setSendingEmail(true);
     try {
       const statusLabel = getStatusLabel(repair.status);
-      const subject = `Aggiornamento Riparazione - ${repair.device.brand} ${repair.device.model}`;
       
       // Get customer ID from device via repair
       const { data: repairData } = await supabase
@@ -541,80 +551,115 @@ export default function RepairDetail() {
         hasLoyaltyCard = !!loyaltyCard;
       }
 
-      // Build HTML without template literal whitespace to avoid quoted-printable encoding issues
-      const diagnosisBlock = repair.diagnosis 
-        ? `<div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:15px;margin:20px 0;"><h4 style="color:#166534;margin-top:0;">Diagnosi</h4><p style="color:#166534;margin-bottom:0;">${repair.diagnosis}</p></div>` 
-        : '';
-      
-      const notesBlock = repair.repair_notes 
-        ? `<div style="background:#fefce8;border-left:4px solid #eab308;padding:15px;margin:20px 0;"><h4 style="color:#854d0e;margin-top:0;">Note</h4><p style="color:#854d0e;margin-bottom:0;">${repair.repair_notes}</p></div>` 
-        : '';
-      
-      const estimatedCostLine = repair.estimated_cost 
-        ? `<p style="margin:5px 0;"><strong>Costo Stimato:</strong> €${repair.estimated_cost.toFixed(2)}</p>` 
-        : '';
-      
-      const finalCostLine = repair.final_cost 
-        ? `<p style="margin:5px 0;"><strong>Costo Finale:</strong> €${repair.final_cost.toFixed(2)}</p>` 
-        : '';
-      
-      const accontoLine = repair.acconto 
-        ? `<p style="margin:5px 0;"><strong>Acconto Versato:</strong> €${repair.acconto.toFixed(2)}</p>` 
-        : '';
-
       const centroName = repair.centro?.business_name || 'Il Team';
-
-      // Build loyalty promotion for completed/ready repairs
+      const centroAddress = repair.centro?.address || '';
+      const centroPhone = repair.centro?.phone || '';
+      const centroEmail = repair.centro?.email || '';
+      const centroLogo = repair.centro?.logo_url || '';
+      
+      // Build loyalty promotion URL
       const loyaltyCheckoutUrl = customerId && repair.customer.centro_id 
         ? `${window.location.origin}/attiva-tessera?customer_id=${customerId}&centro_id=${repair.customer.centro_id}&email=${encodeURIComponent(repair.customer.email)}&centro=${encodeURIComponent(centroName)}`
         : '';
       
       const showLoyaltyPromo = !hasLoyaltyCard && customerId && ['completed', 'ready_for_pickup', 'delivered'].includes(repair.status);
-      
-      const loyaltyPromoBlock = showLoyaltyPromo ? `
-        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:24px;margin:24px 0;text-align:center;">
-          <p style="color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px 0;">🎁 RISPARMIA SULLE PROSSIME RIPARAZIONI</p>
-          <h3 style="color:#fff;margin:0 0 12px 0;font-size:18px;">Attiva la Tessera Fedeltà!</h3>
-          <div style="text-align:left;color:#fff;font-size:13px;margin-bottom:16px;">
-            <p style="margin:4px 0;">✓ <strong>10% di sconto</strong> su tutte le riparazioni</p>
-            <p style="margin:4px 0;">✓ <strong>Diagnostica a €10</strong> invece di €15</p>
-            <p style="margin:4px 0;">✓ <strong>Validità 1 anno</strong> - Solo €30</p>
-          </div>
-          <a href="${loyaltyCheckoutUrl}" style="display:inline-block;background:#fff;color:#d97706;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">🛒 Attiva Ora - €30/anno</a>
-        </div>
-      ` : '';
 
-      const html = [
-        '<!DOCTYPE html><html><head><meta charset="utf-8"></head>',
-        '<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f5f5f5;">',
-        '<div style="background:#fff;border-radius:12px;padding:30px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">',
-        '<h1 style="color:#1a1a1a;margin-bottom:20px;">Aggiornamento Riparazione</h1>',
-        `<p style="color:#666;font-size:16px;">Gentile <strong>${repair.customer.name}</strong>,</p>`,
-        '<p style="color:#666;font-size:16px;">La informiamo che lo stato della sua riparazione è stato aggiornato.</p>',
-        '<div style="background:#f8f9fa;border-radius:8px;padding:20px;margin:20px 0;">',
-        '<h3 style="color:#1a1a1a;margin-top:0;">Dettagli Dispositivo</h3>',
-        `<p style="margin:5px 0;"><strong>Tipo:</strong> ${repair.device.device_type}</p>`,
-        `<p style="margin:5px 0;"><strong>Marca:</strong> ${repair.device.brand}</p>`,
-        `<p style="margin:5px 0;"><strong>Modello:</strong> ${repair.device.model}</p>`,
-        `<p style="margin:5px 0;"><strong>Problema:</strong> ${repair.device.reported_issue}</p>`,
-        '</div>',
-        '<div style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:8px;padding:20px;margin:20px 0;text-align:center;">',
-        '<p style="color:#fff;margin:0 0 10px 0;font-size:14px;">STATO ATTUALE</p>',
-        `<p style="color:#fff;margin:0;font-size:24px;font-weight:bold;">${statusLabel}</p>`,
-        '</div>',
-        diagnosisBlock,
-        notesBlock,
-        '<div style="background:#f8f9fa;border-radius:8px;padding:20px;margin:20px 0;">',
-        '<h3 style="color:#1a1a1a;margin-top:0;">Riepilogo Costi</h3>',
-        estimatedCostLine,
-        finalCostLine,
-        accontoLine,
-        '</div>',
-        loyaltyPromoBlock,
-        '<p style="color:#666;font-size:14px;margin-top:30px;">Per qualsiasi domanda, non esiti a contattarci.</p>',
-        `<p style="color:#666;font-size:14px;">Cordiali saluti,<br><strong>${centroName}</strong></p>`,
-        '</div></body></html>'
-      ].join('');
+      // Check for custom template in Centro settings
+      const customTemplate = repair.centro?.settings?.email_templates?.repair_status_update;
+      
+      let subject: string;
+      let html: string;
+      
+      if (customTemplate?.html) {
+        // Use custom template from Centro settings
+        subject = customTemplate.subject
+          .replace(/\{\{shop_name\}\}/g, centroName)
+          .replace(/\{\{device_name\}\}/g, `${repair.device.brand} ${repair.device.model}`)
+          .replace(/\{\{customer_name\}\}/g, repair.customer.name)
+          .replace(/\{\{status\}\}/g, statusLabel);
+        
+        // Build status note from diagnosis and repair notes
+        const statusNote = [repair.diagnosis, repair.repair_notes].filter(Boolean).join(' - ') || '';
+        
+        // Replace template variables
+        html = customTemplate.html
+          .replace(/\{\{shop_name\}\}/g, centroName)
+          .replace(/\{\{logo_url\}\}/g, centroLogo)
+          .replace(/\{\{customer_name\}\}/g, repair.customer.name)
+          .replace(/\{\{device_name\}\}/g, `${repair.device.brand} ${repair.device.model}`)
+          .replace(/\{\{status\}\}/g, statusLabel)
+          .replace(/\{\{status_note\}\}/g, statusNote)
+          .replace(/\{\{tracking_url\}\}/g, `${window.location.origin}/customer`)
+          .replace(/\{\{shop_phone\}\}/g, centroPhone)
+          .replace(/\{\{shop_address\}\}/g, centroAddress)
+          .replace(/\{\{shop_email\}\}/g, centroEmail)
+          .replace(/\{\{#if logo_url\}\}/g, centroLogo ? '' : '<!--')
+          .replace(/\{\{\/if\}\}/g, centroLogo ? '' : '-->');
+        
+        // Add loyalty promo block if applicable
+        if (showLoyaltyPromo) {
+          const loyaltyPromoHtml = `<div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:24px;margin:24px 0;text-align:center;"><p style="color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px 0;">🎁 RISPARMIA SULLE PROSSIME RIPARAZIONI</p><h3 style="color:#fff;margin:0 0 12px 0;font-size:18px;">Attiva la Tessera Fedeltà!</h3><div style="text-align:left;color:#fff;font-size:13px;margin-bottom:16px;"><p style="margin:4px 0;">✓ <strong>10% di sconto</strong> su tutte le riparazioni</p><p style="margin:4px 0;">✓ <strong>Diagnostica a €10</strong> invece di €15</p><p style="margin:4px 0;">✓ <strong>Validità 1 anno</strong> - Solo €30</p></div><a href="${loyaltyCheckoutUrl}" style="display:inline-block;background:#fff;color:#d97706;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">🛒 Attiva Ora - €30/anno</a></div>`;
+          // Insert before closing body tag
+          html = html.replace(/<\/body>/i, loyaltyPromoHtml + '</body>');
+        }
+      } else {
+        // Use default template (existing behavior)
+        subject = `Aggiornamento Riparazione - ${repair.device.brand} ${repair.device.model}`;
+        
+        const diagnosisBlock = repair.diagnosis 
+          ? `<div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:15px;margin:20px 0;"><h4 style="color:#166534;margin-top:0;">Diagnosi</h4><p style="color:#166534;margin-bottom:0;">${repair.diagnosis}</p></div>` 
+          : '';
+        
+        const notesBlock = repair.repair_notes 
+          ? `<div style="background:#fefce8;border-left:4px solid #eab308;padding:15px;margin:20px 0;"><h4 style="color:#854d0e;margin-top:0;">Note</h4><p style="color:#854d0e;margin-bottom:0;">${repair.repair_notes}</p></div>` 
+          : '';
+        
+        const estimatedCostLine = repair.estimated_cost 
+          ? `<p style="margin:5px 0;"><strong>Costo Stimato:</strong> €${repair.estimated_cost.toFixed(2)}</p>` 
+          : '';
+        
+        const finalCostLine = repair.final_cost 
+          ? `<p style="margin:5px 0;"><strong>Costo Finale:</strong> €${repair.final_cost.toFixed(2)}</p>` 
+          : '';
+        
+        const accontoLine = repair.acconto 
+          ? `<p style="margin:5px 0;"><strong>Acconto Versato:</strong> €${repair.acconto.toFixed(2)}</p>` 
+          : '';
+
+        const loyaltyPromoBlock = showLoyaltyPromo ? `<div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:24px;margin:24px 0;text-align:center;"><p style="color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px 0;">🎁 RISPARMIA SULLE PROSSIME RIPARAZIONI</p><h3 style="color:#fff;margin:0 0 12px 0;font-size:18px;">Attiva la Tessera Fedeltà!</h3><div style="text-align:left;color:#fff;font-size:13px;margin-bottom:16px;"><p style="margin:4px 0;">✓ <strong>10% di sconto</strong> su tutte le riparazioni</p><p style="margin:4px 0;">✓ <strong>Diagnostica a €10</strong> invece di €15</p><p style="margin:4px 0;">✓ <strong>Validità 1 anno</strong> - Solo €30</p></div><a href="${loyaltyCheckoutUrl}" style="display:inline-block;background:#fff;color:#d97706;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">🛒 Attiva Ora - €30/anno</a></div>` : '';
+
+        html = [
+          '<!DOCTYPE html><html><head><meta charset="utf-8"></head>',
+          '<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f5f5f5;">',
+          '<div style="background:#fff;border-radius:12px;padding:30px;box-shadow:0 2px 8px rgba(0,0,0,0.1);">',
+          '<h1 style="color:#1a1a1a;margin-bottom:20px;">Aggiornamento Riparazione</h1>',
+          `<p style="color:#666;font-size:16px;">Gentile <strong>${repair.customer.name}</strong>,</p>`,
+          '<p style="color:#666;font-size:16px;">La informiamo che lo stato della sua riparazione è stato aggiornato.</p>',
+          '<div style="background:#f8f9fa;border-radius:8px;padding:20px;margin:20px 0;">',
+          '<h3 style="color:#1a1a1a;margin-top:0;">Dettagli Dispositivo</h3>',
+          `<p style="margin:5px 0;"><strong>Tipo:</strong> ${repair.device.device_type}</p>`,
+          `<p style="margin:5px 0;"><strong>Marca:</strong> ${repair.device.brand}</p>`,
+          `<p style="margin:5px 0;"><strong>Modello:</strong> ${repair.device.model}</p>`,
+          `<p style="margin:5px 0;"><strong>Problema:</strong> ${repair.device.reported_issue}</p>`,
+          '</div>',
+          '<div style="background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:8px;padding:20px;margin:20px 0;text-align:center;">',
+          '<p style="color:#fff;margin:0 0 10px 0;font-size:14px;">STATO ATTUALE</p>',
+          `<p style="color:#fff;margin:0;font-size:24px;font-weight:bold;">${statusLabel}</p>`,
+          '</div>',
+          diagnosisBlock,
+          notesBlock,
+          '<div style="background:#f8f9fa;border-radius:8px;padding:20px;margin:20px 0;">',
+          '<h3 style="color:#1a1a1a;margin-top:0;">Riepilogo Costi</h3>',
+          estimatedCostLine,
+          finalCostLine,
+          accontoLine,
+          '</div>',
+          loyaltyPromoBlock,
+          '<p style="color:#666;font-size:14px;margin-top:30px;">Per qualsiasi domanda, non esiti a contattarci.</p>',
+          `<p style="color:#666;font-size:14px;">Cordiali saluti,<br><strong>${centroName}</strong></p>`,
+          '</div></body></html>'
+        ].join('');
+      }
 
       const { error } = await supabase.functions.invoke("send-email-smtp", {
         body: {
