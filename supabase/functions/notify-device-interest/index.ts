@@ -193,7 +193,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
           </body>
           </html>
-        `;
+        `.replace(/\n\s*/g, '').replace(/>\s+</g, '><').trim();
 
         // Send email via send-email-smtp function (with Centro SMTP support)
         const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-smtp`, {

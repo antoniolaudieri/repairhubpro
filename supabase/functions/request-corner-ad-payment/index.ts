@@ -79,34 +79,32 @@ serve(async (req) => {
 
     // Send email notification via send-email-smtp edge function
     try {
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #f59e0b;">Richiesta Pagamento Corner</h2>
+          <p><strong>${campaignCorner.corner?.business_name}</strong> ha richiesto il pagamento per la campagna pubblicitaria.</p>
+          <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">Dettagli</h3>
+            <p><strong>Campagna:</strong> ${campaignCorner.campaign?.ad_title}</p>
+            <p><strong>Inserzionista:</strong> ${campaignCorner.campaign?.advertiser_name}</p>
+            <p><strong>Corner:</strong> ${campaignCorner.corner?.business_name}</p>
+            <p><strong>Email Corner:</strong> ${campaignCorner.corner?.email}</p>
+            <p style="font-size: 24px; color: #16a34a; margin-top: 16px;">
+              <strong>Importo: €${campaignCorner.corner_revenue?.toFixed(2)}</strong>
+            </p>
+          </div>
+          <p>Accedi al pannello admin per gestire il pagamento.</p>
+          <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
+            Questa email è stata inviata automaticamente da LabLinkRiparo.
+          </p>
+        </div>
+      `.replace(/\n\s*/g, '').replace(/>\s+</g, '><').trim();
+
       await supabase.functions.invoke('send-email-smtp', {
         body: {
           to: 'info@lablinkriparo.it',
           subject: `💰 Richiesta Pagamento Pubblicità - ${campaignCorner.corner?.business_name}`,
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2 style="color: #f59e0b;">Richiesta Pagamento Corner</h2>
-              
-              <p><strong>${campaignCorner.corner?.business_name}</strong> ha richiesto il pagamento per la campagna pubblicitaria.</p>
-              
-              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="margin-top: 0;">Dettagli</h3>
-                <p><strong>Campagna:</strong> ${campaignCorner.campaign?.ad_title}</p>
-                <p><strong>Inserzionista:</strong> ${campaignCorner.campaign?.advertiser_name}</p>
-                <p><strong>Corner:</strong> ${campaignCorner.corner?.business_name}</p>
-                <p><strong>Email Corner:</strong> ${campaignCorner.corner?.email}</p>
-                <p style="font-size: 24px; color: #16a34a; margin-top: 16px;">
-                  <strong>Importo: €${campaignCorner.corner_revenue?.toFixed(2)}</strong>
-                </p>
-              </div>
-              
-              <p>Accedi al pannello admin per gestire il pagamento.</p>
-              
-              <p style="color: #6b7280; font-size: 12px; margin-top: 30px;">
-                Questa email è stata inviata automaticamente da LabLinkRiparo.
-              </p>
-            </div>
-          `
+          html: emailHtml
         }
       });
       console.log('[request-corner-ad-payment] Email sent to admin');

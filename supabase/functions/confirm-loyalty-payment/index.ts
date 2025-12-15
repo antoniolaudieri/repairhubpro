@@ -172,7 +172,7 @@ serve(async (req) => {
                 </p>
               </body>
               </html>
-            `;
+            `.replace(/\n\s*/g, '').replace(/>\s+</g, '><').trim();
 
             // Send email via send-email-smtp function
             const supabaseUrl = Deno.env.get("SUPABASE_URL");
