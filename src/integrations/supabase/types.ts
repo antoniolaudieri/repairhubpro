@@ -1218,6 +1218,155 @@ export type Database = {
         }
         Relationships: []
       }
+      loyalty_card_usages: {
+        Row: {
+          created_at: string
+          device_id: string | null
+          discount_type: string
+          discounted_amount: number
+          id: string
+          loyalty_card_id: string
+          original_amount: number
+          repair_id: string | null
+          repair_request_id: string | null
+          savings: number
+        }
+        Insert: {
+          created_at?: string
+          device_id?: string | null
+          discount_type: string
+          discounted_amount: number
+          id?: string
+          loyalty_card_id: string
+          original_amount: number
+          repair_id?: string | null
+          repair_request_id?: string | null
+          savings: number
+        }
+        Update: {
+          created_at?: string
+          device_id?: string | null
+          discount_type?: string
+          discounted_amount?: number
+          id?: string
+          loyalty_card_id?: string
+          original_amount?: number
+          repair_id?: string | null
+          repair_request_id?: string | null
+          savings?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_card_usages_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_card_usages_loyalty_card_id_fkey"
+            columns: ["loyalty_card_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_card_usages_repair_id_fkey"
+            columns: ["repair_id"]
+            isOneToOne: false
+            referencedRelation: "repairs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_card_usages_repair_request_id_fkey"
+            columns: ["repair_request_id"]
+            isOneToOne: false
+            referencedRelation: "repair_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_cards: {
+        Row: {
+          activated_at: string | null
+          amount_paid: number
+          bonifico_confirmed_at: string | null
+          bonifico_confirmed_by: string | null
+          card_number: string | null
+          centro_id: string
+          centro_revenue: number
+          created_at: string
+          customer_id: string
+          devices_used: number
+          expires_at: string | null
+          id: string
+          max_devices: number
+          payment_method: string
+          platform_commission: number
+          status: string
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          activated_at?: string | null
+          amount_paid?: number
+          bonifico_confirmed_at?: string | null
+          bonifico_confirmed_by?: string | null
+          card_number?: string | null
+          centro_id: string
+          centro_revenue?: number
+          created_at?: string
+          customer_id: string
+          devices_used?: number
+          expires_at?: string | null
+          id?: string
+          max_devices?: number
+          payment_method: string
+          platform_commission?: number
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          activated_at?: string | null
+          amount_paid?: number
+          bonifico_confirmed_at?: string | null
+          bonifico_confirmed_by?: string | null
+          card_number?: string | null
+          centro_id?: string
+          centro_revenue?: number
+          created_at?: string
+          customer_id?: string
+          devices_used?: number
+          expires_at?: string | null
+          id?: string
+          max_devices?: number
+          payment_method?: string
+          platform_commission?: number
+          status?: string
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_cards_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_cards_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maintenance_predictions: {
         Row: {
           centro_id: string
@@ -2484,6 +2633,7 @@ export type Database = {
         Args: { p_confirmed_by: string; p_topup_id: string }
         Returns: undefined
       }
+      generate_loyalty_card_number: { Args: never; Returns: string }
       get_user_centro_id: { Args: { _user_id: string }; Returns: string }
       has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
       is_campaign_active: { Args: { _campaign_id: string }; Returns: boolean }
