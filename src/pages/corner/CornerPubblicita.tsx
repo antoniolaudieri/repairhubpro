@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Megaphone, Euro, Calendar, TrendingUp, Eye, Send, CheckCircle, Clock, Loader2,
   Monitor, Plus, Trash2, Edit, ExternalLink, Copy, Play, Pause, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  Smartphone, Wrench, Shield, Cpu, Tablet, Zap, Star, Save
+  Smartphone, Wrench, Shield, Cpu, Tablet, Zap, Star, Save, Store
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -530,12 +530,19 @@ export default function CornerPubblicita() {
                 Anteprima Live Display
               </CardTitle>
               <CardDescription>
-                Anteprima fedele di come appare il display - mostra solo elementi attivi
+                Replica esatta del display cliente
                 {usedDevices.length === 0 && <span className="block text-xs text-amber-500 mt-1">Nessun dispositivo usato pubblicato - la strip non sarà visibile</span>}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-3">
-              <div className="relative bg-slate-900 rounded-lg overflow-hidden border-4 border-slate-700 shadow-2xl" style={{ aspectRatio: '16/9' }}>
+              <div className="relative rounded-lg overflow-hidden border-4 border-slate-700 shadow-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" style={{ aspectRatio: '16/9' }}>
+                
+                {/* Animated Background Elements - exactly like real display */}
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                  <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-orange-500/10 to-transparent rounded-full blur-3xl animate-pulse" />
+                  <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-amber-500/10 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
+                </div>
+
                 {/* Used Devices Strip - Top (only if devices exist) */}
                 {usedDevices.length > 0 && (
                   <div className="absolute top-0 left-0 right-0 z-20 bg-black/40 backdrop-blur-xl border-b border-white/10">
@@ -571,83 +578,110 @@ export default function CornerPubblicita() {
                   </div>
                 )}
 
-                {/* Ad Slides - Center */}
-                <div className={`absolute inset-0 ${usedDevices.length > 0 ? 'pt-[72px]' : 'pt-0'} ${tickerEnabled ? 'pb-10' : 'pb-0'}`}>
+                {/* Ad Slides - Center with Card styling like real display */}
+                <div className={`absolute inset-0 flex items-center justify-center p-4 ${usedDevices.length > 0 ? 'pt-20' : 'pt-4'} ${tickerEnabled && tickerMessages.length > 0 ? 'pb-14' : 'pb-4'}`}>
                   <AnimatePresence mode="wait">
                     {previewAds.length > 0 && (
                       <motion.div
                         key={previewAdIndex}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.4 }}
-                        className={`absolute inset-0 ${usedDevices.length > 0 ? 'pt-[72px]' : 'pt-0'} ${tickerEnabled ? 'pb-10' : 'pb-0'}`}
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        transition={{ duration: 0.6, ease: "easeOut" }}
+                        className="w-full max-w-[85%] relative z-10"
                       >
                         {(() => {
                           const currentAd = previewAds[previewAdIndex];
                           const IconComponent = getIconComponent(currentAd.icon);
                           const imagePositionClass = { center: 'object-center', top: 'object-top', bottom: 'object-bottom' }[currentAd.imagePosition || 'center'];
                           const textAlignClass = { left: 'text-left items-start', center: 'text-center items-center', right: 'text-right items-end' }[currentAd.textAlign || 'center'];
-                          const textPositionClass = { bottom: 'justify-end pb-4', center: 'justify-center', top: 'justify-start pt-4' }[currentAd.textPosition || 'center'];
+                          const textPositionClass = { bottom: 'justify-end pb-3', center: 'justify-center', top: 'justify-start pt-3' }[currentAd.textPosition || 'center'];
+                          const fontFamilyClass = currentAd.titleFont || 'font-sans';
                           
                           if (currentAd.type === 'image' && currentAd.imageUrl) {
                             return (
-                              <div className="relative h-full">
-                                <img src={currentAd.imageUrl} alt={currentAd.title} className={`w-full h-full object-cover ${imagePositionClass}`} />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                                <div className={`absolute inset-0 flex flex-col px-4 ${textAlignClass} ${textPositionClass}`}>
-                                  <h3 className={`text-lg font-bold text-white ${currentAd.titleFont || 'font-sans'}`}>{currentAd.title || "Titolo"}</h3>
-                                  <p className={`text-[10px] text-white/80 mt-0.5 ${currentAd.descriptionFont || 'font-sans'}`}>{currentAd.description || "Descrizione"}</p>
+                              <div className="rounded-2xl shadow-2xl overflow-hidden border-0">
+                                <div className="relative aspect-video">
+                                  <img src={currentAd.imageUrl} alt={currentAd.title} className={`w-full h-full object-cover ${imagePositionClass}`} />
+                                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                                  <div className={`absolute inset-0 flex flex-col px-6 ${textAlignClass} ${textPositionClass}`}>
+                                    <h3 
+                                      className={`text-xl font-bold drop-shadow-lg text-white ${fontFamilyClass}`}
+                                    >
+                                      {currentAd.title || "Titolo"}
+                                    </h3>
+                                    <p 
+                                      className={`text-xs mt-1 text-white/80 ${fontFamilyClass}`}
+                                    >
+                                      {currentAd.description || "Descrizione"}
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
                             );
                           }
+                          
+                          // Gradient ad - Card style like real display
                           return (
-                            <div className={`h-full bg-gradient-to-br ${currentAd.gradient} flex flex-col text-white p-4 ${textAlignClass} ${textPositionClass}`}>
-                              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-2">
-                                <IconComponent className="h-5 w-5 text-white" />
+                            <div className={`p-6 bg-gradient-to-br ${currentAd.gradient} rounded-2xl shadow-2xl overflow-hidden relative`}>
+                              {/* Decorative elements like real display */}
+                              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                              <div className="absolute bottom-0 left-0 w-24 h-24 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+                              
+                              <div className={`space-y-3 flex flex-col ${textAlignClass} relative z-10`}>
+                                <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-xl border border-white/20">
+                                  <IconComponent className="h-6 w-6 text-white" />
+                                </div>
+                                <h3 
+                                  className={`text-xl font-bold drop-shadow-lg text-white ${fontFamilyClass}`}
+                                >
+                                  {currentAd.title || "Titolo"}
+                                </h3>
+                                <p 
+                                  className={`text-xs text-white/80 ${fontFamilyClass}`}
+                                >
+                                  {currentAd.description || "Descrizione"}
+                                </p>
                               </div>
-                              <h3 className={`text-lg font-bold ${currentAd.titleFont || 'font-sans'}`}>{currentAd.title || "Titolo"}</h3>
-                              <p className={`text-[10px] text-white/80 mt-1 max-w-[70%] ${currentAd.descriptionFont || 'font-sans'}`}>{currentAd.description || "Descrizione"}</p>
                             </div>
                           );
                         })()}
                       </motion.div>
                     )}
                   </AnimatePresence>
-                </div>
-
-                {/* Slide indicators */}
-                <div className={`absolute ${tickerEnabled ? 'bottom-12' : 'bottom-3'} left-0 right-0 flex justify-center gap-1 z-30`}>
-                  {previewAds.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setPreviewAdIndex(idx)}
-                      className={`w-1.5 h-1.5 rounded-full transition-all ${idx === previewAdIndex ? "bg-white scale-125" : "bg-white/40 hover:bg-white/60"}`}
-                    />
-                  ))}
-                </div>
-
-                {/* Corner Logo - Bottom Left */}
-                {logoUrl && (
-                  <div className={`absolute ${tickerEnabled ? 'bottom-12' : 'bottom-3'} left-3 z-30`}>
-                    <div className="h-8 w-8 rounded-lg overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 shadow-lg">
-                      <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
-                    </div>
+                  
+                  {/* Slide indicators - centered below card */}
+                  <div className={`absolute ${tickerEnabled && tickerMessages.length > 0 ? 'bottom-12' : 'bottom-3'} left-0 right-0 flex justify-center gap-1.5 z-30`}>
+                    {previewAds.map((_, idx) => (
+                      <motion.button
+                        key={idx}
+                        animate={{ scale: idx === previewAdIndex ? 1.3 : 1 }}
+                        onClick={() => setPreviewAdIndex(idx)}
+                        className={`w-1.5 h-1.5 rounded-full transition-all ${idx === previewAdIndex ? "bg-white shadow-lg shadow-white/30" : "bg-white/30 hover:bg-white/50"}`}
+                      />
+                    ))}
                   </div>
-                )}
+                </div>
 
-                {/* LabLinkRiparo Branding - Bottom Right */}
-                <div className={`absolute ${tickerEnabled ? 'bottom-12' : 'bottom-3'} right-3 z-30`}>
-                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/30 backdrop-blur-sm border border-white/10">
-                    <Wrench className="h-3 w-3 text-white/70" />
-                    <span className="text-[9px] font-medium text-white/70">LabLinkRiparo</span>
+                {/* Corner Logo & Branding - Bottom Right like real display */}
+                <div className={`absolute ${tickerEnabled && tickerMessages.length > 0 ? 'bottom-12' : 'bottom-2'} right-2 z-30`}>
+                  <div className="flex items-center gap-2 bg-white/5 backdrop-blur-xl rounded-xl px-3 py-2 border border-white/10">
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="Logo" className="h-6 w-6 object-contain rounded-md" />
+                    ) : (
+                      <div className="h-6 w-6 rounded-md bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center">
+                        <Store className="h-3 w-3 text-white" />
+                      </div>
+                    )}
+                    <div className="text-white text-right">
+                      <p className="text-[7px] text-white/50">Powered by LabLinkRiparo</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Scrolling Ticker - Bottom (only if enabled) */}
                 {tickerEnabled && tickerMessages.length > 0 && (
-                  <div className="absolute bottom-0 left-0 right-0 z-40 bg-black/85 h-10 flex items-center overflow-hidden">
+                  <div className="absolute bottom-0 left-0 right-0 z-40 bg-black/90 h-10 flex items-center overflow-hidden">
                     <div className="flex items-center whitespace-nowrap animate-marquee">
                       {[...tickerMessages, ...tickerMessages].map((msg, idx) => (
                         <span key={idx} className="flex items-center gap-2 text-sm font-medium px-4 text-white">
@@ -660,15 +694,8 @@ export default function CornerPubblicita() {
                   </div>
                 )}
 
-                {/* Status Badge */}
-                <div className={`absolute ${usedDevices.length > 0 ? 'top-[76px]' : 'top-3'} left-3 z-30`}>
-                  <span className={`text-[8px] px-2 py-0.5 rounded-full backdrop-blur ${displayAds.length > 0 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                    {displayAds.length > 0 ? `${displayAds.length} slide` : 'Default'}
-                  </span>
-                </div>
-
                 {/* Preview Controls Overlay */}
-                <div className={`absolute ${usedDevices.length > 0 ? 'top-[76px]' : 'top-3'} right-3 z-30 flex items-center gap-1`}>
+                <div className={`absolute ${usedDevices.length > 0 ? 'top-[76px]' : 'top-2'} right-2 z-30 flex items-center gap-1`}>
                   <select
                     value={slideInterval}
                     onChange={(e) => setSlideInterval(Number(e.target.value))}
