@@ -94,6 +94,8 @@ export default function CornerSegnalazioni() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [cornerId, setCornerId] = useState<string | null>(null);
+  const [cornerRate, setCornerRate] = useState<number>(10);
+  const [directMultiplier, setDirectMultiplier] = useState<number>(50);
   const [expandedQuotes, setExpandedQuotes] = useState<Set<string>>(new Set());
   const [signatureDialogOpen, setSignatureDialogOpen] = useState(false);
   const [selectedQuoteForSignature, setSelectedQuoteForSignature] = useState<{quoteId: string; requestId: string; totalCost: number; deviceInfo: string} | null>(null);
@@ -107,14 +109,27 @@ export default function CornerSegnalazioni() {
 
   const loadCornerAndRequests = async () => {
     try {
+      // Load corner with commission rate
       const { data: corner } = await supabase
         .from("corners")
-        .select("id")
+        .select("id, commission_rate")
         .eq("user_id", user?.id)
         .single();
 
+      // Load direct-to-centro multiplier from platform settings
+      const { data: multiplierSetting } = await supabase
+        .from("platform_settings")
+        .select("value")
+        .eq("key", "direct_to_centro_commission_multiplier")
+        .single();
+
+      if (multiplierSetting) {
+        setDirectMultiplier(multiplierSetting.value);
+      }
+
       if (corner) {
         setCornerId(corner.id);
+        setCornerRate(corner.commission_rate || 10);
         await loadRequests(corner.id);
       }
     } catch (error) {
@@ -756,13 +771,18 @@ export default function CornerSegnalazioni() {
                               </span>
                             </div>
                             
-                            {/* Corner Commission - Halved if direct-to-centro */}
+                            {/* Corner Commission - Reduced if direct-to-centro based on platform setting */}
                             {(() => {
                               const isDirectToCentro = request.corner_direct_to_centro === true;
                               const grossMargin = request.quote.total_cost - (request.quote.parts_cost || 0);
-                              // Half commission if direct-to-centro
-                              const commissionRate = isDirectToCentro ? 0.05 : 0.10;
-                              const cornerCommission = grossMargin * commissionRate;
+                              // Apply direct multiplier if direct-to-centro (e.g., 50% of normal rate)
+                              const effectiveRate = isDirectToCentro 
+                                ? (cornerRate * directMultiplier / 100) / 100 
+                                : cornerRate / 100;
+                              const displayRate = isDirectToCentro 
+                                ? (cornerRate * directMultiplier / 100).toFixed(1)
+                                : cornerRate.toString();
+                              const cornerCommission = grossMargin * effectiveRate;
                               const isViaCorner = request.quote.payment_collection_method === 'via_corner';
                               const amountToRemitToCentro = request.quote.total_cost - cornerCommission;
                               // Check if customer has paid (for direct-to-centro)
@@ -784,8 +804,8 @@ export default function CornerSegnalazioni() {
                                             : 'text-emerald-700 dark:text-emerald-400'
                                         }`}>
                                           <TrendingUp className="h-4 w-4" />
-                                          Tuo Compenso ({isDirectToCentro ? '5' : '10'}% margine)
-                                          {isDirectToCentro && <Badge variant="secondary" className="text-xs">dimezzato</Badge>}
+                                          Tuo Compenso ({displayRate}% margine)
+                                          {isDirectToCentro && <Badge variant="secondary" className="text-xs">ridotto ({directMultiplier}%)</Badge>}
                                         </span>
                                         <p className={`text-xs ${isDirectToCentro && !customerPaid ? 'text-amber-600/70' : 'text-emerald-600/70'}`}>
                                           Margine: €{grossMargin.toFixed(2)}

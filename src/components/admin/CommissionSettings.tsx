@@ -25,6 +25,7 @@ const settingIcons: Record<string, React.ElementType> = {
   default_corner_commission_rate: Store,
   default_riparatore_commission_rate: Wrench,
   default_centro_commission_rate: Building2,
+  direct_to_centro_commission_multiplier: Store,
 };
 
 const settingColors: Record<string, string> = {
@@ -32,6 +33,7 @@ const settingColors: Record<string, string> = {
   default_corner_commission_rate: "from-warning to-warning/70",
   default_riparatore_commission_rate: "from-info to-info/70",
   default_centro_commission_rate: "from-success to-success/70",
+  direct_to_centro_commission_multiplier: "from-orange-500 to-amber-500",
 };
 
 export function CommissionSettings() {
