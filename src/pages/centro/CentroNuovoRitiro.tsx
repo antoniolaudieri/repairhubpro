@@ -639,35 +639,68 @@ export default function CentroNuovoRitiro() {
       let customerId = existingCustomerId;
 
       if (!existingCustomerId) {
-        // Create customer account if email is provided
+        // Check if customer with same email already exists
         if (customerData.email) {
-          const { error: accountError } = await supabase.functions.invoke("create-customer-account", {
-            body: {
-              email: customerData.email,
-              fullName: customerData.name,
-              phone: customerData.phone,
-            },
-          });
-
-          if (accountError) {
-            console.error("Account creation error:", accountError);
-          } else {
-            toast.success("Account cliente creato con password: 12345678");
+          const { data: existingByEmail } = await supabase
+            .from("customers")
+            .select("id, name, phone")
+            .eq("email", customerData.email)
+            .maybeSingle();
+          
+          if (existingByEmail) {
+            // Customer already exists, use existing record
+            customerId = existingByEmail.id;
+            toast.info(`Cliente esistente trovato: ${existingByEmail.name}`);
           }
         }
+        
+        // Also check by phone if no email match
+        if (!customerId && customerData.phone) {
+          const { data: existingByPhone } = await supabase
+            .from("customers")
+            .select("id, name, email")
+            .eq("phone", customerData.phone)
+            .maybeSingle();
+          
+          if (existingByPhone) {
+            customerId = existingByPhone.id;
+            toast.info(`Cliente esistente trovato: ${existingByPhone.name}`);
+          }
+        }
+        
+        // Only create new customer if not found
+        if (!customerId) {
+          // Create customer account if email is provided
+          if (customerData.email) {
+            const { error: accountError } = await supabase.functions.invoke("create-customer-account", {
+              body: {
+                email: customerData.email,
+                fullName: customerData.name,
+                phone: customerData.phone,
+                centroId: centroId,
+              },
+            });
 
-        // Create customer record linked to centro
-        const { data: customer, error: customerError } = await supabase
-          .from("customers")
-          .insert({
-            ...customerData,
-            centro_id: centroId,
-          })
-          .select()
-          .single();
+            if (accountError) {
+              console.error("Account creation error:", accountError);
+            } else {
+              toast.success("Account cliente creato con password: 12345678");
+            }
+          }
 
-        if (customerError) throw customerError;
-        customerId = customer.id;
+          // Create customer record linked to centro
+          const { data: customer, error: customerError } = await supabase
+            .from("customers")
+            .insert({
+              ...customerData,
+              centro_id: centroId,
+            })
+            .select()
+            .single();
+
+          if (customerError) throw customerError;
+          customerId = customer.id;
+        }
       }
 
       // Upload photo

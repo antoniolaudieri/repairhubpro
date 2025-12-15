@@ -19,9 +19,10 @@ interface CustomerSearchProps {
   onSelectCustomer: (customer: Customer | null) => void;
   onCreateNew: () => void;
   centroId?: string | null;
+  searchGlobally?: boolean; // Search all customers, not just centro's
 }
 
-export const CustomerSearch = ({ onSelectCustomer, onCreateNew, centroId }: CustomerSearchProps) => {
+export const CustomerSearch = ({ onSelectCustomer, onCreateNew, centroId, searchGlobally = true }: CustomerSearchProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -37,14 +38,15 @@ export const CustomerSearch = ({ onSelectCustomer, onCreateNew, centroId }: Cust
 
       setLoading(true);
       try {
+        // Search globally by default (all customers) to avoid duplicates
         let query = supabase
           .from("customers")
-          .select("*")
+          .select("*, centro:centri_assistenza(business_name)")
           .or(`name.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`)
-          .limit(5);
+          .limit(10);
         
-        // Filter by centro_id if provided
-        if (centroId) {
+        // Only filter by centro_id if explicitly not searching globally
+        if (!searchGlobally && centroId) {
           query = query.eq("centro_id", centroId);
         }
 
@@ -63,7 +65,7 @@ export const CustomerSearch = ({ onSelectCustomer, onCreateNew, centroId }: Cust
 
     const debounce = setTimeout(searchCustomers, 300);
     return () => clearTimeout(debounce);
-  }, [searchTerm, centroId]);
+  }, [searchTerm, centroId, searchGlobally]);
 
   const handleSelectCustomer = (customer: Customer) => {
     setSelectedCustomer(customer);
@@ -140,7 +142,7 @@ export const CustomerSearch = ({ onSelectCustomer, onCreateNew, centroId }: Cust
                 <div className="absolute z-50 w-full mt-2">
                   <Card className="p-1 shadow-xl border-border/50 bg-card/95 backdrop-blur-sm">
                     <div className="max-h-60 overflow-y-auto">
-                      {customers.map((customer) => (
+                      {customers.map((customer: any) => (
                         <button
                           key={customer.id}
                           type="button"
@@ -154,7 +156,14 @@ export const CustomerSearch = ({ onSelectCustomer, onCreateNew, centroId }: Cust
                               </span>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="font-medium text-foreground truncate">{customer.name}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-foreground truncate">{customer.name}</span>
+                                {customer.centro?.business_name && customer.centro_id !== centroId && (
+                                  <span className="text-[10px] px-1.5 py-0.5 bg-amber-500/10 text-amber-600 rounded-full">
+                                    {customer.centro.business_name}
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex gap-3 text-xs text-muted-foreground mt-0.5">
                                 <span className="flex items-center gap-1">
                                   <Phone className="h-3 w-3" />
