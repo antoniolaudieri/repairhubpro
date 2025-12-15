@@ -53,23 +53,36 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `Sei un esperto valutatore di dispositivi usati per il mercato italiano. Valuta i prezzi basandoti su eBay, Subito.it, Amazon Renewed, Swappie.
+            content: `Sei un esperto valutatore di dispositivi usati per il mercato italiano/europeo. 
 
-Scala grading italiana:
-- B (Discreto): 50-60% del nuovo
-- A (Buono): 60-70% del nuovo  
-- AA (Ottimo): 70-80% del nuovo
-- AAA (Come Nuovo): 80-90% del nuovo
+FONTI DI RIFERIMENTO PREZZI (in ordine di priorità):
+1. Swappie.com - RIFERIMENTO PRINCIPALE per smartphone ricondizionati in Europa. I prezzi Swappie sono il benchmark per "Come Nuovo".
+2. BackMarket.it - Secondo riferimento per ricondizionati certificati
+3. Amazon Renewed Italia - Per comparazione
+4. eBay.it e Subito.it - Per usato privato (prezzi più bassi)
+
+SCALA GRADING E PREZZI REALISTICI:
+- B (Discreto/Buone condizioni): 40-50% del prezzo Swappie "Come Nuovo"
+- A (Buono/Molto buone condizioni): 55-65% del prezzo Swappie "Come Nuovo"
+- AA (Ottimo/Eccellente): 70-80% del prezzo Swappie "Come Nuovo"
+- AAA (Come Nuovo/Pari al nuovo): Prezzo Swappie "Come Nuovo" o "Eccellente" (-5/10%)
+
+REGOLE IMPORTANTI:
+- Il prezzo AAA deve essere INFERIORE al prezzo del nuovo di almeno 20-30%
+- Usa i prezzi REALI di mercato attuali, non percentuali fisse
+- Per iPhone: controlla il prezzo Swappie attuale per quel modello specifico
+- Per Samsung: usa BackMarket come riferimento primario
+- Se il dispositivo è vecchio (>3 anni), i prezzi calano più rapidamente
 
 Se il nome è ambiguo (es. "Apple 15"), interpreta come iPhone 15.
-Fornisci sempre una stima, anche approssimativa.
-${wantsMultipleStorage ? 'IMPORTANTE: Fornisci stime per TUTTE le capacità di storage disponibili per questo dispositivo (es. 64GB, 128GB, 256GB, 512GB, 1TB se applicabili). Ogni storage avrà prezzi diversi.' : ''}`
+Fornisci sempre stime basate su prezzi di mercato REALI e ATTUALI.
+${wantsMultipleStorage ? 'IMPORTANTE: Fornisci stime per TUTTE le capacità di storage disponibili per questo dispositivo.' : ''}`
           },
           {
             role: "user",
             content: storage 
-              ? `Valuta: ${deviceQuery} ${storage}` 
-              : `Valuta: ${deviceQuery} - Fornisci i prezzi per TUTTE le capacità di storage disponibili per questo modello.`
+              ? `Valuta il prezzo di mercato reale per: ${deviceQuery} ${storage}. Usa Swappie.com come riferimento principale.` 
+              : `Valuta i prezzi di mercato reali per: ${deviceQuery} - Fornisci i prezzi per TUTTE le capacità di storage. Usa Swappie.com come benchmark per i prezzi "Come Nuovo".`
           }
         ],
         tools: [
@@ -94,7 +107,7 @@ ${wantsMultipleStorage ? 'IMPORTANTE: Fornisci stime per TUTTE le capacità di s
                             },
                             originalPrice: {
                               type: "number",
-                              description: "Prezzo originale di listino del nuovo in EUR per questo storage"
+                              description: "Prezzo attuale su Swappie/BackMarket per condizione 'Come Nuovo' in EUR"
                             },
                             grades: {
                               type: "object",
@@ -138,7 +151,7 @@ ${wantsMultipleStorage ? 'IMPORTANTE: Fornisci stime per TUTTE le capacità di s
                     properties: {
                       originalPrice: {
                         type: "number",
-                        description: "Prezzo originale di listino del nuovo in EUR"
+                        description: "Prezzo attuale su Swappie/BackMarket per condizione 'Come Nuovo' in EUR"
                       },
                       grades: {
                         type: "object",
