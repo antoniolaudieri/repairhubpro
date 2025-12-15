@@ -135,6 +135,7 @@ interface RepairDetail {
   intake_signature_date: string | null;
   created_at: string;
   started_at: string | null;
+  parts_arrived_at: string | null;
   completed_at: string | null;
   delivered_at: string | null;
   forfeited_at: string | null;
@@ -164,6 +165,8 @@ interface RepairDetail {
 const statusConfig = {
   pending: { label: "In attesa", color: "bg-amber-500", bgLight: "bg-amber-500/10", text: "text-amber-600", icon: Clock },
   waiting_parts: { label: "Attesa ricambi", color: "bg-orange-500", bgLight: "bg-orange-500/10", text: "text-orange-600", icon: Package },
+  waiting_for_parts: { label: "Attesa ricambi", color: "bg-orange-500", bgLight: "bg-orange-500/10", text: "text-orange-600", icon: Package },
+  parts_arrived: { label: "Ricambi arrivati", color: "bg-teal-500", bgLight: "bg-teal-500/10", text: "text-teal-600", icon: CheckCircle },
   in_progress: { label: "In corso", color: "bg-blue-500", bgLight: "bg-blue-500/10", text: "text-blue-600", icon: Wrench },
   completed: { label: "Completata", color: "bg-emerald-500", bgLight: "bg-emerald-500/10", text: "text-emerald-600", icon: CheckCircle },
   delivered: { label: "Consegnato", color: "bg-green-600", bgLight: "bg-green-600/10", text: "text-green-700", icon: CheckCircle },
@@ -286,6 +289,7 @@ export default function RepairDetail() {
         intake_signature_date: data.intake_signature_date,
         created_at: data.created_at,
         started_at: data.started_at,
+        parts_arrived_at: data.parts_arrived_at,
         completed_at: data.completed_at,
         delivered_at: data.delivered_at,
         forfeited_at: data.forfeited_at,
@@ -416,8 +420,9 @@ export default function RepairDetail() {
           final_cost: repair.final_cost,
           acconto: repair.acconto,
           diagnostic_fee_paid: repair.diagnostic_fee_paid,
-          started_at: repair.status === "in_progress" ? new Date().toISOString() : null,
-          completed_at: repair.status === "completed" ? new Date().toISOString() : null,
+          started_at: repair.status === "in_progress" ? new Date().toISOString() : repair.started_at,
+          parts_arrived_at: repair.status === "parts_arrived" ? new Date().toISOString() : repair.parts_arrived_at,
+          completed_at: repair.status === "completed" ? new Date().toISOString() : repair.completed_at,
         })
         .eq("id", id);
 
@@ -843,6 +848,7 @@ export default function RepairDetail() {
                 timestamps={{
                   pending_at: repair.created_at,
                   in_progress_at: repair.started_at,
+                  parts_arrived_at: repair.parts_arrived_at,
                   completed_at: repair.completed_at,
                   delivered_at: repair.delivered_at,
                 }}

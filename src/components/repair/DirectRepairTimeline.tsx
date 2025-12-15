@@ -16,6 +16,7 @@ interface DirectRepairTimelineProps {
   status: string;
   createdAt: string;
   startedAt?: string | null;
+  partsArrivedAt?: string | null;
   completedAt?: string | null;
   deliveredAt?: string | null;
   forfeitedAt?: string | null;
@@ -34,10 +35,11 @@ const getTimelineSteps = (
   currentStatus: string,
   createdAt: string,
   startedAt?: string | null,
+  partsArrivedAt?: string | null,
   completedAt?: string | null,
   deliveredAt?: string | null
 ): TimelineStep[] => {
-  const statusOrder = ['pending', 'in_progress', 'waiting_parts', 'completed', 'delivered'];
+  const statusOrder = ['pending', 'in_progress', 'waiting_parts', 'waiting_for_parts', 'parts_arrived', 'completed', 'delivered'];
   const currentIndex = statusOrder.indexOf(currentStatus);
   
   // Handle cancelled/forfeited statuses
@@ -77,14 +79,30 @@ const getTimelineSteps = (
     }
   ];
 
-  // Add waiting_parts step only if currently in that status
-  if (currentStatus === 'waiting_parts') {
+  // Add waiting_parts step only if currently in that status or parts_arrived
+  if (currentStatus === 'waiting_parts' || currentStatus === 'waiting_for_parts') {
     steps.push({
       id: 'waiting_parts',
       label: 'Attesa Ricambi',
       icon: Package,
       timestamp: null,
       status: 'current'
+    });
+  } else if (currentStatus === 'parts_arrived' || partsArrivedAt) {
+    // Show waiting_parts as completed if parts have arrived
+    steps.push({
+      id: 'waiting_parts',
+      label: 'Attesa Ricambi',
+      icon: Package,
+      timestamp: null,
+      status: 'completed'
+    });
+    steps.push({
+      id: 'parts_arrived',
+      label: 'Ricambi Arrivati',
+      icon: CheckCircle2,
+      timestamp: partsArrivedAt,
+      status: currentStatus === 'parts_arrived' ? 'current' : 'completed'
     });
   }
 
@@ -112,12 +130,13 @@ export function DirectRepairTimeline({
   status,
   createdAt,
   startedAt,
+  partsArrivedAt,
   completedAt,
   deliveredAt,
   forfeitedAt,
   className
 }: DirectRepairTimelineProps) {
-  const steps = getTimelineSteps(status, createdAt, startedAt, completedAt, deliveredAt);
+  const steps = getTimelineSteps(status, createdAt, startedAt, partsArrivedAt, completedAt, deliveredAt);
   
   // Calculate days remaining for forfeiture (only if completed but not delivered/forfeited)
   const showForfeitureCountdown = status === 'completed' && completedAt && !deliveredAt && !forfeitedAt;
