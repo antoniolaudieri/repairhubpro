@@ -158,6 +158,7 @@ export default function CornerPubblicita() {
   const [editingAd, setEditingAd] = useState<DisplayAd | null>(null);
   const [previewAdIndex, setPreviewAdIndex] = useState(0);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(true);
+  const [usedDevices, setUsedDevices] = useState<{brand: string; model: string; price: number}[]>([]);
   
   // Ticker settings
   const [tickerEnabled, setTickerEnabled] = useState(true);
@@ -254,7 +255,16 @@ export default function CornerPubblicita() {
       
       setActiveCampaigns(activeCampaignsData);
       
-      // Build playlist
+      // Load used devices for preview
+      const { data: devicesData } = await supabase
+        .from('used_devices')
+        .select('brand, model, price')
+        .eq('corner_id', corner.id)
+        .eq('status', 'published')
+        .order('created_at', { ascending: false })
+        .limit(4);
+      
+      setUsedDevices(devicesData || []);
       const savedOrder = settings?.ad_playlist_order;
       const customAdsItems: PlaylistItem[] = (settings?.display_ads || []).map(ad => ({
         id: `custom-${ad.id}`, type: 'custom' as const, data: ad
@@ -520,51 +530,49 @@ export default function CornerPubblicita() {
                 Anteprima Live Display
               </CardTitle>
               <CardDescription>
-                Ecco come appare il display cliente completo con dispositivi, pubblicità e feed
+                Anteprima fedele di come appare il display - mostra solo elementi attivi
+                {usedDevices.length === 0 && <span className="block text-xs text-amber-500 mt-1">Nessun dispositivo usato pubblicato - la strip non sarà visibile</span>}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-3">
               <div className="relative bg-slate-900 rounded-lg overflow-hidden border-4 border-slate-700 shadow-2xl" style={{ aspectRatio: '16/9' }}>
-                {/* Used Devices Strip - Top */}
-                <div className="absolute top-0 left-0 right-0 z-20 bg-black/40 backdrop-blur-xl border-b border-white/10">
-                  <div className="flex items-center justify-between px-3 py-1 border-b border-white/5">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                      <span className="text-[8px] font-medium text-white/80">Dispositivi Ricondizionati</span>
+                {/* Used Devices Strip - Top (only if devices exist) */}
+                {usedDevices.length > 0 && (
+                  <div className="absolute top-0 left-0 right-0 z-20 bg-black/40 backdrop-blur-xl border-b border-white/10">
+                    <div className="flex items-center justify-between px-3 py-1 border-b border-white/5">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                        <span className="text-[8px] font-medium text-white/80">Dispositivi Ricondizionati</span>
+                      </div>
+                      <div className="flex gap-0.5">
+                        {[1].map((i) => (
+                          <div key={i} className="w-1 h-1 rounded-full bg-emerald-400" />
+                        ))}
+                      </div>
                     </div>
-                    <div className="flex gap-0.5">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className={`w-1 h-1 rounded-full ${i === 1 ? 'bg-emerald-400' : 'bg-white/20'}`} />
-                      ))}
-                    </div>
-                  </div>
-                  <div className="px-2 py-1.5">
-                    <div className="grid grid-cols-4 gap-1.5">
-                      {[
-                        { brand: 'Apple', model: 'iPhone 14', price: 599 },
-                        { brand: 'Samsung', model: 'Galaxy S23', price: 449 },
-                        { brand: 'Xiaomi', model: 'Redmi Note', price: 179 },
-                        { brand: 'Apple', model: 'iPad Pro', price: 699 },
-                      ].map((device, idx) => (
-                        <div key={idx} className="bg-white/5 backdrop-blur rounded-md p-1.5 border border-white/10">
-                          <div className="flex gap-1.5">
-                            <div className="w-6 h-6 rounded bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center flex-shrink-0">
-                              <Smartphone className="w-3 h-3 text-white/50" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[6px] text-white/50 uppercase truncate">{device.brand}</p>
-                              <p className="text-[8px] font-semibold text-white truncate">{device.model}</p>
-                              <span className="text-emerald-400 font-bold text-[9px]">€{device.price}</span>
+                    <div className="px-2 py-1.5">
+                      <div className={`grid gap-1.5 ${usedDevices.length === 1 ? 'grid-cols-1' : usedDevices.length === 2 ? 'grid-cols-2' : usedDevices.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                        {usedDevices.slice(0, 4).map((device, idx) => (
+                          <div key={idx} className="bg-white/5 backdrop-blur rounded-md p-1.5 border border-white/10">
+                            <div className="flex gap-1.5">
+                              <div className="w-6 h-6 rounded bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center flex-shrink-0">
+                                <Smartphone className="w-3 h-3 text-white/50" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[6px] text-white/50 uppercase truncate">{device.brand}</p>
+                                <p className="text-[8px] font-semibold text-white truncate">{device.model}</p>
+                                <span className="text-emerald-400 font-bold text-[9px]">€{device.price}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
 
                 {/* Ad Slides - Center */}
-                <div className="absolute inset-0 pt-[72px] pb-10">
+                <div className={`absolute inset-0 ${usedDevices.length > 0 ? 'pt-[72px]' : 'pt-0'} ${tickerEnabled ? 'pb-10' : 'pb-0'}`}>
                   <AnimatePresence mode="wait">
                     {previewAds.length > 0 && (
                       <motion.div
@@ -573,7 +581,7 @@ export default function CornerPubblicita() {
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
                         transition={{ duration: 0.4 }}
-                        className="absolute inset-0 pt-[72px] pb-10"
+                        className={`absolute inset-0 ${usedDevices.length > 0 ? 'pt-[72px]' : 'pt-0'} ${tickerEnabled ? 'pb-10' : 'pb-0'}`}
                       >
                         {(() => {
                           const currentAd = previewAds[previewAdIndex];
@@ -610,7 +618,7 @@ export default function CornerPubblicita() {
                 </div>
 
                 {/* Slide indicators */}
-                <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-1 z-30">
+                <div className={`absolute ${tickerEnabled ? 'bottom-12' : 'bottom-3'} left-0 right-0 flex justify-center gap-1 z-30`}>
                   {previewAds.map((_, idx) => (
                     <button
                       key={idx}
@@ -622,7 +630,7 @@ export default function CornerPubblicita() {
 
                 {/* Corner Logo - Bottom Left */}
                 {logoUrl && (
-                  <div className="absolute bottom-12 left-3 z-30">
+                  <div className={`absolute ${tickerEnabled ? 'bottom-12' : 'bottom-3'} left-3 z-30`}>
                     <div className="h-8 w-8 rounded-lg overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 shadow-lg">
                       <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
                     </div>
@@ -630,35 +638,37 @@ export default function CornerPubblicita() {
                 )}
 
                 {/* LabLinkRiparo Branding - Bottom Right */}
-                <div className="absolute bottom-12 right-3 z-30">
+                <div className={`absolute ${tickerEnabled ? 'bottom-12' : 'bottom-3'} right-3 z-30`}>
                   <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/30 backdrop-blur-sm border border-white/10">
                     <Wrench className="h-3 w-3 text-white/70" />
                     <span className="text-[9px] font-medium text-white/70">LabLinkRiparo</span>
                   </div>
                 </div>
 
-                {/* Scrolling Ticker - Bottom */}
-                <div className="absolute bottom-0 left-0 right-0 z-40 bg-black/85 h-10 flex items-center overflow-hidden">
-                  <div className="flex items-center whitespace-nowrap animate-marquee">
-                    {[...tickerMessages, ...tickerMessages].map((msg, idx) => (
-                      <span key={idx} className="flex items-center gap-2 text-sm font-medium px-4 text-white">
-                        {msg.emoji && <span className="text-base">{msg.emoji}</span>}
-                        <span>{msg.text}</span>
-                        <span className="mx-4 text-white/40">•</span>
-                      </span>
-                    ))}
+                {/* Scrolling Ticker - Bottom (only if enabled) */}
+                {tickerEnabled && tickerMessages.length > 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 z-40 bg-black/85 h-10 flex items-center overflow-hidden">
+                    <div className="flex items-center whitespace-nowrap animate-marquee">
+                      {[...tickerMessages, ...tickerMessages].map((msg, idx) => (
+                        <span key={idx} className="flex items-center gap-2 text-sm font-medium px-4 text-white">
+                          {msg.emoji && <span className="text-base">{msg.emoji}</span>}
+                          <span>{msg.text}</span>
+                          <span className="mx-4 text-white/40">•</span>
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Status Badge */}
-                <div className="absolute top-[76px] left-3 z-30">
+                <div className={`absolute ${usedDevices.length > 0 ? 'top-[76px]' : 'top-3'} left-3 z-30`}>
                   <span className={`text-[8px] px-2 py-0.5 rounded-full backdrop-blur ${displayAds.length > 0 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
                     {displayAds.length > 0 ? `${displayAds.length} slide` : 'Default'}
                   </span>
                 </div>
 
                 {/* Preview Controls Overlay */}
-                <div className="absolute top-[76px] right-3 z-30 flex items-center gap-1">
+                <div className={`absolute ${usedDevices.length > 0 ? 'top-[76px]' : 'top-3'} right-3 z-30 flex items-center gap-1`}>
                   <select
                     value={slideInterval}
                     onChange={(e) => setSlideInterval(Number(e.target.value))}
