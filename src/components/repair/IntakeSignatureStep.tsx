@@ -22,6 +22,8 @@ interface IntakeSignatureStepProps {
   estimatedCost?: number;
   partsTotal?: number;
   servicesTotal?: number;
+  /** The original services total before loyalty discount */
+  originalServicesTotal?: number;
   laborTotal?: number;
   /** The original labor total before loyalty discount */
   originalLaborTotal?: number;
@@ -45,6 +47,7 @@ export function IntakeSignatureStep({
   estimatedCost = 0,
   partsTotal = 0,
   servicesTotal = 0,
+  originalServicesTotal,
   laborTotal = 0,
   originalLaborTotal,
   shippingCost = 0,
@@ -231,9 +234,19 @@ export function IntakeSignatureStep({
               </div>
             )}
             {servicesTotal > 0 && (
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Servizi:</span>
-                <span className="font-medium">€{servicesTotal.toFixed(2)}</span>
+                <div className="flex items-center gap-2">
+                  {originalServicesTotal && originalServicesTotal > servicesTotal && (
+                    <span className="text-xs line-through text-muted-foreground">€{originalServicesTotal.toFixed(2)}</span>
+                  )}
+                  <span className={`font-medium ${originalServicesTotal && originalServicesTotal > servicesTotal ? "text-green-600" : ""}`}>
+                    €{servicesTotal.toFixed(2)}
+                  </span>
+                  {originalServicesTotal && originalServicesTotal > servicesTotal && (
+                    <span className="text-[9px] bg-green-500/20 text-green-600 px-1 rounded">-10%</span>
+                  )}
+                </div>
               </div>
             )}
             {laborTotal > 0 && (

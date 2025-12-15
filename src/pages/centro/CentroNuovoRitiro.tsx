@@ -97,6 +97,12 @@ export default function CentroNuovoRitiro() {
     ? Number((laborCost * (1 - loyaltyBenefits.repairDiscountPercent / 100)).toFixed(2))
     : laborCost;
 
+  // Calculate discounted services total (same 10% discount applies)
+  const servicesTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
+  const discountedServicesTotal = hasLoyaltyLaborDiscount
+    ? Number((servicesTotal * (1 - loyaltyBenefits.repairDiscountPercent / 100)).toFixed(2))
+    : servicesTotal;
+
   const baseDiagnosticFee = loyaltyBenefits.hasActiveCard ? loyaltyBenefits.diagnosticFee : 15;
 
   const [customerData, setCustomerData] = useState({
@@ -1048,14 +1054,15 @@ export default function CentroNuovoRitiro() {
 
       case 4:
         const shippingCostForStep4 = shippingEnabled ? UTOPYA_SHIPPING_COST : 0;
-        const estimatedCostTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + selectedServices.reduce((sum, s) => sum + s.price, 0) + discountedLaborCost + shippingCostForStep4;
+        const estimatedCostTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + discountedServicesTotal + discountedLaborCost + shippingCostForStep4;
         return (
           <IntakeSignatureStep
             onSignatureComplete={(signature) => setIntakeSignature(signature)}
             currentSignature={intakeSignature}
             estimatedCost={estimatedCostTotal}
             partsTotal={selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0)}
-            servicesTotal={selectedServices.reduce((sum, s) => sum + s.price, 0)}
+            servicesTotal={discountedServicesTotal}
+            originalServicesTotal={hasLoyaltyLaborDiscount ? servicesTotal : undefined}
             laborTotal={discountedLaborCost}
             originalLaborTotal={hasLoyaltyLaborDiscount ? laborCost : undefined}
             shippingCost={shippingCostForStep4}
