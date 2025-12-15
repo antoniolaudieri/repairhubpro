@@ -78,6 +78,30 @@ const deviceIcons: Record<string, any> = {
   console: Gamepad,
 };
 
+const DeviceImage = ({ photoUrl, deviceType }: { photoUrl: string | null; deviceType: string }) => {
+  const [hasError, setHasError] = useState(false);
+  const Icon = deviceIcons[deviceType] || Smartphone;
+
+  if (!photoUrl || hasError) {
+    return (
+      <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center ring-2 ring-border group-hover:ring-primary/30 transition-all">
+        <Icon className="h-5 w-5 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <img
+        src={photoUrl}
+        alt="Device"
+        className="h-16 w-16 rounded-xl object-cover ring-2 ring-border group-hover:ring-primary/30 transition-all"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+};
+
 export default function CentroLavori() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -411,19 +435,10 @@ export default function CentroLavori() {
                           <CardContent className="p-4">
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                               <div className="flex items-start gap-4">
-                                {repair.device.photo_url ? (
-                                  <div className="relative">
-                                    <img
-                                      src={repair.device.photo_url}
-                                      alt="Device"
-                                      className="h-16 w-16 rounded-xl object-cover ring-2 ring-border group-hover:ring-primary/30 transition-all"
-                                    />
-                                  </div>
-                                ) : (
-                                  <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center ring-2 ring-border group-hover:ring-primary/30 transition-all">
-                                    {DeviceIcon(repair.device.device_type)}
-                                  </div>
-                                )}
+                                <DeviceImage 
+                                  photoUrl={repair.device.photo_url} 
+                                  deviceType={repair.device.device_type} 
+                                />
                                 <div className="space-y-1.5">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h3 className="font-semibold">
