@@ -461,6 +461,17 @@ export function IntakeSignatureStep({
                       <p className="text-xl font-bold text-green-600">€{loyaltyDiscountedTotal.toFixed(2)}</p>
                     </div>
                   </div>
+                  <div className="mt-2 pt-2 border-t border-dashed border-muted-foreground/30 text-center">
+                    <p className="text-[10px] text-muted-foreground">
+                      Oggi paghi: <span className="font-semibold text-foreground">€{(loyaltyDiscountedTotal + 30).toFixed(2)}</span>
+                      <span className="text-muted-foreground ml-1">(ritiro €{loyaltyDiscountedTotal.toFixed(2)} + tessera €30)</span>
+                    </p>
+                    {totalPotentialSavings > 30 && (
+                      <p className="text-[10px] text-green-600 font-medium mt-1">
+                        Già da questo ritiro risparmi €{(totalPotentialSavings - 30).toFixed(2)} netti!
+                      </p>
+                    )}
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-2 text-xs mb-3">
