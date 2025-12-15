@@ -24,6 +24,7 @@ import { CustomerDeviceInterests } from "@/components/centro/CustomerDeviceInter
 import { PredictiveMaintenanceCard } from "@/components/centro/PredictiveMaintenanceCard";
 import { LoyaltyCardProposal } from "@/components/loyalty/LoyaltyCardProposal";
 import { LoyaltyStatusBanner } from "@/components/loyalty/LoyaltyStatusBanner";
+import { LoyaltyCardDetail } from "@/components/loyalty/LoyaltyCardDetail";
 import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
@@ -457,10 +458,14 @@ export default function CentroClienteDetail() {
             </div>
           </motion.div>
 
-          {/* Loyalty Status Banner */}
-          {loyaltyBenefits.hasActiveCard && (
+          {/* Loyalty Card Detail */}
+          {loyaltyBenefits.hasActiveCard && loyaltyBenefits.card && (
             <motion.div variants={itemVariants}>
-              <LoyaltyStatusBanner benefits={loyaltyBenefits} />
+              <LoyaltyCardDetail 
+                card={loyaltyBenefits.card}
+                devices={devices.map(d => ({ id: d.id, device_type: d.device_type, brand: d.brand, model: d.model }))}
+                onRefresh={refreshLoyalty}
+              />
             </motion.div>
           )}
 
