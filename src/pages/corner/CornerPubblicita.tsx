@@ -512,7 +512,7 @@ export default function CornerPubblicita() {
             </CardContent>
           </Card>
 
-          {/* Live Preview */}
+          {/* Live Preview - Full Display */}
           <Card className="overflow-hidden">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2">
@@ -520,106 +520,165 @@ export default function CornerPubblicita() {
                 Anteprima Live Display
               </CardTitle>
               <CardDescription>
-                Ecco come appare il display cliente con le tue pubblicità
+                Ecco come appare il display cliente completo con dispositivi, pubblicità e feed
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="relative bg-slate-900 aspect-video max-h-[300px] overflow-hidden">
-                <AnimatePresence mode="wait">
-                  {previewAds.length > 0 && (
-                    <motion.div
-                      key={previewAdIndex}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.4 }}
-                      className="absolute inset-0"
-                    >
-                      {(() => {
-                        const currentAd = previewAds[previewAdIndex];
-                        const IconComponent = getIconComponent(currentAd.icon);
-                        const imagePositionClass = { center: 'object-center', top: 'object-top', bottom: 'object-bottom' }[currentAd.imagePosition || 'center'];
-                        const textAlignClass = { left: 'text-left items-start', center: 'text-center items-center', right: 'text-right items-end' }[currentAd.textAlign || 'center'];
-                        const textPositionClass = { bottom: 'justify-end pb-6', center: 'justify-center', top: 'justify-start pt-6' }[currentAd.textPosition || 'bottom'];
-                        
-                        if (currentAd.type === 'image' && currentAd.imageUrl) {
-                          return (
-                            <div className="relative h-full">
-                              <img src={currentAd.imageUrl} alt={currentAd.title} className={`w-full h-full object-cover ${imagePositionClass}`} />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                              <div className={`absolute inset-0 flex flex-col px-6 ${textAlignClass} ${textPositionClass}`}>
-                                <h3 className={`text-2xl font-bold text-white ${currentAd.titleFont || 'font-sans'}`}>{currentAd.title || "Titolo"}</h3>
-                                <p className={`text-sm text-white/80 mt-1 ${currentAd.descriptionFont || 'font-sans'}`}>{currentAd.description || "Descrizione"}</p>
-                              </div>
-                            </div>
-                          );
-                        }
-                        return (
-                          <div className={`h-full bg-gradient-to-br ${currentAd.gradient} flex flex-col text-white p-6 ${textAlignClass} ${textPositionClass}`}>
-                            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-4">
-                              <IconComponent className="h-8 w-8 text-white" />
-                            </div>
-                            <h3 className={`text-2xl font-bold ${currentAd.titleFont || 'font-sans'}`}>{currentAd.title || "Titolo"}</h3>
-                            <p className={`text-sm text-white/80 mt-2 ${currentAd.descriptionFont || 'font-sans'}`}>{currentAd.description || "Descrizione"}</p>
-                          </div>
-                        );
-                      })()}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-                
-                <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-1.5">
-                      {previewAds.map((_, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => setPreviewAdIndex(idx)}
-                          className={`w-2 h-2 rounded-full transition-all ${idx === previewAdIndex ? "bg-white scale-125" : "bg-white/40 hover:bg-white/60"}`}
-                        />
+            <CardContent className="p-3">
+              <div className="relative bg-slate-900 rounded-lg overflow-hidden border-4 border-slate-700 shadow-2xl" style={{ aspectRatio: '16/9' }}>
+                {/* Used Devices Strip - Top */}
+                <div className="absolute top-0 left-0 right-0 z-20 bg-black/40 backdrop-blur-xl border-b border-white/10">
+                  <div className="flex items-center justify-between px-3 py-1 border-b border-white/5">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                      <span className="text-[8px] font-medium text-white/80">Dispositivi Ricondizionati</span>
+                    </div>
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className={`w-1 h-1 rounded-full ${i === 1 ? 'bg-emerald-400' : 'bg-white/20'}`} />
                       ))}
                     </div>
-                    <div className="flex items-center gap-1">
-                      <select
-                        value={slideInterval}
-                        onChange={(e) => setSlideInterval(Number(e.target.value))}
-                        className="h-6 text-[10px] bg-white/20 text-white border-0 rounded px-1 focus:ring-0 cursor-pointer"
-                      >
-                        <option value={3} className="text-black">3s</option>
-                        <option value={5} className="text-black">5s</option>
-                        <option value={7} className="text-black">7s</option>
-                        <option value={10} className="text-black">10s</option>
-                        <option value={15} className="text-black">15s</option>
-                      </select>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20" onClick={() => setPreviewAdIndex(prev => (prev - 1 + previewAds.length) % previewAds.length)}>
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20" onClick={() => setIsPreviewPlaying(!isPreviewPlaying)}>
-                        {isPreviewPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20" onClick={() => setPreviewAdIndex(prev => (prev + 1) % previewAds.length)}>
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
+                  </div>
+                  <div className="px-2 py-1.5">
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {[
+                        { brand: 'Apple', model: 'iPhone 14', price: 599 },
+                        { brand: 'Samsung', model: 'Galaxy S23', price: 449 },
+                        { brand: 'Xiaomi', model: 'Redmi Note', price: 179 },
+                        { brand: 'Apple', model: 'iPad Pro', price: 699 },
+                      ].map((device, idx) => (
+                        <div key={idx} className="bg-white/5 backdrop-blur rounded-md p-1.5 border border-white/10">
+                          <div className="flex gap-1.5">
+                            <div className="w-6 h-6 rounded bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center flex-shrink-0">
+                              <Smartphone className="w-3 h-3 text-white/50" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[6px] text-white/50 uppercase truncate">{device.brand}</p>
+                              <p className="text-[8px] font-semibold text-white truncate">{device.model}</p>
+                              <span className="text-emerald-400 font-bold text-[9px]">€{device.price}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
-                
-                <div className="absolute top-3 left-3">
-                  <span className={`text-xs px-2 py-1 rounded-full backdrop-blur ${displayAds.length > 0 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
-                    {displayAds.length > 0 ? `${displayAds.length} slide personalizzate` : 'Slide predefinite'}
-                  </span>
+
+                {/* Ad Slides - Center */}
+                <div className="absolute inset-0 pt-[72px] pb-10">
+                  <AnimatePresence mode="wait">
+                    {previewAds.length > 0 && (
+                      <motion.div
+                        key={previewAdIndex}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.4 }}
+                        className="absolute inset-0 pt-[72px] pb-10"
+                      >
+                        {(() => {
+                          const currentAd = previewAds[previewAdIndex];
+                          const IconComponent = getIconComponent(currentAd.icon);
+                          const imagePositionClass = { center: 'object-center', top: 'object-top', bottom: 'object-bottom' }[currentAd.imagePosition || 'center'];
+                          const textAlignClass = { left: 'text-left items-start', center: 'text-center items-center', right: 'text-right items-end' }[currentAd.textAlign || 'center'];
+                          const textPositionClass = { bottom: 'justify-end pb-4', center: 'justify-center', top: 'justify-start pt-4' }[currentAd.textPosition || 'center'];
+                          
+                          if (currentAd.type === 'image' && currentAd.imageUrl) {
+                            return (
+                              <div className="relative h-full">
+                                <img src={currentAd.imageUrl} alt={currentAd.title} className={`w-full h-full object-cover ${imagePositionClass}`} />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                                <div className={`absolute inset-0 flex flex-col px-4 ${textAlignClass} ${textPositionClass}`}>
+                                  <h3 className={`text-lg font-bold text-white ${currentAd.titleFont || 'font-sans'}`}>{currentAd.title || "Titolo"}</h3>
+                                  <p className={`text-[10px] text-white/80 mt-0.5 ${currentAd.descriptionFont || 'font-sans'}`}>{currentAd.description || "Descrizione"}</p>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className={`h-full bg-gradient-to-br ${currentAd.gradient} flex flex-col text-white p-4 ${textAlignClass} ${textPositionClass}`}>
+                              <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-2">
+                                <IconComponent className="h-5 w-5 text-white" />
+                              </div>
+                              <h3 className={`text-lg font-bold ${currentAd.titleFont || 'font-sans'}`}>{currentAd.title || "Titolo"}</h3>
+                              <p className={`text-[10px] text-white/80 mt-1 max-w-[70%] ${currentAd.descriptionFont || 'font-sans'}`}>{currentAd.description || "Descrizione"}</p>
+                            </div>
+                          );
+                        })()}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
-                
-                <div className="absolute bottom-2 right-2 flex items-center gap-2">
-                  {logoUrl && (
-                    <div className="h-6 w-6 rounded overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20">
+
+                {/* Slide indicators */}
+                <div className="absolute bottom-12 left-0 right-0 flex justify-center gap-1 z-30">
+                  {previewAds.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setPreviewAdIndex(idx)}
+                      className={`w-1.5 h-1.5 rounded-full transition-all ${idx === previewAdIndex ? "bg-white scale-125" : "bg-white/40 hover:bg-white/60"}`}
+                    />
+                  ))}
+                </div>
+
+                {/* Corner Logo - Bottom Left */}
+                {logoUrl && (
+                  <div className="absolute bottom-12 left-3 z-30">
+                    <div className="h-8 w-8 rounded-lg overflow-hidden bg-white/10 backdrop-blur-sm border border-white/20 shadow-lg">
                       <img src={logoUrl} alt="Logo" className="h-full w-full object-cover" />
                     </div>
-                  )}
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-black/30 backdrop-blur-sm">
-                    <Wrench className="h-2.5 w-2.5 text-white/70" />
-                    <span className="text-[8px] font-medium text-white/70">Powered by LabLinkRiparo</span>
                   </div>
+                )}
+
+                {/* LabLinkRiparo Branding - Bottom Right */}
+                <div className="absolute bottom-12 right-3 z-30">
+                  <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-black/30 backdrop-blur-sm border border-white/10">
+                    <Wrench className="h-3 w-3 text-white/70" />
+                    <span className="text-[9px] font-medium text-white/70">LabLinkRiparo</span>
+                  </div>
+                </div>
+
+                {/* Scrolling Ticker - Bottom */}
+                <div className="absolute bottom-0 left-0 right-0 z-40 bg-black/85 h-10 flex items-center overflow-hidden">
+                  <div className="flex items-center whitespace-nowrap animate-marquee">
+                    {[...tickerMessages, ...tickerMessages].map((msg, idx) => (
+                      <span key={idx} className="flex items-center gap-2 text-sm font-medium px-4 text-white">
+                        {msg.emoji && <span className="text-base">{msg.emoji}</span>}
+                        <span>{msg.text}</span>
+                        <span className="mx-4 text-white/40">•</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Status Badge */}
+                <div className="absolute top-[76px] left-3 z-30">
+                  <span className={`text-[8px] px-2 py-0.5 rounded-full backdrop-blur ${displayAds.length > 0 ? 'bg-green-500/20 text-green-300' : 'bg-amber-500/20 text-amber-300'}`}>
+                    {displayAds.length > 0 ? `${displayAds.length} slide` : 'Default'}
+                  </span>
+                </div>
+
+                {/* Preview Controls Overlay */}
+                <div className="absolute top-[76px] right-3 z-30 flex items-center gap-1">
+                  <select
+                    value={slideInterval}
+                    onChange={(e) => setSlideInterval(Number(e.target.value))}
+                    className="h-5 text-[8px] bg-white/20 text-white border-0 rounded px-1 focus:ring-0 cursor-pointer"
+                  >
+                    <option value={3} className="text-black">3s</option>
+                    <option value={5} className="text-black">5s</option>
+                    <option value={7} className="text-black">7s</option>
+                    <option value={10} className="text-black">10s</option>
+                    <option value={15} className="text-black">15s</option>
+                  </select>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 text-white hover:bg-white/20" onClick={() => setPreviewAdIndex(prev => (prev - 1 + previewAds.length) % previewAds.length)}>
+                    <ChevronLeft className="h-3 w-3" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 text-white hover:bg-white/20" onClick={() => setIsPreviewPlaying(!isPreviewPlaying)}>
+                    {isPreviewPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-5 w-5 text-white hover:bg-white/20" onClick={() => setPreviewAdIndex(prev => (prev + 1) % previewAds.length)}>
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
                 </div>
               </div>
             </CardContent>
