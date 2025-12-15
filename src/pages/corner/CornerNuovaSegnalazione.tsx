@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Sparkles, AlertTriangle, Smartphone, ArrowLeft, Building2, Check, Loader2, Euro, Info } from "lucide-react";
 import { PhotoUpload } from "@/components/repair/PhotoUpload";
 import { DeviceInfoCard } from "@/components/repair/DeviceInfoCard";
+import { CustomerSearch } from "@/components/repair/CustomerSearch";
 import { CustomerFormStep } from "@/components/repair/CustomerFormStep";
 import { DeviceFormStep } from "@/components/repair/DeviceFormStep";
 import { NewRepairWizard } from "@/components/repair/NewRepairWizard";
@@ -64,6 +65,10 @@ export default function CornerNuovaSegnalazione() {
   
   // Direct to Centro (customer goes directly, reduced commission)
   const [directToCentro, setDirectToCentro] = useState(false);
+
+  // Customer search state
+  const [existingCustomerId, setExistingCustomerId] = useState<string | null>(null);
+  const [isNewCustomer, setIsNewCustomer] = useState(false);
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -341,9 +346,29 @@ export default function CornerNuovaSegnalazione() {
     }
   };
 
+  const handleSelectCustomer = (customer: any) => {
+    if (customer) {
+      setExistingCustomerId(customer.id);
+      setCustomerData({
+        name: customer.name,
+        email: customer.email || "",
+        phone: customer.phone,
+        address: customer.address || "",
+        notes: "",
+      });
+      setIsNewCustomer(false);
+    }
+  };
+
+  const handleCreateNewCustomer = () => {
+    setExistingCustomerId(null);
+    setCustomerData({ name: "", email: "", phone: "", address: "", notes: "" });
+    setIsNewCustomer(true);
+  };
+
   const canGoNext = () => {
     switch (currentStep) {
-      case 0: return Boolean(customerData.name && customerData.phone);
+      case 0: return isNewCustomer ? Boolean(customerData.name && customerData.phone) : existingCustomerId !== null;
       case 1: return true;
       case 2: return Boolean(deviceData.device_type && deviceData.brand && deviceData.model && deviceData.reported_issue);
       case 3: return selectedCentroId !== null;
@@ -375,75 +400,69 @@ export default function CornerNuovaSegnalazione() {
     setLoading(true);
 
     try {
-      // Create or find customer by phone OR email
-      let customerId: string;
-      let existingCustomer = null;
+      // Use existing customer or find/create new one
+      let customerId = existingCustomerId;
       
-      // First try to find by phone
-      const { data: customerByPhone } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("phone", customerData.phone)
-        .maybeSingle();
-
-      if (customerByPhone) {
-        existingCustomer = customerByPhone;
-      } else if (customerData.email) {
-        // If not found by phone, try by email
-        const { data: customerByEmail } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("email", customerData.email)
-          .maybeSingle();
-        
-        if (customerByEmail) {
-          existingCustomer = customerByEmail;
-        }
-      }
-
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
-        
-        // Update customer info if needed
-        await supabase
-          .from("customers")
-          .update({
-            name: customerData.name,
-            phone: customerData.phone,
-            email: customerData.email || null,
-            address: customerData.address || null,
-          })
-          .eq("id", existingCustomer.id);
-      } else {
-        // Create customer account if email is provided
+      if (!existingCustomerId) {
+        // Check if customer with same email already exists
         if (customerData.email) {
-          const { error: accountError } = await supabase.functions.invoke("create-customer-account", {
-            body: {
-              email: customerData.email,
-              fullName: customerData.name,
-              phone: customerData.phone,
-            },
-          });
-
-          if (accountError) {
-            console.error("Account creation error:", accountError);
-            // Continue anyway - customer record will still be created
+          const { data: existingByEmail } = await supabase
+            .from("customers")
+            .select("id, name")
+            .eq("email", customerData.email)
+            .maybeSingle();
+          
+          if (existingByEmail) {
+            customerId = existingByEmail.id;
+            toast.info(`Cliente esistente trovato: ${existingByEmail.name}`);
           }
         }
+        
+        // Also check by phone if no email match
+        if (!customerId && customerData.phone) {
+          const { data: existingByPhone } = await supabase
+            .from("customers")
+            .select("id, name")
+            .eq("phone", customerData.phone)
+            .maybeSingle();
+          
+          if (existingByPhone) {
+            customerId = existingByPhone.id;
+            toast.info(`Cliente esistente trovato: ${existingByPhone.name}`);
+          }
+        }
+        
+        // Only create new customer if not found
+        if (!customerId) {
+          // Create customer account if email is provided
+          if (customerData.email) {
+            const { error: accountError } = await supabase.functions.invoke("create-customer-account", {
+              body: {
+                email: customerData.email,
+                fullName: customerData.name,
+                phone: customerData.phone,
+              },
+            });
 
-        const { data: newCustomer, error: customerError } = await supabase
-          .from("customers")
-          .insert({
-            name: customerData.name,
-            phone: customerData.phone,
-            email: customerData.email || null,
-            address: customerData.address || null,
-          })
-          .select("id")
-          .single();
+            if (accountError) {
+              console.error("Account creation error:", accountError);
+            }
+          }
 
-        if (customerError) throw customerError;
-        customerId = newCustomer.id;
+          const { data: newCustomer, error: customerError } = await supabase
+            .from("customers")
+            .insert({
+              name: customerData.name,
+              phone: customerData.phone,
+              email: customerData.email || null,
+              address: customerData.address || null,
+            })
+            .select("id")
+            .single();
+
+          if (customerError) throw customerError;
+          customerId = newCustomer.id;
+        }
       }
 
       // Upload photo if exists
@@ -459,6 +478,12 @@ export default function CornerNuovaSegnalazione() {
           const { data: urlData } = supabase.storage.from("device-photos").getPublicUrl(fileName);
           photos = [urlData.publicUrl];
         }
+      }
+
+      if (!customerId) {
+        toast.error("Errore: cliente non trovato");
+        setLoading(false);
+        return;
       }
 
       // Create repair request with assigned Centro and gestione fee info
@@ -522,7 +547,15 @@ export default function CornerNuovaSegnalazione() {
       case 0:
         return (
           <div className="space-y-6">
-            <CustomerFormStep customerData={customerData} onChange={setCustomerData} />
+            <CustomerSearch
+              onSelectCustomer={handleSelectCustomer}
+              onCreateNew={handleCreateNewCustomer}
+              searchGlobally={true}
+            />
+            
+            {isNewCustomer && (
+              <CustomerFormStep customerData={customerData} onChange={setCustomerData} />
+            )}
           </div>
         );
       
