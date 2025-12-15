@@ -283,18 +283,19 @@ export function useCustomerLoyaltyCards(customerEmail: string | null) {
       }
 
       try {
-        // First get customer ID from email
-        const { data: customer } = await supabase
+        // Get ALL customer IDs from email (there may be duplicates)
+        const { data: customers } = await supabase
           .from('customers')
           .select('id')
-          .eq('email', customerEmail)
-          .maybeSingle();
+          .eq('email', customerEmail);
 
-        if (!customer) {
+        if (!customers || customers.length === 0) {
           setCards([]);
           setLoading(false);
           return;
         }
+
+        const customerIds = customers.map(c => c.id);
 
         const { data, error } = await supabase
           .from('loyalty_cards')
@@ -302,7 +303,7 @@ export function useCustomerLoyaltyCards(customerEmail: string | null) {
             *,
             centro:centri_assistenza(business_name, logo_url, phone, email)
           `)
-          .eq('customer_id', customer.id)
+          .in('customer_id', customerIds)
           .eq('status', 'active')
           .order('activated_at', { ascending: false });
 
