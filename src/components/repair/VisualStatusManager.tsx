@@ -68,6 +68,14 @@ export const DIRECT_REPAIR_STATUSES: StatusConfig[] = [
     bgColor: 'bg-orange-500',
   },
   { 
+    id: 'parts_arrived', 
+    label: 'Ricambi Arrivati', 
+    shortLabel: 'Arrivati',
+    icon: CheckCircle2, 
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-500',
+  },
+  {
     id: 'completed', 
     label: 'Completato', 
     shortLabel: 'Pronto',
