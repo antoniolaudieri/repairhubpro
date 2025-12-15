@@ -12,6 +12,27 @@ interface RSSItem {
   source?: string;
 }
 
+// Decode HTML entities
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&#(\d+);/g, (_, num) => String.fromCharCode(parseInt(num, 10)))
+    .replace(/&#x([0-9A-Fa-f]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&rsquo;/g, "'")
+    .replace(/&lsquo;/g, "'")
+    .replace(/&rdquo;/g, '"')
+    .replace(/&ldquo;/g, '"')
+    .replace(/&ndash;/g, '–')
+    .replace(/&mdash;/g, '—')
+    .replace(/&hellip;/g, '…')
+    .replace(/&euro;/g, '€');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -62,9 +83,10 @@ serve(async (req) => {
       const link = linkMatch ? (linkMatch[1] || linkMatch[2] || '').trim() : '';
       
       if (title) {
+        const decodedTitle = decodeHtmlEntities(title);
         items.push({
           id: `rss-${i}-${Date.now()}`,
-          text: title.length > 100 ? title.substring(0, 97) + '...' : title,
+          text: decodedTitle.length > 100 ? decodedTitle.substring(0, 97) + '...' : decodedTitle,
           emoji: '📰',
           source: 'rss'
         });
