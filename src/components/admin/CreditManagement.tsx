@@ -52,6 +52,7 @@ interface EntityCredit {
   payment_status: string;
   last_credit_update: string | null;
   commission_rate: number;
+  direct_to_centro_multiplier?: number;
 }
 
 const statusColors: Record<string, string> = {
@@ -77,6 +78,7 @@ export function CreditManagement() {
   const [deductReason, setDeductReason] = useState("");
   const [showEditCommission, setShowEditCommission] = useState(false);
   const [newCommissionRate, setNewCommissionRate] = useState("");
+  const [newDirectMultiplier, setNewDirectMultiplier] = useState("");
 
   // Fetch pending topup requests
   const { data: pendingRequests = [], isLoading: loadingRequests } = useQuery({
@@ -140,7 +142,7 @@ export function CreditManagement() {
       // Fetch corners
       const { data: corners } = await supabase
         .from("corners")
-        .select("id, business_name, credit_balance, payment_status, last_credit_update, commission_rate")
+        .select("id, business_name, credit_balance, payment_status, last_credit_update, commission_rate, direct_to_centro_multiplier")
         .eq("status", "approved");
 
       corners?.forEach((c: any) => {
@@ -152,6 +154,7 @@ export function CreditManagement() {
           payment_status: c.payment_status || "good_standing",
           last_credit_update: c.last_credit_update,
           commission_rate: c.commission_rate || 10,
+          direct_to_centro_multiplier: c.direct_to_centro_multiplier ?? 50,
         });
       });
 
@@ -282,11 +285,18 @@ export function CreditManagement() {
 
   // Update commission rate mutation
   const updateCommissionMutation = useMutation({
-    mutationFn: async ({ entity, rate }: { entity: EntityCredit; rate: number }) => {
+    mutationFn: async ({ entity, rate, directMultiplier }: { entity: EntityCredit; rate: number; directMultiplier?: number }) => {
       const table = entity.type === "centro" ? "centri_assistenza" : "corners";
+      const updateData: any = { commission_rate: rate };
+      
+      // Only corners have direct_to_centro_multiplier
+      if (entity.type === "corner" && directMultiplier !== undefined) {
+        updateData.direct_to_centro_multiplier = directMultiplier;
+      }
+      
       const { error } = await supabase
         .from(table)
-        .update({ commission_rate: rate })
+        .update(updateData)
         .eq("id", entity.id);
       if (error) throw error;
     },
@@ -296,6 +306,7 @@ export function CreditManagement() {
       setShowEditCommission(false);
       setSelectedEntity(null);
       setNewCommissionRate("");
+      setNewDirectMultiplier("");
     },
     onError: () => {
       toast.error("Errore nell'aggiornamento della commissione");
@@ -329,7 +340,17 @@ export function CreditManagement() {
       toast.error("Inserisci una percentuale valida (0-100)");
       return;
     }
-    updateCommissionMutation.mutate({ entity: selectedEntity, rate });
+    
+    let directMultiplier: number | undefined;
+    if (selectedEntity.type === "corner" && newDirectMultiplier) {
+      directMultiplier = parseFloat(newDirectMultiplier);
+      if (isNaN(directMultiplier) || directMultiplier < 0 || directMultiplier > 100) {
+        toast.error("Inserisci un moltiplicatore valido (0-100)");
+        return;
+      }
+    }
+    
+    updateCommissionMutation.mutate({ entity: selectedEntity, rate, directMultiplier });
   };
 
   // Stats
@@ -540,6 +561,7 @@ export function CreditManagement() {
                               onClick={() => {
                                 setSelectedEntity(entity);
                                 setNewCommissionRate(entity.commission_rate.toString());
+                                setNewDirectMultiplier(entity.direct_to_centro_multiplier?.toString() || "50");
                                 setShowEditCommission(true);
                               }}
                               title="Modifica commissione"
@@ -756,6 +778,28 @@ export function CreditManagement() {
                     : "Percentuale del margine lordo che il Corner guadagna come referral (default: 10%)"}
                 </p>
               </div>
+
+              {/* Direct to Centro Multiplier - Only for Corners */}
+              {selectedEntity.type === "corner" && (
+                <div className="space-y-2">
+                  <Label>Moltiplicatore Consegna Diretta (%)</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      placeholder="50"
+                      value={newDirectMultiplier}
+                      onChange={(e) => setNewDirectMultiplier(e.target.value)}
+                      min={0}
+                      max={100}
+                      step={5}
+                    />
+                    <span className="text-muted-foreground">%</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Percentuale della commissione Corner quando il cliente va direttamente al Centro (default: 50% = metà commissione)
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
