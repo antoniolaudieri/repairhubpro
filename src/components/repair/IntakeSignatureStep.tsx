@@ -25,6 +25,8 @@ interface IntakeSignatureStepProps {
   laborTotal?: number;
   shippingCost?: number;
   diagnosticFee?: number;
+  /** The original diagnostic fee to display when switching diagnosticFee to 0 (e.g. €15 or €10 for loyalty). */
+  baseDiagnosticFee?: number;
   onDiagnosticFeeChange?: (fee: number) => void;
   isFeeDisabledBySettings?: boolean;
   acconto?: number;
@@ -44,6 +46,7 @@ export function IntakeSignatureStep({
   laborTotal = 0,
   shippingCost = 0,
   diagnosticFee = 15,
+  baseDiagnosticFee = 15,
   onDiagnosticFeeChange,
   isFeeDisabledBySettings = false,
   acconto = 0,
@@ -164,7 +167,7 @@ export function IntakeSignatureStep({
   
   const toggleDiagnosticDiscount = () => {
     if (onDiagnosticFeeChange) {
-      onDiagnosticFeeChange(isDiscounted ? 15 : 0);
+      onDiagnosticFeeChange(isDiscounted ? baseDiagnosticFee : 0);
     }
   };
 
@@ -211,7 +214,7 @@ export function IntakeSignatureStep({
             </span>
             {isDiscounted && (
               <span className="ml-2 text-sm line-through text-muted-foreground">
-                €{(estimatedCost + 15).toFixed(2)}
+                €{(estimatedCost + baseDiagnosticFee).toFixed(2)}
               </span>
             )}
           </div>
@@ -245,7 +248,7 @@ export function IntakeSignatureStep({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Diagnosi:</span>
               <span className={`font-medium ${isDiscounted ? "line-through text-muted-foreground" : ""}`}>
-                €{isDiscounted ? "15.00" : diagnosticFee.toFixed(2)}
+                €{isDiscounted ? baseDiagnosticFee.toFixed(2) : diagnosticFee.toFixed(2)}
               </span>
               {isDiscounted && (
                 <span className="font-medium text-green-600">GRATIS</span>
@@ -389,10 +392,10 @@ export function IntakeSignatureStep({
                 <div className="flex flex-col items-center gap-0.5">
                   <Switch
                     checked={!isDiscounted}
-                    onCheckedChange={(checked) => onDiagnosticFeeChange(checked ? 15 : 0)}
+                    onCheckedChange={(checked) => onDiagnosticFeeChange(checked ? baseDiagnosticFee : 0)}
                   />
                   <span className="text-[9px] text-muted-foreground">
-                    {isDiscounted ? "GRATIS" : "€15"}
+                    {isDiscounted ? "GRATIS" : `€${baseDiagnosticFee}`}
                   </span>
                 </div>
               </div>

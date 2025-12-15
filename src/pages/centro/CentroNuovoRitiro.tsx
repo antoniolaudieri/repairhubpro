@@ -92,6 +92,13 @@ export default function CentroNuovoRitiro() {
     }
   }, [loyaltyBenefits.hasActiveCard, loyaltyBenefits.diagnosticFee, loyaltyLoading, isFeeDisabledBySettings]);
 
+  const hasLoyaltyLaborDiscount = loyaltyBenefits.hasActiveCard && loyaltyBenefits.canUseRepairDiscount;
+  const discountedLaborCost = hasLoyaltyLaborDiscount
+    ? Number((laborCost * (1 - loyaltyBenefits.repairDiscountPercent / 100)).toFixed(2))
+    : laborCost;
+
+  const baseDiagnosticFee = loyaltyBenefits.hasActiveCard ? loyaltyBenefits.diagnosticFee : 15;
+
   const [customerData, setCustomerData] = useState({
     name: "",
     email: "",
@@ -188,7 +195,7 @@ export default function CentroNuovoRitiro() {
     const shippingCost = shippingEnabled ? UTOPYA_SHIPPING_COST : 0;
     const estimatedTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) 
       + selectedServices.reduce((sum, s) => sum + s.price, 0) 
-      + laborCost
+      + discountedLaborCost
       + shippingCost;
     
     // Build quote items array for display
@@ -207,11 +214,11 @@ export default function CentroNuovoRitiro() {
         total: service.price,
         type: 'service' as const
       })),
-      ...(laborCost > 0 ? [{
+      ...(discountedLaborCost > 0 ? [{
         name: 'Manodopera',
         quantity: 1,
-        unitPrice: laborCost,
-        total: laborCost,
+        unitPrice: discountedLaborCost,
+        total: discountedLaborCost,
         type: 'labor' as const
       }] : [])
     ];
@@ -239,7 +246,7 @@ export default function CentroNuovoRitiro() {
         ? Math.ceil(estimatedTotal + diagnosticFee) 
         : (acconto > 0 ? acconto : diagnosticFee),
       quoteItems: quoteItems,
-      laborCost: laborCost
+      laborCost: discountedLaborCost
     };
     
     // Start session ONLY ONCE when customer data becomes available
@@ -277,7 +284,8 @@ export default function CentroNuovoRitiro() {
     detectedDevice,
     selectedSpareParts, 
     selectedServices, 
-    laborCost, 
+    laborCost,
+    discountedLaborCost,
     diagnosticFee, 
     acconto,
     paymentMode,
@@ -587,7 +595,7 @@ export default function CentroNuovoRitiro() {
       const partsTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0);
       const servicesTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
       const shippingCostValue = shippingEnabled ? UTOPYA_SHIPPING_COST : 0;
-      const estimatedTotal = partsTotal + servicesTotal + laborCost + shippingCostValue;
+      const estimatedTotal = partsTotal + servicesTotal + discountedLaborCost + shippingCostValue;
       
       // Get current credit balance and platform rate
       const { data: centroData } = await supabase
@@ -691,8 +699,8 @@ export default function CentroNuovoRitiro() {
       if (selectedLabors.length > 0) {
         notesArray.push(`Lavorazioni: ${selectedLabors.map(l => `${l.name} (€${l.price})`).join(", ")}`);
       }
-      if (laborCost > 0) {
-        notesArray.push(`Manodopera: €${laborCost.toFixed(2)}`);
+      if (discountedLaborCost > 0) {
+        notesArray.push(`Manodopera: €${discountedLaborCost.toFixed(2)}`);
       }
       const servicesNotes = notesArray.join(" | ");
 
@@ -828,7 +836,7 @@ export default function CentroNuovoRitiro() {
     return sum + ((sellingPrice - purchaseCost) * part.quantity);
   }, 0);
   const servicesRevenue = selectedServices.reduce((sum, s) => sum + s.price, 0);
-  const netProfit = partsMargin + servicesRevenue + laborCost + diagnosticFee;
+  const netProfit = partsMargin + servicesRevenue + discountedLaborCost + diagnosticFee;
 
   const getProfitLevel = (profit: number) => {
     if (profit >= 100) return { level: "FUOCO", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" };
@@ -1040,7 +1048,7 @@ export default function CentroNuovoRitiro() {
 
       case 4:
         const shippingCostForStep4 = shippingEnabled ? UTOPYA_SHIPPING_COST : 0;
-        const estimatedCostTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + selectedServices.reduce((sum, s) => sum + s.price, 0) + laborCost + shippingCostForStep4;
+        const estimatedCostTotal = selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0) + selectedServices.reduce((sum, s) => sum + s.price, 0) + discountedLaborCost + shippingCostForStep4;
         return (
           <IntakeSignatureStep
             onSignatureComplete={(signature) => setIntakeSignature(signature)}
@@ -1048,9 +1056,10 @@ export default function CentroNuovoRitiro() {
             estimatedCost={estimatedCostTotal}
             partsTotal={selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0)}
             servicesTotal={selectedServices.reduce((sum, s) => sum + s.price, 0)}
-            laborTotal={laborCost}
+            laborTotal={discountedLaborCost}
             shippingCost={shippingCostForStep4}
             diagnosticFee={diagnosticFee}
+            baseDiagnosticFee={baseDiagnosticFee}
             onDiagnosticFeeChange={isFeeDisabledBySettings ? undefined : setDiagnosticFee}
             isFeeDisabledBySettings={isFeeDisabledBySettings}
             acconto={acconto}
