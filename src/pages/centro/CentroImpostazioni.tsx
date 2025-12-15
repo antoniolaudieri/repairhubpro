@@ -644,309 +644,369 @@ export default function CentroImpostazioni() {
     );
   }
 
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.06,
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+  };
+
   return (
     <CentroLayout>
       <PageTransition>
-        <div className="space-y-6 max-w-2xl">
-          <div>
-            <h1 className="text-2xl font-bold">Impostazioni</h1>
-            <p className="text-muted-foreground">
-              Gestisci le informazioni del tuo centro assistenza
-            </p>
+        <div className="p-4 md:p-6 lg:p-8 space-y-6 md:space-y-8">
+          {/* Page Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl md:text-2xl font-semibold text-foreground flex items-center gap-2">
+                <Settings className="h-6 w-6 text-primary" />
+                Impostazioni
+              </h1>
+              <p className="text-xs md:text-sm text-muted-foreground mt-1">
+                Gestisci le informazioni del tuo centro assistenza
+              </p>
+            </div>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || !hasChanges}
+              className="gap-2 shadow-sm"
+            >
+              <Save className="h-4 w-4" />
+              <span className="hidden sm:inline">{isSaving ? "Salvataggio..." : "Salva"}</span>
+            </Button>
           </div>
 
-          {/* Logo Upload */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ImageIcon className="h-5 w-5" />
-                Logo Attività
-              </CardTitle>
-              <CardDescription>
-                Carica il logo della tua attività (max 2MB)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-6">
-                <div className="relative">
-                  {centro?.logo_url ? (
-                    <div className="h-24 w-24 rounded-xl overflow-hidden border-2 border-border shadow-md">
-                      <img 
-                        src={centro.logo_url} 
-                        alt="Logo" 
-                        className="h-full w-full object-cover"
+          <motion.div 
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+          >
+
+            {/* Left Column */}
+            <div className="space-y-6">
+              {/* Logo Upload */}
+              <motion.div variants={itemVariants}>
+                <Card className="border border-border/50 hover:border-border transition-colors">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                        <ImageIcon className="h-4 w-4 text-white" />
+                      </div>
+                      Logo Attività
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Carica il logo della tua attività (max 2MB)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center gap-4">
+                      <div className="relative">
+                        {centro?.logo_url ? (
+                          <div className="h-20 w-20 rounded-xl overflow-hidden border-2 border-border shadow-md">
+                            <img 
+                              src={centro.logo_url} 
+                              alt="Logo" 
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-20 w-20 rounded-xl bg-muted flex items-center justify-center border-2 border-dashed border-border">
+                            <Building2 className="h-8 w-8 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/*"
+                          onChange={handleLogoUpload}
+                          className="hidden"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingLogo}
+                          className="h-8 text-xs"
+                        >
+                          <Upload className="h-3.5 w-3.5 mr-1.5" />
+                          {isUploadingLogo ? "..." : "Carica"}
+                        </Button>
+                        {centro?.logo_url && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRemoveLogo}
+                            disabled={isUploadingLogo}
+                            className="h-8 text-xs text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                            Rimuovi
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Business Info */}
+              <motion.div variants={itemVariants}>
+                <Card className="border border-border/50 hover:border-border transition-colors">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+                        <Building2 className="h-4 w-4 text-white" />
+                      </div>
+                      Informazioni Azienda
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Modifica i dati della tua attività
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-xs">Nome Attività *</Label>
+                      <Input
+                        value={formData.business_name}
+                        onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
+                        placeholder="Nome del centro assistenza"
+                        className="mt-1.5"
                       />
                     </div>
-                  ) : (
-                    <div className="h-24 w-24 rounded-xl bg-muted flex items-center justify-center border-2 border-dashed border-border">
-                      <Building2 className="h-10 w-10 text-muted-foreground" />
+
+                    <div>
+                      <Label className="text-xs">Partita IVA</Label>
+                      <Input
+                        value={formData.vat_number}
+                        onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
+                        placeholder="IT01234567890"
+                        className="mt-1.5"
+                      />
                     </div>
-                  )}
-                </div>
-                <div className="flex flex-col gap-2">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleLogoUpload}
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploadingLogo}
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
-                    {isUploadingLogo ? "Caricamento..." : "Carica Logo"}
-                  </Button>
-                  {centro?.logo_url && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRemoveLogo}
-                      disabled={isUploadingLogo}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Rimuovi
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
-          {/* Business Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Informazioni Azienda
-              </CardTitle>
-              <CardDescription>
-                Modifica i dati della tua attività
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Nome Attività *</Label>
-                <Input
-                  value={formData.business_name}
-                  onChange={(e) => setFormData({ ...formData, business_name: e.target.value })}
-                  placeholder="Nome del centro assistenza"
-                />
-              </div>
+                    <div>
+                      <Label className="text-xs">Note</Label>
+                      <Textarea
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        placeholder="Note aggiuntive..."
+                        rows={2}
+                        className="mt-1.5"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-              <div>
-                <Label>Partita IVA</Label>
-                <Input
-                  value={formData.vat_number}
-                  onChange={(e) => setFormData({ ...formData, vat_number: e.target.value })}
-                  placeholder="IT01234567890"
-                />
-              </div>
+              {/* Contact Info */}
+              <motion.div variants={itemVariants}>
+                <Card className="border border-border/50 hover:border-border transition-colors">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                        <Phone className="h-4 w-4 text-white" />
+                      </div>
+                      Contatti
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label className="text-xs">Indirizzo *</Label>
+                      <div className="flex gap-2 mt-1.5">
+                        <MapPin className="h-4 w-4 mt-2.5 text-muted-foreground" />
+                        <Input
+                          value={formData.address}
+                          onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                          placeholder="Via, numero civico, città"
+                          className="flex-1"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSearchAddress();
+                            }
+                          }}
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon"
+                          onClick={handleSearchAddress}
+                          disabled={isGeocoding || !formData.address}
+                        >
+                          {isGeocoding ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Search className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Premi Invio o clicca la lente per trovare sulla mappa
+                      </p>
+                    </div>
 
-              <div>
-                <Label>Note</Label>
-                <Textarea
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Note aggiuntive..."
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-xs">Telefono *</Label>
+                        <div className="flex gap-2 mt-1.5">
+                          <Phone className="h-4 w-4 mt-2.5 text-muted-foreground" />
+                          <Input
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            placeholder="+39 123 456 7890"
+                            className="flex-1"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Email *</Label>
+                        <div className="flex gap-2 mt-1.5">
+                          <Mail className="h-4 w-4 mt-2.5 text-muted-foreground" />
+                          <Input
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            placeholder="email@example.com"
+                            className="flex-1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-          {/* Contact Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Phone className="h-5 w-5" />
-                Contatti
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label>Indirizzo *</Label>
-                <div className="flex gap-2">
-                  <MapPin className="h-4 w-4 mt-3 text-muted-foreground" />
-                  <Input
-                    value={formData.address}
-                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                    placeholder="Via, numero civico, città"
-                    className="flex-1"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleSearchAddress();
-                      }
-                    }}
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={handleSearchAddress}
-                    disabled={isGeocoding || !formData.address}
-                  >
-                    {isGeocoding ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
+              {/* Diagnostic Fee Settings */}
+              <motion.div variants={itemVariants}>
+                <Card className="border border-border/50 hover:border-border transition-colors">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+                        <Receipt className="h-4 w-4 text-white" />
+                      </div>
+                      Fee Diagnostico
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Gestisci il fee diagnostico di €15 applicato ai nuovi ritiri
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div>
+                        <p className="font-medium text-sm">Disabilita Fee Diagnostico</p>
+                        <p className="text-xs text-muted-foreground">
+                          Se attivo, i nuovi ritiri non avranno il fee di €15
+                        </p>
+                      </div>
+                      <Switch
+                        checked={disableDiagnosticFee}
+                        onCheckedChange={setDisableDiagnosticFee}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Monthly Revenue Goal */}
+              <motion.div variants={itemVariants}>
+                <Card className="border border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-transparent hover:border-emerald-500/50 transition-colors">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-500 flex items-center justify-center">
+                        <Target className="h-4 w-4 text-white" />
+                      </div>
+                      Obiettivo Mensile
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Imposta il tuo obiettivo di fatturato mensile
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="monthlyGoal" className="text-xs">Obiettivo Fatturato (€)</Label>
+                      <div className="relative mt-1.5">
+                        <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="monthlyGoal"
+                          type="number"
+                          value={monthlyGoal || ""}
+                          onChange={(e) => setMonthlyGoal(Number(e.target.value))}
+                          placeholder="Es. 10000"
+                          className="pl-9"
+                          min={0}
+                          step={500}
+                        />
+                      </div>
+                    </div>
+                    
+                    {monthlyGoal > 0 && (
+                      <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div>
+                            <p className="text-[10px] text-muted-foreground">Giornaliero</p>
+                            <p className="text-sm font-bold text-emerald-600">
+                              €{Math.round(monthlyGoal / 22).toLocaleString('it-IT')}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-muted-foreground">Settimanale</p>
+                            <p className="text-sm font-bold text-emerald-600">
+                              €{Math.round(monthlyGoal / 4).toLocaleString('it-IT')}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-muted-foreground">Mensile</p>
+                            <p className="text-sm font-bold text-emerald-600">
+                              €{monthlyGoal.toLocaleString('it-IT')}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Premi Invio o clicca la lente per trovare sulla mappa
-                </p>
-              </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label>Telefono *</Label>
-                  <div className="flex gap-2">
-                    <Phone className="h-4 w-4 mt-3 text-muted-foreground" />
-                    <Input
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="+39 123 456 7890"
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <Label>Email *</Label>
-                  <div className="flex gap-2">
-                    <Mail className="h-4 w-4 mt-3 text-muted-foreground" />
-                    <Input
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      placeholder="email@example.com"
-                      className="flex-1"
-                    />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Diagnostic Fee Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Receipt className="h-5 w-5" />
-                Fee Diagnostico
-              </CardTitle>
-              <CardDescription>
-                Gestisci il fee diagnostico di €15 applicato ai nuovi ritiri
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                <div>
-                  <p className="font-medium">Disabilita Fee Diagnostico</p>
-                  <p className="text-sm text-muted-foreground">
-                    Se attivo, i nuovi ritiri non avranno il fee di €15
-                  </p>
-                </div>
-                <Switch
-                  checked={disableDiagnosticFee}
-                  onCheckedChange={setDisableDiagnosticFee}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Monthly Revenue Goal */}
-          <Card className="border-2 border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 to-transparent">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5 text-emerald-500" />
-                Obiettivo Mensile
-              </CardTitle>
-              <CardDescription>
-                Imposta il tuo obiettivo di fatturato mensile per monitorare i progressi
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <Label htmlFor="monthlyGoal">Obiettivo Fatturato Mensile (€)</Label>
-                  <div className="relative mt-1.5">
-                    <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="monthlyGoal"
-                      type="number"
-                      value={monthlyGoal || ""}
-                      onChange={(e) => setMonthlyGoal(Number(e.target.value))}
-                      placeholder="Es. 10000"
-                      className="pl-9"
-                      min={0}
-                      step={500}
-                    />
-                  </div>
-                </div>
-              </div>
-              
-              {monthlyGoal > 0 && (
-                <div className="p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Giornaliero</p>
-                      <p className="text-lg font-bold text-emerald-600">
-                        €{Math.round(monthlyGoal / 22).toLocaleString('it-IT')}
-                      </p>
+              {/* Email Notifications (SMTP) */}
+              <motion.div variants={itemVariants}>
+                <Card className="border border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent hover:border-blue-500/50 transition-colors">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center">
+                        <Mail className="h-4 w-4 text-white" />
+                      </div>
+                      Email Notifiche
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Configura l'invio email dalla tua email aziendale
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Enable Toggle */}
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <div>
+                        <p className="font-medium text-sm">Usa Email Personalizzata</p>
+                        <p className="text-xs text-muted-foreground">
+                          Invia notifiche dalla tua email
+                        </p>
+                      </div>
+                      <Switch
+                        checked={smtpEnabled}
+                        onCheckedChange={setSmtpEnabled}
+                      />
                     </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Settimanale</p>
-                      <p className="text-lg font-bold text-emerald-600">
-                        €{Math.round(monthlyGoal / 4).toLocaleString('it-IT')}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">Mensile</p>
-                      <p className="text-lg font-bold text-emerald-600">
-                        €{monthlyGoal.toLocaleString('it-IT')}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground text-center mt-3">
-                    I tuoi progressi appariranno nella Dashboard
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Email Notifications (SMTP) */}
-          <Card className="border-2 border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-transparent">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-5 w-5 text-blue-500" />
-                Email Notifiche
-              </CardTitle>
-              <CardDescription>
-                Configura l'invio email per notificare i clienti dalla tua email aziendale
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Enable Toggle */}
-              <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                <div>
-                  <p className="font-medium">Usa Email Personalizzata</p>
-                  <p className="text-sm text-muted-foreground">
-                    Invia notifiche ai clienti dalla tua email aziendale
-                  </p>
-                </div>
-                <Switch
-                  checked={smtpEnabled}
-                  onCheckedChange={setSmtpEnabled}
-                />
-              </div>
 
               {smtpEnabled && (
                 <motion.div
@@ -1159,123 +1219,132 @@ export default function CentroImpostazioni() {
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          {/* Commission Info (Read Only) */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Commissioni
-              </CardTitle>
-              <CardDescription>
-                Le tue commissioni sono gestite dalla piattaforma
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="p-4 rounded-lg bg-muted/50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-medium">Tua Quota Commissione</p>
-                    <p className="text-sm text-muted-foreground">
-                      Percentuale del margine lordo che ricevi per ogni lavoro
-                    </p>
-                  </div>
-                  <div className="text-3xl font-bold text-green-600">
-                    {centro?.commission_rate || 70}%
-                  </div>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-              Per modificare la tua commissione, contatta l'amministratore della piattaforma.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Customer Display */}
-          <Card className="border-2 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Monitor className="h-5 w-5 text-primary" />
-                Display Cliente
-              </CardTitle>
-              <CardDescription>
-                Schermo dedicato per tablet o monitor esterno da mostrare ai clienti durante il ritiro
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Usa questo link per aprire il display cliente su un dispositivo esterno (tablet, monitor).
-                Il display mostrerà i dati del cliente in tempo reale durante il ritiro, permetterà 
-                l'inserimento della password e la firma. Quando non in uso, mostrerà pubblicità.
-              </p>
-              
-              {centro && (
-                <div className="space-y-4">
-                  {/* QR Code */}
-                  <div className="flex justify-center">
-                    <div className="p-4 bg-white rounded-xl border-2 border-primary/20 shadow-lg">
-                      <QRCodeSVG 
-                        value={`${window.location.origin}/display/${centro.id}`}
-                        size={150}
-                        level="H"
-                        includeMargin={true}
-                      />
+              {/* Commission Info (Read Only) */}
+              <motion.div variants={itemVariants}>
+                <Card className="border border-border/50 hover:border-border transition-colors">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center">
+                        <Settings className="h-4 w-4 text-white" />
+                      </div>
+                      Commissioni
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Le tue commissioni sono gestite dalla piattaforma
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-sm">Tua Quota Commissione</p>
+                          <p className="text-xs text-muted-foreground">
+                            Percentuale del margine lordo per ogni lavoro
+                          </p>
+                        </div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {centro?.commission_rate || 70}%
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <p className="text-xs text-center text-muted-foreground">
-                    Scansiona il QR code con il dispositivo dedicato
-                  </p>
-
-                  {/* URL Display */}
-                  <div className="p-3 bg-muted rounded-lg">
-                    <p className="text-xs text-muted-foreground mb-1">URL Display:</p>
-                    <p className="text-xs font-mono break-all">
-                      {window.location.origin}/display/{centro.id}
+                    <p className="text-[10px] text-muted-foreground mt-2">
+                      Per modificare, contatta l'amministratore della piattaforma.
                     </p>
-                  </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/display/${centro.id}`);
-                        toast.success("Link copiato!");
-                      }}
-                    >
-                      <Copy className="h-4 w-4 mr-2" />
-                      Copia Link
-                    </Button>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => window.open(`/display/${centro.id}`, '_blank')}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Apri Display
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              {/* Customer Display */}
+              <motion.div variants={itemVariants}>
+                <Card className="border border-primary/30 bg-gradient-to-br from-primary/5 to-transparent hover:border-primary/50 transition-colors">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+                        <Monitor className="h-4 w-4 text-white" />
+                      </div>
+                      Display Cliente
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Schermo per tablet o monitor esterno
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      Il display mostrerà i dati in tempo reale durante il ritiro e pubblicità quando non in uso.
+                    </p>
+                    
+                    {centro && (
+                      <div className="space-y-3">
+                        {/* QR Code */}
+                        <div className="flex justify-center">
+                          <div className="p-3 bg-white rounded-xl border-2 border-primary/20 shadow-md">
+                            <QRCodeSVG 
+                              value={`${window.location.origin}/display/${centro.id}`}
+                              size={120}
+                              level="H"
+                              includeMargin={true}
+                            />
+                          </div>
+                        </div>
+                        
+                        <p className="text-[10px] text-center text-muted-foreground">
+                          Scansiona il QR con il dispositivo dedicato
+                        </p>
 
-          {/* Live Preview */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                Anteprima Live Display
-              </CardTitle>
-              <CardDescription>
-                Ecco come appare il display cliente con le tue pubblicità
-              </CardDescription>
-            </CardHeader>
+                        {/* URL Display */}
+                        <div className="p-2 bg-muted rounded-lg">
+                          <p className="text-[10px] font-mono break-all text-center">
+                            {window.location.origin}/display/{centro.id}
+                          </p>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 h-8 text-xs"
+                            onClick={() => {
+                              navigator.clipboard.writeText(`${window.location.origin}/display/${centro.id}`);
+                              toast.success("Link copiato!");
+                            }}
+                          >
+                            <Copy className="h-3.5 w-3.5 mr-1.5" />
+                            Copia
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="flex-1 h-8 text-xs"
+                            onClick={() => window.open(`/display/${centro.id}`, '_blank')}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                            Apri
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              {/* Live Preview */}
+              <motion.div variants={itemVariants}>
+                <Card className="overflow-hidden border border-border/50 hover:border-border transition-colors">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-rose-500 to-pink-500 flex items-center justify-center">
+                        <Eye className="h-4 w-4 text-white" />
+                      </div>
+                      Anteprima Live
+                    </CardTitle>
+                    <CardDescription className="text-xs">
+                      Come appare il display con le tue pubblicità
+                    </CardDescription>
+                  </CardHeader>
             <CardContent className="p-0">
               {/* Preview Container - simulates display aspect ratio */}
               <div className="relative bg-slate-900 aspect-video max-h-[300px] overflow-hidden">
@@ -1438,9 +1507,10 @@ export default function CentroImpostazioni() {
               </div>
             </CardContent>
           </Card>
+        </motion.div>
 
           {/* Display Ads Management */}
-          <Card>
+          <Card className="border border-border/50 hover:border-border transition-colors">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Megaphone className="h-5 w-5" />
@@ -1711,13 +1781,8 @@ export default function CentroImpostazioni() {
             centroLogo={centro?.logo_url}
           />
 
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={isSaving}>
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? "Salvataggio..." : "Salva Modifiche"}
-            </Button>
-          </div>
+            </div>
+          </motion.div>
 
           {/* Unsaved Changes Dialog */}
           <UnsavedChangesDialog
