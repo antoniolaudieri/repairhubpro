@@ -410,7 +410,7 @@ export default function CustomerDashboard() {
               </h2>
               <div className="space-y-4">
                 {quotes.map((quote) => {
-                  const items = JSON.parse(quote.items || '[]');
+                  const items = typeof quote.items === 'string' ? JSON.parse(quote.items || '[]') : (quote.items || []);
                   const isPending = quote.status === 'pending' && !quote.signed_at;
                   const isExpired = quote.valid_until && new Date(quote.valid_until) < new Date();
                   
