@@ -43,6 +43,7 @@ import PromotionPreferences from "@/components/customer/PromotionPreferences";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { useCustomerLoyaltyCards } from "@/hooks/useLoyaltyCard";
 import { LoyaltyCardDisplay } from "@/components/loyalty/LoyaltyCardDisplay";
+import { LoyaltyCardActivation } from "@/components/loyalty/LoyaltyCardActivation";
 
 interface Repair {
   id: string;
@@ -391,6 +392,14 @@ export default function CustomerDashboard() {
                 ))}
               </div>
             </div>
+          )}
+
+          {/* Loyalty Card Activation for customers without cards */}
+          {user?.email && (
+            <LoyaltyCardActivation 
+              customerEmail={user.email}
+              existingCardCentroIds={loyaltyCards.map(c => c.centro_id)}
+            />
           )}
 
           {/* Quotes Section */}
