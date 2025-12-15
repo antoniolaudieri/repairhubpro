@@ -1057,6 +1057,7 @@ export default function CentroNuovoRitiro() {
             partsTotal={selectedSpareParts.reduce((sum, part) => sum + part.unit_cost * part.quantity, 0)}
             servicesTotal={selectedServices.reduce((sum, s) => sum + s.price, 0)}
             laborTotal={discountedLaborCost}
+            originalLaborTotal={hasLoyaltyLaborDiscount ? laborCost : undefined}
             shippingCost={shippingCostForStep4}
             diagnosticFee={diagnosticFee}
             baseDiagnosticFee={baseDiagnosticFee}

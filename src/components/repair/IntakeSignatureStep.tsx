@@ -23,6 +23,8 @@ interface IntakeSignatureStepProps {
   partsTotal?: number;
   servicesTotal?: number;
   laborTotal?: number;
+  /** The original labor total before loyalty discount */
+  originalLaborTotal?: number;
   shippingCost?: number;
   diagnosticFee?: number;
   /** The original diagnostic fee to display when switching diagnosticFee to 0 (e.g. €15 or €10 for loyalty). */
@@ -44,6 +46,7 @@ export function IntakeSignatureStep({
   partsTotal = 0,
   servicesTotal = 0,
   laborTotal = 0,
+  originalLaborTotal,
   shippingCost = 0,
   diagnosticFee = 15,
   baseDiagnosticFee = 15,
@@ -234,9 +237,19 @@ export function IntakeSignatureStep({
               </div>
             )}
             {laborTotal > 0 && (
-              <div className="flex justify-between">
+              <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Manodopera:</span>
-                <span className="font-medium">€{laborTotal.toFixed(2)}</span>
+                <div className="flex items-center gap-2">
+                  {originalLaborTotal && originalLaborTotal > laborTotal && (
+                    <span className="text-xs line-through text-muted-foreground">€{originalLaborTotal.toFixed(2)}</span>
+                  )}
+                  <span className={`font-medium ${originalLaborTotal && originalLaborTotal > laborTotal ? "text-green-600" : ""}`}>
+                    €{laborTotal.toFixed(2)}
+                  </span>
+                  {originalLaborTotal && originalLaborTotal > laborTotal && (
+                    <span className="text-[9px] bg-green-500/20 text-green-600 px-1 rounded">-10%</span>
+                  )}
+                </div>
               </div>
             )}
             {shippingCost > 0 && (
