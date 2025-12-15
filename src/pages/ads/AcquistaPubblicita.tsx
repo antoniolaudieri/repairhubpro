@@ -5,7 +5,7 @@ import {
   Megaphone, Building2, Mail, Phone, User, 
   Calendar, MapPin, Check, CreditCard, ArrowLeft,
   ArrowRight, Sparkles, Image, Palette, Type, Upload, Loader2,
-  Tag, Percent, Clock, Video, Timer, Link, QrCode, Building,
+  Tag, Percent, Clock, Timer, Link, QrCode, Building,
   Wand2, Eye, EyeOff, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -42,8 +42,7 @@ interface CampaignData {
   ad_image_url: string;
   ad_gradient: string;
   ad_icon: string;
-  ad_type: 'gradient' | 'image' | 'video';
-  ad_video_url: string;
+  ad_type: 'gradient' | 'image';
   display_seconds: number;
   start_date: string;
   end_date: string;
@@ -138,10 +137,10 @@ const colorPresets = [
 ];
 
 const stepInfo = [
-  { num: 1, emoji: '👤', label: 'Dati' },
-  { num: 2, emoji: '🎨', label: 'Crea' },
-  { num: 3, emoji: '📍', label: 'Dove' },
-  { num: 4, emoji: '💳', label: 'Paga' },
+  { num: 1, label: 'Dati' },
+  { num: 2, label: 'Creatività' },
+  { num: 3, label: 'Posizionamento' },
+  { num: 4, label: 'Pagamento' },
 ];
 
 export default function AcquistaPubblicita() {
@@ -160,7 +159,6 @@ export default function AcquistaPubblicita() {
   const [aiDialogOpen, setAiDialogOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const MIN_IMAGE_WIDTH = 1200;
   const MIN_IMAGE_HEIGHT = 675;
@@ -176,7 +174,6 @@ export default function AcquistaPubblicita() {
     ad_gradient: gradientOptions[0],
     ad_icon: 'Megaphone',
     ad_type: 'gradient',
-    ad_video_url: '',
     display_seconds: MIN_DISPLAY_SECONDS,
     start_date: '',
     end_date: '',
@@ -285,50 +282,38 @@ export default function AcquistaPubblicita() {
     }));
   };
 
-  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'video') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (type === 'image') {
-      if (!file.type.startsWith('image/')) {
-        toast.error('❌ Il file deve essere un\'immagine');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('❌ L\'immagine non può superare 5MB');
-        return;
-      }
-
-      const img = new window.Image();
-      img.src = URL.createObjectURL(file);
-      
-      img.onload = async () => {
-        URL.revokeObjectURL(img.src);
-        if (img.width < MIN_IMAGE_WIDTH || img.height < MIN_IMAGE_HEIGHT) {
-          toast.error(`❌ Immagine troppo piccola! Minimo ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT}px`);
-          return;
-        }
-        await uploadFile(file, 'ad_image_url');
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(img.src);
-        toast.error('❌ Errore nel caricamento');
-      };
-    } else {
-      if (!file.type.startsWith('video/')) {
-        toast.error('❌ Il file deve essere un video');
-        return;
-      }
-      if (file.size > 50 * 1024 * 1024) {
-        toast.error('❌ Il video non può superare 50MB');
-        return;
-      }
-      await uploadFile(file, 'ad_video_url');
+    if (!file.type.startsWith('image/')) {
+      toast.error('Il file deve essere un\'immagine');
+      return;
     }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('L\'immagine non può superare 5MB');
+      return;
+    }
+
+    const img = new window.Image();
+    img.src = URL.createObjectURL(file);
+    
+    img.onload = async () => {
+      URL.revokeObjectURL(img.src);
+      if (img.width < MIN_IMAGE_WIDTH || img.height < MIN_IMAGE_HEIGHT) {
+        toast.error(`Immagine troppo piccola! Minimo ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT}px`);
+        return;
+      }
+      await uploadFile(file, 'ad_image_url');
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      toast.error('Errore nel caricamento');
+    };
   };
 
-  const uploadFile = async (file: File, field: 'ad_image_url' | 'ad_video_url' | 'company_logo_url') => {
+  const uploadFile = async (file: File, field: 'ad_image_url' | 'company_logo_url') => {
     setUploading(true);
     try {
       const fileExt = file.name.split('.').pop();
@@ -346,12 +331,7 @@ export default function AcquistaPubblicita() {
         .getPublicUrl(filePath);
 
       setCampaignData(prev => ({ ...prev, [field]: publicUrl }));
-      const messages: Record<string, string> = {
-        ad_image_url: '✅ Immagine caricata!',
-        ad_video_url: '✅ Video caricato!',
-        company_logo_url: '✅ Logo caricato!'
-      };
-      toast.success(messages[field]);
+      toast.success(field === 'ad_image_url' ? 'Immagine caricata' : 'Logo caricato');
     } catch (error: any) {
       console.error('Upload error:', error);
       toast.error('❌ Errore nel caricamento');
@@ -364,11 +344,11 @@ export default function AcquistaPubblicita() {
     const file = e.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      toast.error('❌ Il file deve essere un\'immagine');
+      toast.error('Il file deve essere un\'immagine');
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('❌ Il logo non può superare 2MB');
+      toast.error('Il logo non può superare 2MB');
       return;
     }
     await uploadFile(file, 'company_logo_url');
@@ -378,7 +358,7 @@ export default function AcquistaPubblicita() {
     if (!campaignData.advertiser_name || !campaignData.advertiser_email || 
         !campaignData.ad_title || !campaignData.start_date || 
         !campaignData.end_date || campaignData.corner_ids.length === 0) {
-      toast.error('⚠️ Compila tutti i campi obbligatori');
+      toast.error('Compila tutti i campi obbligatori');
       return;
     }
 
@@ -399,7 +379,7 @@ export default function AcquistaPubblicita() {
       }
     } catch (error: any) {
       console.error('Error creating checkout:', error);
-      toast.error('❌ Errore nella creazione del pagamento');
+      toast.error('Errore nella creazione del pagamento');
     } finally {
       setSubmitting(false);
     }
@@ -424,19 +404,10 @@ export default function AcquistaPubblicita() {
 
   // Preview component
   const AdPreview = () => (
-    <div className={`aspect-video rounded-xl overflow-hidden shadow-xl relative ${
+    <div className={`aspect-video rounded-xl overflow-hidden shadow-lg relative border border-border ${
       fontOptions.find(f => f.id === campaignData.ad_font)?.className || 'font-sans'
     }`}>
-      {campaignData.ad_type === 'video' && campaignData.ad_video_url ? (
-        <video 
-          src={campaignData.ad_video_url} 
-          className="w-full h-full object-cover"
-          autoPlay 
-          muted 
-          loop 
-          playsInline
-        />
-      ) : campaignData.ad_type === 'image' && campaignData.ad_image_url ? (
+      {campaignData.ad_type === 'image' && campaignData.ad_image_url ? (
         <div className="relative w-full h-full">
           <img 
             src={campaignData.ad_image_url} 
@@ -503,41 +474,41 @@ export default function AcquistaPubblicita() {
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6 sm:mb-8"
+          className="text-center mb-8"
         >
-          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-gradient-to-br from-primary to-primary/60 rounded-2xl mb-3 sm:mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 bg-primary rounded-2xl mb-4 shadow-lg">
             <Megaphone className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold mb-1 sm:mb-2">📺 Pubblicizza la tua Attività</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            ✨ Raggiungi clienti nei Corner della tua zona
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2">Pubblicità sui Display</h1>
+          <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto">
+            Raggiungi nuovi clienti promuovendo la tua attività sui display dei Corner LabLinkRiparo
           </p>
         </motion.div>
 
         {/* Progress Steps - Mobile Optimized */}
-        <div className="mb-6 sm:mb-8">
+        <div className="mb-8">
           {/* Mobile: Compact progress bar */}
           <div className="sm:hidden">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               {stepInfo.map((s, idx) => (
                 <div key={s.num} className="flex items-center">
                   <motion.div 
-                    className={`w-10 h-10 rounded-full flex flex-col items-center justify-center text-xs font-medium transition-all ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
                       step >= s.num ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                     }`}
-                    animate={step === s.num ? { scale: [1, 1.1, 1] } : {}}
+                    animate={step === s.num ? { scale: [1, 1.05, 1] } : {}}
                     transition={{ duration: 0.3 }}
                   >
-                    {step > s.num ? <Check className="h-4 w-4" /> : <span className="text-base">{s.emoji}</span>}
+                    {step > s.num ? <Check className="h-4 w-4" /> : s.num}
                   </motion.div>
                   {idx < stepInfo.length - 1 && (
-                    <div className={`w-6 h-1 mx-1 rounded ${step > s.num ? 'bg-primary' : 'bg-muted'}`} />
+                    <div className={`w-8 h-0.5 mx-1 rounded ${step > s.num ? 'bg-primary' : 'bg-muted'}`} />
                   )}
                 </div>
               ))}
             </div>
-            <p className="text-center text-sm font-medium text-primary">
-              {stepInfo[step - 1].emoji} {stepInfo[step - 1].label}
+            <p className="text-center text-sm font-medium">
+              Passo {step}: {stepInfo[step - 1].label}
             </p>
           </div>
 
@@ -547,19 +518,19 @@ export default function AcquistaPubblicita() {
               <div key={s.num} className="flex items-center">
                 <div className="flex flex-col items-center">
                   <motion.div 
-                    className={`w-12 h-12 rounded-full flex items-center justify-center font-semibold transition-all ${
-                      step >= s.num ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                    className={`w-11 h-11 rounded-full flex items-center justify-center font-semibold transition-all ${
+                      step >= s.num ? 'bg-primary text-primary-foreground shadow-md' : 'bg-muted text-muted-foreground'
                     }`}
                     animate={step === s.num ? { scale: [1, 1.05, 1] } : {}}
                   >
-                    {step > s.num ? <Check className="h-5 w-5" /> : <span className="text-xl">{s.emoji}</span>}
+                    {step > s.num ? <Check className="h-5 w-5" /> : s.num}
                   </motion.div>
-                  <span className={`text-xs mt-1 ${step >= s.num ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                  <span className={`text-xs mt-1.5 ${step >= s.num ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
                     {s.label}
                   </span>
                 </div>
                 {idx < stepInfo.length - 1 && (
-                  <div className={`w-16 h-1 mx-2 rounded ${step > s.num ? 'bg-primary' : 'bg-muted'}`} />
+                  <div className={`w-20 h-0.5 mx-3 rounded ${step > s.num ? 'bg-primary' : 'bg-muted'}`} />
                 )}
               </div>
             ))}
@@ -575,11 +546,13 @@ export default function AcquistaPubblicita() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <Card className="border-2">
+              <Card className="border shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                    <span className="text-2xl">👤</span>
-                    I tuoi dati
+                  <CardTitle className="flex items-center gap-3 text-lg sm:text-xl">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    Informazioni Inserzionista
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -603,7 +576,10 @@ export default function AcquistaPubblicita() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm">📧 Email *</Label>
+                      <Label className="text-sm flex items-center gap-2">
+                        <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                        Email *
+                      </Label>
                       <Input
                         type="email"
                         value={campaignData.advertiser_email}
@@ -613,7 +589,10 @@ export default function AcquistaPubblicita() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-sm">📱 Telefono</Label>
+                      <Label className="text-sm flex items-center gap-2">
+                        <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                        Telefono
+                      </Label>
                       <Input
                         value={campaignData.advertiser_phone}
                         onChange={(e) => setCampaignData(prev => ({ ...prev, advertiser_phone: e.target.value }))}
@@ -646,10 +625,12 @@ export default function AcquistaPubblicita() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
             >
-              <Card className="border-2">
+              <Card className="border shadow-sm">
                 <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
-                    <span className="text-2xl">🎨</span>
+                  <CardTitle className="flex items-center gap-3 text-lg sm:text-xl">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <Palette className="h-4 w-4 text-primary" />
+                    </div>
                     Crea la tua Pubblicità
                   </CardTitle>
                 </CardHeader>
@@ -671,41 +652,44 @@ export default function AcquistaPubblicita() {
                         exit={{ height: 0, opacity: 0 }}
                         className="mb-4"
                       >
-                        <Label className="text-sm mb-2 block">📺 Anteprima</Label>
+                        <Label className="text-sm mb-2 block">Anteprima</Label>
                         <AdPreview />
                       </motion.div>
                     )}
                   </div>
 
                   {/* Ad Type */}
-                  <div className="space-y-2">
-                    <Label className="text-sm">Tipo di annuncio</Label>
-                    <RadioGroup
-                      value={campaignData.ad_type}
-                      onValueChange={(value: 'gradient' | 'image' | 'video') => setCampaignData(prev => ({ ...prev, ad_type: value }))}
-                      className="flex flex-wrap gap-2 sm:gap-4"
-                    >
+                  <div className="space-y-3">
+                    <Label className="text-sm font-medium">Tipo di annuncio</Label>
+                    <div className="grid grid-cols-2 gap-3">
                       {[
-                        { value: 'gradient', icon: Palette, label: '🎨 Gradiente' },
-                        { value: 'image', icon: Image, label: '🖼️ Immagine' },
-                        { value: 'video', icon: Video, label: '🎬 Video' },
+                        { value: 'gradient', icon: Palette, label: 'Gradiente', description: 'Sfondo colorato con testo' },
+                        { value: 'image', icon: Image, label: 'Immagine', description: 'Carica la tua immagine' },
                       ].map((opt) => (
-                        <div key={opt.value} className="flex items-center space-x-2">
-                          <RadioGroupItem value={opt.value} id={opt.value} />
-                          <Label htmlFor={opt.value} className="flex items-center gap-1 cursor-pointer text-sm">
-                            {opt.label}
-                          </Label>
-                        </div>
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setCampaignData(prev => ({ ...prev, ad_type: opt.value as 'gradient' | 'image' }))}
+                          className={`p-4 rounded-xl border-2 text-left transition-all ${
+                            campaignData.ad_type === opt.value
+                              ? 'border-primary bg-primary/5'
+                              : 'border-border hover:border-primary/50'
+                          }`}
+                        >
+                          <opt.icon className={`h-5 w-5 mb-2 ${campaignData.ad_type === opt.value ? 'text-primary' : 'text-muted-foreground'}`} />
+                          <p className="font-medium text-sm">{opt.label}</p>
+                          <p className="text-xs text-muted-foreground">{opt.description}</p>
+                        </button>
                       ))}
-                    </RadioGroup>
+                    </div>
                   </div>
 
                   {/* Display Seconds */}
                   <div className="space-y-3 p-3 sm:p-4 bg-muted/50 rounded-xl border">
                     <div className="flex items-center justify-between">
-                      <Label className="flex items-center gap-2 text-sm">
-                        <Timer className="h-4 w-4" />
-                        ⏱️ Durata visualizzazione
+                      <Label className="flex items-center gap-2 text-sm font-medium">
+                        <Timer className="h-4 w-4 text-muted-foreground" />
+                        Durata visualizzazione
                       </Label>
                       <span className="text-lg font-bold text-primary">{campaignData.display_seconds}s</span>
                     </div>
@@ -725,18 +709,17 @@ export default function AcquistaPubblicita() {
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                     <div className="space-y-4">
-                      {/* Title & Description with AI */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <Label className="text-sm">📝 Titolo *</Label>
+                          <Label className="text-sm font-medium">Titolo *</Label>
                           <Button 
                             variant="outline" 
                             size="sm" 
                             onClick={() => setAiDialogOpen(true)}
-                            className="h-8 text-xs bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50"
+                            className="h-8 text-xs"
                           >
                             <Wand2 className="mr-1 h-3 w-3" />
-                            ✨ Genera con AI
+                            Genera con AI
                           </Button>
                         </div>
                         <Input
@@ -748,7 +731,7 @@ export default function AcquistaPubblicita() {
                       </div>
                       
                       <div className="space-y-2">
-                        <Label className="text-sm">📄 Descrizione</Label>
+                        <Label className="text-sm font-medium">Descrizione</Label>
                         <Textarea
                           value={campaignData.ad_description}
                           onChange={(e) => setCampaignData(prev => ({ ...prev, ad_description: e.target.value }))}
@@ -757,11 +740,9 @@ export default function AcquistaPubblicita() {
                         />
                       </div>
 
-                      {/* Emoji Selector - Horizontal Scroll */}
                       <div className="space-y-2">
-                        <Label className="text-sm flex items-center gap-2">
-                          <Sparkles className="h-4 w-4" />
-                          Emoji
+                        <Label className="text-sm font-medium flex items-center gap-2">
+                          Icona / Emoji
                         </Label>
                         <div className="space-y-2">
                           {emojiCategories.map((cat) => (
@@ -797,9 +778,8 @@ export default function AcquistaPubblicita() {
                         </div>
                       </div>
 
-                      {/* Font Selector */}
                       <div className="space-y-2">
-                        <Label className="text-sm">🔤 Font</Label>
+                        <Label className="text-sm font-medium">Font</Label>
                         <div className="flex gap-2">
                           {fontOptions.map((font) => (
                             <button
@@ -817,9 +797,8 @@ export default function AcquistaPubblicita() {
                         </div>
                       </div>
 
-                      {/* Color Controls */}
                       <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
-                        <Label className="text-sm">🎨 Colori Testo</Label>
+                        <Label className="text-sm font-medium">Colori Testo</Label>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="space-y-1">
                             <Label className="text-xs text-muted-foreground">Titolo</Label>
@@ -866,10 +845,9 @@ export default function AcquistaPubblicita() {
                         </div>
                       </div>
 
-                      {/* Gradient/Image/Video Upload */}
                       {campaignData.ad_type === 'gradient' && (
                         <div className="space-y-2">
-                          <Label className="text-sm">🌈 Gradiente Sfondo</Label>
+                          <Label className="text-sm font-medium">Gradiente Sfondo</Label>
                           <div className="grid grid-cols-3 gap-2">
                             {gradientOptions.map((gradient) => (
                               <button
@@ -886,35 +864,29 @@ export default function AcquistaPubblicita() {
 
                       {campaignData.ad_type === 'image' && (
                         <div className="space-y-2">
-                          <Label className="text-sm">🖼️ Immagine Pubblicità</Label>
+                          <Label className="text-sm font-medium">Immagine Pubblicità</Label>
                           <p className="text-xs text-muted-foreground">Min: {MIN_IMAGE_WIDTH}x{MIN_IMAGE_HEIGHT}px (16:9). Max 5MB.</p>
-                          <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => handleMediaUpload(e, 'image')} className="hidden" />
+                          <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
                           <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading} className="w-full h-11">
                             {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                            {campaignData.ad_image_url ? '✅ Cambia immagine' : 'Carica immagine'}
+                            {campaignData.ad_image_url ? 'Cambia immagine' : 'Carica immagine'}
                           </Button>
+                          {campaignData.ad_image_url && (
+                            <div className="mt-2 p-2 bg-muted/50 rounded-lg">
+                              <p className="text-xs text-green-600 flex items-center gap-1">
+                                <Check className="h-3 w-3" /> Immagine caricata
+                              </p>
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {campaignData.ad_type === 'video' && (
-                        <div className="space-y-2">
-                          <Label className="text-sm">🎬 Video Pubblicità</Label>
-                          <p className="text-xs text-muted-foreground">MP4, MOV, WEBM. Max 50MB. 🔇 Audio disattivato</p>
-                          <input ref={videoInputRef} type="file" accept="video/*" onChange={(e) => handleMediaUpload(e, 'video')} className="hidden" />
-                          <Button variant="outline" onClick={() => videoInputRef.current?.click()} disabled={uploading} className="w-full h-11">
-                            {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Video className="mr-2 h-4 w-4" />}
-                            {campaignData.ad_video_url ? '✅ Cambia video' : 'Carica video'}
-                          </Button>
-                        </div>
-                      )}
-
-                      {/* Advanced Features - Collapsible */}
                       <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
                         <CollapsibleTrigger asChild>
                           <Button variant="ghost" className="w-full justify-between h-11">
                             <span className="flex items-center gap-2">
                               <Sparkles className="h-4 w-4" />
-                              ✨ Funzionalità Avanzate
+                              Funzionalità Avanzate
                             </span>
                             {advancedOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           </Button>
