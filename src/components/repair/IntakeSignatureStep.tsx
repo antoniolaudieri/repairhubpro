@@ -46,6 +46,8 @@ interface IntakeSignatureStepProps {
   centroId?: string | null;
   customerEmail?: string;
   onLoyaltyActivated?: () => void;
+  /** Called when Centro applies loyalty discount as incentive (before card activation) */
+  onApplyLoyaltyIncentive?: () => void;
 }
 
 export function IntakeSignatureStep({ 
@@ -73,6 +75,7 @@ export function IntakeSignatureStep({
   centroId,
   customerEmail,
   onLoyaltyActivated,
+  onApplyLoyaltyIncentive,
 }: IntakeSignatureStepProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [internalPaymentMode, setInternalPaymentMode] = useState<"full" | "partial">("full");
@@ -502,7 +505,7 @@ export function IntakeSignatureStep({
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Button 
                     size="sm" 
                     onClick={() => setShowLoyaltyDialog(true)}
@@ -512,6 +515,18 @@ export function IntakeSignatureStep({
                     Attiva Tessera €30/anno
                     <ArrowRight className="h-3 w-3" />
                   </Button>
+                  
+                  {onApplyLoyaltyIncentive && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={onApplyLoyaltyIncentive}
+                      className="gap-1 border-green-500 text-green-600 hover:bg-green-500/10"
+                    >
+                      <Gift className="h-3 w-3" />
+                      Applica Sconto Ora
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
