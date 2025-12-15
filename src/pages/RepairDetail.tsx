@@ -528,6 +528,19 @@ export default function RepairDetail() {
 
       const customerId = (repairData?.devices as any)?.customer_id;
 
+      // Check if customer has active loyalty card
+      let hasLoyaltyCard = false;
+      if (customerId) {
+        const { data: loyaltyCard } = await supabase
+          .from("loyalty_cards")
+          .select("id")
+          .eq("customer_id", customerId)
+          .eq("centro_id", repair.customer.centro_id)
+          .eq("status", "active")
+          .maybeSingle();
+        hasLoyaltyCard = !!loyaltyCard;
+      }
+
       // Build HTML without template literal whitespace to avoid quoted-printable encoding issues
       const diagnosisBlock = repair.diagnosis 
         ? `<div style="background:#f0fdf4;border-left:4px solid #22c55e;padding:15px;margin:20px 0;"><h4 style="color:#166534;margin-top:0;">Diagnosi</h4><p style="color:#166534;margin-bottom:0;">${repair.diagnosis}</p></div>` 
@@ -550,6 +563,26 @@ export default function RepairDetail() {
         : '';
 
       const centroName = repair.centro?.business_name || 'Il Team';
+
+      // Build loyalty promotion for completed/ready repairs
+      const loyaltyCheckoutUrl = customerId && repair.customer.centro_id 
+        ? `${window.location.origin}/attiva-tessera?customer_id=${customerId}&centro_id=${repair.customer.centro_id}&email=${encodeURIComponent(repair.customer.email)}&centro=${encodeURIComponent(centroName)}`
+        : '';
+      
+      const showLoyaltyPromo = !hasLoyaltyCard && customerId && ['completed', 'ready_for_pickup', 'delivered'].includes(repair.status);
+      
+      const loyaltyPromoBlock = showLoyaltyPromo ? `
+        <div style="background:linear-gradient(135deg,#f59e0b,#d97706);border-radius:12px;padding:24px;margin:24px 0;text-align:center;">
+          <p style="color:#fff;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:0 0 8px 0;">🎁 RISPARMIA SULLE PROSSIME RIPARAZIONI</p>
+          <h3 style="color:#fff;margin:0 0 12px 0;font-size:18px;">Attiva la Tessera Fedeltà!</h3>
+          <div style="text-align:left;color:#fff;font-size:13px;margin-bottom:16px;">
+            <p style="margin:4px 0;">✓ <strong>10% di sconto</strong> su tutte le riparazioni</p>
+            <p style="margin:4px 0;">✓ <strong>Diagnostica a €10</strong> invece di €15</p>
+            <p style="margin:4px 0;">✓ <strong>Validità 1 anno</strong> - Solo €30</p>
+          </div>
+          <a href="${loyaltyCheckoutUrl}" style="display:inline-block;background:#fff;color:#d97706;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px;">🛒 Attiva Ora - €30/anno</a>
+        </div>
+      ` : '';
 
       const html = [
         '<!DOCTYPE html><html><head><meta charset="utf-8"></head>',
@@ -577,6 +610,7 @@ export default function RepairDetail() {
         finalCostLine,
         accontoLine,
         '</div>',
+        loyaltyPromoBlock,
         '<p style="color:#666;font-size:14px;margin-top:30px;">Per qualsiasi domanda, non esiti a contattarci.</p>',
         `<p style="color:#666;font-size:14px;">Cordiali saluti,<br><strong>${centroName}</strong></p>`,
         '</div></body></html>'

@@ -72,6 +72,8 @@ import SuccessoPubblicita from "@/pages/ads/SuccessoPubblicita";
 import TrackQr from "@/pages/ads/TrackQr";
 // Corner pages
 import CornerPubblicita from "@/pages/corner/CornerPubblicita";
+// Loyalty
+import LoyaltyCheckoutRedirect from "@/pages/LoyaltyCheckoutRedirect";
 
 export const AnimatedRoutes = () => {
   return (
@@ -89,6 +91,9 @@ export const AnimatedRoutes = () => {
         <Route path="/ads/acquista" element={<PageTransition><AcquistaPubblicita /></PageTransition>} />
         <Route path="/ads/successo" element={<PageTransition><SuccessoPubblicita /></PageTransition>} />
         <Route path="/ads/qr" element={<TrackQr />} />
+        
+        {/* Public Loyalty Checkout Redirect */}
+        <Route path="/attiva-tessera" element={<PageTransition><LoyaltyCheckoutRedirect /></PageTransition>} />
         
         <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
