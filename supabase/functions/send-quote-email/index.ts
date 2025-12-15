@@ -67,6 +67,17 @@ serve(async (req) => {
       );
     }
 
+    // Check if customer has active loyalty card
+    const { data: activeLoyaltyCard } = await supabase
+      .from("loyalty_cards")
+      .select("id, status")
+      .eq("customer_id", customer.id)
+      .eq("centro_id", centro_id)
+      .eq("status", "active")
+      .maybeSingle();
+
+    const hasLoyaltyCard = !!activeLoyaltyCard;
+
     // Fetch Centro details
     const { data: centro } = await supabase
       .from("centri_assistenza")
@@ -124,6 +135,43 @@ serve(async (req) => {
       : `<h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">${centroName}</h1>
          <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Preventivo di Riparazione</p>`;
 
+    // Calculate loyalty discount (10% on labor/services, excluding parts)
+    const laborCost = quote.labor_cost || 0;
+    const partsCost = quote.parts_cost || 0;
+    const laborDiscount = laborCost * 0.10;
+    const priceWithLoyalty = quote.total_cost - laborDiscount;
+
+    // Build loyalty card promotion section (only if customer doesn't have one)
+    const loyaltyCheckoutUrl = `${origin}/attiva-tessera?customer_id=${customer.id}&centro_id=${centro_id}&email=${encodeURIComponent(customer.email)}&centro=${encodeURIComponent(centroName)}`;
+    
+    const loyaltyPromoSection = !hasLoyaltyCard && laborDiscount > 0 ? `
+      <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; padding: 24px; margin: 24px 0; text-align: center;">
+        <p style="color: #ffffff; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 8px 0;">🎁 OFFERTA SPECIALE</p>
+        <h3 style="color: #ffffff; margin: 0 0 12px 0; font-size: 20px;">Con la Tessera Fedeltà pagheresti</h3>
+        <div style="background: rgba(255,255,255,0.2); border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+          <p style="color: rgba(255,255,255,0.8); font-size: 14px; margin: 0; text-decoration: line-through;">€${quote.total_cost.toFixed(2)}</p>
+          <p style="color: #ffffff; font-size: 36px; font-weight: bold; margin: 4px 0;">€${priceWithLoyalty.toFixed(2)}</p>
+          <p style="color: #fef3c7; font-size: 14px; margin: 0;">Risparmi €${laborDiscount.toFixed(2)} su questa riparazione!</p>
+        </div>
+        <div style="text-align: left; color: #ffffff; font-size: 13px; margin-bottom: 16px;">
+          <p style="margin: 4px 0;">✓ <strong>10% di sconto</strong> su tutte le riparazioni (max 3 dispositivi/anno)</p>
+          <p style="margin: 4px 0;">✓ <strong>Diagnostica a €10</strong> invece di €15 (-€5 ogni volta)</p>
+          <p style="margin: 4px 0;">✓ <strong>Validità 1 anno</strong> - Solo €30</p>
+        </div>
+        <a href="${loyaltyCheckoutUrl}" style="display: inline-block; background: #ffffff; color: #d97706; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 15px;">
+          🛒 Attiva Ora la Tessera - €30/anno
+        </a>
+        <p style="color: rgba(255,255,255,0.7); font-size: 11px; margin: 12px 0 0 0;">Pagamento sicuro con Stripe • Attivazione immediata</p>
+      </div>
+    ` : '';
+
+    // If customer has loyalty card, show a badge
+    const loyaltyBadge = hasLoyaltyCard ? `
+      <div style="background: #dcfce7; border: 1px solid #22c55e; border-radius: 6px; padding: 10px 16px; margin-bottom: 16px; display: inline-block;">
+        <span style="color: #166534; font-size: 14px;">🎖️ <strong>Cliente Fedeltà</strong> - Sconto 10% già applicato</span>
+      </div>
+    ` : '';
+
     const emailHtml = `
 <!DOCTYPE html>
 <html>
@@ -146,6 +194,7 @@ serve(async (req) => {
           <!-- Content -->
           <tr>
             <td style="padding: 32px;">
+              ${loyaltyBadge}
               <h2 style="color: #18181b; margin: 0 0 16px 0; font-size: 22px;">
                 Gentile ${customer.name},
               </h2>
@@ -182,6 +231,8 @@ serve(async (req) => {
                 <p style="color: rgba(255,255,255,0.9); font-size: 14px; margin: 0 0 4px 0;">TOTALE DA PAGARE</p>
                 <p style="color: #ffffff; font-size: 32px; font-weight: bold; margin: 0;">€${quote.total_cost.toFixed(2)}</p>
               </div>
+
+              ${loyaltyPromoSection}
 
               <!-- Validity -->
               <p style="color: #71717a; font-size: 13px; margin: 0 0 24px 0; padding: 12px; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
