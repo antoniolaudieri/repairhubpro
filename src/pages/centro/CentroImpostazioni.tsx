@@ -16,6 +16,7 @@ import { PushNotificationSettings } from "@/components/notifications/PushNotific
 import { OpeningHoursEditor, OpeningHours } from "@/components/settings/OpeningHoursEditor";
 import { UnsavedChangesDialog } from "@/components/settings/UnsavedChangesDialog";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import EmailTemplateEditor, { EmailTemplates } from "@/components/centro/EmailTemplateEditor";
 import { 
   Settings,
   Building2,
@@ -91,7 +92,8 @@ interface CentroSettings {
   smtp_config?: SmtpConfig;
   dymo_config?: DymoConfig;
   monthly_goal?: number;
-  [key: string]: boolean | string | number | DisplayAd[] | SmtpConfig | DymoConfig | undefined;
+  email_templates?: Partial<EmailTemplates>;
+  [key: string]: boolean | string | number | DisplayAd[] | SmtpConfig | DymoConfig | Partial<EmailTemplates> | undefined;
 }
 
 interface Centro {
@@ -206,6 +208,9 @@ export default function CentroImpostazioni() {
   
   // Goals Configuration State
   const [monthlyGoal, setMonthlyGoal] = useState<number>(0);
+  
+  // Email Templates State
+  const [emailTemplates, setEmailTemplates] = useState<Partial<EmailTemplates>>({});
   
   // Opening Hours State
   const [openingHours, setOpeningHours] = useState<OpeningHours | null>(null);
@@ -353,6 +358,8 @@ export default function CentroImpostazioni() {
       // Load Goals config
       setMonthlyGoal(settings?.monthly_goal || 0);
       
+      // Load Email Templates
+      setEmailTemplates(settings?.email_templates || {});
       // Load Opening Hours
       setOpeningHours(centroData.opening_hours as unknown as OpeningHours | null);
       
@@ -445,6 +452,7 @@ export default function CentroImpostazioni() {
           label_format: dymoLabelFormat,
         },
         monthly_goal: monthlyGoal,
+        email_templates: emailTemplates,
       };
       
       const { error } = await supabase
@@ -1690,6 +1698,17 @@ export default function CentroImpostazioni() {
             onPrinterChange={setDymoPrinter}
             labelFormat={dymoLabelFormat}
             onLabelFormatChange={setDymoLabelFormat}
+          />
+
+          {/* Email Templates Editor */}
+          <EmailTemplateEditor
+            templates={emailTemplates}
+            onSave={(templates) => {
+              setEmailTemplates(templates);
+              toast.success("Template email aggiornati - ricorda di salvare le impostazioni");
+            }}
+            centroName={centro?.business_name || "Il tuo Centro"}
+            centroLogo={centro?.logo_url}
           />
 
           {/* Save Button */}
