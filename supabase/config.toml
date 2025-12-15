@@ -83,3 +83,9 @@ verify_jwt = false
 
 [functions.fetch-rss-feed]
 verify_jwt = false
+
+[functions.create-loyalty-checkout]
+verify_jwt = false
+
+[functions.confirm-loyalty-payment]
+verify_jwt = false

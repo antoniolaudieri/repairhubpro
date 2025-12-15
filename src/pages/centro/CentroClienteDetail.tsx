@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, Mail, Phone, MapPin, Edit, Smartphone, FileText, 
   Calendar, User, Laptop, Tablet, Monitor, Gamepad2, Watch, HelpCircle,
-  ChevronRight, Clock, Euro, ShoppingCart, Package, UserPlus, UserX, Loader2, KeyRound, Check
+  ChevronRight, Clock, Euro, ShoppingCart, Package, UserPlus, UserX, Loader2, KeyRound, Check, CreditCard
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -22,6 +22,9 @@ import { OrderSparePartDialog } from "@/components/customers/OrderSparePartDialo
 import { OrderDetailDialog } from "@/components/customers/OrderDetailDialog";
 import { CustomerDeviceInterests } from "@/components/centro/CustomerDeviceInterests";
 import { PredictiveMaintenanceCard } from "@/components/centro/PredictiveMaintenanceCard";
+import { LoyaltyCardProposal } from "@/components/loyalty/LoyaltyCardProposal";
+import { LoyaltyStatusBanner } from "@/components/loyalty/LoyaltyStatusBanner";
+import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -99,6 +102,9 @@ export default function CentroClienteDetail() {
   const [hasAccount, setHasAccount] = useState<boolean | null>(null);
   const [accountLoading, setAccountLoading] = useState(false);
   const [centroId, setCentroId] = useState<string | null>(null);
+
+  // Loyalty card hook
+  const { benefits: loyaltyBenefits, refresh: refreshLoyalty } = useLoyaltyCard(id || null, centroId);
 
   // Fetch centro ID on mount
   useEffect(() => {
@@ -439,8 +445,24 @@ export default function CentroClienteDetail() {
                 <Edit className="h-3.5 w-3.5 mr-1" />
                 Modifica
               </Button>
+              {centroId && (
+                <LoyaltyCardProposal
+                  customerId={id!}
+                  centroId={centroId}
+                  customerEmail={customer.email || undefined}
+                  customerName={customer.name}
+                  onSuccess={refreshLoyalty}
+                />
+              )}
             </div>
           </motion.div>
+
+          {/* Loyalty Status Banner */}
+          {loyaltyBenefits.hasActiveCard && (
+            <motion.div variants={itemVariants}>
+              <LoyaltyStatusBanner benefits={loyaltyBenefits} />
+            </motion.div>
+          )}
 
           {/* Stats */}
           <motion.div variants={itemVariants}>
