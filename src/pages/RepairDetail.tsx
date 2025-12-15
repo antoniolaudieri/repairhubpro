@@ -33,7 +33,8 @@ import {
   FileText,
   MessageCircle,
   ClipboardCheck,
-  Truck
+  Truck,
+  Send
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -43,6 +44,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Switch } from "@/components/ui/switch";
 import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
 import { PatternDisplay } from "@/components/customer/PatternDisplay";
@@ -196,6 +207,9 @@ export default function RepairDetail() {
   const [acceptanceFormOpen, setAcceptanceFormOpen] = useState(false);
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [checklistType, setChecklistType] = useState<'pre_repair' | 'post_repair'>('pre_repair');
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
+  const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Determine back route based on current path
   const isCentroContext = location.pathname.startsWith("/centro");
@@ -401,11 +415,24 @@ export default function RepairDetail() {
     }
   };
 
-  const saveChanges = async () => {
+  const saveChanges = async (skipEmailPrompt = false) => {
     if (!repair) return;
 
     const isStartingRepair = previousStatus === "pending" && repair.status === "in_progress";
     const statusChanged = previousStatus !== repair.status;
+
+    // If status changed and customer has email, ask about sending email
+    if (statusChanged && repair.customer?.email && !skipEmailPrompt) {
+      setPendingStatusChange(repair.status);
+      setEmailDialogOpen(true);
+      return;
+    }
+
+    await performSave(isStartingRepair, statusChanged);
+  };
+
+  const performSave = async (isStartingRepair: boolean, statusChanged: boolean) => {
+    if (!repair) return;
 
     setSaving(true);
     try {
@@ -459,6 +486,155 @@ export default function RepairDetail() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const getStatusLabel = (status: string): string => {
+    const labels: Record<string, string> = {
+      pending: "In Attesa",
+      in_progress: "In Lavorazione",
+      waiting_for_parts: "Attesa Ricambi",
+      parts_arrived: "Ricambi Arrivati",
+      completed: "Completato",
+      delivered: "Consegnato",
+      cancelled: "Annullato",
+      forfeited: "Alienato",
+    };
+    return labels[status] || status;
+  };
+
+  const sendStatusEmail = async () => {
+    if (!repair || !repair.customer?.email || !repair.customer?.centro_id) {
+      toast({
+        title: "Errore",
+        description: "Dati mancanti per l'invio email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const statusLabel = getStatusLabel(repair.status);
+      const subject = `Aggiornamento Riparazione - ${repair.device.brand} ${repair.device.model}`;
+      
+      // Get customer ID from device via repair
+      const { data: repairData } = await supabase
+        .from("repairs")
+        .select("device_id, devices(customer_id)")
+        .eq("id", repair.id)
+        .single();
+
+      const customerId = (repairData?.devices as any)?.customer_id;
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f5f5f5;">
+  <div style="background-color: white; border-radius: 12px; padding: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+    <h1 style="color: #1a1a1a; margin-bottom: 20px;">📋 Aggiornamento Riparazione</h1>
+    
+    <p style="color: #666; font-size: 16px;">Gentile <strong>${repair.customer.name}</strong>,</p>
+    
+    <p style="color: #666; font-size: 16px;">La informiamo che lo stato della sua riparazione è stato aggiornato.</p>
+    
+    <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #1a1a1a; margin-top: 0;">Dettagli Dispositivo</h3>
+      <p style="margin: 5px 0;"><strong>Tipo:</strong> ${repair.device.device_type}</p>
+      <p style="margin: 5px 0;"><strong>Marca:</strong> ${repair.device.brand}</p>
+      <p style="margin: 5px 0;"><strong>Modello:</strong> ${repair.device.model}</p>
+      <p style="margin: 5px 0;"><strong>Problema:</strong> ${repair.device.reported_issue}</p>
+    </div>
+    
+    <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 8px; padding: 20px; margin: 20px 0; text-align: center;">
+      <p style="color: white; margin: 0 0 10px 0; font-size: 14px;">STATO ATTUALE</p>
+      <p style="color: white; margin: 0; font-size: 24px; font-weight: bold;">${statusLabel}</p>
+    </div>
+    
+    ${repair.diagnosis ? `
+    <div style="background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 15px; margin: 20px 0;">
+      <h4 style="color: #166534; margin-top: 0;">Diagnosi</h4>
+      <p style="color: #166534; margin-bottom: 0;">${repair.diagnosis}</p>
+    </div>
+    ` : ''}
+    
+    ${repair.repair_notes ? `
+    <div style="background-color: #fefce8; border-left: 4px solid #eab308; padding: 15px; margin: 20px 0;">
+      <h4 style="color: #854d0e; margin-top: 0;">Note</h4>
+      <p style="color: #854d0e; margin-bottom: 0;">${repair.repair_notes}</p>
+    </div>
+    ` : ''}
+    
+    <div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+      <h3 style="color: #1a1a1a; margin-top: 0;">Riepilogo Costi</h3>
+      ${repair.estimated_cost ? `<p style="margin: 5px 0;"><strong>Costo Stimato:</strong> €${repair.estimated_cost.toFixed(2)}</p>` : ''}
+      ${repair.final_cost ? `<p style="margin: 5px 0;"><strong>Costo Finale:</strong> €${repair.final_cost.toFixed(2)}</p>` : ''}
+      ${repair.acconto ? `<p style="margin: 5px 0;"><strong>Acconto Versato:</strong> €${repair.acconto.toFixed(2)}</p>` : ''}
+    </div>
+    
+    <p style="color: #666; font-size: 14px; margin-top: 30px;">
+      Per qualsiasi domanda, non esiti a contattarci.
+    </p>
+    
+    <p style="color: #666; font-size: 14px;">
+      Cordiali saluti,<br>
+      <strong>${repair.centro?.business_name || 'Il Team'}</strong>
+    </p>
+  </div>
+</body>
+</html>`;
+
+      const { error } = await supabase.functions.invoke("send-email-smtp", {
+        body: {
+          centro_id: repair.customer.centro_id,
+          to: repair.customer.email,
+          subject,
+          html,
+          customer_id: customerId,
+          template_name: "status_update",
+          metadata: {
+            repair_id: repair.id,
+            new_status: repair.status,
+            status_label: statusLabel,
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email Inviata",
+        description: "Il cliente è stato notificato via email",
+      });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile inviare l'email",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  const handleEmailDialogConfirm = async () => {
+    setEmailDialogOpen(false);
+    const isStartingRepair = previousStatus === "pending" && repair?.status === "in_progress";
+    const statusChanged = previousStatus !== repair?.status;
+    
+    await performSave(isStartingRepair, statusChanged);
+    await sendStatusEmail();
+    setPendingStatusChange(null);
+  };
+
+  const handleEmailDialogCancel = async () => {
+    setEmailDialogOpen(false);
+    const isStartingRepair = previousStatus === "pending" && repair?.status === "in_progress";
+    const statusChanged = previousStatus !== repair?.status;
+    
+    await performSave(isStartingRepair, statusChanged);
+    setPendingStatusChange(null);
   };
 
   const handlePartsAdded = (newParts: RepairPart[]) => {
@@ -730,7 +906,7 @@ export default function RepairDetail() {
                 />
               </div>
               <Button
-                onClick={saveChanges} 
+                onClick={() => saveChanges()}
                 disabled={saving} 
                 size="lg"
                 className="gap-2 shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-primary to-primary/90"
@@ -1552,6 +1728,47 @@ export default function RepairDetail() {
           onSuccess={loadRepairDetail}
         />
       )}
+
+      {/* Email Notification Dialog */}
+      <AlertDialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-primary" />
+              Inviare Email al Cliente?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Lo stato della riparazione è cambiato in <strong>{getStatusLabel(pendingStatusChange || repair?.status || "")}</strong>.
+              <br /><br />
+              Vuoi inviare un'email di riepilogo al cliente <strong>{repair?.customer?.name}</strong> ({repair?.customer?.email})?
+              <br /><br />
+              L'email conterrà i dettagli del dispositivo, lo stato attuale, diagnosi, note e riepilogo costi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleEmailDialogCancel} disabled={sendingEmail}>
+              No, salva solo
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleEmailDialogConfirm} 
+              disabled={sendingEmail}
+              className="gap-2"
+            >
+              {sendingEmail ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Invio...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4" />
+                  Sì, invia email
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
