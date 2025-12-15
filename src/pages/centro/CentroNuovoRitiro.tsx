@@ -92,18 +92,21 @@ export default function CentroNuovoRitiro() {
     }
   }, [loyaltyBenefits.hasActiveCard, loyaltyBenefits.diagnosticFee, loyaltyLoading, isFeeDisabledBySettings]);
 
-  const hasLoyaltyLaborDiscount = loyaltyBenefits.hasActiveCard && loyaltyBenefits.canUseRepairDiscount;
+  // State for Centro to apply loyalty discount as incentive (before card activation)
+  const [forceLoyaltyIncentive, setForceLoyaltyIncentive] = useState(false);
+
+  const hasLoyaltyLaborDiscount = (loyaltyBenefits.hasActiveCard && loyaltyBenefits.canUseRepairDiscount) || forceLoyaltyIncentive;
   const discountedLaborCost = hasLoyaltyLaborDiscount
-    ? Number((laborCost * (1 - loyaltyBenefits.repairDiscountPercent / 100)).toFixed(2))
+    ? Number((laborCost * (1 - (loyaltyBenefits.repairDiscountPercent || 10) / 100)).toFixed(2))
     : laborCost;
 
   // Calculate discounted services total (same 10% discount applies)
   const servicesTotal = selectedServices.reduce((sum, s) => sum + s.price, 0);
   const discountedServicesTotal = hasLoyaltyLaborDiscount
-    ? Number((servicesTotal * (1 - loyaltyBenefits.repairDiscountPercent / 100)).toFixed(2))
+    ? Number((servicesTotal * (1 - (loyaltyBenefits.repairDiscountPercent || 10) / 100)).toFixed(2))
     : servicesTotal;
 
-  const baseDiagnosticFee = loyaltyBenefits.hasActiveCard ? loyaltyBenefits.diagnosticFee : 15;
+  const baseDiagnosticFee = (loyaltyBenefits.hasActiveCard || forceLoyaltyIncentive) ? 10 : 15;
 
   const [customerData, setCustomerData] = useState({
     name: "",
@@ -1076,13 +1079,22 @@ export default function CentroNuovoRitiro() {
             onPaymentModeChange={setPaymentMode}
             externalPrivacyConsent={externalPrivacyConsent}
             onPrivacyConsentChange={setExternalPrivacyConsent}
-            showLoyaltyProposal={!loyaltyBenefits.hasActiveCard && !loyaltyLoading}
+            showLoyaltyProposal={!loyaltyBenefits.hasActiveCard && !loyaltyLoading && !forceLoyaltyIncentive}
             customerId={existingCustomerId}
             centroId={centroId}
             customerEmail={customerData.email}
             onLoyaltyActivated={() => {
               // Refresh loyalty benefits after activation
               setDiagnosticFee(10);
+              setForceLoyaltyIncentive(false); // Card is now active, no need for incentive flag
+            }}
+            onApplyLoyaltyIncentive={() => {
+              // Centro applies loyalty discount as incentive
+              setForceLoyaltyIncentive(true);
+              if (!isFeeDisabledBySettings) {
+                setDiagnosticFee(10);
+              }
+              toast.success("Sconto tessera fedeltà applicato come incentivo!");
             }}
           />
         );
