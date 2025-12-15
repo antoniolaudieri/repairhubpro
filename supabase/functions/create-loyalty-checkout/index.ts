@@ -32,7 +32,7 @@ serve(async (req) => {
     );
 
     // Check if customer already has an active loyalty card for this centro
-    const { data: existingCard } = await supabaseClient
+    const { data: existingActiveCard } = await supabaseClient
       .from("loyalty_cards")
       .select("id, status")
       .eq("customer_id", customer_id)
@@ -40,9 +40,17 @@ serve(async (req) => {
       .eq("status", "active")
       .maybeSingle();
 
-    if (existingCard) {
+    if (existingActiveCard) {
       throw new Error("Customer already has an active loyalty card for this centro");
     }
+
+    // Delete any existing pending_payment cards for this customer/centro
+    await supabaseClient
+      .from("loyalty_cards")
+      .delete()
+      .eq("customer_id", customer_id)
+      .eq("centro_id", centro_id)
+      .eq("status", "pending_payment");
 
     // Get centro info for metadata
     const { data: centro } = await supabaseClient
