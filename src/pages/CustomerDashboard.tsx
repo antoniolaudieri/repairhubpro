@@ -28,6 +28,7 @@ import {
   Building2,
   Store,
   Briefcase,
+  CreditCard,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { SignatureDialog } from "@/components/quotes/SignatureDialog";
@@ -40,6 +41,8 @@ import { InAppNotifications } from "@/components/customer/InAppNotifications";
 import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
 import PromotionPreferences from "@/components/customer/PromotionPreferences";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
+import { useCustomerLoyaltyCards } from "@/hooks/useLoyaltyCard";
+import { LoyaltyCardDisplay } from "@/components/loyalty/LoyaltyCardDisplay";
 
 interface Repair {
   id: string;
@@ -95,6 +98,9 @@ export default function CustomerDashboard() {
     inProgress: 0,
     completed: 0,
   });
+
+  // Loyalty cards for this customer
+  const { cards: loyaltyCards, loading: loyaltyLoading } = useCustomerLoyaltyCards(user?.email || null);
 
   useEffect(() => {
     if (user) {
@@ -378,6 +384,21 @@ export default function CustomerDashboard() {
               </div>
             </Card>
           </div>
+
+          {/* Loyalty Cards Section */}
+          {loyaltyCards.length > 0 && (
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
+                <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" />
+                Le Mie Tessere Fedeltà
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {loyaltyCards.map((card) => (
+                  <LoyaltyCardDisplay key={card.id} card={card} />
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Quotes Section */}
           {quotes.length > 0 && (
