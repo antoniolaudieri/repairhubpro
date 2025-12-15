@@ -253,10 +253,6 @@ export default function CustomerDashboard() {
               </Button>
             )}
             
-            <Button variant="ghost" size="sm" onClick={() => navigate("/signature-history")} className="hidden sm:flex">
-              <FileSignature className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Storico Firme</span>
-            </Button>
 
             <Button variant="ghost" size="sm" onClick={() => navigate("/")} className="hidden sm:flex">
               <Home className="h-4 w-4 mr-2" />
@@ -280,10 +276,6 @@ export default function CustomerDashboard() {
                 <DropdownMenuItem onClick={() => navigate("/customer-dashboard")}>
                   <User className="mr-2 h-4 w-4" />
                   Dashboard
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/signature-history")} className="sm:hidden">
-                  <FileSignature className="mr-2 h-4 w-4" />
-                  Storico Firme
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/")} className="sm:hidden">
                   <Home className="mr-2 h-4 w-4" />
