@@ -685,6 +685,63 @@ export type Database = {
           },
         ]
       }
+      customer_communications: {
+        Row: {
+          centro_id: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          metadata: Json | null
+          status: string
+          subject: string | null
+          template_name: string | null
+          type: string
+        }
+        Insert: {
+          centro_id: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          subject?: string | null
+          template_name?: string | null
+          type?: string
+        }
+        Update: {
+          centro_id?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          subject?: string | null
+          template_name?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_communications_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_communications_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_notifications: {
         Row: {
           created_at: string

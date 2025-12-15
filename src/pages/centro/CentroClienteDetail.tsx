@@ -21,6 +21,7 @@ import { QuoteDialog } from "@/components/quotes/QuoteDialog";
 import { OrderSparePartDialog } from "@/components/customers/OrderSparePartDialog";
 import { OrderDetailDialog } from "@/components/customers/OrderDetailDialog";
 import { CustomerDeviceInterests } from "@/components/centro/CustomerDeviceInterests";
+import { CustomerCommunications } from "@/components/centro/CustomerCommunications";
 import { PredictiveMaintenanceCard } from "@/components/centro/PredictiveMaintenanceCard";
 import { LoyaltyCardProposal } from "@/components/loyalty/LoyaltyCardProposal";
 import { LoyaltyStatusBanner } from "@/components/loyalty/LoyaltyStatusBanner";
@@ -495,6 +496,17 @@ export default function CentroClienteDetail() {
                 centroId={centroId}
                 devices={devices.map(d => ({ id: d.id, device_type: d.device_type, brand: d.brand, model: d.model }))}
                 customerPhone={customer?.phone}
+              />
+            </motion.div>
+          )}
+
+          {/* Communications Timeline */}
+          {centroId && (
+            <motion.div variants={itemVariants}>
+              <CustomerCommunications
+                customerId={id!}
+                centroId={centroId}
+                customerEmail={customer.email}
               />
             </motion.div>
           )}

@@ -32,6 +32,10 @@ interface EmailRequest {
   html: string;
   from_name_override?: string;
   attachments?: Attachment[];
+  // For logging communications
+  customer_id?: string;
+  template_name?: string;
+  metadata?: Record<string, any>;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -42,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { centro_id, to, subject, html, from_name_override, attachments }: EmailRequest = await req.json();
+    const { centro_id, to, subject, html, from_name_override, attachments, customer_id, template_name, metadata }: EmailRequest = await req.json();
     
     console.log("send-email-smtp: Sending email to", to, "for centro", centro_id);
     if (attachments?.length) {
@@ -76,6 +80,27 @@ const handler = async (req: Request): Promise<Response> => {
 
     const fromName = from_name_override || smtpConfig?.from_name || centroName;
     const recipients = Array.isArray(to) ? to : [to];
+
+    // Helper function to log communication
+    const logCommunication = async (status: string) => {
+      if (customer_id && centro_id) {
+        try {
+          await supabase.from("customer_communications").insert({
+            customer_id,
+            centro_id,
+            type: "email",
+            subject,
+            content: html.substring(0, 5000), // Limit content size
+            template_name: template_name || null,
+            status,
+            metadata: metadata || {},
+          });
+          console.log("send-email-smtp: Communication logged for customer", customer_id);
+        } catch (logError) {
+          console.error("send-email-smtp: Failed to log communication:", logError);
+        }
+      }
+    };
 
     // Prepare attachments for SMTP - decode base64 efficiently
     const smtpAttachments = attachments?.map(att => ({
@@ -122,6 +147,10 @@ const handler = async (req: Request): Promise<Response> => {
         await client.close();
 
         console.log("send-email-smtp: Email sent via Centro SMTP");
+        
+        // Log communication
+        await logCommunication("sent");
+        
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -178,6 +207,10 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log("send-email-smtp: Email sent via Resend:", emailResult.id);
+    
+    // Log communication
+    await logCommunication("sent");
+    
     return new Response(
       JSON.stringify({ 
         success: true, 
