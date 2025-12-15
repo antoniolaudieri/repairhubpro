@@ -570,6 +570,7 @@ export type Database = {
           created_at: string
           credit_balance: number | null
           credit_warning_threshold: number | null
+          direct_to_centro_multiplier: number | null
           email: string
           id: string
           last_credit_update: string | null
@@ -594,6 +595,7 @@ export type Database = {
           created_at?: string
           credit_balance?: number | null
           credit_warning_threshold?: number | null
+          direct_to_centro_multiplier?: number | null
           email: string
           id?: string
           last_credit_update?: string | null
@@ -618,6 +620,7 @@ export type Database = {
           created_at?: string
           credit_balance?: number | null
           credit_warning_threshold?: number | null
+          direct_to_centro_multiplier?: number | null
           email?: string
           id?: string
           last_credit_update?: string | null
