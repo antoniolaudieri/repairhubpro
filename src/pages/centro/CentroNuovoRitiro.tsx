@@ -1076,6 +1076,14 @@ export default function CentroNuovoRitiro() {
             onPaymentModeChange={setPaymentMode}
             externalPrivacyConsent={externalPrivacyConsent}
             onPrivacyConsentChange={setExternalPrivacyConsent}
+            showLoyaltyProposal={!loyaltyBenefits.hasActiveCard && !loyaltyLoading}
+            customerId={existingCustomerId}
+            centroId={centroId}
+            customerEmail={customerData.email}
+            onLoyaltyActivated={() => {
+              // Refresh loyalty benefits after activation
+              setDiagnosticFee(10);
+            }}
           />
         );
 

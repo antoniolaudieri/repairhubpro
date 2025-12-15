@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet, Tablet, Smartphone, QrCode, Copy, ExternalLink, Loader2, Wifi, Scale } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet, Tablet, Smartphone, QrCode, Copy, ExternalLink, Loader2, Wifi, Scale, Sparkles, ArrowRight, Check } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import SignatureCanvas from "react-signature-canvas";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -39,6 +40,12 @@ interface IntakeSignatureStepProps {
   onPaymentModeChange?: (mode: "full" | "partial") => void;
   externalPrivacyConsent?: boolean;
   onPrivacyConsentChange?: (consent: boolean) => void;
+  /** Loyalty card activation props */
+  showLoyaltyProposal?: boolean;
+  customerId?: string | null;
+  centroId?: string | null;
+  customerEmail?: string;
+  onLoyaltyActivated?: () => void;
 }
 
 export function IntakeSignatureStep({ 
@@ -61,6 +68,11 @@ export function IntakeSignatureStep({
   onPaymentModeChange,
   externalPrivacyConsent,
   onPrivacyConsentChange,
+  showLoyaltyProposal = false,
+  customerId,
+  centroId,
+  customerEmail,
+  onLoyaltyActivated,
 }: IntakeSignatureStepProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
   const [internalPaymentMode, setInternalPaymentMode] = useState<"full" | "partial">("full");
@@ -77,12 +89,117 @@ export function IntakeSignatureStep({
   const [isWaitingForRemoteSign, setIsWaitingForRemoteSign] = useState(false);
   const [internalPrivacyConsent, setInternalPrivacyConsent] = useState(false);
   
+  // Loyalty card activation states
+  const [showLoyaltyDialog, setShowLoyaltyDialog] = useState(false);
+  const [showLoyaltyQrDialog, setShowLoyaltyQrDialog] = useState(false);
+  const [loyaltyProcessing, setLoyaltyProcessing] = useState(false);
+  const [loyaltyCheckoutUrl, setLoyaltyCheckoutUrl] = useState<string | null>(null);
+  const [loyaltyCardId, setLoyaltyCardId] = useState<string | null>(null);
+  const [isPollingLoyalty, setIsPollingLoyalty] = useState(false);
+  
   // Use external privacy consent if provided, otherwise use internal state
   const privacyConsent = externalPrivacyConsent !== undefined ? externalPrivacyConsent : internalPrivacyConsent;
   
   const setPrivacyConsent = (value: boolean) => {
     setInternalPrivacyConsent(value);
     onPrivacyConsentChange?.(value);
+  };
+  
+  // Calculate potential savings with loyalty card
+  const potentialLaborSavings = laborTotal * 0.10;
+  const potentialServicesSavings = servicesTotal * 0.10;
+  const potentialDiagnosticSavings = baseDiagnosticFee === 15 ? 5 : 0;
+  const totalPotentialSavings = potentialLaborSavings + potentialServicesSavings + potentialDiagnosticSavings;
+  
+  // Poll for loyalty payment completion
+  useEffect(() => {
+    if (!loyaltyCardId || !showLoyaltyQrDialog) return;
+
+    setIsPollingLoyalty(true);
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from('loyalty_cards')
+        .select('status')
+        .eq('id', loyaltyCardId)
+        .single();
+
+      if (data?.status === 'active') {
+        clearInterval(interval);
+        setIsPollingLoyalty(false);
+        setShowLoyaltyQrDialog(false);
+        setShowLoyaltyDialog(false);
+        toast.success("Tessera fedeltà attivata con successo!");
+        onLoyaltyActivated?.();
+      }
+    }, 3000);
+
+    return () => {
+      clearInterval(interval);
+      setIsPollingLoyalty(false);
+    };
+  }, [loyaltyCardId, showLoyaltyQrDialog, onLoyaltyActivated]);
+  
+  const handleLoyaltyStripeCheckout = async () => {
+    if (!customerId || !centroId) return;
+    
+    setLoyaltyProcessing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-loyalty-checkout', {
+        body: { customerId, centroId, customerEmail }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.url) {
+        setLoyaltyCheckoutUrl(data.url);
+        setLoyaltyCardId(data.loyalty_card_id);
+        setShowLoyaltyDialog(false);
+        setShowLoyaltyQrDialog(true);
+      }
+    } catch (err: any) {
+      toast.error("Errore nella creazione del pagamento");
+      console.error(err);
+    } finally {
+      setLoyaltyProcessing(false);
+    }
+  };
+  
+  const handleLoyaltyBonifico = async () => {
+    if (!customerId || !centroId) return;
+    
+    setLoyaltyProcessing(true);
+    try {
+      // Create and immediately activate loyalty card for bonifico
+      const { data, error } = await supabase
+        .from('loyalty_cards')
+        .insert({
+          customer_id: customerId,
+          centro_id: centroId,
+          payment_method: 'bonifico',
+          amount_paid: 30,
+          platform_commission: 1.50,
+          centro_revenue: 28.50,
+          status: 'active',
+          activated_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          bonifico_confirmed_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Note: Platform commission deduction would be handled separately if needed
+      
+      toast.success("Tessera fedeltà attivata con bonifico!");
+      setShowLoyaltyDialog(false);
+      onLoyaltyActivated?.();
+    } catch (err: any) {
+      toast.error("Errore nell'attivazione: " + err.message);
+      console.error(err);
+    } finally {
+      setLoyaltyProcessing(false);
+    }
   };
   
   // Suggerimento sconto diagnosi per preventivi sopra €100
@@ -307,7 +424,70 @@ export function IntakeSignatureStep({
         </Card>
       </motion.div>
 
-      {/* Payment Mode Selection */}
+      {/* Loyalty Card Proposal Banner - show only if customer doesn't have active card */}
+      {showLoyaltyProposal && customerId && centroId && totalPotentialSavings > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.1 }}
+        >
+          <Card className="p-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-2 border-amber-500/30 border-dashed">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
+                <Sparkles className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap mb-2">
+                  <span className="font-semibold text-amber-700 dark:text-amber-400">Risparmia con la Tessera Fedeltà!</span>
+                  <Badge className="bg-green-500 text-white text-xs">
+                    -€{totalPotentialSavings.toFixed(0)} su questo ritiro
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  {potentialDiagnosticSavings > 0 && (
+                    <div className="flex items-center gap-1.5 p-2 rounded bg-background/50">
+                      <Check className="h-3 w-3 text-green-500" />
+                      <span>Diagnosi: <span className="line-through text-muted-foreground">€15</span> → <span className="text-green-600 font-medium">€10</span></span>
+                    </div>
+                  )}
+                  
+                  {potentialLaborSavings > 0 && (
+                    <div className="flex items-center gap-1.5 p-2 rounded bg-background/50">
+                      <Check className="h-3 w-3 text-green-500" />
+                      <span>Manodopera: <span className="text-green-600 font-medium">-10%</span></span>
+                    </div>
+                  )}
+                  
+                  {potentialServicesSavings > 0 && (
+                    <div className="flex items-center gap-1.5 p-2 rounded bg-background/50">
+                      <Check className="h-3 w-3 text-green-500" />
+                      <span>Servizi: <span className="text-green-600 font-medium">-10%</span></span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-1.5 p-2 rounded bg-background/50">
+                    <Check className="h-3 w-3 text-green-500" />
+                    <span>3 dispositivi coperti</span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Button 
+                    size="sm" 
+                    onClick={() => setShowLoyaltyDialog(true)}
+                    className="gap-1 bg-amber-500 hover:bg-amber-600"
+                  >
+                    <CreditCard className="h-3 w-3" />
+                    Attiva Tessera €30/anno
+                    <ArrowRight className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </motion.div>
+      )}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -770,6 +950,141 @@ export function IntakeSignatureStep({
                 )}
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loyalty Card Activation Dialog */}
+      <Dialog open={showLoyaltyDialog} onOpenChange={setShowLoyaltyDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5 text-amber-500" />
+              Tessera Fedeltà
+            </DialogTitle>
+            <DialogDescription>
+              Attiva la tessera fedeltà per il cliente - €30/anno
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Card className="p-4 bg-amber-500/10 border-amber-500/30">
+              <h4 className="font-semibold mb-2">Vantaggi inclusi:</h4>
+              <ul className="space-y-1.5 text-sm">
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Diagnosi €10 invece di €15 (risparmio €5)
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Sconto 10% su manodopera e servizi
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Copertura fino a 3 dispositivi
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Validità 12 mesi
+                </li>
+              </ul>
+              
+              {totalPotentialSavings > 0 && (
+                <div className="mt-3 p-2 rounded bg-green-500/20 text-center">
+                  <span className="text-sm font-medium text-green-700">
+                    Risparmio su questo ritiro: €{totalPotentialSavings.toFixed(2)}
+                  </span>
+                </div>
+              )}
+            </Card>
+            
+            <div className="space-y-2">
+              <Button 
+                className="w-full gap-2" 
+                onClick={handleLoyaltyStripeCheckout}
+                disabled={loyaltyProcessing}
+              >
+                {loyaltyProcessing ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <QrCode className="h-4 w-4" />
+                )}
+                {loyaltyProcessing ? "Generazione QR..." : "💳 Genera QR Pagamento (€30)"}
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={handleLoyaltyBonifico}
+                disabled={loyaltyProcessing}
+              >
+                {loyaltyProcessing ? "Attivazione..." : "🏦 Pagamento Contanti/Bonifico"}
+              </Button>
+              
+              <p className="text-xs text-center text-muted-foreground">
+                Commissione piattaforma: €1.50 (5%)
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loyalty QR Code Payment Dialog */}
+      <Dialog open={showLoyaltyQrDialog} onOpenChange={setShowLoyaltyQrDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 justify-center">
+              <QrCode className="h-5 w-5 text-primary" />
+              Scansiona per Pagare
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Il cliente può scansionare il QR con il telefono per completare il pagamento
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col items-center gap-4 py-4">
+            {loyaltyCheckoutUrl && (
+              <div className="p-4 bg-white rounded-xl shadow-lg">
+                <QRCodeSVG 
+                  value={loyaltyCheckoutUrl} 
+                  size={200}
+                  level="H"
+                  includeMargin
+                />
+              </div>
+            )}
+            
+            <div className="text-center space-y-1">
+              <p className="text-2xl font-bold">€30,00</p>
+              <p className="text-sm text-muted-foreground">Tessera Fedeltà Annuale</p>
+            </div>
+
+            {isPollingLoyalty && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                In attesa del pagamento...
+              </div>
+            )}
+
+            <div className="flex gap-2 w-full">
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="flex-1 gap-1"
+                onClick={() => loyaltyCheckoutUrl && window.open(loyaltyCheckoutUrl, '_blank')}
+              >
+                <ExternalLink className="h-3 w-3" />
+                Apri Link
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                className="flex-1"
+                onClick={() => setShowLoyaltyQrDialog(false)}
+              >
+                Annulla
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
