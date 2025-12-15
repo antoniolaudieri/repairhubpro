@@ -469,7 +469,9 @@ export default function AcquistaPubblicita() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/30 to-background py-4 sm:py-8 px-3 sm:px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto flex gap-8">
+        {/* Main Content */}
+        <div className="flex-1 max-w-4xl mx-auto lg:mx-0">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -1284,6 +1286,27 @@ export default function AcquistaPubblicita() {
             </motion.div>
           )}
         </AnimatePresence>
+        </div>
+
+        {/* Desktop Sidebar Preview - Fixed position */}
+        <div className="hidden lg:block w-80 xl:w-96 flex-shrink-0">
+          <div className="sticky top-8">
+            <Card className="border shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Eye className="h-4 w-4 text-primary" />
+                  Anteprima Live
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <AdPreview />
+                <p className="text-xs text-muted-foreground text-center mt-3">
+                  Così apparirà la tua pubblicità sui display dei Corner
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
       {/* AI Dialog */}
