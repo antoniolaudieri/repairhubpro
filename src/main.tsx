@@ -1,7 +1,10 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { preloadBrandLogos } from "./utils/brandLogos";
 
+// Preload brand logos cache early
+preloadBrandLogos();
 // Remove initial loader once React is ready
 const removeInitialLoader = () => {
   const loader = document.getElementById('initial-loader');

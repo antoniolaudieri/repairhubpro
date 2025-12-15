@@ -160,6 +160,36 @@ export type Database = {
           },
         ]
       }
+      brand_logos: {
+        Row: {
+          brand_name: string
+          created_at: string
+          device_categories: string[] | null
+          display_name: string | null
+          id: string
+          logo_url: string
+          updated_at: string
+        }
+        Insert: {
+          brand_name: string
+          created_at?: string
+          device_categories?: string[] | null
+          display_name?: string | null
+          id?: string
+          logo_url: string
+          updated_at?: string
+        }
+        Update: {
+          brand_name?: string
+          created_at?: string
+          device_categories?: string[] | null
+          display_name?: string | null
+          id?: string
+          logo_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       centri_assistenza: {
         Row: {
           address: string

@@ -10,15 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { StatusBadge, DIRECT_REPAIR_STATUSES } from "@/components/repair/VisualStatusManager";
+import { DeviceImage } from "@/components/common/DeviceImage";
 import { 
   Plus, 
   Search, 
-  Smartphone, 
-  Laptop, 
-  Tablet, 
-  Watch, 
-  Monitor, 
-  Gamepad,
   Clock,
   Wrench,
   CheckCircle2,
@@ -68,39 +63,6 @@ interface DirectRepair {
     };
   };
 }
-
-const deviceIcons: Record<string, any> = {
-  smartphone: Smartphone,
-  tablet: Tablet,
-  laptop: Laptop,
-  smartwatch: Watch,
-  computer: Monitor,
-  console: Gamepad,
-};
-
-const DeviceImage = ({ photoUrl, deviceType }: { photoUrl: string | null; deviceType: string }) => {
-  const [hasError, setHasError] = useState(false);
-  const Icon = deviceIcons[deviceType] || Smartphone;
-
-  if (!photoUrl || hasError) {
-    return (
-      <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center ring-2 ring-border group-hover:ring-primary/30 transition-all">
-        <Icon className="h-5 w-5 text-muted-foreground" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative">
-      <img
-        src={photoUrl}
-        alt="Device"
-        className="h-16 w-16 rounded-xl object-cover ring-2 ring-border group-hover:ring-primary/30 transition-all"
-        onError={() => setHasError(true)}
-      />
-    </div>
-  );
-};
 
 export default function CentroLavori() {
   const { user } = useAuth();
@@ -239,10 +201,7 @@ export default function CentroLavori() {
     return matchesSearch && matchesStatus;
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  const DeviceIcon = (type: string) => {
-    const Icon = deviceIcons[type] || Smartphone;
-    return <Icon className="h-5 w-5" />;
-  };
+  // DeviceIcon helper removed - now using DeviceImage component
 
   // Stats
   const totalRepairs = repairs.length;
@@ -437,6 +396,7 @@ export default function CentroLavori() {
                               <div className="flex items-start gap-4">
                                 <DeviceImage 
                                   photoUrl={repair.device.photo_url} 
+                                  brand={repair.device.brand}
                                   deviceType={repair.device.device_type} 
                                 />
                                 <div className="space-y-1.5">
