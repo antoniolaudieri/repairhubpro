@@ -419,17 +419,17 @@ export default function CentroCommissioni() {
             variants={containerVariants}
             initial="hidden"
             animate="visible"
-            className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
           >
             {statsCards.map((card) => (
               <motion.div key={card.title} variants={itemVariants}>
                 <Card className="p-3 md:p-4 border-border/50 hover:border-border transition-colors">
-                  <div className="flex items-center gap-2 md:gap-3">
+                  <div className="flex items-start gap-2 md:gap-3">
                     <div className={`h-8 w-8 md:h-10 md:w-10 rounded-lg ${card.iconBg} flex items-center justify-center flex-shrink-0`}>
                       <card.icon className="h-4 w-4 md:h-5 md:w-5 text-white" />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-base md:text-xl font-bold text-foreground leading-none">{card.value}</p>
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <p className="text-sm sm:text-base lg:text-xl font-bold text-foreground leading-tight truncate">{card.value}</p>
                       <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">{card.title}</p>
                     </div>
                   </div>
