@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,11 +7,12 @@ import { PageTransition } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, FileText, Send, Download, CheckCircle, Shield, Bug, UserX, Database } from 'lucide-react';
+import { ArrowLeft, FileText, Send, Download, CheckCircle, Shield, Bug, UserX, Database, Pen, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { generateForensicReportPDF } from '@/components/centro/ForensicReportPDFGenerator';
+import SignatureCanvas from 'react-signature-canvas';
 
 interface ForensicReport {
   id: string;
@@ -41,6 +42,7 @@ interface ForensicReport {
   recommendations: string | null;
   technician_name: string;
   technician_qualification: string | null;
+  technician_signature: string | null;
   status: string;
   sent_at: string | null;
   sent_to_email: string | null;
@@ -84,6 +86,8 @@ export default function CentroPeriziaDetail() {
   const [centro, setCentro] = useState<Centro | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [isSigningMode, setIsSigningMode] = useState(false);
+  const signatureRef = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
     if (user && id) {
@@ -434,12 +438,117 @@ export default function CentroPeriziaDetail() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Tecnico</CardTitle>
+              <CardTitle className="flex items-center justify-between">
+                <span>Tecnico</span>
+                {report.status === 'draft' && !report.technician_signature && (
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setIsSigningMode(true)}
+                  >
+                    <Pen className="h-4 w-4 mr-1" />
+                    Firma
+                  </Button>
+                )}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              <p className="font-medium">{report.technician_name}</p>
-              {report.technician_qualification && (
-                <p className="text-sm text-muted-foreground">{report.technician_qualification}</p>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="font-medium">{report.technician_name}</p>
+                {report.technician_qualification && (
+                  <p className="text-sm text-muted-foreground">{report.technician_qualification}</p>
+                )}
+              </div>
+              
+              {/* Signature display or capture */}
+              {report.technician_signature ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Firma:</p>
+                  <div className="border rounded-lg p-2 bg-white">
+                    <img 
+                      src={report.technician_signature} 
+                      alt="Firma tecnico" 
+                      className="max-h-20 mx-auto"
+                    />
+                  </div>
+                  {report.status === 'draft' && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full text-destructive"
+                      onClick={async () => {
+                        const { error } = await supabase
+                          .from('forensic_reports')
+                          .update({ technician_signature: null })
+                          .eq('id', report.id);
+                        if (!error) {
+                          toast.success('Firma rimossa');
+                          loadData();
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" />
+                      Rimuovi firma
+                    </Button>
+                  )}
+                </div>
+              ) : isSigningMode ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">Disegna la tua firma:</p>
+                  <div className="border-2 border-dashed rounded-lg bg-white">
+                    <SignatureCanvas
+                      ref={signatureRef}
+                      canvasProps={{
+                        className: 'w-full h-32',
+                        style: { width: '100%', height: '128px' }
+                      }}
+                      backgroundColor="white"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => signatureRef.current?.clear()}
+                    >
+                      Cancella
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setIsSigningMode(false)}
+                    >
+                      Annulla
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={async () => {
+                        if (signatureRef.current?.isEmpty()) {
+                          toast.error('Disegna la firma prima di salvare');
+                          return;
+                        }
+                        const signatureData = signatureRef.current?.toDataURL('image/png');
+                        const { error } = await supabase
+                          .from('forensic_reports')
+                          .update({ technician_signature: signatureData })
+                          .eq('id', report.id);
+                        if (error) {
+                          toast.error('Errore nel salvataggio');
+                        } else {
+                          toast.success('Firma salvata');
+                          setIsSigningMode(false);
+                          loadData();
+                        }
+                      }}
+                    >
+                      Salva
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">Nessuna firma</p>
               )}
             </CardContent>
           </Card>

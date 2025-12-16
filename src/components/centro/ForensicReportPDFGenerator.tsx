@@ -28,6 +28,7 @@ interface ForensicReport {
   recommendations: string | null;
   technician_name: string;
   technician_qualification: string | null;
+  technician_signature: string | null;
   customer: {
     name: string;
     email: string | null;
@@ -55,12 +56,14 @@ const purposeLabels: Record<string, string> = {
 export async function generateForensicReportPDF(report: ForensicReport, centro: Centro): Promise<void> {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = 15;
   const contentWidth = pageWidth - margin * 2;
   let y = 15;
 
+  // Helper function to add page break if needed
   const addNewPageIfNeeded = (requiredSpace: number) => {
-    if (y + requiredSpace > 270) {
+    if (y + requiredSpace > pageHeight - 25) {
       pdf.addPage();
       y = 20;
       return true;
@@ -68,95 +71,134 @@ export async function generateForensicReportPDF(report: ForensicReport, centro: 
     return false;
   };
 
-  // Header with Centro branding - increased height for better spacing
-  const headerHeight = 50;
-  pdf.setFillColor(30, 41, 59);
+  // Helper for section headers
+  const addSectionHeader = (title: string, bgColor: [number, number, number] = [30, 41, 59]) => {
+    addNewPageIfNeeded(25);
+    pdf.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
+    pdf.roundedRect(margin, y, contentWidth, 9, 2, 2, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(title, margin + 5, y + 6);
+    y += 13;
+  };
+
+  // ==================== HEADER ====================
+  const headerHeight = 52;
+  
+  // Dark header background
+  pdf.setFillColor(15, 23, 42);
   pdf.rect(0, 0, pageWidth, headerHeight, 'F');
+  
+  // Decorative accent line
+  pdf.setFillColor(59, 130, 246);
+  pdf.rect(0, headerHeight - 3, pageWidth, 3, 'F');
 
-  const logoX = margin;
-  const textStartX = centro.logo_url ? margin + 38 : margin;
-  const headerTextY = 20; // Start text lower in header
+  const textStartX = centro.logo_url ? margin + 40 : margin;
+  const headerTextY = 16;
 
-  // Try to load logo
+  // Logo
   if (centro.logo_url) {
     try {
-      pdf.addImage(centro.logo_url, 'PNG', logoX, 10, 32, 32);
+      pdf.addImage(centro.logo_url, 'PNG', margin, 10, 34, 34);
     } catch (e) {
       console.log('Could not load logo');
     }
   }
 
+  // Title and company info
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(16);
+  pdf.setFontSize(18);
   pdf.setFont('helvetica', 'bold');
   pdf.text('PERIZIA TECNICA FORENSE', textStartX, headerTextY);
 
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(centro.business_name, textStartX, headerTextY + 7);
-  pdf.text(`${centro.address} | Tel: ${centro.phone}`, textStartX, headerTextY + 13);
-  pdf.text(`Email: ${centro.email}${centro.vat_number ? ` | P.IVA: ${centro.vat_number}` : ''}`, textStartX, headerTextY + 19);
+  pdf.setTextColor(203, 213, 225);
+  pdf.text(centro.business_name, textStartX, headerTextY + 8);
+  pdf.text(`${centro.address} | Tel: ${centro.phone}`, textStartX, headerTextY + 14);
+  pdf.text(`Email: ${centro.email}${centro.vat_number ? ` | P.IVA: ${centro.vat_number}` : ''}`, textStartX, headerTextY + 20);
 
-  // Report number and date badge - positioned within header
-  const badgeX = pageWidth - margin - 45;
-  const badgeY = 12;
+  // Report number badge
+  const badgeX = pageWidth - margin - 48;
+  const badgeY = 10;
   pdf.setFillColor(59, 130, 246);
-  pdf.roundedRect(badgeX, badgeY, 42, 26, 2, 2, 'F');
+  pdf.roundedRect(badgeX, badgeY, 46, 30, 3, 3, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(7);
-  pdf.text('N. PERIZIA', badgeX + 21, badgeY + 6, { align: 'center' });
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(report.report_number, badgeX + 21, badgeY + 13, { align: 'center' });
-  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(format(new Date(report.report_date), 'dd/MM/yyyy'), badgeX + 21, badgeY + 20, { align: 'center' });
-
-  y = headerHeight + 8;
-
-  // Client and Recipient info
-  pdf.setTextColor(30, 41, 59);
-  pdf.setFillColor(241, 245, 249);
-  pdf.roundedRect(margin, y, contentWidth, 35, 2, 2, 'F');
-
+  pdf.text('N. PERIZIA', badgeX + 23, badgeY + 7, { align: 'center' });
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(report.report_number, badgeX + 23, badgeY + 16, { align: 'center' });
   pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('COMMITTENTE', margin + 5, y + 8);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(report.customer.name, margin + 5, y + 14);
-  pdf.text(`Tel: ${report.customer.phone}`, margin + 5, y + 20);
+  pdf.text(format(new Date(report.report_date), 'dd/MM/yyyy'), badgeX + 23, badgeY + 24, { align: 'center' });
+
+  y = headerHeight + 10;
+
+  // ==================== CLIENT & RECIPIENT ====================
+  pdf.setFillColor(248, 250, 252);
+  pdf.roundedRect(margin, y, contentWidth, 38, 3, 3, 'F');
+  
+  // Left border accent
+  pdf.setFillColor(59, 130, 246);
+  pdf.rect(margin, y, 3, 38, 'F');
+
+  const halfWidth = contentWidth / 2;
+
+  // Committente
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('COMMITTENTE', margin + 10, y + 8);
+  
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(report.customer.name, margin + 10, y + 15);
+  
+  pdf.setFontSize(8);
+  pdf.setTextColor(71, 85, 105);
+  pdf.text(`Tel: ${report.customer.phone}`, margin + 10, y + 22);
   if (report.customer.email) {
-    pdf.text(`Email: ${report.customer.email}`, margin + 5, y + 26);
+    pdf.text(`Email: ${report.customer.email}`, margin + 10, y + 28);
   }
   if (report.customer.address) {
-    pdf.text(report.customer.address, margin + 5, y + 32);
+    pdf.text(report.customer.address, margin + 10, y + 34);
   }
 
+  // Separator line
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(margin + halfWidth, y + 5, margin + halfWidth, y + 33);
+
+  // Destinatario
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('DESTINATARIO PERIZIA', margin + contentWidth / 2 + 5, y + 8);
+  pdf.text('DESTINATARIO PERIZIA', margin + halfWidth + 8, y + 8);
+  
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(purposeLabels[report.purpose] || report.purpose, margin + contentWidth / 2 + 5, y + 14);
+  pdf.text(purposeLabels[report.purpose] || report.purpose, margin + halfWidth + 8, y + 15);
+  
+  pdf.setFontSize(8);
+  pdf.setTextColor(71, 85, 105);
   if (report.recipient_name) {
-    pdf.text(report.recipient_name, margin + contentWidth / 2 + 5, y + 20);
+    pdf.text(report.recipient_name, margin + halfWidth + 8, y + 22);
   }
   if (report.recipient_role) {
-    pdf.text(report.recipient_role, margin + contentWidth / 2 + 5, y + 26);
+    pdf.text(report.recipient_role, margin + halfWidth + 8, y + 28);
   }
 
-  y += 42;
+  y += 46;
 
-  // Device section
-  pdf.setFillColor(30, 41, 59);
-  pdf.roundedRect(margin, y, contentWidth, 8, 2, 2, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('DISPOSITIVO OGGETTO DI ANALISI', margin + 5, y + 5.5);
+  // ==================== DEVICE INFO ====================
+  addSectionHeader('DISPOSITIVO OGGETTO DI ANALISI');
 
-  y += 12;
+  pdf.setFillColor(255, 255, 255);
+  pdf.setDrawColor(226, 232, 240);
+  pdf.roundedRect(margin, y, contentWidth, 20, 2, 2, 'FD');
 
-  pdf.setTextColor(30, 41, 59);
-  pdf.setFontSize(9);
   const deviceInfo = [
     ['Tipo:', report.device_type],
     ['Marca:', report.device_brand || '-'],
@@ -166,167 +208,193 @@ export async function generateForensicReportPDF(report: ForensicReport, centro: 
     ['Condizione:', report.device_condition || '-']
   ];
 
+  pdf.setFontSize(8);
   deviceInfo.forEach(([label, value], i) => {
     const col = i % 3;
     const row = Math.floor(i / 3);
     const colWidth = contentWidth / 3;
     
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(label, margin + 5 + col * colWidth, y + row * 7);
+    pdf.setTextColor(100, 116, 139);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(value, margin + 25 + col * colWidth, y + row * 7);
+    pdf.text(label, margin + 5 + col * colWidth, y + 6 + row * 8);
+    
+    pdf.setTextColor(30, 41, 59);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(String(value), margin + 24 + col * colWidth, y + 6 + row * 8);
   });
 
-  y += 18;
+  y += 26;
 
-  // Analysis Summary
-  addNewPageIfNeeded(40);
-  pdf.setFillColor(30, 41, 59);
-  pdf.roundedRect(margin, y, contentWidth, 8, 2, 2, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('SOMMARIO DELLE OPERAZIONI DI ANALISI', margin + 5, y + 5.5);
-
-  y += 12;
+  // ==================== ANALYSIS SUMMARY ====================
+  addSectionHeader('SOMMARIO DELLE OPERAZIONI DI ANALISI');
 
   pdf.setTextColor(51, 65, 85);
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
   const summaryLines = pdf.splitTextToSize(report.analysis_summary, contentWidth - 10);
   pdf.text(summaryLines, margin + 5, y);
-  y += summaryLines.length * 4 + 8;
+  y += summaryLines.length * 4.5 + 10;
 
-  // Findings sections
-  // Using simple text markers instead of emojis (jsPDF doesn't support emojis)
+  // ==================== FINDINGS ====================
   const findings = [
-    { check: report.malware_check, title: 'VERIFICA MALWARE', result: report.malware_findings, marker: '[M]' },
-    { check: report.spyware_check, title: 'VERIFICA SPYWARE / SOFTWARE SPIA', result: report.spyware_findings, marker: '[S]' },
-    { check: report.compromised_accounts_check, title: 'VERIFICA ACCOUNT COMPROMESSI', result: report.compromised_accounts_findings, marker: '[A]' },
-    { check: report.data_integrity_check, title: 'VERIFICA INTEGRITA DATI', result: report.data_integrity_findings, marker: '[D]' }
+    { check: report.malware_check, title: 'VERIFICA MALWARE', result: report.malware_findings, color: [239, 68, 68] as [number, number, number] },
+    { check: report.spyware_check, title: 'VERIFICA SPYWARE / SOFTWARE SPIA', result: report.spyware_findings, color: [249, 115, 22] as [number, number, number] },
+    { check: report.compromised_accounts_check, title: 'VERIFICA ACCOUNT COMPROMESSI', result: report.compromised_accounts_findings, color: [234, 179, 8] as [number, number, number] },
+    { check: report.data_integrity_check, title: 'VERIFICA INTEGRITA DATI', result: report.data_integrity_findings, color: [59, 130, 246] as [number, number, number] }
   ];
 
   findings.forEach(finding => {
     if (finding.check) {
-      addNewPageIfNeeded(30);
+      addNewPageIfNeeded(35);
       
-      pdf.setFillColor(241, 245, 249);
-      pdf.roundedRect(margin, y, contentWidth, 8, 2, 2, 'F');
+      // Header with colored accent
+      pdf.setFillColor(248, 250, 252);
+      pdf.roundedRect(margin, y, contentWidth, 9, 2, 2, 'F');
+      pdf.setFillColor(finding.color[0], finding.color[1], finding.color[2]);
+      pdf.rect(margin, y, 4, 9, 'F');
+      
       pdf.setTextColor(30, 41, 59);
-      pdf.setFontSize(10);
+      pdf.setFontSize(9);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`${finding.marker}  ${finding.title}`, margin + 5, y + 5.5);
+      pdf.text(finding.title, margin + 8, y + 6);
       
-      y += 12;
+      y += 13;
       
-      pdf.setTextColor(51, 65, 85);
+      pdf.setTextColor(71, 85, 105);
       pdf.setFontSize(9);
       pdf.setFont('helvetica', 'normal');
       const resultText = finding.result || 'Nessuna anomalia rilevata';
       const resultLines = pdf.splitTextToSize(resultText, contentWidth - 10);
       pdf.text(resultLines, margin + 5, y);
-      y += resultLines.length * 4 + 8;
+      y += resultLines.length * 4.5 + 8;
     }
   });
 
   // Other findings
   if (report.other_findings) {
-    addNewPageIfNeeded(30);
-    pdf.setFillColor(241, 245, 249);
-    pdf.roundedRect(margin, y, contentWidth, 8, 2, 2, 'F');
-    pdf.setTextColor(30, 41, 59);
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('ULTERIORI RISULTATI E NOTE TECNICHE', margin + 5, y + 5.5);
+    addSectionHeader('ULTERIORI RISULTATI E NOTE TECNICHE', [100, 116, 139]);
     
-    y += 12;
-    
-    pdf.setTextColor(51, 65, 85);
+    pdf.setTextColor(71, 85, 105);
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
     const otherLines = pdf.splitTextToSize(report.other_findings, contentWidth - 10);
     pdf.text(otherLines, margin + 5, y);
-    y += otherLines.length * 4 + 8;
+    y += otherLines.length * 4.5 + 8;
   }
 
-  // Conclusions
-  addNewPageIfNeeded(50);
-  pdf.setFillColor(59, 130, 246);
-  pdf.roundedRect(margin, y, contentWidth, 8, 2, 2, 'F');
-  pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
-  pdf.text('CONCLUSIONI', margin + 5, y + 5.5);
+  // ==================== CONCLUSIONS ====================
+  addSectionHeader('CONCLUSIONI', [16, 185, 129]);
 
-  y += 12;
-
+  pdf.setFillColor(240, 253, 244);
+  pdf.setDrawColor(134, 239, 172);
+  const conclusionLines = pdf.splitTextToSize(report.conclusions, contentWidth - 16);
+  const conclusionHeight = conclusionLines.length * 4.5 + 8;
+  pdf.roundedRect(margin, y, contentWidth, conclusionHeight, 2, 2, 'FD');
+  
   pdf.setTextColor(30, 41, 59);
   pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
-  const conclusionLines = pdf.splitTextToSize(report.conclusions, contentWidth - 10);
-  pdf.text(conclusionLines, margin + 5, y);
-  y += conclusionLines.length * 4 + 8;
+  pdf.text(conclusionLines, margin + 8, y + 5);
+  y += conclusionHeight + 6;
 
   // Recommendations
   if (report.recommendations) {
-    addNewPageIfNeeded(30);
-    pdf.setFillColor(254, 243, 199);
-    pdf.roundedRect(margin, y, contentWidth, 8, 2, 2, 'F');
-    pdf.setTextColor(30, 41, 59);
-    pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('RACCOMANDAZIONI', margin + 5, y + 5.5);
+    addSectionHeader('RACCOMANDAZIONI', [234, 179, 8]);
 
-    y += 12;
-
-    pdf.setTextColor(51, 65, 85);
+    pdf.setFillColor(254, 252, 232);
+    pdf.setDrawColor(253, 224, 71);
+    const recLines = pdf.splitTextToSize(report.recommendations, contentWidth - 16);
+    const recHeight = recLines.length * 4.5 + 8;
+    pdf.roundedRect(margin, y, contentWidth, recHeight, 2, 2, 'FD');
+    
+    pdf.setTextColor(71, 85, 105);
     pdf.setFontSize(9);
     pdf.setFont('helvetica', 'normal');
-    const recLines = pdf.splitTextToSize(report.recommendations, contentWidth - 10);
-    pdf.text(recLines, margin + 5, y);
-    y += recLines.length * 4 + 8;
+    pdf.text(recLines, margin + 8, y + 5);
+    y += recHeight + 8;
   }
 
-  // Signature section
-  addNewPageIfNeeded(50);
-  y += 10;
-  pdf.setDrawColor(203, 213, 225);
-  pdf.line(margin, y, pageWidth - margin, y);
-
-  y += 10;
-
-  pdf.setTextColor(30, 41, 59);
-  pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
-  pdf.text(`Data: ${format(new Date(report.report_date), 'd MMMM yyyy', { locale: it })}`, margin, y);
-
-  pdf.text('Il Tecnico:', pageWidth - margin - 60, y);
-  y += 6;
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(report.technician_name, pageWidth - margin - 60, y);
-  if (report.technician_qualification) {
-    y += 5;
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(8);
-    pdf.text(report.technician_qualification, pageWidth - margin - 60, y);
-  }
-
-  y += 15;
-  pdf.setDrawColor(100, 116, 139);
-  pdf.line(pageWidth - margin - 60, y, pageWidth - margin, y);
-  pdf.setFontSize(7);
-  pdf.setTextColor(100, 116, 139);
-  pdf.text('(firma)', pageWidth - margin - 30, y + 4, { align: 'center' });
-
-  // Footer
-  const footerY = pdf.internal.pageSize.getHeight() - 15;
-  pdf.setDrawColor(226, 232, 240);
-  pdf.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
+  // ==================== SIGNATURE SECTION ====================
+  addNewPageIfNeeded(70);
+  y += 8;
   
+  // Separator
+  pdf.setDrawColor(203, 213, 225);
+  pdf.setLineWidth(0.5);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 12;
+
+  // Two columns: date on left, signature on right
+  const signatureBlockX = pageWidth - margin - 70;
+
+  // Date section
   pdf.setTextColor(100, 116, 139);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Data della perizia:', margin, y);
+  
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(format(new Date(report.report_date), 'd MMMM yyyy', { locale: it }), margin, y + 6);
+
+  // Technician signature section
+  pdf.setTextColor(100, 116, 139);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Il Tecnico Incaricato:', signatureBlockX, y);
+  
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(report.technician_name, signatureBlockX, y + 6);
+  
+  if (report.technician_qualification) {
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'italic');
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(report.technician_qualification, signatureBlockX, y + 12);
+    y += 6;
+  }
+
+  y += 18;
+
+  // Signature box
+  if (report.technician_signature) {
+    // Has signature - display it
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(203, 213, 225);
+    pdf.roundedRect(signatureBlockX, y, 68, 28, 2, 2, 'FD');
+    
+    try {
+      pdf.addImage(report.technician_signature, 'PNG', signatureBlockX + 4, y + 2, 60, 24);
+    } catch (e) {
+      console.log('Could not load signature');
+    }
+    y += 30;
+  } else {
+    // No signature - show placeholder line
+    pdf.setDrawColor(100, 116, 139);
+    pdf.line(signatureBlockX, y + 20, signatureBlockX + 68, y + 20);
+    
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFontSize(7);
+    pdf.text('(firma del tecnico)', signatureBlockX + 34, y + 26, { align: 'center' });
+    y += 30;
+  }
+
+  // ==================== FOOTER ====================
+  const footerY = pageHeight - 12;
+  
+  pdf.setDrawColor(226, 232, 240);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, footerY - 6, pageWidth - margin, footerY - 6);
+  
+  pdf.setTextColor(148, 163, 184);
   pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'normal');
   pdf.text(
-    `Perizia n. ${report.report_number} - Documento generato il ${format(new Date(), 'dd/MM/yyyy HH:mm')} - ${centro.business_name}`,
+    `Perizia n. ${report.report_number} | Documento generato il ${format(new Date(), 'dd/MM/yyyy HH:mm')} | ${centro.business_name}`,
     pageWidth / 2,
     footerY,
     { align: 'center' }
