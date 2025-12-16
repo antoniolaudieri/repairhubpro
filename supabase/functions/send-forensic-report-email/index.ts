@@ -20,239 +20,373 @@ interface SmtpConfig {
   enabled: boolean;
 }
 
-function generateForensicPDF(report: any, centro: any, customer: any): string {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  const contentWidth = pageWidth - margin * 2;
-  let y = 20;
+const purposeLabels: Record<string, string> = {
+  avvocato: 'Avvocato',
+  polizia_postale: 'Polizia Postale',
+  assicurazione: 'Assicurazione',
+  altro: 'Altro'
+};
 
-  const purposeLabels: Record<string, string> = {
-    avvocato: "Avvocato",
-    polizia_postale: "Polizia Postale",
-    assicurazione: "Assicurazione",
-    altro: "Altro",
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function formatDateLong(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function formatDateTime(date: Date): string {
+  return date.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function generateForensicPDF(report: any, centro: any): string {
+  const pdf = new jsPDF('p', 'mm', 'a4');
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
+  const margin = 15;
+  const contentWidth = pageWidth - margin * 2;
+  let y = 15;
+
+  const addNewPageIfNeeded = (requiredSpace: number) => {
+    if (y + requiredSpace > pageHeight - 25) {
+      pdf.addPage();
+      y = 20;
+      return true;
+    }
+    return false;
   };
 
-  // Header
-  doc.setFillColor(30, 41, 59);
-  doc.rect(0, 0, pageWidth, 40, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("PERIZIA TECNICA FORENSE", pageWidth / 2, 20, { align: "center" });
-  doc.setFontSize(12);
-  doc.setFont("helvetica", "normal");
-  doc.text(`N. ${report.report_number}`, pageWidth / 2, 32, { align: "center" });
+  const addSectionHeader = (title: string, bgColor: [number, number, number] = [30, 41, 59]) => {
+    addNewPageIfNeeded(25);
+    pdf.setFillColor(bgColor[0], bgColor[1], bgColor[2]);
+    pdf.roundedRect(margin, y, contentWidth, 9, 2, 2, 'F');
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(title, margin + 5, y + 6);
+    y += 13;
+  };
 
-  y = 55;
-  doc.setTextColor(0, 0, 0);
+  // ==================== HEADER ====================
+  const headerHeight = 58;
+  
+  pdf.setFillColor(15, 23, 42);
+  pdf.rect(0, 0, pageWidth, headerHeight, 'F');
+  
+  pdf.setFillColor(59, 130, 246);
+  pdf.rect(0, headerHeight - 3, pageWidth, 3, 'F');
 
-  // Centro info
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "bold");
-  doc.text("CENTRO ASSISTENZA", margin, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.text(centro.business_name || "", margin, y);
-  y += 5;
-  doc.text(centro.address || "", margin, y);
-  y += 5;
-  doc.text(`Tel: ${centro.phone || ""} - Email: ${centro.email || ""}`, margin, y);
+  const textStartX = margin;
+  const headerTextY = 14;
+
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('PERIZIA TECNICA FORENSE', textStartX, headerTextY);
+
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setTextColor(203, 213, 225);
+  pdf.text(centro.business_name, textStartX, headerTextY + 7);
+  pdf.text(`${centro.address} | Tel: ${centro.phone}`, textStartX, headerTextY + 13);
+  pdf.text(`Email: ${centro.email}`, textStartX, headerTextY + 19);
   if (centro.vat_number) {
-    y += 5;
-    doc.text(`P.IVA: ${centro.vat_number}`, margin, y);
+    pdf.text(`P.IVA: ${centro.vat_number}`, textStartX, headerTextY + 25);
   }
 
-  y += 15;
+  // Report number badge
+  const badgeX = pageWidth - margin - 46;
+  const badgeY = 10;
+  pdf.setFillColor(59, 130, 246);
+  pdf.roundedRect(badgeX, badgeY, 44, 34, 3, 3, 'F');
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('N. PERIZIA', badgeX + 22, badgeY + 7, { align: 'center' });
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(report.report_number, badgeX + 22, badgeY + 16, { align: 'center' });
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(formatDate(report.report_date), badgeX + 22, badgeY + 26, { align: 'center' });
 
-  // Customer info
-  doc.setFont("helvetica", "bold");
-  doc.text("CLIENTE", margin, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.text(`Nome: ${customer?.name || "N/D"}`, margin, y);
-  y += 5;
-  doc.text(`Email: ${customer?.email || "N/D"}`, margin, y);
-  y += 5;
-  doc.text(`Tel: ${customer?.phone || "N/D"}`, margin, y);
+  y = headerHeight + 10;
 
-  y += 15;
+  // ==================== CLIENT & RECIPIENT ====================
+  pdf.setFillColor(248, 250, 252);
+  pdf.roundedRect(margin, y, contentWidth, 38, 3, 3, 'F');
+  
+  pdf.setFillColor(59, 130, 246);
+  pdf.rect(margin, y, 3, 38, 'F');
 
-  // Device info
-  doc.setFont("helvetica", "bold");
-  doc.text("DISPOSITIVO ANALIZZATO", margin, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.text(`Tipo: ${report.device_type || "N/D"}`, margin, y);
-  y += 5;
-  doc.text(`Marca: ${report.device_brand || "N/D"} - Modello: ${report.device_model || "N/D"}`, margin, y);
-  if (report.device_serial) {
-    y += 5;
-    doc.text(`Seriale: ${report.device_serial}`, margin, y);
+  const halfWidth = contentWidth / 2;
+
+  // Committente
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('COMMITTENTE', margin + 10, y + 8);
+  
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(report.customer?.name || 'N/D', margin + 10, y + 15);
+  
+  pdf.setFontSize(8);
+  pdf.setTextColor(71, 85, 105);
+  pdf.text(`Tel: ${report.customer?.phone || 'N/D'}`, margin + 10, y + 22);
+  if (report.customer?.email) {
+    pdf.text(`Email: ${report.customer.email}`, margin + 10, y + 28);
   }
-  if (report.device_imei) {
-    y += 5;
-    doc.text(`IMEI: ${report.device_imei}`, margin, y);
+  if (report.customer?.address) {
+    pdf.text(report.customer.address, margin + 10, y + 34);
   }
 
-  y += 15;
+  // Separator line
+  pdf.setDrawColor(226, 232, 240);
+  pdf.line(margin + halfWidth, y + 5, margin + halfWidth, y + 33);
 
-  // Purpose
-  doc.setFont("helvetica", "bold");
-  doc.text("FINALITÀ PERIZIA", margin, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.text(purposeLabels[report.purpose] || report.purpose || "N/D", margin, y);
+  // Destinatario
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('DESTINATARIO PERIZIA', margin + halfWidth + 8, y + 8);
+  
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(purposeLabels[report.purpose] || report.purpose, margin + halfWidth + 8, y + 15);
+  
+  pdf.setFontSize(8);
+  pdf.setTextColor(71, 85, 105);
   if (report.recipient_name) {
-    y += 5;
-    doc.text(`Destinatario: ${report.recipient_name} ${report.recipient_role ? `(${report.recipient_role})` : ""}`, margin, y);
+    pdf.text(report.recipient_name, margin + halfWidth + 8, y + 22);
+  }
+  if (report.recipient_role) {
+    pdf.text(report.recipient_role, margin + halfWidth + 8, y + 28);
   }
 
-  y += 15;
+  y += 46;
 
-  // Analysis summary
-  doc.setFont("helvetica", "bold");
-  doc.text("RIEPILOGO ANALISI", margin, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  const summaryLines = doc.splitTextToSize(report.analysis_summary || "", contentWidth);
-  doc.text(summaryLines, margin, y);
-  y += summaryLines.length * 5 + 10;
+  // ==================== DEVICE INFO ====================
+  addSectionHeader('DISPOSITIVO OGGETTO DI ANALISI');
 
-  // Check if we need a new page
-  if (y > 250) {
-    doc.addPage();
-    y = 20;
-  }
+  pdf.setFillColor(255, 255, 255);
+  pdf.setDrawColor(226, 232, 240);
+  pdf.roundedRect(margin, y, contentWidth, 20, 2, 2, 'FD');
 
-  // Check results
-  doc.setFont("helvetica", "bold");
-  doc.text("RISULTATI VERIFICHE", margin, y);
-  y += 8;
-
-  const checks = [
-    { label: "Malware", checked: report.malware_check, findings: report.malware_findings },
-    { label: "Spyware", checked: report.spyware_check, findings: report.spyware_findings },
-    { label: "Account Compromessi", checked: report.compromised_accounts_check, findings: report.compromised_accounts_findings },
-    { label: "Integrità Dati", checked: report.data_integrity_check, findings: report.data_integrity_findings },
+  const deviceInfo = [
+    ['Tipo:', report.device_type || '-'],
+    ['Marca:', report.device_brand || '-'],
+    ['Modello:', report.device_model || '-'],
+    ['Seriale:', report.device_serial || '-'],
+    ['IMEI:', report.device_imei || '-'],
+    ['Condizione:', report.device_condition || '-']
   ];
 
-  for (const check of checks) {
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
+  pdf.setFontSize(8);
+  deviceInfo.forEach(([label, value], i) => {
+    const col = i % 3;
+    const row = Math.floor(i / 3);
+    const colWidth = contentWidth / 3;
+    
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(label, margin + 5 + col * colWidth, y + 6 + row * 8);
+    
+    pdf.setTextColor(30, 41, 59);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(String(value), margin + 24 + col * colWidth, y + 6 + row * 8);
+  });
+
+  y += 26;
+
+  // ==================== ANALYSIS SUMMARY ====================
+  addSectionHeader('SOMMARIO DELLE OPERAZIONI DI ANALISI');
+
+  pdf.setTextColor(51, 65, 85);
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  const summaryLines = pdf.splitTextToSize(report.analysis_summary || '', contentWidth - 10);
+  pdf.text(summaryLines, margin + 5, y);
+  y += summaryLines.length * 4.5 + 10;
+
+  // ==================== FINDINGS ====================
+  const findings = [
+    { check: report.malware_check, title: 'VERIFICA MALWARE', result: report.malware_findings, color: [239, 68, 68] as [number, number, number] },
+    { check: report.spyware_check, title: 'VERIFICA SPYWARE / SOFTWARE SPIA', result: report.spyware_findings, color: [249, 115, 22] as [number, number, number] },
+    { check: report.compromised_accounts_check, title: 'VERIFICA ACCOUNT COMPROMESSI', result: report.compromised_accounts_findings, color: [234, 179, 8] as [number, number, number] },
+    { check: report.data_integrity_check, title: 'VERIFICA INTEGRITA DATI', result: report.data_integrity_findings, color: [59, 130, 246] as [number, number, number] }
+  ];
+
+  findings.forEach(finding => {
+    if (finding.check) {
+      addNewPageIfNeeded(35);
+      
+      pdf.setFillColor(248, 250, 252);
+      pdf.roundedRect(margin, y, contentWidth, 9, 2, 2, 'F');
+      pdf.setFillColor(finding.color[0], finding.color[1], finding.color[2]);
+      pdf.rect(margin, y, 4, 9, 'F');
+      
+      pdf.setTextColor(30, 41, 59);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(finding.title, margin + 8, y + 6);
+      
+      y += 13;
+      
+      pdf.setTextColor(71, 85, 105);
+      pdf.setFontSize(9);
+      pdf.setFont('helvetica', 'normal');
+      const resultText = finding.result || 'Nessuna anomalia rilevata';
+      const resultLines = pdf.splitTextToSize(resultText, contentWidth - 10);
+      pdf.text(resultLines, margin + 5, y);
+      y += resultLines.length * 4.5 + 8;
     }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    const status = check.checked ? "✓ RILEVATO" : "✗ NON RILEVATO";
-    doc.text(`${check.label}: ${status}`, margin, y);
-    y += 5;
-    if (check.findings) {
-      doc.setFont("helvetica", "normal");
-      const findingsLines = doc.splitTextToSize(check.findings, contentWidth);
-      doc.text(findingsLines, margin, y);
-      y += findingsLines.length * 4 + 5;
-    }
-  }
+  });
 
   // Other findings
   if (report.other_findings) {
-    if (y > 250) {
-      doc.addPage();
-      y = 20;
-    }
-    y += 5;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("ALTRE EVIDENZE", margin, y);
-    y += 6;
-    doc.setFont("helvetica", "normal");
-    const otherLines = doc.splitTextToSize(report.other_findings, contentWidth);
-    doc.text(otherLines, margin, y);
-    y += otherLines.length * 5 + 10;
+    addSectionHeader('ULTERIORI RISULTATI E NOTE TECNICHE', [100, 116, 139]);
+    
+    pdf.setTextColor(71, 85, 105);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    const otherLines = pdf.splitTextToSize(report.other_findings, contentWidth - 10);
+    pdf.text(otherLines, margin + 5, y);
+    y += otherLines.length * 4.5 + 8;
   }
 
-  // Conclusions
-  if (y > 220) {
-    doc.addPage();
-    y = 20;
-  }
-  doc.setFont("helvetica", "bold");
-  doc.text("CONCLUSIONI", margin, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  const conclusionLines = doc.splitTextToSize(report.conclusions || "", contentWidth);
-  doc.text(conclusionLines, margin, y);
-  y += conclusionLines.length * 5 + 10;
+  // ==================== CONCLUSIONS ====================
+  addSectionHeader('CONCLUSIONI', [16, 185, 129]);
+
+  pdf.setFillColor(240, 253, 244);
+  pdf.setDrawColor(134, 239, 172);
+  const conclusionLines = pdf.splitTextToSize(report.conclusions || '', contentWidth - 16);
+  const conclusionHeight = conclusionLines.length * 4.5 + 8;
+  pdf.roundedRect(margin, y, contentWidth, conclusionHeight, 2, 2, 'FD');
+  
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(9);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(conclusionLines, margin + 8, y + 5);
+  y += conclusionHeight + 6;
 
   // Recommendations
   if (report.recommendations) {
-    if (y > 250) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.setFont("helvetica", "bold");
-    doc.text("RACCOMANDAZIONI", margin, y);
-    y += 6;
-    doc.setFont("helvetica", "normal");
+    addSectionHeader('RACCOMANDAZIONI', [234, 179, 8]);
+
+    pdf.setFillColor(254, 252, 232);
+    pdf.setDrawColor(253, 224, 71);
+    
+    let recText = '';
     try {
       const recs = typeof report.recommendations === 'string' 
         ? JSON.parse(report.recommendations) 
         : report.recommendations;
       if (Array.isArray(recs)) {
-        for (const rec of recs) {
-          const recLines = doc.splitTextToSize(`• ${rec}`, contentWidth);
-          doc.text(recLines, margin, y);
-          y += recLines.length * 5 + 2;
-        }
+        recText = recs.map((r: string) => `• ${r}`).join('\n');
+      } else {
+        recText = String(report.recommendations);
       }
     } catch {
-      const recLines = doc.splitTextToSize(String(report.recommendations), contentWidth);
-      doc.text(recLines, margin, y);
+      recText = String(report.recommendations);
     }
+    
+    const recLines = pdf.splitTextToSize(recText, contentWidth - 16);
+    const recHeight = recLines.length * 4.5 + 8;
+    pdf.roundedRect(margin, y, contentWidth, recHeight, 2, 2, 'FD');
+    
+    pdf.setTextColor(71, 85, 105);
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(recLines, margin + 8, y + 5);
+    y += recHeight + 8;
   }
 
-  // Technician signature
-  if (y > 240) {
-    doc.addPage();
-    y = 20;
-  }
-  y += 15;
-  doc.setFont("helvetica", "bold");
-  doc.text("TECNICO RESPONSABILE", margin, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.text(report.technician_name || "N/D", margin, y);
+  // ==================== SIGNATURE SECTION ====================
+  addNewPageIfNeeded(70);
+  y += 8;
+  
+  pdf.setDrawColor(203, 213, 225);
+  pdf.setLineWidth(0.5);
+  pdf.line(margin, y, pageWidth - margin, y);
+  y += 12;
+
+  const signatureBlockX = pageWidth - margin - 70;
+
+  // Date section
+  pdf.setTextColor(100, 116, 139);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Data della perizia:', margin, y);
+  
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(formatDateLong(report.report_date), margin, y + 6);
+
+  // Technician signature section
+  pdf.setTextColor(100, 116, 139);
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text('Il Tecnico Incaricato:', signatureBlockX, y);
+  
+  pdf.setTextColor(30, 41, 59);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(report.technician_name || 'N/D', signatureBlockX, y + 6);
+  
   if (report.technician_qualification) {
-    y += 5;
-    doc.text(report.technician_qualification, margin, y);
+    pdf.setFontSize(8);
+    pdf.setFont('helvetica', 'italic');
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(report.technician_qualification, signatureBlockX, y + 12);
+    y += 6;
   }
 
-  // Date and footer
-  y += 15;
-  const reportDate = new Date(report.report_date).toLocaleDateString('it-IT', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  });
-  doc.text(`Data perizia: ${reportDate}`, margin, y);
+  y += 18;
 
-  // Footer on all pages
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(128, 128, 128);
-    doc.text(
-      `${centro.business_name} - Documento generato automaticamente - Pagina ${i} di ${pageCount}`,
-      pageWidth / 2,
-      doc.internal.pageSize.getHeight() - 10,
-      { align: "center" }
-    );
+  // Signature box
+  if (report.technician_signature) {
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(203, 213, 225);
+    pdf.roundedRect(signatureBlockX, y, 68, 28, 2, 2, 'FD');
+    
+    try {
+      pdf.addImage(report.technician_signature, 'PNG', signatureBlockX + 4, y + 2, 60, 24);
+    } catch (e) {
+      console.log('Could not load signature');
+    }
+    y += 30;
+  } else {
+    pdf.setDrawColor(100, 116, 139);
+    pdf.line(signatureBlockX, y + 20, signatureBlockX + 68, y + 20);
+    
+    pdf.setTextColor(100, 116, 139);
+    pdf.setFontSize(7);
+    pdf.text('(firma del tecnico)', signatureBlockX + 34, y + 26, { align: 'center' });
+    y += 30;
   }
 
-  return doc.output('datauristring').split(',')[1]; // Return base64
+  // ==================== FOOTER ====================
+  const footerY = pageHeight - 12;
+  
+  pdf.setDrawColor(226, 232, 240);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin, footerY - 6, pageWidth - margin, footerY - 6);
+  
+  pdf.setTextColor(148, 163, 184);
+  pdf.setFontSize(7);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(
+    `Perizia n. ${report.report_number} | Documento generato il ${formatDateTime(new Date())} | ${centro.business_name}`,
+    pageWidth / 2,
+    footerY,
+    { align: 'center' }
+  );
+
+  return pdf.output('datauristring').split(',')[1];
 }
 
 serve(async (req) => {
@@ -268,7 +402,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get report data
     const { data: report, error: reportError } = await supabase
       .from("forensic_reports")
       .select("*, customer:customers(id, name, email, phone, address)")
@@ -277,7 +410,6 @@ serve(async (req) => {
 
     if (reportError || !report) throw new Error("Report not found");
 
-    // Get centro data including settings
     const { data: centro, error: centroError } = await supabase
       .from("centri_assistenza")
       .select("business_name, address, phone, email, vat_number, settings")
@@ -286,16 +418,8 @@ serve(async (req) => {
 
     if (centroError || !centro) throw new Error("Centro not found");
 
-    const purposeLabels: Record<string, string> = {
-      avvocato: "Avvocato",
-      polizia_postale: "Polizia Postale",
-      assicurazione: "Assicurazione",
-      altro: "Altro",
-    };
-
-    // Generate PDF
     console.log("Generating PDF...");
-    const pdfBase64 = generateForensicPDF(report, centro, report.customer);
+    const pdfBase64 = generateForensicPDF(report, centro);
     console.log("PDF generated successfully");
 
     const emailHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f4f4f5"><div style="max-width:600px;margin:0 auto;padding:20px"><div style="background:linear-gradient(135deg,#1e293b,#334155);padding:30px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:#fff;margin:0;font-size:24px">📋 Perizia Tecnica Forense</h1><p style="color:#94a3b8;margin:10px 0 0 0">N. ${report.report_number}</p></div><div style="background:#fff;padding:30px;border-radius:0 0 12px 12px"><p style="color:#374151;font-size:16px">Gentile <strong>${customerName}</strong>,</p><p style="color:#374151;font-size:14px">In allegato alla presente troverà la perizia tecnica forense relativa al dispositivo da Lei consegnato.</p><div style="background:#f8fafc;padding:20px;border-radius:8px;margin:20px 0"><h3 style="color:#1e293b;margin:0 0 15px 0">Riepilogo</h3><p style="margin:5px 0;font-size:14px"><strong>N. Perizia:</strong> ${report.report_number}</p><p style="margin:5px 0;font-size:14px"><strong>Dispositivo:</strong> ${report.device_brand || ""} ${report.device_model || ""}</p><p style="margin:5px 0;font-size:14px"><strong>Destinatario:</strong> ${purposeLabels[report.purpose] || report.purpose}</p></div><p style="color:#374151;font-size:14px;margin-top:20px">Cordiali saluti,<br><strong>${centro.business_name}</strong></p></div><div style="text-align:center;padding:20px"><p style="color:#64748b;font-size:12px">${centro.business_name} | ${centro.address} | ${centro.phone}</p></div></div></body></html>`;
@@ -303,7 +427,6 @@ serve(async (req) => {
     const subject = `Perizia Tecnica n. ${report.report_number} - ${centro.business_name}`;
     const pdfFilename = `Perizia_${report.report_number}.pdf`;
 
-    // Check if Centro has SMTP configured
     const settings = centro.settings as { smtp_config?: SmtpConfig } | null;
     const smtpConfig = settings?.smtp_config;
 
@@ -349,7 +472,6 @@ serve(async (req) => {
       }
     }
 
-    // Fallback to Resend if SMTP not configured or failed
     if (!emailSent) {
       console.log("Using Resend fallback");
       const resendApiKey = Deno.env.get("RESEND_API_KEY");
@@ -371,7 +493,6 @@ serve(async (req) => {
       console.log("Email sent via Resend successfully with PDF attachment");
     }
 
-    // Update report sent status
     await supabase
       .from("forensic_reports")
       .update({ 
