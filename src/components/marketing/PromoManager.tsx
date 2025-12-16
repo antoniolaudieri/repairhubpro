@@ -213,7 +213,7 @@ export function PromoManager({ centroId }: PromoManagerProps) {
                   Nuova Promo
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>
                     {editingPromo ? "Modifica Promozione" : "Nuova Promozione"}
