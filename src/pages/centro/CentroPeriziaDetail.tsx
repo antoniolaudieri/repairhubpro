@@ -222,41 +222,42 @@ export default function CentroPeriziaDetail() {
   return (
     <CentroLayout>
       <PageTransition>
-        <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/centro/perizie')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{report.report_number}</h1>
-            <Badge variant={statusConfig[report.status]?.variant || 'secondary'}>
-              {statusConfig[report.status]?.label || report.status}
-            </Badge>
+        <div className="space-y-6 p-4 md:p-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/centro/perizie')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold">{report.report_number}</h1>
+                <Badge variant={statusConfig[report.status]?.variant || 'secondary'}>
+                  {statusConfig[report.status]?.label || report.status}
+                </Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {format(new Date(report.report_date), 'd MMMM yyyy', { locale: it })}
+              </p>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={handleDownloadPDF}>
+                <Download className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
+              {report.status === 'draft' && (
+                <Button variant="outline" size="sm" onClick={handleFinalize}>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Finalizza
+                </Button>
+              )}
+              {report.customer.email && (
+                <Button size="sm" onClick={handleSendEmail} disabled={sending} className="bg-blue-600 hover:bg-blue-700">
+                  <Send className="h-4 w-4 mr-2" />
+                  {sending ? 'Invio...' : 'Invia Email'}
+                </Button>
+              )}
+            </div>
           </div>
-          <p className="text-muted-foreground">
-            {format(new Date(report.report_date), 'd MMMM yyyy', { locale: it })}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleDownloadPDF}>
-            <Download className="h-4 w-4 mr-2" />
-            Scarica PDF
-          </Button>
-          {report.status === 'draft' && (
-            <Button variant="outline" onClick={handleFinalize}>
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Finalizza
-            </Button>
-          )}
-          {report.status !== 'draft' && report.customer.email && (
-            <Button onClick={handleSendEmail} disabled={sending}>
-              <Send className="h-4 w-4 mr-2" />
-              {sending ? 'Invio...' : 'Invia Email'}
-            </Button>
-          )}
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

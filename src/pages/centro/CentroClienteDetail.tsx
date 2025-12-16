@@ -10,7 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   ArrowLeft, Mail, Phone, MapPin, Edit, Smartphone, FileText, 
   Calendar, User, Laptop, Tablet, Monitor, Gamepad2, Watch, HelpCircle,
-  ChevronRight, Clock, Euro, ShoppingCart, Package, UserPlus, UserX, Loader2, KeyRound, Check, CreditCard
+  ChevronRight, Clock, Euro, ShoppingCart, Package, UserPlus, UserX, Loader2, KeyRound, Check, CreditCard,
+  Shield, Send
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -80,6 +81,17 @@ interface RepairRequest {
   corner?: { business_name: string } | null;
 }
 
+interface ForensicReport {
+  id: string;
+  report_number: string;
+  purpose: string;
+  status: string;
+  created_at: string;
+  sent_at: string | null;
+  device_brand: string | null;
+  device_model: string | null;
+}
+
 const deviceIcons: Record<string, React.ReactNode> = {
   smartphone: <Smartphone className="h-5 w-5" />,
   tablet: <Tablet className="h-5 w-5" />,
@@ -97,6 +109,7 @@ export default function CentroClienteDetail() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [repairRequests, setRepairRequests] = useState<RepairRequest[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [forensicReports, setForensicReports] = useState<ForensicReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [editOpen, setEditOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
@@ -289,6 +302,16 @@ export default function CentroClienteDetail() {
 
       if (ordersError) throw ordersError;
       setOrders(ordersData || []);
+
+      // Load forensic reports
+      const { data: forensicData, error: forensicError } = await supabase
+        .from("forensic_reports")
+        .select("id, report_number, purpose, status, created_at, sent_at, device_brand, device_model")
+        .eq("customer_id", id)
+        .order("created_at", { ascending: false });
+
+      if (forensicError) throw forensicError;
+      setForensicReports(forensicData || []);
     } catch (error: any) {
       toast.error(error.message || "Errore nel caricamento dei dati");
       navigate("/centro/clienti");
@@ -888,6 +911,71 @@ export default function CentroClienteDetail() {
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Forensic Reports */}
+          {forensicReports.length > 0 && (
+            <motion.div variants={itemVariants}>
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Shield className="h-4 w-4" />
+                      Perizie Forensi
+                    </CardTitle>
+                    <Badge variant="secondary" className="text-xs">{forensicReports.length}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-1.5">
+                    {forensicReports.map((report) => {
+                      const statusConfig: Record<string, { label: string; className: string }> = {
+                        draft: { label: "Bozza", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
+                        finalized: { label: "Finalizzata", className: "bg-primary/10 text-primary border-primary/20" },
+                        sent: { label: "Inviata", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+                      };
+                      const { label, className } = statusConfig[report.status] || { label: report.status, className: "" };
+                      
+                      return (
+                        <div
+                          key={report.id}
+                          className="flex items-center gap-2 p-2.5 border rounded-lg hover:bg-muted/30 cursor-pointer transition-colors"
+                          onClick={() => navigate(`/centro/perizie/${report.id}`)}
+                        >
+                          <div className="h-10 w-10 flex items-center justify-center rounded-lg border bg-blue-500/10 text-blue-600">
+                            <Shield className="h-4 w-4" />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate font-mono">{report.report_number}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {report.device_brand} {report.device_model} • {report.purpose}
+                            </p>
+                            {report.sent_at && (
+                              <p className="text-[10px] text-emerald-600 flex items-center gap-1">
+                                <Send className="h-2.5 w-2.5" />
+                                Inviata {format(new Date(report.sent_at), "dd MMM yy", { locale: it })}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="flex flex-col items-end gap-0.5">
+                            <Badge variant="outline" className={`text-[10px] ${className}`}>
+                              {label}
+                            </Badge>
+                            <p className="text-[10px] text-muted-foreground">
+                              {format(new Date(report.created_at), "dd MMM yy", { locale: it })}
+                            </p>
+                          </div>
+                          
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
           <CustomerDialog
             open={editOpen}
