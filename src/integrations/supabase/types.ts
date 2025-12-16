@@ -2123,6 +2123,7 @@ export type Database = {
           estimated_cost: number | null
           final_cost: number | null
           final_cost_accepted_at: string | null
+          final_cost_accepted_by_phone: boolean | null
           final_cost_signature: string | null
           forfeited_at: string | null
           forfeiture_warning_sent_at: string | null
@@ -2155,6 +2156,7 @@ export type Database = {
           estimated_cost?: number | null
           final_cost?: number | null
           final_cost_accepted_at?: string | null
+          final_cost_accepted_by_phone?: boolean | null
           final_cost_signature?: string | null
           forfeited_at?: string | null
           forfeiture_warning_sent_at?: string | null
@@ -2187,6 +2189,7 @@ export type Database = {
           estimated_cost?: number | null
           final_cost?: number | null
           final_cost_accepted_at?: string | null
+          final_cost_accepted_by_phone?: boolean | null
           final_cost_signature?: string | null
           forfeited_at?: string | null
           forfeiture_warning_sent_at?: string | null

@@ -152,6 +152,8 @@ interface RepairDetail {
   diagnostic_fee_paid: boolean | null;
   intake_signature: string | null;
   intake_signature_date: string | null;
+  final_cost_accepted_at: string | null;
+  final_cost_accepted_by_phone: boolean | null;
   created_at: string;
   started_at: string | null;
   parts_arrived_at: string | null;
@@ -219,6 +221,8 @@ export default function RepairDetail() {
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [pendingStatusChange, setPendingStatusChange] = useState<string | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendingFinalCostEmail, setSendingFinalCostEmail] = useState(false);
+  const [acceptingByPhone, setAcceptingByPhone] = useState(false);
 
   // Determine back route based on current path
   const isCentroContext = location.pathname.startsWith("/centro");
@@ -314,6 +318,8 @@ export default function RepairDetail() {
         diagnostic_fee_paid: data.diagnostic_fee_paid,
         intake_signature: data.intake_signature,
         intake_signature_date: data.intake_signature_date,
+        final_cost_accepted_at: data.final_cost_accepted_at,
+        final_cost_accepted_by_phone: data.final_cost_accepted_by_phone,
         created_at: data.created_at,
         started_at: data.started_at,
         parts_arrived_at: data.parts_arrived_at,
@@ -1199,6 +1205,137 @@ export default function RepairDetail() {
                       </div>
                     </div>
                   </div>
+
+                  {/* Final Cost Acceptance Section */}
+                  {repair.final_cost && repair.final_cost > 0 && (
+                    <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-green-500/5 border border-emerald-200/50">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                            <Euro className="h-5 w-5 text-emerald-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">Accettazione Costo Finale</p>
+                            {repair.final_cost_accepted_at ? (
+                              <p className="text-sm text-emerald-600 font-medium">
+                                ✅ Accettato {repair.final_cost_accepted_by_phone ? 'telefonicamente' : 'con firma'} il {new Date(repair.final_cost_accepted_at).toLocaleDateString('it-IT')}
+                              </p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">
+                                €{repair.final_cost.toFixed(2)} - In attesa di conferma cliente
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        {!repair.final_cost_accepted_at && (
+                          <div className="flex flex-wrap gap-2">
+                            {repair.customer?.email && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                                disabled={sendingFinalCostEmail}
+                                onClick={async () => {
+                                  if (!repair.customer?.centro_id) {
+                                    toast({
+                                      title: "Errore",
+                                      description: "Centro non configurato per questo cliente",
+                                      variant: "destructive",
+                                    });
+                                    return;
+                                  }
+                                  setSendingFinalCostEmail(true);
+                                  try {
+                                    // First save the repair to ensure final_cost is persisted
+                                    await supabase
+                                      .from("repairs")
+                                      .update({ final_cost: repair.final_cost })
+                                      .eq("id", repair.id);
+
+                                    const { error } = await supabase.functions.invoke("send-final-cost-email", {
+                                      body: {
+                                        repair_id: repair.id,
+                                        centro_id: repair.customer.centro_id,
+                                      },
+                                    });
+                                    if (error) throw error;
+                                    toast({
+                                      title: "Email Inviata",
+                                      description: "Il cliente riceverà un'email per accettare il costo finale",
+                                    });
+                                  } catch (error: any) {
+                                    console.error("Error sending final cost email:", error);
+                                    toast({
+                                      title: "Errore",
+                                      description: "Impossibile inviare l'email",
+                                      variant: "destructive",
+                                    });
+                                  } finally {
+                                    setSendingFinalCostEmail(false);
+                                  }
+                                }}
+                              >
+                                {sendingFinalCostEmail ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Send className="h-4 w-4" />
+                                )}
+                                Invia Email
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                              disabled={acceptingByPhone}
+                              onClick={async () => {
+                                setAcceptingByPhone(true);
+                                try {
+                                  const { error } = await supabase
+                                    .from("repairs")
+                                    .update({
+                                      final_cost: repair.final_cost,
+                                      final_cost_accepted_at: new Date().toISOString(),
+                                      final_cost_accepted_by_phone: true,
+                                    })
+                                    .eq("id", repair.id);
+
+                                  if (error) throw error;
+
+                                  setRepair({
+                                    ...repair,
+                                    final_cost_accepted_at: new Date().toISOString(),
+                                    final_cost_accepted_by_phone: true,
+                                  });
+
+                                  toast({
+                                    title: "✅ Costo Accettato",
+                                    description: "Il cliente ha accettato telefonicamente il costo finale",
+                                  });
+                                } catch (error: any) {
+                                  console.error("Error accepting by phone:", error);
+                                  toast({
+                                    title: "Errore",
+                                    description: "Impossibile registrare l'accettazione",
+                                    variant: "destructive",
+                                  });
+                                } finally {
+                                  setAcceptingByPhone(false);
+                                }
+                              }}
+                            >
+                              {acceptingByPhone ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Phone className="h-4 w-4" />
+                              )}
+                              Accettato Telefonicamente
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Diagnostic Fee Toggle */}
                   <div className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-orange-500/5 border border-amber-200/50">
