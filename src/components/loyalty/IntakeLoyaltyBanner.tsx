@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard, Gift, Check, ArrowRight, Sparkles, QrCode, Loader2, ExternalLink } from "lucide-react";
 import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
+import { useLoyaltyProgramSettingsForCentro } from "@/hooks/useLoyaltyProgramSettings";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -25,12 +26,32 @@ export function IntakeLoyaltyBanner({
   onDiagnosticFeeChange,
 }: IntakeLoyaltyBannerProps) {
   const { benefits, loading, createCheckout, activateWithBonifico, refresh } = useLoyaltyCard(customerId, centroId);
+  const { settings, loading: settingsLoading, getEffectiveSettings } = useLoyaltyProgramSettingsForCentro(centroId);
   const [showProposalDialog, setShowProposalDialog] = useState(false);
   const [showQrDialog, setShowQrDialog] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [loyaltyCardId, setLoyaltyCardId] = useState<string | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const [displayPrice, setDisplayPrice] = useState<number | null>(null);
+
+  // Get effective settings (custom or defaults)
+  const effectiveSettings = getEffectiveSettings();
+  const annualPrice = effectiveSettings.annual_price;
+  const diagnosticFee = effectiveSettings.diagnostic_fee;
+  const repairDiscountPercent = effectiveSettings.repair_discount_percent;
+  const maxDevices = effectiveSettings.max_devices;
+  const validityMonths = effectiveSettings.validity_months;
+  
+  // Calculate savings based on Centro's settings
+  const baseDiagnosticFee = 15; // Standard fee without loyalty
+  const diagnosticSavings = baseDiagnosticFee - diagnosticFee;
+  const repairDiscount = estimatedCost * (repairDiscountPercent / 100);
+  const totalPotentialSavings = diagnosticSavings + repairDiscount;
+
+  // Platform commission
+  const platformCommissionRate = 0.05; // 5%
+  const platformCommission = annualPrice * platformCommissionRate;
 
   // Poll for payment completion
   useEffect(() => {
@@ -50,7 +71,7 @@ export function IntakeLoyaltyBanner({
         setShowQrDialog(false);
         setShowProposalDialog(false);
         toast.success("Tessera fedeltà attivata con successo!");
-        onDiagnosticFeeChange?.(10);
+        onDiagnosticFeeChange?.(diagnosticFee);
         refresh();
       }
     }, 3000);
@@ -59,14 +80,9 @@ export function IntakeLoyaltyBanner({
       clearInterval(interval);
       setIsPolling(false);
     };
-  }, [loyaltyCardId, showQrDialog, onDiagnosticFeeChange, refresh]);
+  }, [loyaltyCardId, showQrDialog, onDiagnosticFeeChange, refresh, diagnosticFee]);
 
-  if (loading || !customerId) return null;
-
-  // Calculate savings with loyalty card
-  const diagnosticSavings = 5; // €15 - €10 = €5
-  const repairDiscount = estimatedCost * 0.10; // 10% of repair
-  const totalPotentialSavings = diagnosticSavings + repairDiscount;
+  if (loading || settingsLoading || !customerId) return null;
 
   const handleStripeCheckout = async () => {
     setProcessing(true);
@@ -76,6 +92,7 @@ export function IntakeLoyaltyBanner({
     if (result?.url) {
       setCheckoutUrl(result.url);
       setLoyaltyCardId(result.loyalty_card_id);
+      setDisplayPrice(result.annual_price || annualPrice);
       setShowProposalDialog(false);
       setShowQrDialog(true);
     } else {
@@ -91,7 +108,7 @@ export function IntakeLoyaltyBanner({
     if (success) {
       toast.success("Tessera fedeltà attivata con bonifico!");
       setShowProposalDialog(false);
-      onDiagnosticFeeChange?.(10);
+      onDiagnosticFeeChange?.(diagnosticFee);
     } else {
       toast.error("Errore nell'attivazione");
     }
@@ -115,11 +132,11 @@ export function IntakeLoyaltyBanner({
             <div className="flex flex-wrap gap-3 mt-1 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Check className="h-3 w-3 text-green-500" />
-                Diagnosi €10 <span className="line-through text-xs">€15</span>
+                Diagnosi €{diagnosticFee} <span className="line-through text-xs">€{baseDiagnosticFee}</span>
               </span>
               <span className="flex items-center gap-1">
                 <Check className="h-3 w-3 text-green-500" />
-                Sconto 10% riparazioni
+                Sconto {repairDiscountPercent}% riparazioni
               </span>
               <span className="text-xs">
                 ({benefits.devicesUsed}/{benefits.maxDevices} dispositivi usati)
@@ -142,17 +159,19 @@ export function IntakeLoyaltyBanner({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold">Proponi Tessera Fedeltà</span>
-              <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 text-xs">
-                Risparmio €{totalPotentialSavings.toFixed(0)}+
-              </Badge>
+              {totalPotentialSavings > 0 && (
+                <Badge className="bg-green-500/20 text-green-700 dark:text-green-300 text-xs">
+                  Risparmio €{totalPotentialSavings.toFixed(0)}+
+                </Badge>
+              )}
             </div>
             
             <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
               <div className="flex items-center gap-1.5 p-2 rounded bg-background/50">
                 <div className="text-muted-foreground">Diagnosi oggi:</div>
                 <div className="font-medium">
-                  <span className="text-destructive line-through mr-1">€15</span>
-                  <span className="text-green-600">€10</span>
+                  <span className="text-destructive line-through mr-1">€{baseDiagnosticFee}</span>
+                  <span className="text-green-600">€{diagnosticFee}</span>
                 </div>
               </div>
               
@@ -161,7 +180,7 @@ export function IntakeLoyaltyBanner({
                   <div className="text-muted-foreground">Riparazione:</div>
                   <div className="font-medium">
                     <span className="text-destructive line-through mr-1">€{estimatedCost.toFixed(0)}</span>
-                    <span className="text-green-600">€{(estimatedCost * 0.9).toFixed(0)}</span>
+                    <span className="text-green-600">€{(estimatedCost * (1 - repairDiscountPercent / 100)).toFixed(0)}</span>
                   </div>
                 </div>
               )}
@@ -174,11 +193,11 @@ export function IntakeLoyaltyBanner({
                 className="gap-1"
               >
                 <Sparkles className="h-3 w-3" />
-                Attiva per €30/anno
+                Attiva per €{annualPrice}/anno
                 <ArrowRight className="h-3 w-3" />
               </Button>
               <span className="text-xs text-muted-foreground">
-                3 dispositivi coperti
+                {maxDevices} dispositivi coperti
               </span>
             </div>
           </div>
@@ -194,7 +213,7 @@ export function IntakeLoyaltyBanner({
               Tessera Fedeltà
             </DialogTitle>
             <DialogDescription>
-              Attiva la tessera fedeltà per il cliente - €30/anno
+              Attiva la tessera fedeltà per il cliente - €{annualPrice}/anno
             </DialogDescription>
           </DialogHeader>
           
@@ -204,19 +223,19 @@ export function IntakeLoyaltyBanner({
               <ul className="space-y-1.5 text-sm">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Diagnosi €10 invece di €15 (risparmio €5)
+                  Diagnosi €{diagnosticFee} invece di €{baseDiagnosticFee} (risparmio €{diagnosticSavings})
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Sconto 10% su tutte le riparazioni
+                  Sconto {repairDiscountPercent}% su tutte le riparazioni
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Copertura fino a 3 dispositivi
+                  Copertura fino a {maxDevices} dispositivi
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Validità 12 mesi
+                  Validità {validityMonths} mesi
                 </li>
               </ul>
             </Card>
@@ -232,7 +251,7 @@ export function IntakeLoyaltyBanner({
                 ) : (
                   <QrCode className="h-4 w-4" />
                 )}
-                {processing ? "Generazione QR..." : "💳 Genera QR Pagamento (€30)"}
+                {processing ? "Generazione QR..." : `💳 Genera QR Pagamento (€${annualPrice})`}
               </Button>
               
               <Button 
@@ -245,7 +264,7 @@ export function IntakeLoyaltyBanner({
               </Button>
               
               <p className="text-xs text-center text-muted-foreground">
-                Commissione piattaforma: €1.50 (5%)
+                Commissione piattaforma: €{platformCommission.toFixed(2)} (5%)
               </p>
             </div>
           </div>
@@ -278,7 +297,7 @@ export function IntakeLoyaltyBanner({
             )}
             
             <div className="text-center space-y-1">
-              <p className="text-2xl font-bold">€30,00</p>
+              <p className="text-2xl font-bold">€{(displayPrice || annualPrice).toFixed(2).replace('.', ',')}</p>
               <p className="text-sm text-muted-foreground">Tessera Fedeltà Annuale</p>
             </div>
 
