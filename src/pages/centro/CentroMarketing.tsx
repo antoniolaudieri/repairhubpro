@@ -22,7 +22,7 @@ interface LoyaltyStats {
 
 export default function CentroMarketing() {
   const { user } = useAuth();
-  const { settings, loading, saving, saveSettings, centroId } = useLoyaltyProgramSettings();
+  const { settings, loading, saving, saveSettings, centroId, getEffectiveSettings } = useLoyaltyProgramSettings();
   const [centroInfo, setCentroInfo] = useState<{ business_name: string; logo_url: string | null } | null>(null);
   const [stats, setStats] = useState<LoyaltyStats>({
     totalCards: 0,
@@ -33,6 +33,8 @@ export default function CentroMarketing() {
   });
   const [loadingStats, setLoadingStats] = useState(true);
   const [loyaltyTab, setLoyaltyTab] = useState("config");
+
+  const effectiveSettings = getEffectiveSettings();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -98,7 +100,7 @@ export default function CentroMarketing() {
 
   return (
     <CentroLayout>
-      <div className="space-y-6">
+      <div className="p-4 md:p-6 space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -110,8 +112,8 @@ export default function CentroMarketing() {
               Gestisci programmi fedeltà e promozioni
             </p>
           </div>
-          <Badge variant={settings?.is_active ? "default" : "secondary"} className="text-sm">
-            {settings?.is_active ? "Programma Attivo" : "Programma Disattivo"}
+          <Badge variant={effectiveSettings.is_active ? "default" : "secondary"} className="text-sm">
+            {effectiveSettings.is_active ? "Programma Attivo" : "Programma Disattivo"}
           </Badge>
         </div>
 
