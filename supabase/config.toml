@@ -95,3 +95,9 @@ verify_jwt = false
 
 [functions.send-final-cost-email]
 verify_jwt = false
+
+[functions.send-forensic-report-email]
+verify_jwt = false
+
+[functions.generate-forensic-report]
+verify_jwt = false
