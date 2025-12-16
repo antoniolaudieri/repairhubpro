@@ -84,7 +84,7 @@ export async function generateForensicReportPDF(report: ForensicReport, centro: 
   };
 
   // ==================== HEADER ====================
-  const headerHeight = 52;
+  const headerHeight = 58;
   
   // Dark header background
   pdf.setFillColor(15, 23, 42);
@@ -94,13 +94,13 @@ export async function generateForensicReportPDF(report: ForensicReport, centro: 
   pdf.setFillColor(59, 130, 246);
   pdf.rect(0, headerHeight - 3, pageWidth, 3, 'F');
 
-  const textStartX = centro.logo_url ? margin + 40 : margin;
-  const headerTextY = 16;
+  const textStartX = centro.logo_url ? margin + 42 : margin;
+  const headerTextY = 14;
 
   // Logo
   if (centro.logo_url) {
     try {
-      pdf.addImage(centro.logo_url, 'PNG', margin, 10, 34, 34);
+      pdf.addImage(centro.logo_url, 'PNG', margin, 10, 36, 36);
     } catch (e) {
       console.log('Could not load logo');
     }
@@ -108,32 +108,35 @@ export async function generateForensicReportPDF(report: ForensicReport, centro: 
 
   // Title and company info
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(18);
+  pdf.setFontSize(16);
   pdf.setFont('helvetica', 'bold');
   pdf.text('PERIZIA TECNICA FORENSE', textStartX, headerTextY);
 
-  pdf.setFontSize(9);
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
   pdf.setTextColor(203, 213, 225);
-  pdf.text(centro.business_name, textStartX, headerTextY + 8);
-  pdf.text(`${centro.address} | Tel: ${centro.phone}`, textStartX, headerTextY + 14);
-  pdf.text(`Email: ${centro.email}${centro.vat_number ? ` | P.IVA: ${centro.vat_number}` : ''}`, textStartX, headerTextY + 20);
+  pdf.text(centro.business_name, textStartX, headerTextY + 7);
+  pdf.text(`${centro.address} | Tel: ${centro.phone}`, textStartX, headerTextY + 13);
+  pdf.text(`Email: ${centro.email}`, textStartX, headerTextY + 19);
+  if (centro.vat_number) {
+    pdf.text(`P.IVA: ${centro.vat_number}`, textStartX, headerTextY + 25);
+  }
 
   // Report number badge
-  const badgeX = pageWidth - margin - 48;
+  const badgeX = pageWidth - margin - 46;
   const badgeY = 10;
   pdf.setFillColor(59, 130, 246);
-  pdf.roundedRect(badgeX, badgeY, 46, 30, 3, 3, 'F');
+  pdf.roundedRect(badgeX, badgeY, 44, 34, 3, 3, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(7);
   pdf.setFont('helvetica', 'normal');
-  pdf.text('N. PERIZIA', badgeX + 23, badgeY + 7, { align: 'center' });
-  pdf.setFontSize(11);
+  pdf.text('N. PERIZIA', badgeX + 22, badgeY + 7, { align: 'center' });
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(report.report_number, badgeX + 23, badgeY + 16, { align: 'center' });
-  pdf.setFontSize(9);
+  pdf.text(report.report_number, badgeX + 22, badgeY + 16, { align: 'center' });
+  pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(format(new Date(report.report_date), 'dd/MM/yyyy'), badgeX + 23, badgeY + 24, { align: 'center' });
+  pdf.text(format(new Date(report.report_date), 'dd/MM/yyyy'), badgeX + 22, badgeY + 26, { align: 'center' });
 
   y = headerHeight + 10;
 
