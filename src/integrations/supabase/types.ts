@@ -1185,6 +1185,7 @@ export type Database = {
           status: string
           technician_name: string
           technician_qualification: string | null
+          technician_signature: string | null
           updated_at: string
         }
         Insert: {
@@ -1221,6 +1222,7 @@ export type Database = {
           status?: string
           technician_name: string
           technician_qualification?: string | null
+          technician_signature?: string | null
           updated_at?: string
         }
         Update: {
@@ -1257,6 +1259,7 @@ export type Database = {
           status?: string
           technician_name?: string
           technician_qualification?: string | null
+          technician_signature?: string | null
           updated_at?: string
         }
         Relationships: [
