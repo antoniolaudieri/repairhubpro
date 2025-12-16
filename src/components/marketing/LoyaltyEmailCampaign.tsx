@@ -166,13 +166,16 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
 
   const selectedCustomers = customersWithoutCard.filter(c => selectedIds.has(c.id));
 
-  const generateEmailHtml = (customerName: string) => {
+  const generateEmailHtml = (customerName: string, customerId: string, customerEmail: string) => {
     const firstName = getFirstName(customerName);
     const personalizedMessage = customMessage.replace(/\{\{nome\}\}/g, firstName);
-    const personalizedSubject = customSubject.replace(/\{\{nome\}\}/g, firstName);
     const messageHtml = personalizedMessage.replace(/\n/g, '<br/>');
     
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"><div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;"><h1 style="color: white; margin: 0; font-size: 24px;">🎁 Tessera Fedeltà</h1><p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">${centroName}</p></div><div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px;"><p style="font-size: 16px;">Ciao <strong>${firstName}</strong>!</p><div style="margin: 20px 0;">${messageHtml.replace(/Ciao \{\{nome\}\}[!,]?<br\/?><br\/?>?/gi, '').replace(/Gentile \{\{nome\}\}[,]?<br\/?><br\/?>?/gi, '').replace(new RegExp(firstName + '[!,]?<br/?><br/?>?', 'gi'), '')}</div><div style="background: #fef3c7; border-radius: 12px; padding: 20px; margin: 20px 0;"><h3 style="margin: 0 0 15px 0; color: #92400e;">I tuoi vantaggi:</h3><ul style="margin: 0; padding-left: 20px; color: #78350f;"><li style="margin-bottom: 8px;">Diagnostica a €${settings?.diagnostic_fee || 10}</li><li style="margin-bottom: 8px;">${settings?.repair_discount_percent || 10}% sconto riparazioni</li><li>Valida per ${settings?.max_devices || 3} dispositivi</li></ul><p style="margin: 15px 0 0 0; font-size: 24px; font-weight: bold; color: #92400e; text-align: center;">Solo €${settings?.annual_price || 30}/anno</p></div></div><p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">${centroName} - Questa email è stata inviata perché sei un nostro cliente.</p></body></html>`;
+    // Build checkout URL
+    const baseUrl = window.location.origin;
+    const checkoutUrl = `${baseUrl}/attiva-tessera?customer_id=${customerId}&centro_id=${centroId}&email=${encodeURIComponent(customerEmail || '')}&centro=${encodeURIComponent(centroName)}`;
+    
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"><div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;"><h1 style="color: white; margin: 0; font-size: 24px;">🎁 Tessera Fedeltà</h1><p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">${centroName}</p></div><div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px;"><p style="font-size: 16px;">Ciao <strong>${firstName}</strong>!</p><div style="margin: 20px 0;">${messageHtml.replace(/Ciao \{\{nome\}\}[!,]?<br\/?><br\/?>?/gi, '').replace(/Gentile \{\{nome\}\}[,]?<br\/?><br\/?>?/gi, '').replace(new RegExp(firstName + '[!,]?<br/?><br/?>?', 'gi'), '')}</div><div style="background: #fef3c7; border-radius: 12px; padding: 20px; margin: 20px 0;"><h3 style="margin: 0 0 15px 0; color: #92400e;">I tuoi vantaggi:</h3><ul style="margin: 0; padding-left: 20px; color: #78350f;"><li style="margin-bottom: 8px;">Diagnostica a €${settings?.diagnostic_fee || 10}</li><li style="margin-bottom: 8px;">${settings?.repair_discount_percent || 10}% sconto riparazioni</li><li>Valida per ${settings?.max_devices || 3} dispositivi</li></ul><p style="margin: 15px 0 0 0; font-size: 24px; font-weight: bold; color: #92400e; text-align: center;">Solo €${settings?.annual_price || 30}/anno</p></div><div style="text-align: center; margin: 25px 0;"><a href="${checkoutUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);">🎁 ATTIVA ORA LA TUA TESSERA</a><p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280;">Pagamento sicuro con Stripe</p></div></div><p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">${centroName} - Questa email è stata inviata perché sei un nostro cliente.</p></body></html>`;
   };
 
   const getPersonalizedSubject = (customerName: string) => {
@@ -195,7 +198,7 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
             centro_id: centroId,
             to: customer.email,
             subject: getPersonalizedSubject(customer.name),
-            html: generateEmailHtml(customer.name),
+            html: generateEmailHtml(customer.name, customer.id, customer.email || ''),
             customer_id: customer.id,
             template_name: "loyalty_proposal",
             metadata: { campaign: "loyalty_mass_email" }
