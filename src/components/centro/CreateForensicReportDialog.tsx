@@ -11,6 +11,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
+import { Search, Smartphone, Tablet, Laptop, Monitor, Sparkles, Loader2 } from 'lucide-react';
 
 interface Customer {
   id: string;
@@ -35,13 +37,24 @@ interface Props {
   onSuccess: () => void;
 }
 
+const deviceIcons: Record<string, any> = {
+  smartphone: Smartphone,
+  tablet: Tablet,
+  laptop: Laptop,
+  pc: Monitor,
+};
+
 export default function CreateForensicReportDialog({ open, onOpenChange, centroId, onSuccess }: Props) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [diagnosisSummary, setDiagnosisSummary] = useState('');
 
   const [formData, setFormData] = useState({
     purpose: 'avvocato',
@@ -78,6 +91,8 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
   useEffect(() => {
     if (selectedCustomerId) {
       loadDevices(selectedCustomerId);
+    } else {
+      setDevices([]);
     }
   }, [selectedCustomerId]);
 
@@ -97,6 +112,21 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
     }
   }, [selectedDeviceId, devices]);
 
+  useEffect(() => {
+    if (customerSearch.trim()) {
+      const search = customerSearch.toLowerCase();
+      setFilteredCustomers(
+        customers.filter(c =>
+          c.name.toLowerCase().includes(search) ||
+          c.phone.includes(search) ||
+          c.email?.toLowerCase().includes(search)
+        )
+      );
+    } else {
+      setFilteredCustomers(customers);
+    }
+  }, [customerSearch, customers]);
+
   const loadCustomers = async () => {
     const { data } = await supabase
       .from('customers')
@@ -105,6 +135,7 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
       .order('name');
     
     setCustomers(data || []);
+    setFilteredCustomers(data || []);
   };
 
   const loadDevices = async (customerId: string) => {
@@ -122,6 +153,59 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
     const year = date.getFullYear();
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     return `PER-${year}-${random}`;
+  };
+
+  const handleGenerateWithAI = async () => {
+    if (!diagnosisSummary.trim()) {
+      toast.error('Scrivi prima un riepilogo della diagnosi');
+      return;
+    }
+
+    setGenerating(true);
+
+    try {
+      const checksPerformed = [];
+      if (formData.malware_check) checksPerformed.push('malware');
+      if (formData.spyware_check) checksPerformed.push('spyware');
+      if (formData.compromised_accounts_check) checksPerformed.push('accounts');
+      if (formData.data_integrity_check) checksPerformed.push('integrity');
+
+      const response = await supabase.functions.invoke('generate-forensic-report', {
+        body: {
+          diagnosisSummary,
+          deviceType: formData.device_type,
+          deviceBrand: formData.device_brand,
+          deviceModel: formData.device_model,
+          purpose: formData.purpose,
+          checksPerformed
+        }
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const data = response.data;
+
+      setFormData(prev => ({
+        ...prev,
+        analysis_summary: data.analysis_summary || prev.analysis_summary,
+        malware_findings: data.malware_findings || prev.malware_findings,
+        spyware_findings: data.spyware_findings || prev.spyware_findings,
+        compromised_accounts_findings: data.compromised_accounts_findings || prev.compromised_accounts_findings,
+        data_integrity_findings: data.data_integrity_findings || prev.data_integrity_findings,
+        other_findings: data.other_findings || prev.other_findings,
+        conclusions: data.conclusions || prev.conclusions,
+        recommendations: data.recommendations || prev.recommendations
+      }));
+
+      toast.success('Documento generato con AI!');
+    } catch (error: any) {
+      console.error('AI generation error:', error);
+      toast.error(error.message || 'Errore nella generazione AI');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -155,8 +239,6 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
       toast.success('Perizia creata con successo');
       onOpenChange(false);
       onSuccess();
-      
-      // Navigate to detail page
       navigate(`/centro/perizie/${data.id}`);
     } catch (error: any) {
       console.error('Error creating report:', error);
@@ -165,6 +247,8 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
       setLoading(false);
     }
   };
+
+  const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -183,37 +267,85 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
             </TabsList>
 
             <TabsContent value="cliente" className="space-y-4 mt-4">
+              {/* Customer Search */}
               <div className="space-y-2">
-                <Label>Cliente *</Label>
-                <Select value={selectedCustomerId} onValueChange={setSelectedCustomerId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleziona cliente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {customers.map(c => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.name} - {c.phone}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Cerca Cliente *</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca per nome, telefono o email..."
+                    value={customerSearch}
+                    onChange={(e) => setCustomerSearch(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
               </div>
 
-              {devices.length > 0 && (
+              {/* Customer Selection */}
+              {!selectedCustomerId ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {filteredCustomers.slice(0, 10).map(c => (
+                    <Card
+                      key={c.id}
+                      className="cursor-pointer hover:bg-accent transition-colors"
+                      onClick={() => {
+                        setSelectedCustomerId(c.id);
+                        setCustomerSearch('');
+                      }}
+                    >
+                      <CardContent className="p-3">
+                        <p className="font-medium">{c.name}</p>
+                        <p className="text-sm text-muted-foreground">{c.phone} {c.email && `• ${c.email}`}</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {filteredCustomers.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nessun cliente trovato
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="p-3 flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">{selectedCustomer?.name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedCustomer?.phone} {selectedCustomer?.email && `• ${selectedCustomer.email}`}
+                      </p>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedCustomerId('')}>
+                      Cambia
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Customer Devices */}
+              {selectedCustomerId && devices.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Dispositivo esistente (opzionale)</Label>
-                  <Select value={selectedDeviceId} onValueChange={setSelectedDeviceId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona dispositivo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {devices.map(d => (
-                        <SelectItem key={d.id} value={d.id}>
-                          {d.brand} {d.model} ({d.device_type})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label>Dispositivi del Cliente</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {devices.map(d => {
+                      const Icon = deviceIcons[d.device_type] || Smartphone;
+                      const isSelected = selectedDeviceId === d.id;
+                      return (
+                        <Card
+                          key={d.id}
+                          className={`cursor-pointer transition-colors ${isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-accent'}`}
+                          onClick={() => setSelectedDeviceId(isSelected ? '' : d.id)}
+                        >
+                          <CardContent className="p-3 flex items-center gap-3">
+                            <Icon className="h-8 w-8 text-muted-foreground" />
+                            <div className="min-w-0">
+                              <p className="font-medium truncate">{d.brand} {d.model}</p>
+                              <p className="text-xs text-muted-foreground">{d.device_type}</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -319,6 +451,42 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
             </TabsContent>
 
             <TabsContent value="analisi" className="space-y-4 mt-4">
+              {/* AI Generation Section */}
+              <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-purple-500" />
+                    <Label className="text-base font-semibold">Generazione AI</Label>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Scrivi un breve riepilogo della diagnosi e l'AI genererà un documento professionale completo.
+                  </p>
+                  <Textarea
+                    value={diagnosisSummary}
+                    onChange={(e) => setDiagnosisSummary(e.target.value)}
+                    placeholder="Es: Ho analizzato il dispositivo e trovato 3 app spia installate (mSpy, FlexiSpy, Cerberus). Il dispositivo presentava anche malware trojan. Gli account email e social risultano compromessi con accessi non autorizzati dalla Cina..."
+                    rows={4}
+                  />
+                  <Button 
+                    onClick={handleGenerateWithAI} 
+                    disabled={generating || !diagnosisSummary.trim()}
+                    className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                  >
+                    {generating ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generazione in corso...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Genera Documento con AI
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+
               <div className="space-y-2">
                 <Label>Sommario Analisi *</Label>
                 <Textarea 
