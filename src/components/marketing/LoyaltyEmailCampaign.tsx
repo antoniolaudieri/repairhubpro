@@ -7,9 +7,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Search, Mail, Send, Users, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Search, Mail, Send, Users, CheckCircle2, Loader2, Sparkles } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface Customer {
@@ -32,6 +33,12 @@ interface LoyaltyEmailCampaignProps {
   } | null;
 }
 
+type EmailTemplate = "friendly" | "urgency" | "value" | "exclusive" | "custom";
+
+const getFirstName = (fullName: string): string => {
+  return fullName.split(" ")[0];
+};
+
 export function LoyaltyEmailCampaign({ centroId, centroName, settings }: LoyaltyEmailCampaignProps) {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,12 +49,45 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0, failed: 0 });
   const [customSubject, setCustomSubject] = useState("");
   const [customMessage, setCustomMessage] = useState("");
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate>("friendly");
+
+  const emailTemplates = {
+    friendly: {
+      name: "Amichevole",
+      description: "Tono caldo e personale",
+      subject: `${centroName} - Un regalo speciale per te! 🎁`,
+      getMessage: () => `Ciao {{nome}}!\n\nCome stai? Spero tutto bene con i tuoi dispositivi! 😊\n\nVolevo parlarti di una novità pensata proprio per clienti speciali come te: la nostra Tessera Fedeltà!\n\nCon soli €${settings?.annual_price || 30} all'anno avrai:\n✨ Diagnostica a €${settings?.diagnostic_fee || 10} (risparmi €5 ogni volta!)\n✨ ${settings?.repair_discount_percent || 10}% di sconto su TUTTE le riparazioni\n✨ Valida per ${settings?.max_devices || 3} dispositivi tuoi o della tua famiglia\n\nÈ un piccolo investimento che si ripaga già alla prima riparazione!\n\nTi aspetto in negozio per attivare la tua tessera 🤗\n\nA presto!\n${centroName}`
+    },
+    urgency: {
+      name: "Urgenza",
+      description: "Crea senso di urgenza",
+      subject: `⚡ {{nome}}, offerta limitata - Solo per te!`,
+      getMessage: () => `{{nome}}, non perdere questa occasione!\n\nSolo per un periodo limitato, puoi attivare la Tessera Fedeltà ${centroName} a condizioni vantaggiosissime!\n\n🔥 COSA OTTIENI SUBITO:\n• Diagnostica a soli €${settings?.diagnostic_fee || 10} (invece di €15)\n• ${settings?.repair_discount_percent || 10}% di sconto immediato su ogni riparazione\n• Protezione per ${settings?.max_devices || 3} dispositivi\n\n💰 QUANTO RISPARMI:\nUna sola riparazione da €100 = €${settings?.repair_discount_percent || 10} di risparmio\nDue riparazioni = già hai recuperato il costo della tessera!\n\nIl prezzo? Solo €${settings?.annual_price || 30}/anno.\n\n⏰ Non aspettare che sia troppo tardi - la prossima riparazione è dietro l'angolo!\n\nVieni in negozio o rispondi a questa email per saperne di più.\n\n${centroName}`
+    },
+    value: {
+      name: "Valore",
+      description: "Focus sui vantaggi economici",
+      subject: `{{nome}}, ecco come risparmiare sulle riparazioni 💰`,
+      getMessage: () => `Ciao {{nome}},\n\nFacciamo due conti insieme?\n\n📱 Se hai uno smartphone, un tablet o un PC, prima o poi avrai bisogno di una riparazione. È inevitabile.\n\nEcco cosa succederebbe SENZA tessera:\n• Diagnostica: €15\n• Riparazione media: €80\n• Totale: €95\n\nCon la TESSERA FEDELTÀ ${centroName}:\n• Diagnostica: €${settings?.diagnostic_fee || 10} ✓\n• Riparazione con ${settings?.repair_discount_percent || 10}% sconto: €72 ✓\n• Totale: €82\n\n💵 RISPARMIO IMMEDIATO: €13 (già più del 40% del costo tessera!)\n\nE questo è solo con UNA riparazione. La tessera copre ${settings?.max_devices || 3} dispositivi per un anno intero!\n\nCosto tessera: solo €${settings?.annual_price || 30}/anno\n\nÈ matematica: conviene. Punto.\n\nPassi in negozio? Ti aspetto!\n\n${centroName}`
+    },
+    exclusive: {
+      name: "Esclusività",
+      description: "Fai sentire il cliente speciale",
+      subject: `{{nome}}, un'opportunità riservata ai nostri migliori clienti ⭐`,
+      getMessage: () => `Gentile {{nome}},\n\nSei tra i clienti che apprezziamo di più, e per questo vogliamo offrirti qualcosa di speciale.\n\nAbbiamo creato la TESSERA FEDELTÀ ${centroName.toUpperCase()} - un programma esclusivo che ti garantisce:\n\n🌟 VANTAGGI RISERVATI:\n• Diagnostica prioritaria a €${settings?.diagnostic_fee || 10}\n• ${settings?.repair_discount_percent || 10}% di sconto permanente su ogni intervento\n• Assistenza dedicata per ${settings?.max_devices || 3} dispositivi\n• Accesso a promozioni riservate ai membri\n\nQuesto programma non è per tutti - è pensato per chi, come te, cerca qualità e affidabilità.\n\nL'investimento? €${settings?.annual_price || 30} all'anno.\nIl valore che ricevi? Molto, molto di più.\n\nSarebbe un piacere averti nel nostro club di clienti premium.\n\nCon stima,\n${centroName}`
+    },
+    custom: {
+      name: "Personalizzato",
+      description: "Scrivi il tuo messaggio",
+      subject: `${centroName} - Tessera Fedeltà`,
+      getMessage: () => `Gentile {{nome}},\n\n[Scrivi qui il tuo messaggio personalizzato]\n\nCordiali saluti,\n${centroName}`
+    }
+  };
 
   const fetchCustomers = async () => {
     if (!centroId) return;
     setLoading(true);
 
-    // Fetch all customers for this centro
     const { data: allCustomers, error: customersError } = await supabase
       .from("customers")
       .select("id, name, email, phone")
@@ -61,8 +101,7 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
       return;
     }
 
-    // Fetch active loyalty cards for this centro
-    const { data: loyaltyCards, error: cardsError } = await supabase
+    const { data: loyaltyCards } = await supabase
       .from("loyalty_cards")
       .select("customer_id")
       .eq("centro_id", centroId)
@@ -84,22 +123,17 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
   }, [centroId]);
 
   useEffect(() => {
-    // Set default email content when settings load
     if (settings) {
-      setCustomSubject(`${centroName} - Scopri la nostra Tessera Fedeltà! 🎁`);
-      setCustomMessage(
-        `Gentile Cliente,\n\n` +
-        `Siamo lieti di presentarti la nostra nuova Tessera Fedeltà!\n\n` +
-        `Con soli €${settings.annual_price}/anno potrai usufruire di:\n` +
-        `• Diagnostica a soli €${settings.diagnostic_fee} (invece di €15)\n` +
-        `• ${settings.repair_discount_percent}% di sconto su tutte le riparazioni\n` +
-        `• Valida per ${settings.max_devices} dispositivi\n\n` +
-        (settings.promo_tagline ? `${settings.promo_tagline}\n\n` : '') +
-        `Non perdere questa opportunità!\n\n` +
-        `Cordiali saluti,\n${centroName}`
-      );
+      applyTemplate(selectedTemplate);
     }
   }, [settings, centroName]);
+
+  const applyTemplate = (template: EmailTemplate) => {
+    const t = emailTemplates[template];
+    setCustomSubject(t.subject);
+    setCustomMessage(t.getMessage());
+    setSelectedTemplate(template);
+  };
 
   const filteredCustomers = customers.filter(c => {
     const search = searchTerm.toLowerCase();
@@ -133,43 +167,16 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
   const selectedCustomers = customersWithoutCard.filter(c => selectedIds.has(c.id));
 
   const generateEmailHtml = (customerName: string) => {
-    const messageHtml = customMessage.replace(/\n/g, '<br/>');
+    const firstName = getFirstName(customerName);
+    const personalizedMessage = customMessage.replace(/\{\{nome\}\}/g, firstName);
+    const personalizedSubject = customSubject.replace(/\{\{nome\}\}/g, firstName);
+    const messageHtml = personalizedMessage.replace(/\n/g, '<br/>');
     
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 24px;">🎁 Tessera Fedeltà</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">${centroName}</p>
-        </div>
-        <div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px;">
-          <p style="font-size: 16px;">Gentile <strong>${customerName}</strong>,</p>
-          <div style="margin: 20px 0;">
-            ${messageHtml.replace(`Gentile Cliente,<br/><br/>`, '')}
-          </div>
-          <div style="background: #fef3c7; border-radius: 12px; padding: 20px; margin: 20px 0;">
-            <h3 style="margin: 0 0 15px 0; color: #92400e;">I tuoi vantaggi:</h3>
-            <ul style="margin: 0; padding-left: 20px; color: #78350f;">
-              <li style="margin-bottom: 8px;">Diagnostica a €${settings?.diagnostic_fee || 10}</li>
-              <li style="margin-bottom: 8px;">${settings?.repair_discount_percent || 10}% sconto riparazioni</li>
-              <li>Valida per ${settings?.max_devices || 3} dispositivi</li>
-            </ul>
-            <p style="margin: 15px 0 0 0; font-size: 24px; font-weight: bold; color: #92400e; text-align: center;">
-              Solo €${settings?.annual_price || 30}/anno
-            </p>
-          </div>
-        </div>
-        <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">
-          ${centroName} - Questa email è stata inviata perché sei un nostro cliente.
-        </p>
-      </body>
-      </html>
-    `.trim();
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"><div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;"><h1 style="color: white; margin: 0; font-size: 24px;">🎁 Tessera Fedeltà</h1><p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">${centroName}</p></div><div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px;"><p style="font-size: 16px;">Ciao <strong>${firstName}</strong>!</p><div style="margin: 20px 0;">${messageHtml.replace(/Ciao \{\{nome\}\}[!,]?<br\/?><br\/?>?/gi, '').replace(/Gentile \{\{nome\}\}[,]?<br\/?><br\/?>?/gi, '').replace(new RegExp(firstName + '[!,]?<br/?><br/?>?', 'gi'), '')}</div><div style="background: #fef3c7; border-radius: 12px; padding: 20px; margin: 20px 0;"><h3 style="margin: 0 0 15px 0; color: #92400e;">I tuoi vantaggi:</h3><ul style="margin: 0; padding-left: 20px; color: #78350f;"><li style="margin-bottom: 8px;">Diagnostica a €${settings?.diagnostic_fee || 10}</li><li style="margin-bottom: 8px;">${settings?.repair_discount_percent || 10}% sconto riparazioni</li><li>Valida per ${settings?.max_devices || 3} dispositivi</li></ul><p style="margin: 15px 0 0 0; font-size: 24px; font-weight: bold; color: #92400e; text-align: center;">Solo €${settings?.annual_price || 30}/anno</p></div></div><p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">${centroName} - Questa email è stata inviata perché sei un nostro cliente.</p></body></html>`;
+  };
+
+  const getPersonalizedSubject = (customerName: string) => {
+    return customSubject.replace(/\{\{nome\}\}/g, getFirstName(customerName));
   };
 
   const sendEmails = async () => {
@@ -187,7 +194,7 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
           body: {
             centro_id: centroId,
             to: customer.email,
-            subject: customSubject,
+            subject: getPersonalizedSubject(customer.name),
             html: generateEmailHtml(customer.name),
             customer_id: customer.id,
             template_name: "loyalty_proposal",
@@ -337,12 +344,35 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
             </div>
 
             <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                Template Email Persuasivo
+              </label>
+              <Select value={selectedTemplate} onValueChange={(v) => applyTemplate(v as EmailTemplate)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(emailTemplates).map(([key, template]) => (
+                    <SelectItem key={key} value={key}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{template.name}</span>
+                        <span className="text-xs text-muted-foreground">{template.description}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">Oggetto Email</label>
               <Input
                 value={customSubject}
                 onChange={(e) => setCustomSubject(e.target.value)}
                 placeholder="Oggetto dell'email..."
               />
+              <p className="text-xs text-muted-foreground">Usa {"{{nome}}"} per inserire il nome del cliente</p>
             </div>
 
             <div className="space-y-2">
@@ -350,9 +380,10 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
               <Textarea
                 value={customMessage}
                 onChange={(e) => setCustomMessage(e.target.value)}
-                rows={10}
+                rows={12}
                 className="font-mono text-sm"
               />
+              <p className="text-xs text-muted-foreground">Usa {"{{nome}}"} per personalizzare con il nome del cliente</p>
             </div>
 
             {sending && (
