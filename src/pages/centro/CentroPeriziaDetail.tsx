@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { CentroLayout } from '@/layouts/CentroLayout';
+import { PageTransition } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -192,25 +194,31 @@ export default function CentroPeriziaDetail() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <CentroLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </CentroLayout>
     );
   }
 
   if (!report) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">Perizia non trovata</p>
-        <Button variant="link" onClick={() => navigate('/centro/perizie')}>
-          Torna alle perizie
-        </Button>
-      </div>
+      <CentroLayout>
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">Perizia non trovata</p>
+          <Button variant="link" onClick={() => navigate('/centro/perizie')}>
+            Torna alle perizie
+          </Button>
+        </div>
+      </CentroLayout>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <CentroLayout>
+      <PageTransition>
+        <div className="space-y-6">
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/centro/perizie')}>
           <ArrowLeft className="h-5 w-5" />
@@ -454,5 +462,7 @@ export default function CentroPeriziaDetail() {
         </div>
       </div>
     </div>
+      </PageTransition>
+    </CentroLayout>
   );
 }
