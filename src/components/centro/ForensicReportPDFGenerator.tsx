@@ -68,44 +68,51 @@ export async function generateForensicReportPDF(report: ForensicReport, centro: 
     return false;
   };
 
-  // Header with Centro branding
+  // Header with Centro branding - increased height for better spacing
+  const headerHeight = 50;
   pdf.setFillColor(30, 41, 59);
-  pdf.rect(0, 0, pageWidth, 45, 'F');
+  pdf.rect(0, 0, pageWidth, headerHeight, 'F');
+
+  const logoX = margin;
+  const textStartX = centro.logo_url ? margin + 38 : margin;
+  const headerTextY = 20; // Start text lower in header
 
   // Try to load logo
   if (centro.logo_url) {
     try {
-      pdf.addImage(centro.logo_url, 'PNG', margin, 8, 30, 30);
+      pdf.addImage(centro.logo_url, 'PNG', logoX, 10, 32, 32);
     } catch (e) {
       console.log('Could not load logo');
     }
   }
 
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(18);
+  pdf.setFontSize(16);
   pdf.setFont('helvetica', 'bold');
-  pdf.text('PERIZIA TECNICA FORENSE', centro.logo_url ? margin + 35 : margin, 18);
+  pdf.text('PERIZIA TECNICA FORENSE', textStartX, headerTextY);
 
-  pdf.setFontSize(10);
+  pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(centro.business_name, centro.logo_url ? margin + 35 : margin, 26);
-  pdf.text(`${centro.address} | Tel: ${centro.phone}`, centro.logo_url ? margin + 35 : margin, 32);
-  pdf.text(`Email: ${centro.email}${centro.vat_number ? ` | P.IVA: ${centro.vat_number}` : ''}`, centro.logo_url ? margin + 35 : margin, 38);
+  pdf.text(centro.business_name, textStartX, headerTextY + 7);
+  pdf.text(`${centro.address} | Tel: ${centro.phone}`, textStartX, headerTextY + 13);
+  pdf.text(`Email: ${centro.email}${centro.vat_number ? ` | P.IVA: ${centro.vat_number}` : ''}`, textStartX, headerTextY + 19);
 
-  // Report number and date badge
+  // Report number and date badge - positioned within header
+  const badgeX = pageWidth - margin - 45;
+  const badgeY = 12;
   pdf.setFillColor(59, 130, 246);
-  pdf.roundedRect(pageWidth - margin - 50, 10, 50, 28, 2, 2, 'F');
+  pdf.roundedRect(badgeX, badgeY, 42, 26, 2, 2, 'F');
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(8);
-  pdf.text('N. PERIZIA', pageWidth - margin - 25, 18, { align: 'center' });
-  pdf.setFontSize(11);
+  pdf.setFontSize(7);
+  pdf.text('N. PERIZIA', badgeX + 21, badgeY + 6, { align: 'center' });
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(report.report_number, pageWidth - margin - 25, 26, { align: 'center' });
+  pdf.text(report.report_number, badgeX + 21, badgeY + 13, { align: 'center' });
   pdf.setFontSize(8);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(format(new Date(report.report_date), 'dd/MM/yyyy'), pageWidth - margin - 25, 33, { align: 'center' });
+  pdf.text(format(new Date(report.report_date), 'dd/MM/yyyy'), badgeX + 21, badgeY + 20, { align: 'center' });
 
-  y = 55;
+  y = headerHeight + 8;
 
   // Client and Recipient info
   pdf.setTextColor(30, 41, 59);
@@ -191,11 +198,12 @@ export async function generateForensicReportPDF(report: ForensicReport, centro: 
   y += summaryLines.length * 4 + 8;
 
   // Findings sections
+  // Using simple text markers instead of emojis (jsPDF doesn't support emojis)
   const findings = [
-    { check: report.malware_check, title: 'VERIFICA MALWARE', result: report.malware_findings, icon: '🦠' },
-    { check: report.spyware_check, title: 'VERIFICA SPYWARE / SOFTWARE SPIA', result: report.spyware_findings, icon: '🕵️' },
-    { check: report.compromised_accounts_check, title: 'VERIFICA ACCOUNT COMPROMESSI', result: report.compromised_accounts_findings, icon: '🔐' },
-    { check: report.data_integrity_check, title: 'VERIFICA INTEGRITÀ DATI', result: report.data_integrity_findings, icon: '💾' }
+    { check: report.malware_check, title: 'VERIFICA MALWARE', result: report.malware_findings, marker: '[M]' },
+    { check: report.spyware_check, title: 'VERIFICA SPYWARE / SOFTWARE SPIA', result: report.spyware_findings, marker: '[S]' },
+    { check: report.compromised_accounts_check, title: 'VERIFICA ACCOUNT COMPROMESSI', result: report.compromised_accounts_findings, marker: '[A]' },
+    { check: report.data_integrity_check, title: 'VERIFICA INTEGRITA DATI', result: report.data_integrity_findings, marker: '[D]' }
   ];
 
   findings.forEach(finding => {
@@ -207,7 +215,7 @@ export async function generateForensicReportPDF(report: ForensicReport, centro: 
       pdf.setTextColor(30, 41, 59);
       pdf.setFontSize(10);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`${finding.icon} ${finding.title}`, margin + 5, y + 5.5);
+      pdf.text(`${finding.marker}  ${finding.title}`, margin + 5, y + 5.5);
       
       y += 12;
       
