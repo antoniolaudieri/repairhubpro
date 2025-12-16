@@ -4,10 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { CentroLayout } from "@/layouts/CentroLayout";
 import { LoyaltyProgramConfigurator } from "@/components/marketing/LoyaltyProgramConfigurator";
+import { ActiveLoyaltyCardsList } from "@/components/marketing/ActiveLoyaltyCardsList";
+import { LoyaltyEmailCampaign } from "@/components/marketing/LoyaltyEmailCampaign";
 import { useLoyaltyProgramSettings } from "@/hooks/useLoyaltyProgramSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag } from "lucide-react";
+import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag, Settings, UserCheck } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LoyaltyStats {
@@ -30,6 +32,7 @@ export default function CentroMarketing() {
     avgDevicesUsed: 0,
   });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [loyaltyTab, setLoyaltyTab] = useState("config");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -168,10 +171,9 @@ export default function CentroMarketing() {
               <CreditCard className="h-4 w-4" />
               Tessera Fedeltà
             </TabsTrigger>
-            <TabsTrigger value="email" className="flex items-center gap-1" disabled>
+            <TabsTrigger value="email" className="flex items-center gap-1">
               <Mail className="h-4 w-4" />
               Email
-              <Badge variant="outline" className="ml-1 text-xs">Soon</Badge>
             </TabsTrigger>
             <TabsTrigger value="promos" className="flex items-center gap-1" disabled>
               <Tag className="h-4 w-4" />
@@ -181,24 +183,48 @@ export default function CentroMarketing() {
           </TabsList>
 
           <TabsContent value="loyalty" className="mt-6">
-            {centroInfo && (
-              <LoyaltyProgramConfigurator
-                settings={settings}
-                centroName={centroInfo.business_name}
-                centroLogo={centroInfo.logo_url}
-                onSave={saveSettings}
-                saving={saving}
-              />
-            )}
+            {/* Sub-tabs for Loyalty */}
+            <Tabs value={loyaltyTab} onValueChange={setLoyaltyTab} className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="config" className="flex items-center gap-1">
+                  <Settings className="h-4 w-4" />
+                  Configurazione
+                </TabsTrigger>
+                <TabsTrigger value="members" className="flex items-center gap-1">
+                  <UserCheck className="h-4 w-4" />
+                  Membri Attivi
+                  {stats.activeCards > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-xs">{stats.activeCards}</Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="config">
+                {centroInfo && (
+                  <LoyaltyProgramConfigurator
+                    settings={settings}
+                    centroName={centroInfo.business_name}
+                    centroLogo={centroInfo.logo_url}
+                    onSave={saveSettings}
+                    saving={saving}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="members">
+                <ActiveLoyaltyCardsList centroId={centroId} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
-          <TabsContent value="email">
-            <Card>
-              <CardHeader>
-                <CardTitle>Email Marketing</CardTitle>
-                <CardDescription>Prossimamente: Campagne email automatiche e newsletter</CardDescription>
-              </CardHeader>
-            </Card>
+          <TabsContent value="email" className="mt-6">
+            {centroInfo && (
+              <LoyaltyEmailCampaign
+                centroId={centroId}
+                centroName={centroInfo.business_name}
+                settings={settings}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="promos">
