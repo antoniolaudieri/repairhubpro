@@ -50,7 +50,7 @@ export function LoyaltyCardDesigner({
   return (
     <div className={`relative ${previewMode ? 'w-full max-w-md' : 'w-full'}`}>
       <Card
-        className={`relative overflow-hidden ${template.pattern} ${template.gradient} aspect-[1.6/1] p-4 sm:p-6 shadow-2xl`}
+        className={`relative overflow-hidden ${template.pattern} ${template.gradient} min-h-[200px] sm:min-h-[220px] p-4 sm:p-5 shadow-2xl rounded-xl`}
         style={{
           backgroundImage: effectiveSettings.card_background_url
             ? `url(${effectiveSettings.card_background_url})`
