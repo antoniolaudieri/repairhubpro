@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { CentroLayout } from '@/layouts/CentroLayout';
+import { PageTransition } from '@/components/PageTransition';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -126,14 +128,18 @@ export default function CentroPerizie() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <CentroLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </CentroLayout>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <CentroLayout>
+      <PageTransition>
+        <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold">Perizie Forensi</h1>
@@ -243,14 +249,16 @@ export default function CentroPerizie() {
         )}
       </div>
 
-      <CreateForensicReportDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        centroId={centroId}
-        onSuccess={() => {
-          if (centroId) loadReports(centroId);
-        }}
-      />
-    </div>
+        <CreateForensicReportDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          centroId={centroId}
+          onSuccess={() => {
+            if (centroId) loadReports(centroId);
+          }}
+        />
+        </div>
+      </PageTransition>
+    </CentroLayout>
   );
 }
