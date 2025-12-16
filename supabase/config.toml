@@ -89,3 +89,9 @@ verify_jwt = false
 
 [functions.confirm-loyalty-payment]
 verify_jwt = false
+
+[functions.accept-quote-signature]
+verify_jwt = false
+
+[functions.send-final-cost-email]
+verify_jwt = false
