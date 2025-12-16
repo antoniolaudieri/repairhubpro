@@ -1,11 +1,23 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password: string;
+  from_name: string;
+  from_email: string;
+  enabled: boolean;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -20,6 +32,7 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Get report data
     const { data: report, error: reportError } = await supabase
       .from("forensic_reports")
       .select("*")
@@ -28,9 +41,10 @@ serve(async (req) => {
 
     if (reportError || !report) throw new Error("Report not found");
 
+    // Get centro data including settings
     const { data: centro, error: centroError } = await supabase
       .from("centri_assistenza")
-      .select("business_name, address, phone, email, vat_number")
+      .select("business_name, address, phone, email, vat_number, settings")
       .eq("id", centroId)
       .single();
 
@@ -45,16 +59,71 @@ serve(async (req) => {
 
     const emailHtml = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f4f4f5"><div style="max-width:600px;margin:0 auto;padding:20px"><div style="background:linear-gradient(135deg,#1e293b,#334155);padding:30px;border-radius:12px 12px 0 0;text-align:center"><h1 style="color:#fff;margin:0;font-size:24px">📋 Perizia Tecnica Forense</h1><p style="color:#94a3b8;margin:10px 0 0 0">N. ${report.report_number}</p></div><div style="background:#fff;padding:30px;border-radius:0 0 12px 12px"><p style="color:#374151;font-size:16px">Gentile <strong>${customerName}</strong>,</p><p style="color:#374151;font-size:14px">In allegato alla presente troverà la perizia tecnica forense relativa al dispositivo da Lei consegnato.</p><div style="background:#f8fafc;padding:20px;border-radius:8px;margin:20px 0"><h3 style="color:#1e293b;margin:0 0 15px 0">Riepilogo</h3><p style="margin:5px 0;font-size:14px"><strong>N. Perizia:</strong> ${report.report_number}</p><p style="margin:5px 0;font-size:14px"><strong>Dispositivo:</strong> ${report.device_brand || ""} ${report.device_model || ""}</p><p style="margin:5px 0;font-size:14px"><strong>Destinatario:</strong> ${purposeLabels[report.purpose] || report.purpose}</p></div><p style="color:#374151;font-size:14px">Per ricevere il PDF completo, contatti il laboratorio.</p><p style="color:#374151;font-size:14px;margin-top:20px">Cordiali saluti,<br><strong>${centro.business_name}</strong></p></div><div style="text-align:center;padding:20px"><p style="color:#64748b;font-size:12px">${centro.business_name} | ${centro.address} | ${centro.phone}</p></div></div></body></html>`;
 
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) throw new Error("RESEND_API_KEY not configured");
+    const subject = `Perizia Tecnica n. ${report.report_number} - ${centro.business_name}`;
 
-    const resend = new Resend(resendApiKey);
-    await resend.emails.send({
-      from: "LabLinkRiparo <onboarding@resend.dev>",
-      to: [customerEmail],
-      subject: `Perizia Tecnica n. ${report.report_number} - ${centro.business_name}`,
-      html: emailHtml,
-    });
+    // Check if Centro has SMTP configured
+    const settings = centro.settings as { smtp_config?: SmtpConfig } | null;
+    const smtpConfig = settings?.smtp_config;
+
+    let emailSent = false;
+
+    if (smtpConfig?.enabled && smtpConfig?.host && smtpConfig?.user && smtpConfig?.password) {
+      console.log("Using Centro SMTP configuration");
+      try {
+        const client = new SMTPClient({
+          connection: {
+            hostname: smtpConfig.host,
+            port: smtpConfig.port || 587,
+            tls: smtpConfig.secure !== false,
+            auth: {
+              username: smtpConfig.user,
+              password: smtpConfig.password,
+            },
+          },
+        });
+
+        await client.send({
+          from: smtpConfig.from_email 
+            ? `${smtpConfig.from_name || centro.business_name} <${smtpConfig.from_email}>`
+            : `${centro.business_name} <${smtpConfig.user}>`,
+          to: customerEmail,
+          subject: subject,
+          html: emailHtml,
+        });
+
+        await client.close();
+        emailSent = true;
+        console.log("Email sent via SMTP successfully");
+      } catch (smtpError) {
+        console.error("SMTP send failed:", smtpError);
+      }
+    }
+
+    // Fallback to Resend if SMTP not configured or failed
+    if (!emailSent) {
+      console.log("Using Resend fallback");
+      const resendApiKey = Deno.env.get("RESEND_API_KEY");
+      if (!resendApiKey) throw new Error("RESEND_API_KEY not configured");
+
+      const resend = new Resend(resendApiKey);
+      await resend.emails.send({
+        from: `${centro.business_name} <onboarding@resend.dev>`,
+        to: [customerEmail],
+        subject: subject,
+        html: emailHtml,
+      });
+      console.log("Email sent via Resend successfully");
+    }
+
+    // Update report sent status
+    await supabase
+      .from("forensic_reports")
+      .update({ 
+        sent_at: new Date().toISOString(),
+        sent_to_email: customerEmail,
+        status: 'sent'
+      })
+      .eq("id", reportId);
 
     console.log("Email sent successfully");
     return new Response(JSON.stringify({ success: true }), {
