@@ -319,6 +319,65 @@ export type Database = {
           },
         ]
       }
+      centro_promos: {
+        Row: {
+          applies_to: string
+          centro_id: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          title: string
+          updated_at: string
+          usage_count: number
+          valid_from: string
+          valid_until: string
+        }
+        Insert: {
+          applies_to?: string
+          centro_id: string
+          created_at?: string
+          description?: string | null
+          discount_type: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          title: string
+          updated_at?: string
+          usage_count?: number
+          valid_from?: string
+          valid_until: string
+        }
+        Update: {
+          applies_to?: string
+          centro_id?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          title?: string
+          updated_at?: string
+          usage_count?: number
+          valid_from?: string
+          valid_until?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_promos_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       checklist_items: {
         Row: {
           category: string

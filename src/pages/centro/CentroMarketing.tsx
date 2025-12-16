@@ -6,6 +6,7 @@ import { CentroLayout } from "@/layouts/CentroLayout";
 import { LoyaltyProgramConfigurator } from "@/components/marketing/LoyaltyProgramConfigurator";
 import { ActiveLoyaltyCardsList } from "@/components/marketing/ActiveLoyaltyCardsList";
 import { LoyaltyEmailCampaign } from "@/components/marketing/LoyaltyEmailCampaign";
+import { PromoManager } from "@/components/marketing/PromoManager";
 import { useLoyaltyProgramSettings } from "@/hooks/useLoyaltyProgramSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -219,10 +220,9 @@ export default function CentroMarketing() {
               <Mail className="h-4 w-4" />
               Email
             </TabsTrigger>
-            <TabsTrigger value="promos" className="flex items-center gap-1" disabled>
+            <TabsTrigger value="promos" className="flex items-center gap-1">
               <Tag className="h-4 w-4" />
               Promo
-              <Badge variant="outline" className="ml-1 text-xs">Soon</Badge>
             </TabsTrigger>
           </TabsList>
 
@@ -271,13 +271,8 @@ export default function CentroMarketing() {
             )}
           </TabsContent>
 
-          <TabsContent value="promos">
-            <Card>
-              <CardHeader>
-                <CardTitle>Promozioni</CardTitle>
-                <CardDescription>Prossimamente: Gestione offerte speciali e codici sconto</CardDescription>
-              </CardHeader>
-            </Card>
+          <TabsContent value="promos" className="mt-6">
+            <PromoManager centroId={centroId} />
           </TabsContent>
         </Tabs>
       </div>
