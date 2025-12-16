@@ -30,6 +30,14 @@ interface LoyaltyCardUsage {
   created_at: string;
 }
 
+interface LoyaltyProgramSettings {
+  annual_price: number;
+  diagnostic_fee: number;
+  repair_discount_percent: number;
+  max_devices: number;
+  validity_months: number;
+}
+
 interface LoyaltyBenefits {
   hasActiveCard: boolean;
   diagnosticFee: number;
@@ -40,13 +48,22 @@ interface LoyaltyBenefits {
   card: LoyaltyCard | null;
 }
 
+const DEFAULT_SETTINGS: LoyaltyProgramSettings = {
+  annual_price: 30,
+  diagnostic_fee: 10,
+  repair_discount_percent: 10,
+  max_devices: 3,
+  validity_months: 12,
+};
+
 export function useLoyaltyCard(customerId: string | null, centroId: string | null) {
   const [card, setCard] = useState<LoyaltyCard | null>(null);
   const [usages, setUsages] = useState<LoyaltyCardUsage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [programSettings, setProgramSettings] = useState<LoyaltyProgramSettings>(DEFAULT_SETTINGS);
   const [benefits, setBenefits] = useState<LoyaltyBenefits>({
     hasActiveCard: false,
-    diagnosticFee: 15,
+    diagnosticFee: 15, // Standard fee without loyalty
     repairDiscountPercent: 0,
     canUseRepairDiscount: false,
     devicesUsed: 0,
@@ -61,6 +78,24 @@ export function useLoyaltyCard(customerId: string | null, centroId: string | nul
     }
 
     try {
+      // Fetch Centro's loyalty program settings first
+      const { data: settings } = await supabase
+        .from('loyalty_program_settings')
+        .select('*')
+        .eq('centro_id', centroId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      const currentSettings: LoyaltyProgramSettings = settings ? {
+        annual_price: settings.annual_price,
+        diagnostic_fee: settings.diagnostic_fee,
+        repair_discount_percent: settings.repair_discount_percent,
+        max_devices: settings.max_devices,
+        validity_months: settings.validity_months,
+      } : DEFAULT_SETTINGS;
+
+      setProgramSettings(currentSettings);
+
       const { data: loyaltyCard, error } = await supabase
         .from('loyalty_cards')
         .select(`
@@ -92,15 +127,15 @@ export function useLoyaltyCard(customerId: string | null, centroId: string | nul
             repairDiscountPercent: 0,
             canUseRepairDiscount: false,
             devicesUsed: 0,
-            maxDevices: 3,
+            maxDevices: currentSettings.max_devices,
             card: null,
           });
         } else {
           setCard(loyaltyCard);
           setBenefits({
             hasActiveCard: true,
-            diagnosticFee: 10, // Reduced fee
-            repairDiscountPercent: 10,
+            diagnosticFee: currentSettings.diagnostic_fee,
+            repairDiscountPercent: currentSettings.repair_discount_percent,
             canUseRepairDiscount: loyaltyCard.devices_used < loyaltyCard.max_devices,
             devicesUsed: loyaltyCard.devices_used,
             maxDevices: loyaltyCard.max_devices,
@@ -201,6 +236,12 @@ export function useLoyaltyCard(customerId: string | null, centroId: string | nul
     if (!customerId || !centroId) return false;
 
     try {
+      // Use dynamic pricing from settings
+      const annualPrice = programSettings.annual_price;
+      const platformCommissionRate = 0.05; // 5%
+      const platformCommission = annualPrice * platformCommissionRate;
+      const centroRevenue = annualPrice - platformCommission;
+
       // Create and immediately activate card for bonifico payment
       const { data: newCard, error } = await supabase
         .from('loyalty_cards')
@@ -209,6 +250,12 @@ export function useLoyaltyCard(customerId: string | null, centroId: string | nul
           centro_id: centroId,
           status: 'active',
           payment_method: 'bonifico',
+          amount_paid: annualPrice,
+          platform_commission: platformCommission,
+          centro_revenue: centroRevenue,
+          max_devices: programSettings.max_devices,
+          activated_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + programSettings.validity_months * 30 * 24 * 60 * 60 * 1000).toISOString(),
           bonifico_confirmed_at: new Date().toISOString(),
         })
         .select()
@@ -217,8 +264,6 @@ export function useLoyaltyCard(customerId: string | null, centroId: string | nul
       if (error) throw error;
 
       // Deduct 5% platform commission from Centro's credit balance
-      const platformCommission = 1.50;
-      
       const { data: centro } = await supabase
         .from('centri_assistenza')
         .select('credit_balance, credit_warning_threshold')
@@ -246,7 +291,7 @@ export function useLoyaltyCard(customerId: string | null, centroId: string | nul
             transaction_type: 'loyalty_commission',
             amount: -platformCommission,
             balance_after: newBalance,
-            description: 'Commissione 5% tessera fedeltà #' + newCard.id.substring(0, 8),
+            description: `Commissione 5% tessera fedeltà €${annualPrice} #${newCard.id.substring(0, 8)}`,
           });
       }
 
@@ -263,6 +308,7 @@ export function useLoyaltyCard(customerId: string | null, centroId: string | nul
     usages,
     loading,
     benefits,
+    programSettings,
     recordUsage,
     createCheckout,
     activateWithBonifico,

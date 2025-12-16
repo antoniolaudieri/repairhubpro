@@ -7,8 +7,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const LOYALTY_PRICE_ID = "price_1Sebo2ICmQjzXUDdd5R6M8b6";
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -52,14 +50,32 @@ serve(async (req) => {
       .eq("centro_id", centro_id)
       .eq("status", "pending_payment");
 
-    // Get centro info for metadata
+    // Get centro info and loyalty program settings
     const { data: centro } = await supabaseClient
       .from("centri_assistenza")
       .select("business_name")
       .eq("id", centro_id)
       .single();
 
-    // Create pending loyalty card record
+    // Get Centro's custom loyalty program settings
+    const { data: loyaltySettings } = await supabaseClient
+      .from("loyalty_program_settings")
+      .select("*")
+      .eq("centro_id", centro_id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    // Use custom settings or defaults
+    const annualPrice = loyaltySettings?.annual_price ?? 30;
+    const maxDevices = loyaltySettings?.max_devices ?? 3;
+    const validityMonths = loyaltySettings?.validity_months ?? 12;
+    const platformCommissionRate = 0.05; // 5%
+    const platformCommission = annualPrice * platformCommissionRate;
+    const centroRevenue = annualPrice - platformCommission;
+
+    console.log("[CREATE-LOYALTY-CHECKOUT] Using price:", annualPrice, "€");
+
+    // Create pending loyalty card record with correct amounts
     const { data: loyaltyCard, error: insertError } = await supabaseClient
       .from("loyalty_cards")
       .insert({
@@ -67,6 +83,10 @@ serve(async (req) => {
         centro_id,
         status: "pending_payment",
         payment_method: "stripe",
+        amount_paid: annualPrice,
+        platform_commission: platformCommission,
+        centro_revenue: centroRevenue,
+        max_devices: maxDevices,
       })
       .select()
       .single();
@@ -78,12 +98,19 @@ serve(async (req) => {
 
     console.log("[CREATE-LOYALTY-CHECKOUT] Created pending card:", loyaltyCard.id);
 
-    // Create Stripe checkout session
+    // Create Stripe checkout session with dynamic price
     const session = await stripe.checkout.sessions.create({
       customer_email: customer_email || undefined,
       line_items: [
         {
-          price: LOYALTY_PRICE_ID,
+          price_data: {
+            currency: "eur",
+            product_data: {
+              name: `Tessera Fedeltà - ${centro?.business_name || "Centro"}`,
+              description: `Validità ${validityMonths} mesi - Fino a ${maxDevices} dispositivi`,
+            },
+            unit_amount: Math.round(annualPrice * 100), // Convert to cents
+          },
           quantity: 1,
         },
       ],
@@ -96,6 +123,7 @@ serve(async (req) => {
         customer_id,
         centro_id,
         centro_name: centro?.business_name || "Centro",
+        annual_price: annualPrice.toString(),
       },
     });
 
@@ -109,7 +137,8 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       url: session.url,
-      loyalty_card_id: loyaltyCard.id 
+      loyalty_card_id: loyaltyCard.id,
+      annual_price: annualPrice,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
