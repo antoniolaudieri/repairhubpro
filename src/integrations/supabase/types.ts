@@ -1150,6 +1150,139 @@ export type Database = {
           },
         ]
       }
+      forensic_reports: {
+        Row: {
+          analysis_summary: string
+          centro_id: string
+          compromised_accounts_check: boolean | null
+          compromised_accounts_findings: string | null
+          conclusions: string
+          created_at: string
+          customer_id: string
+          data_integrity_check: boolean | null
+          data_integrity_findings: string | null
+          device_brand: string | null
+          device_condition: string | null
+          device_id: string | null
+          device_imei: string | null
+          device_model: string | null
+          device_serial: string | null
+          device_type: string
+          id: string
+          malware_check: boolean | null
+          malware_findings: string | null
+          other_findings: string | null
+          purpose: string
+          recipient_name: string | null
+          recipient_role: string | null
+          recommendations: string | null
+          report_date: string
+          report_number: string
+          sent_at: string | null
+          sent_to_email: string | null
+          spyware_check: boolean | null
+          spyware_findings: string | null
+          status: string
+          technician_name: string
+          technician_qualification: string | null
+          updated_at: string
+        }
+        Insert: {
+          analysis_summary: string
+          centro_id: string
+          compromised_accounts_check?: boolean | null
+          compromised_accounts_findings?: string | null
+          conclusions: string
+          created_at?: string
+          customer_id: string
+          data_integrity_check?: boolean | null
+          data_integrity_findings?: string | null
+          device_brand?: string | null
+          device_condition?: string | null
+          device_id?: string | null
+          device_imei?: string | null
+          device_model?: string | null
+          device_serial?: string | null
+          device_type: string
+          id?: string
+          malware_check?: boolean | null
+          malware_findings?: string | null
+          other_findings?: string | null
+          purpose: string
+          recipient_name?: string | null
+          recipient_role?: string | null
+          recommendations?: string | null
+          report_date?: string
+          report_number: string
+          sent_at?: string | null
+          sent_to_email?: string | null
+          spyware_check?: boolean | null
+          spyware_findings?: string | null
+          status?: string
+          technician_name: string
+          technician_qualification?: string | null
+          updated_at?: string
+        }
+        Update: {
+          analysis_summary?: string
+          centro_id?: string
+          compromised_accounts_check?: boolean | null
+          compromised_accounts_findings?: string | null
+          conclusions?: string
+          created_at?: string
+          customer_id?: string
+          data_integrity_check?: boolean | null
+          data_integrity_findings?: string | null
+          device_brand?: string | null
+          device_condition?: string | null
+          device_id?: string | null
+          device_imei?: string | null
+          device_model?: string | null
+          device_serial?: string | null
+          device_type?: string
+          id?: string
+          malware_check?: boolean | null
+          malware_findings?: string | null
+          other_findings?: string | null
+          purpose?: string
+          recipient_name?: string | null
+          recipient_role?: string | null
+          recommendations?: string | null
+          report_date?: string
+          report_number?: string
+          sent_at?: string | null
+          sent_to_email?: string | null
+          spyware_check?: boolean | null
+          spyware_findings?: string | null
+          status?: string
+          technician_name?: string
+          technician_qualification?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forensic_reports_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forensic_reports_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forensic_reports_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_access: {
         Row: {
           can_reserve: boolean

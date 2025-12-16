@@ -42,6 +42,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import { Search } from "lucide-react";
 
+import { ClipboardCheck } from "lucide-react";
+
 const menuItems = [
   { title: "Dashboard", url: "/centro", icon: LayoutDashboard },
   { title: "Nuovo Ritiro", url: "/centro/nuovo-ritiro", icon: PlusCircle },
@@ -51,6 +53,7 @@ const menuItems = [
   { title: "Guide IA", url: "/centro/guide", icon: BookOpen },
   { title: "Clienti", url: "/centro/clienti", icon: UserRound },
   { title: "Preventivi", url: "/centro/preventivi", icon: FileText },
+  { title: "Perizie", url: "/centro/perizie", icon: ClipboardCheck },
   { title: "Inventario", url: "/centro/inventario", icon: Package },
   { title: "Ordini", url: "/centro/ordini", icon: ShoppingCart },
   { title: "Listino Prezzi", url: "/centro/listino", icon: Settings2 },
