@@ -1563,6 +1563,68 @@ export type Database = {
           },
         ]
       }
+      loyalty_program_settings: {
+        Row: {
+          annual_price: number
+          card_accent_color: string | null
+          card_background_url: string | null
+          card_template: string | null
+          card_text_color: string | null
+          centro_id: string
+          created_at: string
+          diagnostic_fee: number
+          id: string
+          is_active: boolean
+          max_devices: number
+          promo_tagline: string | null
+          repair_discount_percent: number
+          updated_at: string
+          validity_months: number
+        }
+        Insert: {
+          annual_price?: number
+          card_accent_color?: string | null
+          card_background_url?: string | null
+          card_template?: string | null
+          card_text_color?: string | null
+          centro_id: string
+          created_at?: string
+          diagnostic_fee?: number
+          id?: string
+          is_active?: boolean
+          max_devices?: number
+          promo_tagline?: string | null
+          repair_discount_percent?: number
+          updated_at?: string
+          validity_months?: number
+        }
+        Update: {
+          annual_price?: number
+          card_accent_color?: string | null
+          card_background_url?: string | null
+          card_template?: string | null
+          card_text_color?: string | null
+          centro_id?: string
+          created_at?: string
+          diagnostic_fee?: number
+          id?: string
+          is_active?: boolean
+          max_devices?: number
+          promo_tagline?: string | null
+          repair_discount_percent?: number
+          updated_at?: string
+          validity_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_program_settings_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: true
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maintenance_predictions: {
         Row: {
           centro_id: string

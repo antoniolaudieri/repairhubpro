@@ -17,7 +17,8 @@ import {
   PlusCircle,
   Store,
   Bell,
-  Smartphone
+  Smartphone,
+  Megaphone
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -60,6 +61,7 @@ const menuItems = [
   { title: "Collaboratori", url: "/centro/collaboratori", icon: Users },
   { title: "Accessi Condivisi", url: "/centro/accessi", icon: Share2 },
   { title: "Usato", url: "/centro/usato", icon: Smartphone },
+  { title: "Marketing", url: "/centro/marketing", icon: Megaphone },
   { title: "Commissioni", url: "/centro/commissioni", icon: DollarSign },
   { title: "Impostazioni", url: "/centro/impostazioni", icon: Settings },
 ];
