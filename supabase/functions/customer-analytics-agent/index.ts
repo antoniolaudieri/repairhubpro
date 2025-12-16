@@ -36,6 +36,22 @@ function calculateScore(
   hasAccount: boolean,
   maxSpent: number
 ): { score: number; breakdown: CustomerAnalytics["scoreBreakdown"] } {
+  // NEW CUSTOMERS: If no history, assign neutral score (50)
+  const isNewCustomer = repairCount === 0 && totalSpent === 0;
+  
+  if (isNewCustomer) {
+    return {
+      score: 50,
+      breakdown: {
+        lifetimeValue: 50,
+        frequency: 50,
+        recency: 50,
+        loyalty: 50,
+        engagement: 50,
+      },
+    };
+  }
+
   // Lifetime Value (30%) - normalized against max spender
   const lifetimeValue = maxSpent > 0 ? Math.min((totalSpent / maxSpent) * 100, 100) : 0;
 

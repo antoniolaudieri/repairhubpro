@@ -89,6 +89,12 @@ export function calculateLocalScore(
   lastVisitDate: Date | null,
   maxSpent: number
 ): number {
+  // NEW CUSTOMERS: If no history, assign neutral score (50)
+  const isNewCustomer = repairCount === 0 && totalSpent === 0;
+  if (isNewCustomer) {
+    return 50;
+  }
+
   const lifetimeValue = maxSpent > 0 ? Math.min((totalSpent / maxSpent) * 100, 100) : 0;
   const frequency = Math.min((repairCount / 12) * 100, 100);
   
