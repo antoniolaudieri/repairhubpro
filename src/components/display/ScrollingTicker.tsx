@@ -45,12 +45,12 @@ export function ScrollingTicker({
           {tickerContent.map((message, index) => (
             <span 
               key={`${message.id}-${index}`} 
-              className="flex items-center gap-3 text-lg font-medium px-6"
+              className="flex items-center gap-3 text-base sm:text-lg md:text-xl font-semibold px-4 sm:px-6"
               style={{ color: textColor }}
             >
-              {message.emoji && <span className="text-2xl">{message.emoji}</span>}
-              <span>{message.text}</span>
-              <span className="mx-6 text-white/40">•</span>
+              {message.emoji && <span className="text-xl sm:text-2xl">{message.emoji}</span>}
+              <span className="drop-shadow-sm">{message.text}</span>
+              <span className="mx-4 sm:mx-6 text-white/50">•</span>
             </span>
           ))}
         </div>
