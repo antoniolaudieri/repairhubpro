@@ -1038,7 +1038,7 @@ export default function CustomerHome() {
                   <div className="space-y-5">
                     {[
                       { icon: MapPin, label: "Indirizzo", value: "Via Alessandro Manzoni 7, 18100 Imperia IM" },
-                      { icon: Mail, label: "Email", value: "info@lablinkriparo.it" },
+                      { icon: Mail, label: "Email", value: "info@lablinkriparo.com" },
                       { icon: FileText, label: "P.IVA", value: "01538960087" },
                     ].map((item, idx) => (
                       <motion.div 
@@ -1257,7 +1257,7 @@ export default function CustomerHome() {
                   </li>
                   <li className="flex items-center gap-2">
                     <Mail className="h-4 w-4" />
-                    <span>info@lablinkriparo.it</span>
+                    <span>info@lablinkriparo.com</span>
                   </li>
                   <li className="flex items-center gap-2">
                     <FileText className="h-4 w-4" />
