@@ -38,6 +38,17 @@ interface HealthLog {
   anomalies: any;
 }
 
+interface HardwareInfo {
+  model?: string;
+  platform?: string;
+  battery?: { level?: number; charging?: boolean };
+  storage?: { usedPercent?: number; availableGB?: number; totalGB?: number };
+  ram?: { usedPercent?: number };
+  network?: { type?: string };
+  screen?: { width?: number; height?: number };
+  cpu?: { cores?: number };
+}
+
 interface DiagnosticQuiz {
   id: string;
   health_score: number | null;
@@ -45,6 +56,7 @@ interface DiagnosticQuiz {
   recommendations: any;
   status: string;
   created_at: string;
+  hardware_info: HardwareInfo | null;
 }
 
 interface HealthAlert {
@@ -90,15 +102,20 @@ export function CustomerDeviceHealth({ customerId, centroId }: CustomerDeviceHea
       // Fetch diagnostic quizzes
       const { data: quizzesData } = await supabase
         .from("diagnostic_quizzes")
-        .select("*")
+        .select("id, health_score, ai_analysis, recommendations, status, created_at, hardware_info")
         .eq("customer_id", customerId)
         .eq("centro_id", centroId)
         .order("created_at", { ascending: false })
         .limit(10);
 
-      setQuizzes(quizzesData || []);
-      if (quizzesData && quizzesData.length > 0 && !logsData?.length) {
-        setSelectedQuiz(quizzesData[0]);
+      const mappedQuizzes: DiagnosticQuiz[] = (quizzesData || []).map(q => ({
+        ...q,
+        hardware_info: q.hardware_info as HardwareInfo | null
+      }));
+      
+      setQuizzes(mappedQuizzes);
+      if (mappedQuizzes.length > 0 && !logsData?.length) {
+        setSelectedQuiz(mappedQuizzes[0]);
       }
 
       // Fetch alerts
@@ -257,6 +274,48 @@ export function CustomerDeviceHealth({ customerId, centroId }: CustomerDeviceHea
           <TabsContent value="quiz" className="mt-4 space-y-4">
             {selectedQuiz ? (
               <div className="space-y-4">
+                {/* Detected Device Model */}
+                {selectedQuiz.hardware_info?.model && (
+                  <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Smartphone className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{selectedQuiz.hardware_info.model}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedQuiz.hardware_info.platform || 'Dispositivo rilevato'}
+                          {selectedQuiz.hardware_info.screen && ` • ${selectedQuiz.hardware_info.screen.width}x${selectedQuiz.hardware_info.screen.height}`}
+                        </p>
+                      </div>
+                    </div>
+                    {/* Hardware metrics from quiz */}
+                    <div className="grid grid-cols-3 gap-2 mt-3">
+                      {selectedQuiz.hardware_info.battery?.level !== undefined && (
+                        <div className="text-center p-2 rounded bg-background/50">
+                          <Battery className="h-3.5 w-3.5 mx-auto text-green-500" />
+                          <p className="text-xs font-medium mt-1">{selectedQuiz.hardware_info.battery.level}%</p>
+                          <p className="text-[10px] text-muted-foreground">Batteria</p>
+                        </div>
+                      )}
+                      {selectedQuiz.hardware_info.storage?.usedPercent !== undefined && (
+                        <div className="text-center p-2 rounded bg-background/50">
+                          <HardDrive className="h-3.5 w-3.5 mx-auto text-blue-500" />
+                          <p className="text-xs font-medium mt-1">{Math.round(selectedQuiz.hardware_info.storage.usedPercent)}%</p>
+                          <p className="text-[10px] text-muted-foreground">Storage</p>
+                        </div>
+                      )}
+                      {selectedQuiz.hardware_info.cpu?.cores && (
+                        <div className="text-center p-2 rounded bg-background/50">
+                          <Cpu className="h-3.5 w-3.5 mx-auto text-purple-500" />
+                          <p className="text-xs font-medium mt-1">{selectedQuiz.hardware_info.cpu.cores}</p>
+                          <p className="text-[10px] text-muted-foreground">Core CPU</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex items-center gap-4">
                   <DeviceHealthScore score={selectedQuiz.health_score || 0} size="md" />
                   <div>
