@@ -110,3 +110,9 @@ verify_jwt = false
 
 [functions.generate-pwa-manifest]
 verify_jwt = false
+
+[functions.track-email-click]
+verify_jwt = false
+
+[functions.unsubscribe-email]
+verify_jwt = false

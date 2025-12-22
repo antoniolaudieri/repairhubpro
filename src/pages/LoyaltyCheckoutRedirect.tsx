@@ -1,6 +1,89 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { Loader2, CreditCard, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+export default function LoyaltyCheckoutRedirect() {
+  const [searchParams] = useSearchParams();
+  const customerId = searchParams.get("customer_id");
+  const centroId = searchParams.get("centro_id");
+  const customerEmail = searchParams.get("email");
+  const centroName = searchParams.get("centro") || "Centro";
+  const trackingId = searchParams.get("track");
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const initCheckout = async () => {
+      if (!customerId || !centroId) {
+        setError("Parametri mancanti. Contatta il centro.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Track click via edge function (bypasses RLS)
+        if (trackingId) {
+          await supabase.functions.invoke("track-email-click", {
+            body: { tracking_id: trackingId }
+          });
+        }
+
+        // Create checkout session
+        const { data, error: fnError } = await supabase.functions.invoke("create-loyalty-checkout", {
+          body: { customerId, centroId, customerEmail }
+        });
+
+        if (fnError) throw fnError;
+
+        if (data?.url) {
+          window.location.href = data.url;
+        } else {
+          setError("Impossibile creare la sessione di pagamento.");
+          setLoading(false);
+        }
+      } catch (err: any) {
+        console.error("Checkout error:", err);
+        setError(err.message || "Errore durante il checkout.");
+        setLoading(false);
+      }
+    };
+
+    initCheckout();
+  }, [customerId, centroId, customerEmail, trackingId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full p-8 text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Preparazione checkout...</h2>
+          <p className="text-muted-foreground">Verrai reindirizzato al pagamento sicuro.</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <Card className="max-w-md w-full p-8 text-center">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Errore</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={() => window.close()} variant="outline">Chiudi</Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return null;
+}
+import { useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard, Gift, Shield, CheckCircle } from "lucide-react";
