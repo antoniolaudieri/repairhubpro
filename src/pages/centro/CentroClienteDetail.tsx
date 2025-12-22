@@ -29,6 +29,7 @@ import { LoyaltyStatusBanner } from "@/components/loyalty/LoyaltyStatusBanner";
 import { LoyaltyCardDetail } from "@/components/loyalty/LoyaltyCardDetail";
 import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
 import { CustomerIntelligenceCard } from "@/components/customers/CustomerIntelligenceCard";
+import { CustomerDeviceHealth } from "@/components/centro/CustomerDeviceHealth";
 import { CustomerVisitTracker } from "@/components/customers/CustomerVisitTracker";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
@@ -513,6 +514,13 @@ export default function CentroClienteDetail() {
                   customerName={customer.name}
                 />
               </div>
+            </motion.div>
+          )}
+
+          {/* Device Health */}
+          {centroId && (
+            <motion.div variants={itemVariants}>
+              <CustomerDeviceHealth customerId={id!} centroId={centroId} />
             </motion.div>
           )}
 

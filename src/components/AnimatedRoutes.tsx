@@ -77,6 +77,8 @@ import TrackQr from "@/pages/ads/TrackQr";
 import CornerPubblicita from "@/pages/corner/CornerPubblicita";
 // Loyalty
 import LoyaltyCheckoutRedirect from "@/pages/LoyaltyCheckoutRedirect";
+// Device Health
+import DeviceHealthQuiz from "@/pages/customer/DeviceHealthQuiz";
 
 export const AnimatedRoutes = () => {
   return (
@@ -97,6 +99,9 @@ export const AnimatedRoutes = () => {
         
         {/* Public Loyalty Checkout Redirect */}
         <Route path="/attiva-tessera" element={<PageTransition><LoyaltyCheckoutRedirect /></PageTransition>} />
+        
+        {/* Device Health Quiz - iOS WebApp */}
+        <Route path="/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />
         
         <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
