@@ -21,7 +21,8 @@ import {
   Filter,
   Clock,
   AlertTriangle,
-  Activity
+  Activity,
+  Upload
 } from "lucide-react";
 import { toast } from "sonner";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
@@ -32,6 +33,7 @@ import { CustomerScoreBadge } from "@/components/centro/CustomerScoreBadge";
 import { CustomerReturnPrediction } from "@/components/centro/CustomerReturnPrediction";
 import { useCustomerAnalytics, type CustomerAnalytics } from "@/hooks/useCustomerAnalytics";
 import { CustomerHealthBadge } from "@/components/centro/CustomerHealthBadge";
+import { CustomerImportDialog } from "@/components/customers/CustomerImportDialog";
 
 interface Customer {
   id: string;
@@ -61,6 +63,7 @@ export default function CentroClienti() {
   const [activeFilter, setActiveFilter] = useState<CustomerFilter>("all");
   const [healthActiveCustomers, setHealthActiveCustomers] = useState<Set<string>>(new Set());
   const [loyaltyActiveCustomers, setLoyaltyActiveCustomers] = useState<Set<string>>(new Set());
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Fetch customer analytics from AI agent
   const { analytics, loading: analyticsLoading } = useCustomerAnalytics(centroId);
@@ -289,13 +292,23 @@ export default function CentroClienti() {
                 {customers.length} clienti • €{totalRevenue.toFixed(0)} fatturato totale
               </p>
             </div>
-            <Button
-              onClick={() => setDialogOpen(true)}
-              className="gap-2 shadow-sm"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Nuovo Cliente</span>
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setImportDialogOpen(true)}
+                className="gap-2 shadow-sm"
+              >
+                <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">Importa</span>
+              </Button>
+              <Button
+                onClick={() => setDialogOpen(true)}
+                className="gap-2 shadow-sm"
+              >
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Nuovo Cliente</span>
+              </Button>
+            </div>
           </div>
 
           {/* Stats Cards */}
@@ -681,6 +694,15 @@ export default function CentroClienti() {
             onOpenChange={setDialogOpen}
             onSuccess={loadCustomers}
           />
+
+          {centroId && (
+            <CustomerImportDialog
+              open={importDialogOpen}
+              onOpenChange={setImportDialogOpen}
+              centroId={centroId}
+              onImportComplete={loadCustomers}
+            />
+          )}
         </div>
       </PageTransition>
       
