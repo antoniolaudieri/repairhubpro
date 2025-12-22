@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.generate-forensic-report]
 verify_jwt = false
+
+[functions.generate-pwa-manifest]
+verify_jwt = false

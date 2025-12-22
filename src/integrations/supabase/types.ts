@@ -1526,6 +1526,7 @@ export type Database = {
           created_at: string
           customer_id: string
           device_id: string | null
+          hardware_info: Json | null
           health_score: number | null
           id: string
           loyalty_card_id: string | null
@@ -1540,6 +1541,7 @@ export type Database = {
           created_at?: string
           customer_id: string
           device_id?: string | null
+          hardware_info?: Json | null
           health_score?: number | null
           id?: string
           loyalty_card_id?: string | null
@@ -1554,6 +1556,7 @@ export type Database = {
           created_at?: string
           customer_id?: string
           device_id?: string | null
+          hardware_info?: Json | null
           health_score?: number | null
           id?: string
           loyalty_card_id?: string | null
