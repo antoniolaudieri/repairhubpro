@@ -1763,6 +1763,57 @@ export type Database = {
         }
         Relationships: []
       }
+      email_campaign_clicks: {
+        Row: {
+          campaign_type: string
+          centro_id: string
+          clicked_at: string | null
+          converted: boolean
+          converted_at: string | null
+          created_at: string
+          customer_id: string
+          email_template: string
+          id: string
+        }
+        Insert: {
+          campaign_type?: string
+          centro_id: string
+          clicked_at?: string | null
+          converted?: boolean
+          converted_at?: string | null
+          created_at?: string
+          customer_id: string
+          email_template: string
+          id?: string
+        }
+        Update: {
+          campaign_type?: string
+          centro_id?: string
+          clicked_at?: string | null
+          converted?: boolean
+          converted_at?: string | null
+          created_at?: string
+          customer_id?: string
+          email_template?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaign_clicks_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaign_clicks_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback: {
         Row: {
           comment: string | null

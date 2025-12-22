@@ -14,6 +14,7 @@ export default function LoyaltyCheckoutRedirect() {
   const centroId = searchParams.get("centro_id");
   const customerEmail = searchParams.get("email");
   const centroName = searchParams.get("centro") || "Centro Assistenza";
+  const trackingId = searchParams.get("track");
 
   useEffect(() => {
     const initiateCheckout = async () => {
@@ -23,9 +24,28 @@ export default function LoyaltyCheckoutRedirect() {
         return;
       }
 
+      // Track the click if tracking ID is present
+      if (trackingId) {
+        try {
+          await supabase
+            .from("email_campaign_clicks")
+            .update({ clicked_at: new Date().toISOString() })
+            .eq("id", trackingId);
+          console.log("Click tracked:", trackingId);
+        } catch (trackErr) {
+          console.error("Error tracking click:", trackErr);
+          // Don't block checkout if tracking fails
+        }
+      }
+
       try {
         const { data, error: fnError } = await supabase.functions.invoke("create-loyalty-checkout", {
-          body: { customer_id: customerId, centro_id: centroId, customer_email: customerEmail },
+          body: { 
+            customer_id: customerId, 
+            centro_id: centroId, 
+            customer_email: customerEmail,
+            tracking_id: trackingId 
+          },
         });
 
         if (fnError) throw fnError;
@@ -49,7 +69,7 @@ export default function LoyaltyCheckoutRedirect() {
     };
 
     initiateCheckout();
-  }, [customerId, centroId, customerEmail]);
+  }, [customerId, centroId, customerEmail, trackingId]);
 
   if (loading) {
     return (
