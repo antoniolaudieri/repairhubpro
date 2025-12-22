@@ -20,7 +20,8 @@ import {
   CreditCard,
   Filter,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Activity
 } from "lucide-react";
 import { toast } from "sonner";
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
@@ -30,6 +31,7 @@ import { CustomerAIAgent } from "@/components/centro/CustomerAIAgent";
 import { CustomerScoreBadge } from "@/components/centro/CustomerScoreBadge";
 import { CustomerReturnPrediction } from "@/components/centro/CustomerReturnPrediction";
 import { useCustomerAnalytics, type CustomerAnalytics } from "@/hooks/useCustomerAnalytics";
+import { CustomerHealthBadge } from "@/components/centro/CustomerHealthBadge";
 
 interface Customer {
   id: string;
@@ -44,7 +46,7 @@ interface CustomerStats {
   totalSpent: number;
 }
 
-type CustomerFilter = "all" | "gold" | "atRisk" | "overdue" | "returningThisWeek";
+type CustomerFilter = "all" | "gold" | "atRisk" | "overdue" | "returningThisWeek" | "healthActive";
 
 export default function CentroClienti() {
   const { user } = useAuth();
@@ -57,6 +59,7 @@ export default function CentroClienti() {
   const [customerStats, setCustomerStats] = useState<Record<string, CustomerStats>>({});
   const [centroId, setCentroId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<CustomerFilter>("all");
+  const [healthActiveCustomers, setHealthActiveCustomers] = useState<Set<string>>(new Set());
 
   // Fetch customer analytics from AI agent
   const { analytics, loading: analyticsLoading } = useCustomerAnalytics(centroId);
@@ -138,6 +141,36 @@ export default function CentroClienti() {
     loadCustomers();
   }, [user]);
 
+  // Fetch customers with active health monitoring
+  useEffect(() => {
+    const fetchHealthActiveCustomers = async () => {
+      if (!centroId) return;
+      
+      try {
+        // Get customers with active loyalty cards that have health data
+        const { data: healthLogs } = await supabase
+          .from("device_health_logs")
+          .select("customer_id")
+          .eq("centro_id", centroId);
+        
+        const { data: quizzes } = await supabase
+          .from("diagnostic_quizzes")
+          .select("customer_id")
+          .eq("centro_id", centroId);
+        
+        const activeIds = new Set<string>();
+        healthLogs?.forEach(log => activeIds.add(log.customer_id));
+        quizzes?.forEach(quiz => activeIds.add(quiz.customer_id));
+        
+        setHealthActiveCustomers(activeIds);
+      } catch (error) {
+        console.error("Error fetching health active customers:", error);
+      }
+    };
+    
+    fetchHealthActiveCustomers();
+  }, [centroId]);
+
   // Create analytics map for quick lookup
   const analyticsMap = useMemo(() => {
     const map: Record<string, CustomerAnalytics> = {};
@@ -154,8 +187,10 @@ export default function CentroClienti() {
         customer.phone.includes(searchQuery)
     );
 
-    // Apply additional filters based on analytics
-    if (activeFilter !== "all" && Object.keys(analyticsMap).length > 0) {
+    // Apply additional filters
+    if (activeFilter === "healthActive") {
+      filtered = filtered.filter(customer => healthActiveCustomers.has(customer.id));
+    } else if (activeFilter !== "all" && Object.keys(analyticsMap).length > 0) {
       filtered = filtered.filter(customer => {
         const a = analyticsMap[customer.id];
         if (!a) return false;
@@ -180,7 +215,7 @@ export default function CentroClienti() {
     }
 
     setFilteredCustomers(filtered);
-  }, [searchQuery, customers, activeFilter, analyticsMap]);
+  }, [searchQuery, customers, activeFilter, analyticsMap, healthActiveCustomers]);
 
   const totalRepairs = Object.values(customerStats).reduce((a, b) => a + b.repairCount, 0);
   const totalRevenue = Object.values(customerStats).reduce((a, b) => a + b.totalSpent, 0);
@@ -329,6 +364,15 @@ export default function CentroClienti() {
             >
               <Clock className="h-3.5 w-3.5" />
               In Ritardo ({overdueCount})
+            </Button>
+            <Button
+              variant={activeFilter === "healthActive" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter("healthActive")}
+              className="gap-1.5"
+            >
+              <Activity className="h-3.5 w-3.5" />
+              Monitoraggio ({healthActiveCustomers.size})
             </Button>
           </motion.div>
 
@@ -490,6 +534,14 @@ export default function CentroClienti() {
 
                           {/* Stats Pills */}
                           <div className="flex items-center gap-2 mb-5 flex-wrap">
+                            {/* Health Status Badge - Real-time */}
+                            {centroId && (
+                              <CustomerHealthBadge 
+                                customerId={customer.id} 
+                                centroId={centroId}
+                                compact
+                              />
+                            )}
                             <div className={`
                               inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold
                               transition-all duration-300

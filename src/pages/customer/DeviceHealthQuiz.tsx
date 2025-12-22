@@ -1,3 +1,4 @@
+// This page handles BOTH iOS and Android diagnostic quiz
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
