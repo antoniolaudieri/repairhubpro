@@ -102,6 +102,7 @@ export const AnimatedRoutes = () => {
         
         {/* Device Health Quiz - iOS WebApp */}
         <Route path="/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />
+        <Route path="/customer/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />
         
         <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
