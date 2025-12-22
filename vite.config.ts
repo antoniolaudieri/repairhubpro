@@ -92,13 +92,17 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     rollupOptions: {
-      // Externalize Capacitor modules - they're only available in native builds
-      external: [
-        '@capacitor/core',
-        '@capacitor/app',
-        '@capacitor/device',
-        '@capacitor/push-notifications',
-      ],
+      onwarn(warning, warn) {
+        // Ignore Capacitor module resolution warnings
+        if (warning.code === 'UNRESOLVED_IMPORT' && 
+            warning.exporter?.includes('@capacitor')) {
+          return;
+        }
+        warn(warning);
+      },
     },
+  },
+  optimizeDeps: {
+    exclude: ['@capacitor/core', '@capacitor/app', '@capacitor/device', '@capacitor/push-notifications'],
   },
 }));
