@@ -251,10 +251,16 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
     <!-- CTA SECTION -->
     <div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px; text-align: center;">
       <a href="${checkoutUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);">🎁 ATTIVA ORA LA TUA TESSERA</a>
-      <p style="margin: 15px 0 0 0; font-size: 13px; color: #6b7280;">Pagamento sicuro con Stripe • Attivazione immediata</p>
+      <p style="margin: 15px 0 0 0; font-size: 13px; color: #6b7280;">Pagamento sicuro con Stripe</p>
     </div>
     
-    <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">${centroName} - Questa email è stata inviata perché sei un nostro cliente.</p>
+    <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">
+      ${centroName} - Questa email è stata inviata perché sei un nostro cliente.
+    </p>
+    <p style="text-align: center; font-size: 11px; margin-top: 10px;">
+      <a href="${baseUrl}/disiscrizione?email=${encodeURIComponent(customerEmail || '')}&centro=${centroId}&nome=${encodeURIComponent(centroName)}" style="color: #9ca3af; text-decoration: underline;">Annulla iscrizione</a> | 
+      Ai sensi del GDPR hai il diritto di revocare il consenso in qualsiasi momento.
+    </p>
     
     </body></html>`;
   };

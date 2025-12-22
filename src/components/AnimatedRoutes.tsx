@@ -80,6 +80,7 @@ import LoyaltyCheckoutRedirect from "@/pages/LoyaltyCheckoutRedirect";
 // Device Health + PWA Install
 import InstallCentro from "@/pages/InstallCentro";
 import DeviceHealthQuiz from "@/pages/customer/DeviceHealthQuiz";
+import Disiscrizione from "@/pages/Disiscrizione";
 
 export const AnimatedRoutes = () => {
   return (
@@ -100,6 +101,9 @@ export const AnimatedRoutes = () => {
         
         {/* Public Loyalty Checkout Redirect */}
         <Route path="/attiva-tessera" element={<PageTransition><LoyaltyCheckoutRedirect /></PageTransition>} />
+        
+        {/* Public Email Unsubscribe */}
+        <Route path="/disiscrizione" element={<PageTransition><Disiscrizione /></PageTransition>} />
         
         {/* Device Health Quiz - iOS WebApp */}
         <Route path="/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />

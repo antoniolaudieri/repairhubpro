@@ -1814,6 +1814,54 @@ export type Database = {
           },
         ]
       }
+      email_unsubscribes: {
+        Row: {
+          campaign_type: string
+          centro_id: string | null
+          created_at: string
+          customer_id: string | null
+          email: string
+          id: string
+          reason: string | null
+          unsubscribed_at: string
+        }
+        Insert: {
+          campaign_type?: string
+          centro_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          email: string
+          id?: string
+          reason?: string | null
+          unsubscribed_at?: string
+        }
+        Update: {
+          campaign_type?: string
+          centro_id?: string | null
+          created_at?: string
+          customer_id?: string | null
+          email?: string
+          id?: string
+          reason?: string | null
+          unsubscribed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_unsubscribes_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_unsubscribes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feedback: {
         Row: {
           comment: string | null

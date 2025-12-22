@@ -5,7 +5,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet, Tablet, Smartphone, QrCode, Copy, ExternalLink, Loader2, Wifi, Scale, Sparkles, ArrowRight, Check } from "lucide-react";
+import { FileSignature, X, Euro, Shield, CheckCircle2, Gift, CreditCard, Wallet, Tablet, Smartphone, QrCode, Copy, ExternalLink, Loader2, Wifi, Scale, Sparkles, ArrowRight, Check, Bell } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import SignatureCanvas from "react-signature-canvas";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -16,6 +16,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { QRCodeSVG } from "qrcode.react";
+
+interface MarketingConsents {
+  marketing_consent: boolean;
+  email_consent: boolean;
+  sms_consent: boolean;
+}
 
 interface IntakeSignatureStepProps {
   onSignatureComplete: (signatureData: string) => void;
@@ -40,6 +46,9 @@ interface IntakeSignatureStepProps {
   onPaymentModeChange?: (mode: "full" | "partial") => void;
   externalPrivacyConsent?: boolean;
   onPrivacyConsentChange?: (consent: boolean) => void;
+  /** Marketing consents */
+  marketingConsents?: MarketingConsents;
+  onMarketingConsentsChange?: (consents: MarketingConsents) => void;
   /** Loyalty card activation props */
   showLoyaltyProposal?: boolean;
   customerId?: string | null;
@@ -70,6 +79,8 @@ export function IntakeSignatureStep({
   onPaymentModeChange,
   externalPrivacyConsent,
   onPrivacyConsentChange,
+  marketingConsents,
+  onMarketingConsentsChange,
   showLoyaltyProposal = false,
   customerId,
   centroId,
@@ -751,6 +762,66 @@ export function IntakeSignatureStep({
           </ScrollArea>
         </Card>
       </motion.div>
+
+      {/* Marketing Consents Section */}
+      {onMarketingConsentsChange && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.12 }}
+        >
+          <Card className="p-4 border border-blue-500/30 bg-blue-500/5">
+            <div className="flex items-center gap-2 mb-3">
+              <Bell className="h-4 w-4 text-blue-500" />
+              <h4 className="text-sm font-semibold text-foreground">Consensi Marketing (opzionali)</h4>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-500/10">
+                <Checkbox 
+                  id="marketing-consent"
+                  checked={marketingConsents?.marketing_consent ?? false}
+                  onCheckedChange={(checked) => onMarketingConsentsChange({
+                    ...(marketingConsents || { marketing_consent: false, email_consent: false, sms_consent: false }),
+                    marketing_consent: checked === true
+                  })}
+                />
+                <Label htmlFor="marketing-consent" className="text-xs cursor-pointer flex-1">
+                  Acconsento a ricevere comunicazioni marketing e promozioni
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-500/10">
+                <Checkbox 
+                  id="email-consent"
+                  checked={marketingConsents?.email_consent ?? false}
+                  onCheckedChange={(checked) => onMarketingConsentsChange({
+                    ...(marketingConsents || { marketing_consent: false, email_consent: false, sms_consent: false }),
+                    email_consent: checked === true
+                  })}
+                />
+                <Label htmlFor="email-consent" className="text-xs cursor-pointer flex-1">
+                  Acconsento a ricevere newsletter via email
+                </Label>
+              </div>
+              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-blue-500/10">
+                <Checkbox 
+                  id="sms-consent"
+                  checked={marketingConsents?.sms_consent ?? false}
+                  onCheckedChange={(checked) => onMarketingConsentsChange({
+                    ...(marketingConsents || { marketing_consent: false, email_consent: false, sms_consent: false }),
+                    sms_consent: checked === true
+                  })}
+                />
+                <Label htmlFor="sms-consent" className="text-xs cursor-pointer flex-1">
+                  Acconsento a ricevere notifiche SMS
+                </Label>
+              </div>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2">
+              Potrai modificare queste preferenze in qualsiasi momento dalla tua area personale o tramite il link di disiscrizione nelle email.
+            </p>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Privacy Consent Checkbox */}
       <motion.div
