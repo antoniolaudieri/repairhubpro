@@ -36,10 +36,13 @@ interface HealthLogRequest {
 }
 
 interface QuizRequest {
-  customer_email: string;
-  centro_id: string;
+  loyalty_card_id?: string;
+  customer_email?: string;
+  centro_id?: string;
   device_id?: string;
   responses: Record<string, any>;
+  health_score?: number;
+  quick_mode?: boolean;
 }
 
 interface Anomaly {
@@ -514,57 +517,100 @@ serve(async (req) => {
       case 'submit_quiz': {
         const quizData = data as QuizRequest;
         
-        // Get customer
-        const { data: customer, error: customerError } = await supabase
-          .from('customers')
-          .select('id')
-          .eq('email', quizData.customer_email)
-          .single();
+        let customerId: string;
+        let centroId: string;
+        let loyaltyCardId: string;
         
-        if (customerError || !customer) {
+        // Support loyalty_card_id directly
+        if (quizData.loyalty_card_id) {
+          const { data: card, error: cardError } = await supabase
+            .from('loyalty_cards')
+            .select('id, customer_id, centro_id, status')
+            .eq('id', quizData.loyalty_card_id)
+            .single();
+          
+          if (cardError || !card) {
+            console.error('Loyalty card not found:', quizData.loyalty_card_id);
+            return new Response(
+              JSON.stringify({ error: 'Tessera non trovata' }),
+              { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          if (card.status !== 'active') {
+            return new Response(
+              JSON.stringify({ error: 'Tessera fedeltà non attiva' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          customerId = card.customer_id;
+          centroId = card.centro_id;
+          loyaltyCardId = card.id;
+        } else if (quizData.customer_email && quizData.centro_id) {
+          // Legacy: use email + centro_id
+          const { data: customer, error: customerError } = await supabase
+            .from('customers')
+            .select('id')
+            .eq('email', quizData.customer_email)
+            .single();
+          
+          if (customerError || !customer) {
+            return new Response(
+              JSON.stringify({ error: 'Cliente non trovato' }),
+              { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          const { data: loyaltyCard } = await supabase
+            .from('loyalty_cards')
+            .select('id')
+            .eq('customer_id', customer.id)
+            .eq('centro_id', quizData.centro_id)
+            .eq('status', 'active')
+            .single();
+          
+          if (!loyaltyCard) {
+            return new Response(
+              JSON.stringify({ error: 'Tessera fedeltà non attiva' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          customerId = customer.id;
+          centroId = quizData.centro_id;
+          loyaltyCardId = loyaltyCard.id;
+        } else {
           return new Response(
-            JSON.stringify({ error: 'Cliente non trovato' }),
-            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
-        // Verify loyalty card
-        const { data: loyaltyCard } = await supabase
-          .from('loyalty_cards')
-          .select('id')
-          .eq('customer_id', customer.id)
-          .eq('centro_id', quizData.centro_id)
-          .eq('status', 'active')
-          .single();
-        
-        if (!loyaltyCard) {
-          return new Response(
-            JSON.stringify({ error: 'Tessera fedeltà non attiva' }),
-            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            JSON.stringify({ error: 'Parametri mancanti' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         
         // Analyze quiz with AI
         const analysis = await analyzeQuizWithAI(quizData.responses);
         
+        // Use provided health_score if available, otherwise use AI analysis
+        const finalScore = quizData.health_score ?? analysis.score;
+        
         // Get settings
         const { data: settings } = await supabase
           .from('device_health_settings')
           .select('*')
-          .eq('centro_id', quizData.centro_id)
+          .eq('centro_id', centroId)
           .single();
         
         // Insert quiz
         const { data: quiz, error: quizError } = await supabase
           .from('diagnostic_quizzes')
           .insert({
-            customer_id: customer.id,
-            centro_id: quizData.centro_id,
+            customer_id: customerId,
+            centro_id: centroId,
             device_id: quizData.device_id,
-            loyalty_card_id: loyaltyCard.id,
+            loyalty_card_id: loyaltyCardId,
             responses: quizData.responses,
             ai_analysis: analysis.analysis,
-            health_score: analysis.score,
+            health_score: finalScore,
             recommendations: analysis.recommendations,
             status: 'analyzed',
             analyzed_at: new Date().toISOString()
@@ -578,16 +624,16 @@ serve(async (req) => {
         }
         
         // Create alert if needed
-        const anomalies: Anomaly[] = analysis.score < 60 
+        const anomalies: Anomaly[] = finalScore < 60 
           ? [{ type: 'general_warning', severity: 'medium', message: analysis.analysis }]
           : [];
         
         await createAlertIfNeeded(
           supabase,
-          customer.id,
-          quizData.centro_id,
+          customerId,
+          centroId,
           quizData.device_id || null,
-          analysis.score,
+          finalScore,
           anomalies,
           settings,
           undefined,
@@ -595,15 +641,19 @@ serve(async (req) => {
         );
         
         // Award badges
-        await awardBadgeIfEligible(supabase, customer.id, quizData.centro_id);
+        await awardBadgeIfEligible(supabase, customerId, centroId);
         
         return new Response(
           JSON.stringify({
             success: true,
-            health_score: analysis.score,
-            analysis: analysis.analysis,
-            recommendations: analysis.recommendations,
-            quiz_id: quiz.id
+            quiz: {
+              id: quiz.id,
+              health_score: finalScore,
+              ai_analysis: analysis.analysis,
+              recommendations: analysis.recommendations,
+              created_at: quiz.created_at,
+              status: quiz.status
+            }
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
