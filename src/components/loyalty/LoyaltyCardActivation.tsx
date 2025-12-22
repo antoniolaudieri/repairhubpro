@@ -47,11 +47,25 @@ export function LoyaltyCardActivation({ customerEmail, existingCardCentroIds }: 
         return;
       }
 
-      // Filtra solo quelli con centro_id
+      const customerIds = customers.map(c => c.id);
+
+      // Trova TUTTE le loyalty cards attive per questo cliente (qualsiasi centro)
+      const { data: activeCards } = await supabase
+        .from('loyalty_cards')
+        .select('centro_id')
+        .in('customer_id', customerIds)
+        .eq('status', 'active');
+
+      const activeCentroIds = activeCards?.map(c => c.centro_id) || [];
+      
+      // Combina con existingCardCentroIds passati come prop
+      const allExistingCentroIds = [...new Set([...existingCardCentroIds, ...activeCentroIds])];
+
+      // Filtra solo quelli con centro_id e senza card attiva
       const centroIds = customers
         .filter(c => c.centro_id)
         .map(c => c.centro_id as string)
-        .filter(id => !existingCardCentroIds.includes(id));
+        .filter(id => !allExistingCentroIds.includes(id));
 
       if (centroIds.length === 0) {
         setLoading(false);
