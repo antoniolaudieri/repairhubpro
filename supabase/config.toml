@@ -1,5 +1,11 @@
 project_id = "mivvpthovnkynigfwmjm"
 
+[functions.device-health]
+verify_jwt = false
+
+[functions.send-health-alert-email]
+verify_jwt = true
+
 [functions.analyze-device]
 verify_jwt = false
 

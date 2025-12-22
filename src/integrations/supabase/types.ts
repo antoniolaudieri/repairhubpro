@@ -801,6 +801,54 @@ export type Database = {
           },
         ]
       }
+      customer_health_badges: {
+        Row: {
+          badge_description: string | null
+          badge_icon: string | null
+          badge_name: string
+          badge_type: string
+          centro_id: string
+          customer_id: string
+          earned_at: string
+          id: string
+        }
+        Insert: {
+          badge_description?: string | null
+          badge_icon?: string | null
+          badge_name: string
+          badge_type: string
+          centro_id: string
+          customer_id: string
+          earned_at?: string
+          id?: string
+        }
+        Update: {
+          badge_description?: string | null
+          badge_icon?: string | null
+          badge_name?: string
+          badge_type?: string
+          centro_id?: string
+          customer_id?: string
+          earned_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_health_badges_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_health_badges_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_notifications: {
         Row: {
           created_at: string
@@ -1041,6 +1089,310 @@ export type Database = {
           },
         ]
       }
+      device_health_alerts: {
+        Row: {
+          alert_type: string
+          centro_id: string
+          created_at: string
+          customer_id: string
+          customer_response: string | null
+          customer_response_at: string | null
+          customer_viewed_at: string | null
+          device_health_log_id: string | null
+          device_id: string | null
+          diagnostic_quiz_id: string | null
+          discount_code: string | null
+          discount_offered: number | null
+          email_sent_at: string | null
+          expires_at: string | null
+          id: string
+          message: string
+          push_sent_at: string | null
+          recommended_action: string | null
+          severity: string
+          sms_sent_at: string | null
+          status: string
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          centro_id: string
+          created_at?: string
+          customer_id: string
+          customer_response?: string | null
+          customer_response_at?: string | null
+          customer_viewed_at?: string | null
+          device_health_log_id?: string | null
+          device_id?: string | null
+          diagnostic_quiz_id?: string | null
+          discount_code?: string | null
+          discount_offered?: number | null
+          email_sent_at?: string | null
+          expires_at?: string | null
+          id?: string
+          message: string
+          push_sent_at?: string | null
+          recommended_action?: string | null
+          severity?: string
+          sms_sent_at?: string | null
+          status?: string
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          centro_id?: string
+          created_at?: string
+          customer_id?: string
+          customer_response?: string | null
+          customer_response_at?: string | null
+          customer_viewed_at?: string | null
+          device_health_log_id?: string | null
+          device_id?: string | null
+          diagnostic_quiz_id?: string | null
+          discount_code?: string | null
+          discount_offered?: number | null
+          email_sent_at?: string | null
+          expires_at?: string | null
+          id?: string
+          message?: string
+          push_sent_at?: string | null
+          recommended_action?: string | null
+          severity?: string
+          sms_sent_at?: string | null
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_health_alerts_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_health_alerts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_health_alerts_device_health_log_id_fkey"
+            columns: ["device_health_log_id"]
+            isOneToOne: false
+            referencedRelation: "device_health_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_health_alerts_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_health_alerts_diagnostic_quiz_id_fkey"
+            columns: ["diagnostic_quiz_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_quizzes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      device_health_logs: {
+        Row: {
+          ai_analysis: string | null
+          anomalies: Json | null
+          app_version: string | null
+          battery_cycles: number | null
+          battery_health: string | null
+          battery_level: number | null
+          battery_temperature: number | null
+          centro_id: string
+          created_at: string
+          customer_id: string
+          device_id: string | null
+          device_manufacturer: string | null
+          device_model_info: string | null
+          health_score: number | null
+          id: string
+          is_charging: boolean | null
+          loyalty_card_id: string | null
+          os_version: string | null
+          ram_available_mb: number | null
+          ram_percent_used: number | null
+          ram_total_mb: number | null
+          source: string
+          storage_available_gb: number | null
+          storage_percent_used: number | null
+          storage_total_gb: number | null
+          storage_used_gb: number | null
+        }
+        Insert: {
+          ai_analysis?: string | null
+          anomalies?: Json | null
+          app_version?: string | null
+          battery_cycles?: number | null
+          battery_health?: string | null
+          battery_level?: number | null
+          battery_temperature?: number | null
+          centro_id: string
+          created_at?: string
+          customer_id: string
+          device_id?: string | null
+          device_manufacturer?: string | null
+          device_model_info?: string | null
+          health_score?: number | null
+          id?: string
+          is_charging?: boolean | null
+          loyalty_card_id?: string | null
+          os_version?: string | null
+          ram_available_mb?: number | null
+          ram_percent_used?: number | null
+          ram_total_mb?: number | null
+          source?: string
+          storage_available_gb?: number | null
+          storage_percent_used?: number | null
+          storage_total_gb?: number | null
+          storage_used_gb?: number | null
+        }
+        Update: {
+          ai_analysis?: string | null
+          anomalies?: Json | null
+          app_version?: string | null
+          battery_cycles?: number | null
+          battery_health?: string | null
+          battery_level?: number | null
+          battery_temperature?: number | null
+          centro_id?: string
+          created_at?: string
+          customer_id?: string
+          device_id?: string | null
+          device_manufacturer?: string | null
+          device_model_info?: string | null
+          health_score?: number | null
+          id?: string
+          is_charging?: boolean | null
+          loyalty_card_id?: string | null
+          os_version?: string | null
+          ram_available_mb?: number | null
+          ram_percent_used?: number | null
+          ram_total_mb?: number | null
+          source?: string
+          storage_available_gb?: number | null
+          storage_percent_used?: number | null
+          storage_total_gb?: number | null
+          storage_used_gb?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_health_logs_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_health_logs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_health_logs_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_health_logs_loyalty_card_id_fkey"
+            columns: ["loyalty_card_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      device_health_settings: {
+        Row: {
+          android_monitoring_enabled: boolean
+          auto_discount_on_critical: boolean
+          badge_after_checkups: number
+          battery_critical_threshold: number
+          battery_warning_threshold: number
+          centro_id: string
+          created_at: string
+          critical_discount_percent: number
+          health_score_critical_threshold: number
+          health_score_warning_threshold: number
+          id: string
+          ios_webapp_enabled: boolean
+          is_enabled: boolean
+          points_per_checkup: number
+          quiz_reminder_days: number
+          storage_critical_threshold: number
+          storage_warning_threshold: number
+          sync_interval_hours: number
+          updated_at: string
+          warning_discount_percent: number
+        }
+        Insert: {
+          android_monitoring_enabled?: boolean
+          auto_discount_on_critical?: boolean
+          badge_after_checkups?: number
+          battery_critical_threshold?: number
+          battery_warning_threshold?: number
+          centro_id: string
+          created_at?: string
+          critical_discount_percent?: number
+          health_score_critical_threshold?: number
+          health_score_warning_threshold?: number
+          id?: string
+          ios_webapp_enabled?: boolean
+          is_enabled?: boolean
+          points_per_checkup?: number
+          quiz_reminder_days?: number
+          storage_critical_threshold?: number
+          storage_warning_threshold?: number
+          sync_interval_hours?: number
+          updated_at?: string
+          warning_discount_percent?: number
+        }
+        Update: {
+          android_monitoring_enabled?: boolean
+          auto_discount_on_critical?: boolean
+          badge_after_checkups?: number
+          battery_critical_threshold?: number
+          battery_warning_threshold?: number
+          centro_id?: string
+          created_at?: string
+          critical_discount_percent?: number
+          health_score_critical_threshold?: number
+          health_score_warning_threshold?: number
+          id?: string
+          ios_webapp_enabled?: boolean
+          is_enabled?: boolean
+          points_per_checkup?: number
+          quiz_reminder_days?: number
+          storage_critical_threshold?: number
+          storage_warning_threshold?: number
+          sync_interval_hours?: number
+          updated_at?: string
+          warning_discount_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_health_settings_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: true
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_price_valuations: {
         Row: {
           brand: string
@@ -1162,6 +1514,80 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diagnostic_quizzes: {
+        Row: {
+          ai_analysis: string | null
+          analyzed_at: string | null
+          centro_id: string
+          created_at: string
+          customer_id: string
+          device_id: string | null
+          health_score: number | null
+          id: string
+          loyalty_card_id: string | null
+          recommendations: Json | null
+          responses: Json
+          status: string
+        }
+        Insert: {
+          ai_analysis?: string | null
+          analyzed_at?: string | null
+          centro_id: string
+          created_at?: string
+          customer_id: string
+          device_id?: string | null
+          health_score?: number | null
+          id?: string
+          loyalty_card_id?: string | null
+          recommendations?: Json | null
+          responses?: Json
+          status?: string
+        }
+        Update: {
+          ai_analysis?: string | null
+          analyzed_at?: string | null
+          centro_id?: string
+          created_at?: string
+          customer_id?: string
+          device_id?: string | null
+          health_score?: number | null
+          id?: string
+          loyalty_card_id?: string | null
+          recommendations?: Json | null
+          responses?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_quizzes_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnostic_quizzes_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnostic_quizzes_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnostic_quizzes_loyalty_card_id_fkey"
+            columns: ["loyalty_card_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_cards"
             referencedColumns: ["id"]
           },
         ]
@@ -3115,6 +3541,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_device_health_score: {
+        Args: {
+          p_battery_health: string
+          p_battery_level: number
+          p_ram_percent_used: number
+          p_storage_percent_used: number
+        }
+        Returns: number
+      }
       confirm_topup: {
         Args: { p_confirmed_by: string; p_topup_id: string }
         Returns: undefined
