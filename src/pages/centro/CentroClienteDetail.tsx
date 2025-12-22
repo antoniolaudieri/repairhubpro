@@ -495,6 +495,27 @@ export default function CentroClienteDetail() {
             </motion.div>
           )}
 
+          {/* Customer Intelligence */}
+          {centroId && (
+            <motion.div variants={itemVariants}>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <CustomerIntelligenceCard 
+                  customerId={id!} 
+                  centroId={centroId}
+                  totalSpent={totalSpent}
+                  repairCount={totalRepairsCount}
+                  lastVisitDate={lastRepairDate}
+                  hasLoyaltyCard={loyaltyBenefits.hasActiveCard}
+                />
+                <CustomerVisitTracker 
+                  customerId={id!} 
+                  centroId={centroId}
+                  customerName={customer.name}
+                />
+              </div>
+            </motion.div>
+          )}
+
           {/* Stats */}
           <motion.div variants={itemVariants}>
             <CustomerStats
