@@ -1316,6 +1316,103 @@ export type Database = {
           },
         ]
       }
+      device_health_readings: {
+        Row: {
+          app_version: string | null
+          battery_health: string | null
+          battery_level: number | null
+          centro_id: string
+          created_at: string
+          customer_id: string | null
+          device_manufacturer: string | null
+          device_model: string | null
+          device_token: string | null
+          health_score: number | null
+          id: string
+          is_charging: boolean | null
+          loyalty_card_id: string | null
+          os_version: string | null
+          platform: string | null
+          ram_available_mb: number | null
+          ram_percent_used: number | null
+          ram_total_mb: number | null
+          storage_available_gb: number | null
+          storage_percent_used: number | null
+          storage_total_gb: number | null
+          storage_used_gb: number | null
+        }
+        Insert: {
+          app_version?: string | null
+          battery_health?: string | null
+          battery_level?: number | null
+          centro_id: string
+          created_at?: string
+          customer_id?: string | null
+          device_manufacturer?: string | null
+          device_model?: string | null
+          device_token?: string | null
+          health_score?: number | null
+          id?: string
+          is_charging?: boolean | null
+          loyalty_card_id?: string | null
+          os_version?: string | null
+          platform?: string | null
+          ram_available_mb?: number | null
+          ram_percent_used?: number | null
+          ram_total_mb?: number | null
+          storage_available_gb?: number | null
+          storage_percent_used?: number | null
+          storage_total_gb?: number | null
+          storage_used_gb?: number | null
+        }
+        Update: {
+          app_version?: string | null
+          battery_health?: string | null
+          battery_level?: number | null
+          centro_id?: string
+          created_at?: string
+          customer_id?: string | null
+          device_manufacturer?: string | null
+          device_model?: string | null
+          device_token?: string | null
+          health_score?: number | null
+          id?: string
+          is_charging?: boolean | null
+          loyalty_card_id?: string | null
+          os_version?: string | null
+          platform?: string | null
+          ram_available_mb?: number | null
+          ram_percent_used?: number | null
+          ram_total_mb?: number | null
+          storage_available_gb?: number | null
+          storage_percent_used?: number | null
+          storage_total_gb?: number | null
+          storage_used_gb?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_health_readings_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_health_readings_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_health_readings_loyalty_card_id_fkey"
+            columns: ["loyalty_card_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       device_health_settings: {
         Row: {
           android_monitoring_enabled: boolean
