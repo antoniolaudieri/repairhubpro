@@ -294,7 +294,7 @@ export function CustomerDialog({ open, onOpenChange, customer, onSuccess }: Cust
 
             <TabsContent value="profile" className="space-y-4">
               {/* Birth Date & Gender */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="birth_date" className="flex items-center gap-1.5 text-sm">
                     <Calendar className="h-3.5 w-3.5" />
