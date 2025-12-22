@@ -32,9 +32,14 @@ export default function LoyaltyCheckoutRedirect() {
           });
         }
 
-        // Create checkout session
+        // Create checkout session (use snake_case for edge function)
         const { data, error: fnError } = await supabase.functions.invoke("create-loyalty-checkout", {
-          body: { customerId, centroId, customerEmail }
+          body: { 
+            customer_id: customerId, 
+            centro_id: centroId, 
+            customer_email: customerEmail,
+            tracking_id: trackingId
+          }
         });
 
         if (fnError) throw fnError;
