@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { RefreshCw, Bell, Cloud, CloudOff, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,8 +14,6 @@ import {
   HealthScoreWidget,
   RamWidget 
 } from '@/components/monitor';
-import { PushNotifications } from '@capacitor/push-notifications';
-import { App } from '@capacitor/app';
 
 interface CentroInfo {
   id: string;
@@ -30,8 +28,64 @@ const DeviceMonitor = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [isNative, setIsNative] = useState(false);
   
   const deviceInfo = useNativeDeviceInfo(centroId);
+
+  // Check if running in native environment and setup Capacitor
+  useEffect(() => {
+    const initCapacitor = async () => {
+      try {
+        const { Capacitor } = await import('@capacitor/core');
+        const nativePlatform = Capacitor.isNativePlatform();
+        setIsNative(nativePlatform);
+        
+        if (nativePlatform) {
+          // Setup push notifications
+          const { PushNotifications } = await import('@capacitor/push-notifications');
+          
+          const result = await PushNotifications.checkPermissions();
+          
+          if (result.receive === 'prompt') {
+            const requestResult = await PushNotifications.requestPermissions();
+            setPushEnabled(requestResult.receive === 'granted');
+          } else {
+            setPushEnabled(result.receive === 'granted');
+          }
+
+          if (result.receive === 'granted') {
+            await PushNotifications.register();
+            
+            PushNotifications.addListener('pushNotificationReceived', notification => {
+              toast({
+                title: notification.title || 'Notifica',
+                description: notification.body || ''
+              });
+            });
+            
+            PushNotifications.addListener('pushNotificationActionPerformed', action => {
+              console.log('Push action performed:', action);
+            });
+          }
+
+          // Setup app lifecycle
+          const { App } = await import('@capacitor/app');
+          App.addListener('appStateChange', async ({ isActive }) => {
+            if (isActive) {
+              deviceInfo.refresh();
+            } else {
+              await deviceInfo.syncToServer();
+            }
+          });
+        }
+      } catch (e) {
+        console.log('Capacitor not available - running in web mode');
+        setIsNative(false);
+      }
+    };
+    
+    initCapacitor();
+  }, [toast, deviceInfo]);
 
   // Fetch centro info
   useEffect(() => {
@@ -61,64 +115,6 @@ const DeviceMonitor = () => {
     
     fetchCentro();
   }, [centroId, toast]);
-
-  // Setup push notifications
-  useEffect(() => {
-    const setupPush = async () => {
-      try {
-        // Check if we're in a native environment
-        const result = await PushNotifications.checkPermissions();
-        
-        if (result.receive === 'prompt') {
-          const requestResult = await PushNotifications.requestPermissions();
-          setPushEnabled(requestResult.receive === 'granted');
-        } else {
-          setPushEnabled(result.receive === 'granted');
-        }
-
-        if (result.receive === 'granted') {
-          await PushNotifications.register();
-          
-          // Handle push notification events
-          PushNotifications.addListener('pushNotificationReceived', notification => {
-            toast({
-              title: notification.title || 'Notifica',
-              description: notification.body || ''
-            });
-          });
-          
-          PushNotifications.addListener('pushNotificationActionPerformed', action => {
-            console.log('Push action performed:', action);
-          });
-        }
-      } catch (e) {
-        console.log('Push notifications not available (web environment)');
-      }
-    };
-    
-    setupPush();
-  }, [toast]);
-
-  // Handle app lifecycle for background sync
-  useEffect(() => {
-    const setupAppLifecycle = async () => {
-      try {
-        App.addListener('appStateChange', async ({ isActive }) => {
-          if (isActive) {
-            // App came to foreground - refresh data
-            deviceInfo.refresh();
-          } else {
-            // App went to background - sync data
-            await deviceInfo.syncToServer();
-          }
-        });
-      } catch (e) {
-        console.log('App lifecycle not available (web environment)');
-      }
-    };
-    
-    setupAppLifecycle();
-  }, [deviceInfo]);
 
   const handleSync = async () => {
     setSyncing(true);
