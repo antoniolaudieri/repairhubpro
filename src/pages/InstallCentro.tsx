@@ -34,8 +34,59 @@ export default function InstallCentro() {
   useEffect(() => {
     if (centroId) {
       fetchCentroInfo();
+      injectDynamicManifest(centroId);
     }
+    
+    // Cleanup on unmount - restore original manifest
+    return () => {
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) {
+        manifestLink.setAttribute('href', '/manifest.webmanifest');
+      }
+    };
   }, [centroId]);
+
+  // Inject dynamic manifest for this centro
+  const injectDynamicManifest = (id: string) => {
+    const manifestUrl = `https://mivvpthovnkynigfwmjm.supabase.co/functions/v1/generate-pwa-manifest?centro_id=${id}`;
+    
+    // Update or create manifest link
+    let manifestLink = document.querySelector('link[rel="manifest"]') as HTMLLinkElement;
+    if (manifestLink) {
+      manifestLink.href = manifestUrl;
+    } else {
+      manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest';
+      manifestLink.href = manifestUrl;
+      document.head.appendChild(manifestLink);
+    }
+  };
+
+  // Update apple-touch-icon when centro loads
+  useEffect(() => {
+    if (centro?.logo_url) {
+      // Update apple-touch-icon for iOS
+      let appleIcon = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement;
+      if (appleIcon) {
+        appleIcon.href = centro.logo_url;
+      }
+      
+      // Update page title
+      document.title = `${centro.business_name} - Installa App`;
+      
+      // Update theme-color meta
+      const themeColor = document.querySelector('meta[name="theme-color"]');
+      if (themeColor) {
+        themeColor.setAttribute('content', '#000000');
+      }
+      
+      // Update apple-mobile-web-app-title
+      let appleTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]') as HTMLMetaElement;
+      if (appleTitle) {
+        appleTitle.content = centro.business_name;
+      }
+    }
+  }, [centro]);
 
   const fetchCentroInfo = async () => {
     try {
