@@ -29,7 +29,7 @@ export default function DeviceHealthQuiz() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const loyaltyCardId = searchParams.get("card");
+  const loyaltyCardIdFromUrl = searchParams.get("card");
   
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -39,14 +39,69 @@ export default function DeviceHealthQuiz() {
   const [result, setResult] = useState<QuizResult | null>(null);
   const [previousQuizzes, setPreviousQuizzes] = useState<QuizResult[]>([]);
   const [loyaltyCard, setLoyaltyCard] = useState<any>(null);
+  const [availableCards, setAvailableCards] = useState<any[]>([]);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(loyaltyCardIdFromUrl);
 
   useEffect(() => {
     checkAccess();
-  }, [user, loyaltyCardId]);
+  }, [user, selectedCardId]);
+
+  // If no card ID in URL, try to find active loyalty cards for this user
+  useEffect(() => {
+    const findUserCards = async () => {
+      const userEmail = user?.email;
+      if (!userEmail || loyaltyCardIdFromUrl) return;
+      
+      try {
+        // Use fetch to avoid Supabase client type inference issues
+        const baseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        
+        // Fetch loyalty cards
+        const cardsRes = await fetch(
+          `${baseUrl}/rest/v1/loyalty_cards?customer_email=eq.${encodeURIComponent(userEmail)}&status=eq.active&select=id,card_number,centro_id`,
+          { headers: { "apikey": apiKey, "Authorization": `Bearer ${apiKey}` } }
+        );
+        const cards = await cardsRes.json() as { id: string; card_number: string | null; centro_id: string }[];
+        
+        if (cards && cards.length > 0) {
+          // Fetch centro names
+          const centroIds = [...new Set(cards.map(c => c.centro_id))];
+          const centroRes = await fetch(
+            `${baseUrl}/rest/v1/centri_assistenza?id=in.(${centroIds.join(",")})&select=id,business_name`,
+            { headers: { "apikey": apiKey, "Authorization": `Bearer ${apiKey}` } }
+          );
+          const centri = await centroRes.json() as { id: string; business_name: string }[];
+          const centroMap = new Map(centri?.map(c => [c.id, c.business_name]) || []);
+          
+          const cardsWithCentro = cards.map(card => ({
+            ...card,
+            centro_name: centroMap.get(card.centro_id) || "Centro"
+          }));
+          
+          setAvailableCards(cardsWithCentro);
+          if (cardsWithCentro.length === 1) {
+            setSelectedCardId(cardsWithCentro[0].id);
+          }
+        } else {
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Error fetching user cards:", error);
+        setLoading(false);
+      }
+    };
+
+    findUserCards();
+  }, [user, loyaltyCardIdFromUrl]);
 
   const checkAccess = async () => {
-    if (!user || !loyaltyCardId) {
-      setLoading(false);
+    if (!user || !selectedCardId) {
+      if (!loyaltyCardIdFromUrl && availableCards.length === 0) {
+        // Will be handled by findUserCards
+      } else {
+        setLoading(false);
+      }
       return;
     }
 
@@ -55,7 +110,7 @@ export default function DeviceHealthQuiz() {
       const { data, error } = await supabase.functions.invoke("device-health", {
         body: {
           action: "verify_access",
-          loyalty_card_id: loyaltyCardId
+          loyalty_card_id: selectedCardId
         }
       });
 
@@ -77,31 +132,31 @@ export default function DeviceHealthQuiz() {
   };
 
   const fetchPreviousQuizzes = async () => {
-    if (!user) return;
+    if (!user || !selectedCardId) return;
 
     try {
-      const { data } = await supabase
+      const response: any = await supabase
         .from("diagnostic_quizzes")
         .select("id, health_score, ai_analysis, recommendations, created_at, status")
-        .eq("loyalty_card_id", loyaltyCardId)
+        .eq("loyalty_card_id", selectedCardId)
         .order("created_at", { ascending: false })
         .limit(5);
 
-      setPreviousQuizzes(data || []);
+      setPreviousQuizzes(response.data || []);
     } catch (error) {
       console.error("Error fetching quizzes:", error);
     }
   };
 
   const handleQuizComplete = async (responses: Record<string, string>, healthScore: number) => {
-    if (!user || !loyaltyCardId) return;
+    if (!user || !selectedCardId) return;
 
     setSubmitting(true);
     try {
       const { data, error } = await supabase.functions.invoke("device-health", {
         body: {
           action: "submit_quiz",
-          loyalty_card_id: loyaltyCardId,
+          loyalty_card_id: selectedCardId,
           responses,
           health_score: healthScore,
           quick_mode: quickMode
@@ -136,7 +191,54 @@ export default function DeviceHealthQuiz() {
     );
   }
 
-  if (!user || !loyaltyCardId || !hasAccess) {
+  // Show card selector if multiple cards available
+  if (user && !selectedCardId && availableCards.length > 1) {
+    return (
+      <PageTransition>
+        <div className="min-h-screen bg-background p-4">
+          <div className="max-w-md mx-auto pt-8">
+            <Card>
+              <CardHeader className="text-center">
+                <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                  <Activity className="h-8 w-8 text-primary" />
+                </div>
+                <CardTitle>Seleziona Tessera</CardTitle>
+                <CardDescription>
+                  Hai più tessere attive. Seleziona quella da utilizzare per la diagnosi.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {availableCards.map((card) => (
+                  <Button
+                    key={card.id}
+                    variant="outline"
+                    className="w-full justify-start h-auto py-3"
+                    onClick={() => setSelectedCardId(card.id)}
+                  >
+                    <div className="text-left">
+                      <p className="font-medium">{card.card_number}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {(card.centri_assistenza as any)?.business_name || "Centro"}
+                      </p>
+                    </div>
+                  </Button>
+                ))}
+                <Button 
+                  onClick={() => navigate("/customer-dashboard")} 
+                  variant="ghost"
+                  className="w-full mt-4"
+                >
+                  Torna alla Dashboard
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
+
+  if (!user || (!selectedCardId && availableCards.length === 0) || !hasAccess) {
     return (
       <PageTransition>
         <div className="min-h-screen bg-background p-4">
@@ -152,8 +254,8 @@ export default function DeviceHealthQuiz() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-center">
-                <Button onClick={() => navigate("/")} variant="outline">
-                  Torna alla Home
+                <Button onClick={() => navigate("/customer-dashboard")} variant="outline">
+                  Torna alla Dashboard
                 </Button>
               </CardContent>
             </Card>
@@ -172,7 +274,7 @@ export default function DeviceHealthQuiz() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => showQuiz ? setShowQuiz(false) : navigate(-1)}
+              onClick={() => showQuiz ? setShowQuiz(false) : navigate("/customer-dashboard")}
               className="h-8 w-8"
             >
               <ArrowLeft className="h-4 w-4" />
