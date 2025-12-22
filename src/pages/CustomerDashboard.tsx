@@ -42,6 +42,7 @@ import { NotificationBanner } from "@/components/customer/NotificationBanner";
 import { InAppNotifications } from "@/components/customer/InAppNotifications";
 import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
 import PromotionPreferences from "@/components/customer/PromotionPreferences";
+import { MarketingConsentManager } from "@/components/customer/MarketingConsentManager";
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { useCustomerLoyaltyCards } from "@/hooks/useLoyaltyCard";
 import { LoyaltyCardDisplay } from "@/components/loyalty/LoyaltyCardDisplay";
@@ -678,6 +679,11 @@ export default function CustomerDashboard() {
               </div>
             )}
           </div>
+
+          {/* Marketing Consent Manager */}
+          {user?.email && (
+            <MarketingConsentManager customerEmail={user.email} />
+          )}
 
           {/* Promotion Preferences */}
           {user?.email && (

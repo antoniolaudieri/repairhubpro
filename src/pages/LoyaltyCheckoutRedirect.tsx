@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CreditCard, AlertCircle, CheckCircle2 } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { Loader2, CreditCard, AlertCircle, CheckCircle2, Gift, Shield } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export default function LoyaltyCheckoutRedirect() {
@@ -10,7 +10,7 @@ export default function LoyaltyCheckoutRedirect() {
   const customerId = searchParams.get("customer_id");
   const centroId = searchParams.get("centro_id");
   const customerEmail = searchParams.get("email");
-  const centroName = searchParams.get("centro") || "Centro";
+  const centroName = searchParams.get("centro") || "Centro Assistenza";
   const trackingId = searchParams.get("track");
   
   const [loading, setLoading] = useState(true);
@@ -47,111 +47,16 @@ export default function LoyaltyCheckoutRedirect() {
         }
       } catch (err: any) {
         console.error("Checkout error:", err);
-        setError(err.message || "Errore durante il checkout.");
+        if (err.message?.includes("already has an active")) {
+          setError("Hai già una tessera fedeltà attiva per questo centro!");
+        } else {
+          setError(err.message || "Errore durante il checkout.");
+        }
         setLoading(false);
       }
     };
 
     initCheckout();
-  }, [customerId, centroId, customerEmail, trackingId]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full p-8 text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Preparazione checkout...</h2>
-          <p className="text-muted-foreground">Verrai reindirizzato al pagamento sicuro.</p>
-        </Card>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <Card className="max-w-md w-full p-8 text-center">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Errore</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={() => window.close()} variant="outline">Chiudi</Button>
-        </Card>
-      </div>
-    );
-  }
-
-  return null;
-}
-import { useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, CreditCard, Gift, Shield, CheckCircle } from "lucide-react";
-
-export default function LoyaltyCheckoutRedirect() {
-  const [searchParams] = useSearchParams();
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const customerId = searchParams.get("customer_id");
-  const centroId = searchParams.get("centro_id");
-  const customerEmail = searchParams.get("email");
-  const centroName = searchParams.get("centro") || "Centro Assistenza";
-  const trackingId = searchParams.get("track");
-
-  useEffect(() => {
-    const initiateCheckout = async () => {
-      if (!customerId || !centroId) {
-        setError("Parametri mancanti. Link non valido.");
-        setLoading(false);
-        return;
-      }
-
-      // Track the click if tracking ID is present
-      if (trackingId) {
-        try {
-          await supabase
-            .from("email_campaign_clicks")
-            .update({ clicked_at: new Date().toISOString() })
-            .eq("id", trackingId);
-          console.log("Click tracked:", trackingId);
-        } catch (trackErr) {
-          console.error("Error tracking click:", trackErr);
-          // Don't block checkout if tracking fails
-        }
-      }
-
-      try {
-        const { data, error: fnError } = await supabase.functions.invoke("create-loyalty-checkout", {
-          body: { 
-            customer_id: customerId, 
-            centro_id: centroId, 
-            customer_email: customerEmail,
-            tracking_id: trackingId 
-          },
-        });
-
-        if (fnError) throw fnError;
-        if (data?.error) throw new Error(data.error);
-
-        if (data?.url) {
-          window.location.href = data.url;
-        } else {
-          setError("Impossibile creare la sessione di pagamento.");
-          setLoading(false);
-        }
-      } catch (err: any) {
-        console.error("Checkout error:", err);
-        if (err.message?.includes("already has an active")) {
-          setError("Hai già una tessera fedeltà attiva per questo centro!");
-        } else {
-          setError(err.message || "Errore durante la creazione del checkout.");
-        }
-        setLoading(false);
-      }
-    };
-
-    initiateCheckout();
   }, [customerId, centroId, customerEmail, trackingId]);
 
   if (loading) {
@@ -175,9 +80,9 @@ export default function LoyaltyCheckoutRedirect() {
           <CardHeader className="text-center">
             <div className="mx-auto w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4">
               {error.includes("attiva") ? (
-                <CheckCircle className="h-8 w-8 text-green-600" />
+                <CheckCircle2 className="h-8 w-8 text-green-600" />
               ) : (
-                <CreditCard className="h-8 w-8 text-amber-600" />
+                <AlertCircle className="h-8 w-8 text-amber-600" />
               )}
             </div>
             <CardTitle>{error.includes("attiva") ? "Tessera Già Attiva!" : "Attenzione"}</CardTitle>

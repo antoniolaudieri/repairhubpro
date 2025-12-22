@@ -273,12 +273,43 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
     if (selectedCustomers.length === 0) return;
     
     setSending(true);
-    setSendProgress({ sent: 0, total: selectedCustomers.length, failed: 0 });
+    
+    // Check for unsubscribed customers first
+    const customerEmails = selectedCustomers.map(c => c.email).filter(Boolean);
+    const { data: unsubscribed } = await supabase
+      .from("email_unsubscribes")
+      .select("email")
+      .eq("centro_id", centroId)
+      .in("email", customerEmails);
+    
+    const unsubscribedEmails = new Set(unsubscribed?.map(u => u.email) || []);
+    
+    // Also check customer_profiles for email_consent = false
+    const customerIds = selectedCustomers.map(c => c.id);
+    const { data: profiles } = await supabase
+      .from("customer_profiles")
+      .select("customer_id, email_consent")
+      .eq("centro_id", centroId)
+      .in("customer_id", customerIds)
+      .eq("email_consent", false);
+    
+    const noConsentCustomerIds = new Set(profiles?.map(p => p.customer_id) || []);
+    
+    // Filter out unsubscribed customers
+    const eligibleCustomers = selectedCustomers.filter(c => 
+      c.email && 
+      !unsubscribedEmails.has(c.email) && 
+      !noConsentCustomerIds.has(c.id)
+    );
+    
+    const skipped = selectedCustomers.length - eligibleCustomers.length;
+    
+    setSendProgress({ sent: 0, total: eligibleCustomers.length, failed: 0 });
 
     let sent = 0;
     let failed = 0;
 
-    for (const customer of selectedCustomers) {
+    for (const customer of eligibleCustomers) {
       try {
         // Create tracking record first
         const { data: trackingRecord, error: trackingError } = await supabase
@@ -318,16 +349,22 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
         failed++;
       }
       
-      setSendProgress({ sent, total: selectedCustomers.length, failed });
+      setSendProgress({ sent, total: eligibleCustomers.length, failed });
     }
 
     setSending(false);
     setShowEmailDialog(false);
     
-    if (failed === 0) {
+    if (skipped > 0) {
+      toast.info(`${skipped} clienti esclusi (disiscritti o senza consenso)`);
+    }
+    
+    if (failed === 0 && sent > 0) {
       toast.success(`${sent} email inviate con successo!`);
-    } else {
+    } else if (sent > 0) {
       toast.warning(`${sent} email inviate, ${failed} fallite`);
+    } else if (sent === 0 && skipped > 0) {
+      toast.warning("Nessuna email inviata - tutti i clienti selezionati sono disiscritti");
     }
     
     setSelectedIds(new Set());
