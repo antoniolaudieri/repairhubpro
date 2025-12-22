@@ -46,7 +46,7 @@ interface CustomerStats {
   totalSpent: number;
 }
 
-type CustomerFilter = "all" | "gold" | "atRisk" | "overdue" | "returningThisWeek" | "healthActive";
+type CustomerFilter = "all" | "gold" | "atRisk" | "overdue" | "returningThisWeek" | "healthActive" | "loyaltyActive";
 
 export default function CentroClienti() {
   const { user } = useAuth();
@@ -60,6 +60,7 @@ export default function CentroClienti() {
   const [centroId, setCentroId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<CustomerFilter>("all");
   const [healthActiveCustomers, setHealthActiveCustomers] = useState<Set<string>>(new Set());
+  const [loyaltyActiveCustomers, setLoyaltyActiveCustomers] = useState<Set<string>>(new Set());
 
   // Fetch customer analytics from AI agent
   const { analytics, loading: analyticsLoading } = useCustomerAnalytics(centroId);
@@ -171,6 +172,32 @@ export default function CentroClienti() {
     fetchHealthActiveCustomers();
   }, [centroId]);
 
+  // Fetch customers with active loyalty cards
+  useEffect(() => {
+    const fetchLoyaltyActiveCustomers = async () => {
+      if (!centroId) return;
+      
+      try {
+        const { data: loyaltyCards } = await supabase
+          .from("loyalty_cards")
+          .select("customer_id")
+          .eq("centro_id", centroId)
+          .eq("status", "active");
+        
+        const activeIds = new Set<string>();
+        loyaltyCards?.forEach(card => {
+          if (card.customer_id) activeIds.add(card.customer_id);
+        });
+        
+        setLoyaltyActiveCustomers(activeIds);
+      } catch (error) {
+        console.error("Error fetching loyalty active customers:", error);
+      }
+    };
+    
+    fetchLoyaltyActiveCustomers();
+  }, [centroId]);
+
   // Create analytics map for quick lookup
   const analyticsMap = useMemo(() => {
     const map: Record<string, CustomerAnalytics> = {};
@@ -190,6 +217,8 @@ export default function CentroClienti() {
     // Apply additional filters
     if (activeFilter === "healthActive") {
       filtered = filtered.filter(customer => healthActiveCustomers.has(customer.id));
+    } else if (activeFilter === "loyaltyActive") {
+      filtered = filtered.filter(customer => loyaltyActiveCustomers.has(customer.id));
     } else if (activeFilter !== "all" && Object.keys(analyticsMap).length > 0) {
       filtered = filtered.filter(customer => {
         const a = analyticsMap[customer.id];
@@ -215,7 +244,7 @@ export default function CentroClienti() {
     }
 
     setFilteredCustomers(filtered);
-  }, [searchQuery, customers, activeFilter, analyticsMap, healthActiveCustomers]);
+  }, [searchQuery, customers, activeFilter, analyticsMap, healthActiveCustomers, loyaltyActiveCustomers]);
 
   const totalRepairs = Object.values(customerStats).reduce((a, b) => a + b.repairCount, 0);
   const totalRevenue = Object.values(customerStats).reduce((a, b) => a + b.totalSpent, 0);
@@ -373,6 +402,15 @@ export default function CentroClienti() {
             >
               <Activity className="h-3.5 w-3.5" />
               Monitoraggio ({healthActiveCustomers.size})
+            </Button>
+            <Button
+              variant={activeFilter === "loyaltyActive" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveFilter("loyaltyActive")}
+              className="gap-1.5"
+            >
+              <CreditCard className="h-3.5 w-3.5" />
+              Tessera Attiva ({loyaltyActiveCustomers.size})
             </Button>
           </motion.div>
 
