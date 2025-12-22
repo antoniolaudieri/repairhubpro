@@ -81,6 +81,7 @@ import LoyaltyCheckoutRedirect from "@/pages/LoyaltyCheckoutRedirect";
 import InstallCentro from "@/pages/InstallCentro";
 import DeviceHealthQuiz from "@/pages/customer/DeviceHealthQuiz";
 import Disiscrizione from "@/pages/Disiscrizione";
+import DeviceMonitor from "@/pages/DeviceMonitor";
 
 export const AnimatedRoutes = () => {
   return (
@@ -104,6 +105,9 @@ export const AnimatedRoutes = () => {
         
         {/* Public Email Unsubscribe */}
         <Route path="/disiscrizione" element={<PageTransition><Disiscrizione /></PageTransition>} />
+        
+        {/* Device Monitor - Native Android App */}
+        <Route path="/device-monitor/:centroId" element={<PageTransition><DeviceMonitor /></PageTransition>} />
         
         {/* Device Health Quiz - iOS WebApp */}
         <Route path="/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />

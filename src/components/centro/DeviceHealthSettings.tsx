@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
+import { SendHealthNotificationDialog } from "./SendHealthNotificationDialog";
 
 interface DeviceHealthSettingsProps {
   centroId: string;
@@ -140,10 +141,13 @@ export function DeviceHealthSettings({ centroId }: DeviceHealthSettingsProps) {
               Monitora la salute dei dispositivi dei clienti con tessera fedeltà
             </CardDescription>
           </div>
-          <Switch
-            checked={settings.is_enabled}
-            onCheckedChange={(checked) => setSettings(prev => ({ ...prev, is_enabled: checked }))}
-          />
+          <div className="flex items-center gap-3">
+            <SendHealthNotificationDialog centroId={centroId} />
+            <Switch
+              checked={settings.is_enabled}
+              onCheckedChange={(checked) => setSettings(prev => ({ ...prev, is_enabled: checked }))}
+            />
+          </div>
         </div>
       </CardHeader>
 
