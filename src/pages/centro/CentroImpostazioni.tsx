@@ -17,6 +17,7 @@ import { OpeningHoursEditor, OpeningHours } from "@/components/settings/OpeningH
 import { UnsavedChangesDialog } from "@/components/settings/UnsavedChangesDialog";
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import EmailTemplateEditor, { EmailTemplates } from "@/components/centro/EmailTemplateEditor";
+import { DeviceHealthSettings } from "@/components/centro/DeviceHealthSettings";
 import { 
   Settings,
   Building2,
@@ -1780,6 +1781,11 @@ export default function CentroImpostazioni() {
             centroName={centro?.business_name || "Il tuo Centro"}
             centroLogo={centro?.logo_url}
           />
+
+          {/* Device Health Settings */}
+          {centro && (
+            <DeviceHealthSettings centroId={centro.id} />
+          )}
 
             </div>
           </motion.div>
