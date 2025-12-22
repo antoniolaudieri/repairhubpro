@@ -196,7 +196,12 @@ export default function CentroLavori() {
       repair.device.customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       repair.device.reported_issue?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus = statusFilter === "all" || repair.status === statusFilter;
+    // "in_corso" filter includes both in_progress and waiting_for_parts to match stats
+    const matchesStatus = 
+      statusFilter === "all" || 
+      (statusFilter === "in_corso" 
+        ? (repair.status === "in_progress" || repair.status === "waiting_for_parts")
+        : repair.status === statusFilter);
 
     return matchesSearch && matchesStatus;
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -347,8 +352,7 @@ export default function CentroLavori() {
               <SelectContent>
                 <SelectItem value="all">Tutti gli stati</SelectItem>
                 <SelectItem value="pending">In Attesa</SelectItem>
-                <SelectItem value="in_progress">In Corso</SelectItem>
-                <SelectItem value="waiting_for_parts">Attesa Ricambi</SelectItem>
+                <SelectItem value="in_corso">In Corso (+ Attesa Ricambi)</SelectItem>
                 <SelectItem value="completed">Completato</SelectItem>
                 <SelectItem value="delivered">Consegnato</SelectItem>
                 <SelectItem value="forfeited">Alienato</SelectItem>
