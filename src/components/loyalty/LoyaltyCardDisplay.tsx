@@ -90,14 +90,26 @@ export function LoyaltyCardDisplay({ card, compact = false }: LoyaltyCardDisplay
           <p className="text-2xl font-mono tracking-wider">{card.card_number || '---'}</p>
         </div>
 
+        {/* Main Benefit Highlight */}
+        <div className="bg-white/25 rounded-lg p-3 mb-4 border border-white/30">
+          <div className="flex items-center gap-2 mb-1">
+            <Gift className="h-5 w-5" />
+            <span className="text-sm font-bold uppercase">Diagnosi Inclusa</span>
+          </div>
+          <p className="text-xs opacity-90">
+            Diagnosi gratuita per {card.max_devices} dispositivi • Controllo completo dello stato di salute
+          </p>
+        </div>
+
         {/* Benefits Grid */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-white/20 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
-              <Check className="h-4 w-4" />
+              <Smartphone className="h-4 w-4" />
               <span className="text-xs font-medium">DIAGNOSI</span>
             </div>
-            <p className="text-lg font-bold">€10 <span className="text-xs opacity-70 line-through">€15</span></p>
+            <p className="text-lg font-bold">{card.devices_used}/{card.max_devices}</p>
+            <p className="text-xs opacity-70">dispositivi</p>
           </div>
           
           <div className="bg-white/20 rounded-lg p-3">
@@ -106,27 +118,22 @@ export function LoyaltyCardDisplay({ card, compact = false }: LoyaltyCardDisplay
               <span className="text-xs font-medium">SCONTO</span>
             </div>
             <p className="text-lg font-bold">10%</p>
+            <p className="text-xs opacity-70">su riparazioni</p>
           </div>
           
-          <div className="bg-white/20 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Smartphone className="h-4 w-4" />
-              <span className="text-xs font-medium">DISPOSITIVI</span>
+          <div className="bg-white/20 rounded-lg p-3 col-span-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span className="text-xs font-medium">VALIDITÀ</span>
+              </div>
+              <p className="text-sm font-bold">
+                {card.expires_at 
+                  ? format(new Date(card.expires_at), 'dd/MM/yyyy', { locale: it })
+                  : 'N/A'
+                }
+              </p>
             </div>
-            <p className="text-lg font-bold">{card.devices_used}/{card.max_devices}</p>
-          </div>
-          
-          <div className="bg-white/20 rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Calendar className="h-4 w-4" />
-              <span className="text-xs font-medium">SCADENZA</span>
-            </div>
-            <p className="text-sm font-bold">
-              {card.expires_at 
-                ? format(new Date(card.expires_at), 'dd/MM/yyyy', { locale: it })
-                : 'N/A'
-              }
-            </p>
           </div>
         </div>
 
