@@ -77,7 +77,8 @@ import TrackQr from "@/pages/ads/TrackQr";
 import CornerPubblicita from "@/pages/corner/CornerPubblicita";
 // Loyalty
 import LoyaltyCheckoutRedirect from "@/pages/LoyaltyCheckoutRedirect";
-// Device Health
+// Device Health + PWA Install
+import InstallCentro from "@/pages/InstallCentro";
 import DeviceHealthQuiz from "@/pages/customer/DeviceHealthQuiz";
 
 export const AnimatedRoutes = () => {
@@ -485,8 +486,9 @@ export const AnimatedRoutes = () => {
         <Route path="/usato" element={<PageTransition><UsatoCatalog /></PageTransition>} />
         <Route path="/usato/:id" element={<PageTransition><UsatoDetail /></PageTransition>} />
         
-        {/* PWA Install Page */}
+        {/* PWA Install Pages */}
         <Route path="/install" element={<PageTransition><Install /></PageTransition>} />
+        <Route path="/install/:centroId" element={<PageTransition><InstallCentro /></PageTransition>} />
         {/* Technician Routes */}
         <Route
           path="/dashboard"
