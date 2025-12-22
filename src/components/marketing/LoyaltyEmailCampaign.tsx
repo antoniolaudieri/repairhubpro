@@ -33,7 +33,7 @@ interface LoyaltyEmailCampaignProps {
   } | null;
 }
 
-type EmailTemplate = "friendly" | "urgency" | "value" | "exclusive" | "custom";
+type EmailTemplate = "diagnosis" | "friendly" | "urgency" | "value" | "exclusive" | "prevention" | "custom";
 
 const getFirstName = (fullName: string): string => {
   return fullName.split(" ")[0];
@@ -49,38 +49,50 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
   const [sendProgress, setSendProgress] = useState({ sent: 0, total: 0, failed: 0 });
   const [customSubject, setCustomSubject] = useState("");
   const [customMessage, setCustomMessage] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate>("friendly");
+  const [selectedTemplate, setSelectedTemplate] = useState<EmailTemplate>("diagnosis");
 
   const emailTemplates = {
+    diagnosis: {
+      name: "📱 Diagnosi Gratuita",
+      description: "Focus sulla webapp di diagnosi dispositivi - NOVITÀ",
+      subject: `{{nome}}, scopri lo stato di salute del tuo smartphone GRATIS! 📱`,
+      getMessage: () => `Ciao {{nome}}!\n\n🆕 GRANDE NOVITÀ: Abbiamo lanciato un nuovo servizio esclusivo!\n\nCon la Tessera Fedeltà ${centroName} hai accesso alla nostra WEBAPP DI DIAGNOSI DISPOSITIVI - un'applicazione intelligente che monitora la salute del tuo smartphone in tempo reale!\n\n📊 COSA FA LA WEBAPP:\n• Analisi stato batteria e cicli di ricarica\n• Controllo memoria e storage disponibile\n• Monitoraggio prestazioni del sistema\n• Alert automatici quando c'è un problema\n• Report dettagliato sulla salute del dispositivo\n\n🎁 CON LA TESSERA OTTIENI:\n✅ DIAGNOSI GRATUITA per ${settings?.max_devices || 3} dispositivi (valore €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)}!)\n✅ ${settings?.repair_discount_percent || 10}% di sconto su TUTTE le riparazioni\n✅ Accesso illimitato alla webapp di monitoraggio\n✅ Alert preventivi per evitare guasti\n\n💰 TUTTO QUESTO A SOLI €${settings?.annual_price || 30}/ANNO!\n\nNon aspettare che il tuo telefono si rompa - previeni i problemi!\n\n${centroName}`
+    },
     friendly: {
-      name: "Amichevole",
-      description: "Tono caldo e personale",
+      name: "💝 Amichevole",
+      description: "Tono caldo e personale con focus diagnosi",
       subject: `${centroName} - Un regalo speciale per te! 🎁`,
-      getMessage: () => `Ciao {{nome}}!\n\nCome stai? Spero tutto bene con i tuoi dispositivi! 😊\n\nVolevo parlarti di una novità pensata proprio per clienti speciali come te: la nostra Tessera Fedeltà!\n\nCon soli €${settings?.annual_price || 30} all'anno avrai:\n✨ Diagnostica a €${settings?.diagnostic_fee || 10} (risparmi €5 ogni volta!)\n✨ ${settings?.repair_discount_percent || 10}% di sconto su TUTTE le riparazioni\n✨ Valida per ${settings?.max_devices || 3} dispositivi tuoi o della tua famiglia\n\nÈ un piccolo investimento che si ripaga già alla prima riparazione!\n\nTi aspetto in negozio per attivare la tua tessera 🤗\n\nA presto!\n${centroName}`
+      getMessage: () => `Ciao {{nome}}!\n\nCome stai? Spero tutto bene con i tuoi dispositivi! 😊\n\nVolevo parlarti di una novità pensata proprio per clienti speciali come te: la nostra Tessera Fedeltà!\n\n🆕 NOVITÀ ESCLUSIVA: Con la tessera hai accesso alla nostra webapp di DIAGNOSI SMART che monitora la salute del tuo smartphone!\n\nCon soli €${settings?.annual_price || 30} all'anno avrai:\n📱 DIAGNOSI GRATUITA per ${settings?.max_devices || 3} dispositivi (normalmente €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)}!)\n✨ ${settings?.repair_discount_percent || 10}% di sconto su TUTTE le riparazioni\n📊 Webapp per controllare lo stato del tuo telefono\n🔔 Alert automatici prima che qualcosa si rompa\n\nÈ un piccolo investimento che si ripaga già con la prima diagnosi!\n\nTi aspetto in negozio o clicca il bottone qui sotto per attivare subito la tua tessera 🤗\n\nA presto!\n${centroName}`
     },
     urgency: {
-      name: "Urgenza",
+      name: "⚡ Urgenza",
       description: "Crea senso di urgenza",
-      subject: `⚡ {{nome}}, offerta limitata - Solo per te!`,
-      getMessage: () => `{{nome}}, non perdere questa occasione!\n\nSolo per un periodo limitato, puoi attivare la Tessera Fedeltà ${centroName} a condizioni vantaggiosissime!\n\n🔥 COSA OTTIENI SUBITO:\n• Diagnostica a soli €${settings?.diagnostic_fee || 10} (invece di €15)\n• ${settings?.repair_discount_percent || 10}% di sconto immediato su ogni riparazione\n• Protezione per ${settings?.max_devices || 3} dispositivi\n\n💰 QUANTO RISPARMI:\nUna sola riparazione da €100 = €${settings?.repair_discount_percent || 10} di risparmio\nDue riparazioni = già hai recuperato il costo della tessera!\n\nIl prezzo? Solo €${settings?.annual_price || 30}/anno.\n\n⏰ Non aspettare che sia troppo tardi - la prossima riparazione è dietro l'angolo!\n\nVieni in negozio o rispondi a questa email per saperne di più.\n\n${centroName}`
+      subject: `⚡ {{nome}}, offerta limitata - Diagnosi GRATIS per 3 dispositivi!`,
+      getMessage: () => `{{nome}}, non perdere questa occasione!\n\nSolo per un periodo limitato, puoi attivare la Tessera Fedeltà ${centroName} e ottenere la DIAGNOSI GRATUITA per ${settings?.max_devices || 3} dispositivi!\n\n🔥 COSA OTTIENI SUBITO:\n📱 DIAGNOSI INCLUSA per ${settings?.max_devices || 3} dispositivi (risparmio di €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)}!)\n📊 Accesso alla WEBAPP di monitoraggio salute dispositivi\n💰 ${settings?.repair_discount_percent || 10}% di sconto immediato su ogni riparazione\n🔔 Alert automatici per prevenire guasti\n\n💡 PERCHÉ È IMPORTANTE:\nLa nostra webapp analizza batteria, memoria e prestazioni. Ti avvisa PRIMA che il dispositivo si guasti - risparmiando centinaia di euro in riparazioni d'emergenza!\n\nIl prezzo? Solo €${settings?.annual_price || 30}/anno.\nIl valore? Oltre €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3) + 50}!\n\n⏰ Non aspettare che sia troppo tardi - clicca il bottone e attiva ORA!\n\n${centroName}`
     },
     value: {
-      name: "Valore",
+      name: "💰 Valore",
       description: "Focus sui vantaggi economici",
-      subject: `{{nome}}, ecco come risparmiare sulle riparazioni 💰`,
-      getMessage: () => `Ciao {{nome}},\n\nFacciamo due conti insieme?\n\n📱 Se hai uno smartphone, un tablet o un PC, prima o poi avrai bisogno di una riparazione. È inevitabile.\n\nEcco cosa succederebbe SENZA tessera:\n• Diagnostica: €15\n• Riparazione media: €80\n• Totale: €95\n\nCon la TESSERA FEDELTÀ ${centroName}:\n• Diagnostica: €${settings?.diagnostic_fee || 10} ✓\n• Riparazione con ${settings?.repair_discount_percent || 10}% sconto: €72 ✓\n• Totale: €82\n\n💵 RISPARMIO IMMEDIATO: €13 (già più del 40% del costo tessera!)\n\nE questo è solo con UNA riparazione. La tessera copre ${settings?.max_devices || 3} dispositivi per un anno intero!\n\nCosto tessera: solo €${settings?.annual_price || 30}/anno\n\nÈ matematica: conviene. Punto.\n\nPassi in negozio? Ti aspetto!\n\n${centroName}`
+      subject: `{{nome}}, ecco quanto risparmi con la Tessera 💰`,
+      getMessage: () => `Ciao {{nome}},\n\nFacciamo due conti insieme?\n\n📱 Hai uno smartphone, tablet o PC? Prima o poi avrai bisogno di controllarne lo stato o ripararlo.\n\n❌ SENZA TESSERA:\n• Diagnosi singola: €${settings?.diagnostic_fee || 15}\n• Per 3 dispositivi: €${(settings?.diagnostic_fee || 15) * 3}\n• Riparazione media: €80\n• Totale potenziale: €${(settings?.diagnostic_fee || 15) * 3 + 80}\n\n✅ CON LA TESSERA FEDELTÀ (€${settings?.annual_price || 30}/anno):\n• DIAGNOSI ${settings?.max_devices || 3} DISPOSITIVI: €0 (GRATIS!)\n• Webapp monitoraggio: INCLUSA\n• Riparazione con ${settings?.repair_discount_percent || 10}% sconto: €72\n• TOTALE: €${settings?.annual_price || 30} + €72 = €${(settings?.annual_price || 30) + 72}\n\n💵 RISPARMIO: €${(settings?.diagnostic_fee || 15) * 3 + 80 - ((settings?.annual_price || 30) + 72)}!\n\nE la webapp ti avvisa quando c'è un problema - PRIMA che si rompa tutto!\n\nÈ matematica: conviene. Punto.\n\nClicca il bottone qui sotto e attiva subito!\n\n${centroName}`
     },
     exclusive: {
-      name: "Esclusività",
+      name: "⭐ Esclusività",
       description: "Fai sentire il cliente speciale",
-      subject: `{{nome}}, un'opportunità riservata ai nostri migliori clienti ⭐`,
-      getMessage: () => `Gentile {{nome}},\n\nSei tra i clienti che apprezziamo di più, e per questo vogliamo offrirti qualcosa di speciale.\n\nAbbiamo creato la TESSERA FEDELTÀ ${centroName.toUpperCase()} - un programma esclusivo che ti garantisce:\n\n🌟 VANTAGGI RISERVATI:\n• Diagnostica prioritaria a €${settings?.diagnostic_fee || 10}\n• ${settings?.repair_discount_percent || 10}% di sconto permanente su ogni intervento\n• Assistenza dedicata per ${settings?.max_devices || 3} dispositivi\n• Accesso a promozioni riservate ai membri\n\nQuesto programma non è per tutti - è pensato per chi, come te, cerca qualità e affidabilità.\n\nL'investimento? €${settings?.annual_price || 30} all'anno.\nIl valore che ricevi? Molto, molto di più.\n\nSarebbe un piacere averti nel nostro club di clienti premium.\n\nCon stima,\n${centroName}`
+      subject: `{{nome}}, accesso VIP alla nuova tecnologia di diagnosi ⭐`,
+      getMessage: () => `Gentile {{nome}},\n\nSei tra i clienti che apprezziamo di più, e per questo vogliamo offrirti qualcosa di speciale.\n\nAbbiamo lanciato una TECNOLOGIA ESCLUSIVA: una webapp di diagnosi che monitora la salute dei tuoi dispositivi in tempo reale!\n\n🌟 VANTAGGI RISERVATI AI MEMBRI:\n📱 DIAGNOSI GRATUITA per ${settings?.max_devices || 3} dispositivi\n📊 Accesso ESCLUSIVO alla webapp di monitoraggio\n🔔 Alert intelligenti che prevengono guasti costosi\n💰 ${settings?.repair_discount_percent || 10}% di sconto permanente su ogni intervento\n⚡ Priorità nelle riparazioni\n\nLa webapp analizza:\n• Stato batteria e cicli di ricarica\n• Memoria e spazio disponibile\n• Prestazioni generali del sistema\n• Potenziali problemi prima che si verifichino\n\nQuesto programma non è per tutti - è pensato per chi, come te, vuole proteggere i propri dispositivi.\n\nL'investimento? Solo €${settings?.annual_price || 30}/anno.\nIl valore? Inestimabile.\n\nSarebbe un piacere averti nel nostro club di clienti premium.\n\nCon stima,\n${centroName}`
+    },
+    prevention: {
+      name: "🛡️ Prevenzione",
+      description: "Focus sulla prevenzione guasti",
+      subject: `{{nome}}, previeni i guasti del tuo smartphone - Costa meno! 🛡️`,
+      getMessage: () => `Ciao {{nome}},\n\n❓ Lo sapevi che la maggior parte dei guasti smartphone si può PREVENIRE?\n\nBatteria che si scarica velocemente, telefono che rallenta, memoria piena... Sono tutti segnali che qualcosa non va. Ma spesso ce ne accorgiamo troppo tardi!\n\n🆕 ECCO LA SOLUZIONE:\n\nCon la Tessera Fedeltà ${centroName} hai accesso alla nostra webapp di DIAGNOSI SMART che:\n\n📊 Monitora la salute del dispositivo in tempo reale\n🔋 Controlla lo stato della batteria e cicli di ricarica\n💾 Analizza memoria e storage\n🔔 Ti avvisa PRIMA che qualcosa si rompa\n\n🎁 COSA INCLUDE LA TESSERA:\n✅ Diagnosi GRATUITA per ${settings?.max_devices || 3} dispositivi (valore €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)})\n✅ Accesso illimitato alla webapp\n✅ ${settings?.repair_discount_percent || 10}% sconto su tutte le riparazioni\n✅ Alert preventivi automatici\n\n💡 PREVENIRE costa €${settings?.annual_price || 30}/anno\n❌ RIPARARE costa centinaia di euro + stress!\n\nLa scelta è facile. Attiva ora la tua tessera!\n\n${centroName}`
     },
     custom: {
-      name: "Personalizzato",
+      name: "✏️ Personalizzato",
       description: "Scrivi il tuo messaggio",
-      subject: `${centroName} - Tessera Fedeltà`,
-      getMessage: () => `Gentile {{nome}},\n\n[Scrivi qui il tuo messaggio personalizzato]\n\nCordiali saluti,\n${centroName}`
+      subject: `${centroName} - Tessera Fedeltà con Diagnosi Inclusa`,
+      getMessage: () => `Gentile {{nome}},\n\n[Scrivi qui il tuo messaggio personalizzato]\n\nRicorda di menzionare:\n• Diagnosi GRATUITA per ${settings?.max_devices || 3} dispositivi\n• Webapp di monitoraggio salute dispositivi\n• ${settings?.repair_discount_percent || 10}% sconto riparazioni\n• Costo: solo €${settings?.annual_price || 30}/anno\n\nCordiali saluti,\n${centroName}`
     }
   };
 
@@ -175,7 +187,76 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
     const baseUrl = window.location.origin;
     const checkoutUrl = `${baseUrl}/attiva-tessera?customer_id=${customerId}&centro_id=${centroId}&email=${encodeURIComponent(customerEmail || '')}&centro=${encodeURIComponent(centroName)}`;
     
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;"><div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;"><h1 style="color: white; margin: 0; font-size: 24px;">🎁 Tessera Fedeltà</h1><p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">${centroName}</p></div><div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px;"><p style="font-size: 16px;">Ciao <strong>${firstName}</strong>!</p><div style="margin: 20px 0;">${messageHtml.replace(/Ciao \{\{nome\}\}[!,]?<br\/?><br\/?>?/gi, '').replace(/Gentile \{\{nome\}\}[,]?<br\/?><br\/?>?/gi, '').replace(new RegExp(firstName + '[!,]?<br/?><br/?>?', 'gi'), '')}</div><div style="background: #fef3c7; border-radius: 12px; padding: 20px; margin: 20px 0;"><h3 style="margin: 0 0 15px 0; color: #92400e;">I tuoi vantaggi:</h3><ul style="margin: 0; padding-left: 20px; color: #78350f;"><li style="margin-bottom: 8px;">Diagnostica a €${settings?.diagnostic_fee || 10}</li><li style="margin-bottom: 8px;">${settings?.repair_discount_percent || 10}% sconto riparazioni</li><li>Valida per ${settings?.max_devices || 3} dispositivi</li></ul><p style="margin: 15px 0 0 0; font-size: 24px; font-weight: bold; color: #92400e; text-align: center;">Solo €${settings?.annual_price || 30}/anno</p></div><div style="text-align: center; margin: 25px 0;"><a href="${checkoutUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);">🎁 ATTIVA ORA LA TUA TESSERA</a><p style="margin: 10px 0 0 0; font-size: 12px; color: #6b7280;">Pagamento sicuro con Stripe</p></div></div><p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">${centroName} - Questa email è stata inviata perché sei un nostro cliente.</p></body></html>`;
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc;">
+    
+    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+      <h1 style="color: white; margin: 0; font-size: 24px;">🎁 Tessera Fedeltà</h1>
+      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">${centroName}</p>
+    </div>
+    
+    <div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
+      <p style="font-size: 16px;">Ciao <strong>${firstName}</strong>!</p>
+      <div style="margin: 20px 0;">${messageHtml.replace(/Ciao \{\{nome\}\}[!,]?<br\/?><br\/?>?/gi, '').replace(/Gentile \{\{nome\}\}[,]?<br\/?><br\/?>?/gi, '').replace(new RegExp(firstName + '[!,]?<br/?><br/?>?', 'gi'), '')}</div>
+    </div>
+    
+    <!-- WEBAPP HIGHLIGHT SECTION -->
+    <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 25px; margin: 0; color: white;">
+      <div style="text-align: center; margin-bottom: 15px;">
+        <span style="font-size: 40px;">📱</span>
+      </div>
+      <h3 style="margin: 0 0 12px 0; text-align: center; font-size: 18px;">🆕 NOVITÀ: WebApp Diagnosi Smart</h3>
+      <p style="margin: 0 0 15px 0; text-align: center; font-size: 14px; opacity: 0.9;">Monitora la salute dei tuoi dispositivi in tempo reale!</p>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
+        <span style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 12px;">🔋 Stato Batteria</span>
+        <span style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 12px;">💾 Analisi Memoria</span>
+        <span style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 12px;">🔔 Alert Automatici</span>
+      </div>
+    </div>
+    
+    <!-- BENEFITS SECTION -->
+    <div style="background: #fef3c7; padding: 25px; border: 1px solid #e5e7eb; border-top: none;">
+      <h3 style="margin: 0 0 15px 0; color: #92400e; text-align: center;">✨ I tuoi vantaggi esclusivi</h3>
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 10px; text-align: center; width: 50%;">
+            <div style="font-size: 28px;">📱</div>
+            <div style="font-weight: bold; color: #92400e;">DIAGNOSI GRATIS</div>
+            <div style="font-size: 13px; color: #78350f;">Per ${settings?.max_devices || 3} dispositivi</div>
+          </td>
+          <td style="padding: 10px; text-align: center; width: 50%;">
+            <div style="font-size: 28px;">💰</div>
+            <div style="font-weight: bold; color: #92400e;">${settings?.repair_discount_percent || 10}% SCONTO</div>
+            <div style="font-size: 13px; color: #78350f;">Su tutte le riparazioni</div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding: 10px; text-align: center; width: 50%;">
+            <div style="font-size: 28px;">📊</div>
+            <div style="font-weight: bold; color: #92400e;">WEBAPP INCLUSA</div>
+            <div style="font-size: 13px; color: #78350f;">Monitoraggio salute</div>
+          </td>
+          <td style="padding: 10px; text-align: center; width: 50%;">
+            <div style="font-size: 28px;">🛡️</div>
+            <div style="font-weight: bold; color: #92400e;">PREVENZIONE</div>
+            <div style="font-size: 13px; color: #78350f;">Alert prima dei guasti</div>
+          </td>
+        </tr>
+      </table>
+      <div style="text-align: center; margin-top: 15px; padding: 15px; background: #92400e; border-radius: 12px;">
+        <span style="color: #fef3c7; font-size: 14px;">TUTTO QUESTO A SOLI</span>
+        <div style="color: white; font-size: 32px; font-weight: bold;">€${settings?.annual_price || 30}/anno</div>
+      </div>
+    </div>
+    
+    <!-- CTA SECTION -->
+    <div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px; text-align: center;">
+      <a href="${checkoutUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);">🎁 ATTIVA ORA LA TUA TESSERA</a>
+      <p style="margin: 15px 0 0 0; font-size: 13px; color: #6b7280;">Pagamento sicuro con Stripe • Attivazione immediata</p>
+    </div>
+    
+    <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">${centroName} - Questa email è stata inviata perché sei un nostro cliente.</p>
+    
+    </body></html>`;
   };
 
   const getPersonalizedSubject = (customerName: string) => {
