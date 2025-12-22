@@ -90,4 +90,15 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      // Externalize Capacitor modules - they're only available in native builds
+      external: [
+        '@capacitor/core',
+        '@capacitor/app',
+        '@capacitor/device',
+        '@capacitor/push-notifications',
+      ],
+    },
+  },
 }));
