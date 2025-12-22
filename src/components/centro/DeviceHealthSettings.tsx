@@ -110,7 +110,7 @@ export function DeviceHealthSettings({ centroId }: DeviceHealthSettingsProps) {
     }
   };
 
-  const quizUrl = `${window.location.origin}/device-health`;
+  const quizUrl = `${window.location.origin}/install/${centroId}`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(quizUrl);
