@@ -102,20 +102,32 @@ export function LoyaltyCardProposal({
         {/* Benefits Preview */}
         <Card className="bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200">
           <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Benefici inclusi</CardTitle>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Gift className="h-5 w-5 text-amber-600" />
+              Benefici inclusi
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2">
-            <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-500" />
-              <span>Diagnosi dispositivo a <strong>€10</strong> invece di €15</span>
+          <CardContent className="space-y-3">
+            <div className="p-2.5 rounded-lg bg-gradient-to-r from-green-100 to-emerald-100 border border-green-200">
+              <div className="flex items-start gap-2">
+                <Smartphone className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-green-800">Diagnosi GRATUITA per 3 dispositivi</p>
+                  <p className="text-xs text-green-700">Controllo completo dello stato di salute del dispositivo</p>
+                </div>
+              </div>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-500" />
+              <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
               <span><strong>10% di sconto</strong> su ogni riparazione</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Check className="h-4 w-4 text-green-500" />
-              <span>Valida per <strong>3 dispositivi</strong> per 1 anno</span>
+              <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+              <span>Validità <strong>12 mesi</strong> dalla data di attivazione</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+              <span>Priorità nelle prenotazioni</span>
             </div>
           </CardContent>
         </Card>

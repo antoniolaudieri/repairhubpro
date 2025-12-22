@@ -115,12 +115,19 @@ export function LoyaltyCardDetail({ card, devices, onRefresh }: LoyaltyCardDetai
 
         {expanded && (
           <CardContent className="pt-2 space-y-4">
+            {/* Main Benefit */}
+            <div className="p-3 rounded-lg bg-gradient-to-r from-green-100 to-emerald-100 border border-green-200">
+              <div className="flex items-start gap-2">
+                <Smartphone className="h-5 w-5 text-green-600 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-green-800 text-sm">Diagnosi GRATUITA per {card.max_devices} dispositivi</p>
+                  <p className="text-xs text-green-700">Controllo completo dello stato di salute</p>
+                </div>
+              </div>
+            </div>
+
             {/* Status badges */}
             <div className="flex flex-wrap gap-2">
-              <Badge className="bg-green-100 text-green-800 border-green-200">
-                <Check className="h-3 w-3 mr-1" />
-                Diagnosi €10
-              </Badge>
               <Badge className="bg-blue-100 text-blue-800 border-blue-200">
                 <Percent className="h-3 w-3 mr-1" />
                 Sconto 10% riparazioni
