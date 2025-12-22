@@ -28,6 +28,8 @@ import { LoyaltyCardProposal } from "@/components/loyalty/LoyaltyCardProposal";
 import { LoyaltyStatusBanner } from "@/components/loyalty/LoyaltyStatusBanner";
 import { LoyaltyCardDetail } from "@/components/loyalty/LoyaltyCardDetail";
 import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
+import { CustomerIntelligenceCard } from "@/components/customers/CustomerIntelligenceCard";
+import { CustomerVisitTracker } from "@/components/customers/CustomerVisitTracker";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
