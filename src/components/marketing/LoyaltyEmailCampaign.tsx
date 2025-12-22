@@ -178,14 +178,14 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
 
   const selectedCustomers = customersWithoutCard.filter(c => selectedIds.has(c.id));
 
-  const generateEmailHtml = (customerName: string, customerId: string, customerEmail: string) => {
+  const generateEmailHtml = (customerName: string, customerId: string, customerEmail: string, trackingId: string) => {
     const firstName = getFirstName(customerName);
     const personalizedMessage = customMessage.replace(/\{\{nome\}\}/g, firstName);
     const messageHtml = personalizedMessage.replace(/\n/g, '<br/>');
     
-    // Build checkout URL
+    // Build checkout URL with tracking
     const baseUrl = window.location.origin;
-    const checkoutUrl = `${baseUrl}/attiva-tessera?customer_id=${customerId}&centro_id=${centroId}&email=${encodeURIComponent(customerEmail || '')}&centro=${encodeURIComponent(centroName)}`;
+    const checkoutUrl = `${baseUrl}/attiva-tessera?customer_id=${customerId}&centro_id=${centroId}&email=${encodeURIComponent(customerEmail || '')}&centro=${encodeURIComponent(centroName)}&track=${trackingId}`;
     
     return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc;">
     
@@ -274,15 +274,34 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
 
     for (const customer of selectedCustomers) {
       try {
+        // Create tracking record first
+        const { data: trackingRecord, error: trackingError } = await supabase
+          .from("email_campaign_clicks")
+          .insert({
+            centro_id: centroId,
+            customer_id: customer.id,
+            campaign_type: "loyalty_promotion",
+            email_template: selectedTemplate,
+          })
+          .select("id")
+          .single();
+
+        if (trackingError) {
+          console.error("Error creating tracking record:", trackingError);
+          throw trackingError;
+        }
+
+        const trackingId = trackingRecord.id;
+
         const { error } = await supabase.functions.invoke("send-email-smtp", {
           body: {
             centro_id: centroId,
             to: customer.email,
             subject: getPersonalizedSubject(customer.name),
-            html: generateEmailHtml(customer.name, customer.id, customer.email || ''),
+            html: generateEmailHtml(customer.name, customer.id, customer.email || '', trackingId),
             customer_id: customer.id,
             template_name: "loyalty_proposal",
-            metadata: { campaign: "loyalty_mass_email" }
+            metadata: { campaign: "loyalty_mass_email", tracking_id: trackingId }
           }
         });
 

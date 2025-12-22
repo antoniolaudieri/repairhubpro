@@ -42,6 +42,7 @@ serve(async (req) => {
       if (session.metadata?.type === "loyalty_card" && session.metadata?.loyalty_card_id) {
         const loyaltyCardId = session.metadata.loyalty_card_id;
         const centroId = session.metadata.centro_id;
+        const trackingId = session.metadata.tracking_id;
         
         console.log("[CONFIRM-LOYALTY] Activating loyalty card:", loyaltyCardId);
 
@@ -57,6 +58,24 @@ serve(async (req) => {
         if (updateError) {
           console.error("[CONFIRM-LOYALTY] Error activating card:", updateError);
           throw updateError;
+        }
+
+        // Mark email campaign click as converted if tracking ID present
+        if (trackingId) {
+          const { error: conversionError } = await supabaseClient
+            .from("email_campaign_clicks")
+            .update({
+              converted: true,
+              converted_at: new Date().toISOString(),
+            })
+            .eq("id", trackingId);
+
+          if (conversionError) {
+            console.error("[CONFIRM-LOYALTY] Error marking conversion:", conversionError);
+            // Don't fail the whole process
+          } else {
+            console.log("[CONFIRM-LOYALTY] Conversion tracked for:", trackingId);
+          }
         }
 
         // Deduct 5% platform commission from Centro's credit balance

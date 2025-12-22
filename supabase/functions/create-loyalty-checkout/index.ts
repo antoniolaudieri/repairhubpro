@@ -13,8 +13,8 @@ serve(async (req) => {
   }
 
   try {
-    const { customer_id, centro_id, customer_email } = await req.json();
-    console.log("[CREATE-LOYALTY-CHECKOUT] Starting for customer:", customer_id, "centro:", centro_id);
+    const { customer_id, centro_id, customer_email, tracking_id } = await req.json();
+    console.log("[CREATE-LOYALTY-CHECKOUT] Starting for customer:", customer_id, "centro:", centro_id, "tracking:", tracking_id);
 
     if (!customer_id || !centro_id) {
       throw new Error("customer_id and centro_id are required");
@@ -124,6 +124,7 @@ serve(async (req) => {
         centro_id,
         centro_name: centro?.business_name || "Centro",
         annual_price: annualPrice.toString(),
+        tracking_id: tracking_id || "",
       },
     });
 

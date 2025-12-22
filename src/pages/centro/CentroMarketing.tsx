@@ -6,11 +6,12 @@ import { CentroLayout } from "@/layouts/CentroLayout";
 import { LoyaltyProgramConfigurator } from "@/components/marketing/LoyaltyProgramConfigurator";
 import { ActiveLoyaltyCardsList } from "@/components/marketing/ActiveLoyaltyCardsList";
 import { LoyaltyEmailCampaign } from "@/components/marketing/LoyaltyEmailCampaign";
+import { EmailCampaignAnalytics } from "@/components/marketing/EmailCampaignAnalytics";
 import { PromoManager } from "@/components/marketing/PromoManager";
 import { useLoyaltyProgramSettings } from "@/hooks/useLoyaltyProgramSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag, Settings, UserCheck } from "lucide-react";
+import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag, Settings, UserCheck, Send } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LoyaltyStats {
@@ -38,6 +39,7 @@ export default function CentroMarketing() {
   });
   const [loadingStats, setLoadingStats] = useState(true);
   const [loyaltyTab, setLoyaltyTab] = useState("config");
+  const [emailTab, setEmailTab] = useState("send");
 
   const effectiveSettings = getEffectiveSettings();
 
@@ -262,13 +264,33 @@ export default function CentroMarketing() {
           </TabsContent>
 
           <TabsContent value="email" className="mt-6">
-            {centroInfo && (
-              <LoyaltyEmailCampaign
-                centroId={centroId}
-                centroName={centroInfo.business_name}
-                settings={settings}
-              />
-            )}
+            {/* Sub-tabs for Email */}
+            <Tabs value={emailTab} onValueChange={setEmailTab} className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="send" className="flex items-center gap-1">
+                  <Send className="h-4 w-4" />
+                  Invia Email
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="flex items-center gap-1">
+                  <BarChart3 className="h-4 w-4" />
+                  Analytics
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="send">
+                {centroInfo && (
+                  <LoyaltyEmailCampaign
+                    centroId={centroId}
+                    centroName={centroInfo.business_name}
+                    settings={settings}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="analytics">
+                <EmailCampaignAnalytics centroId={centroId} />
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="promos" className="mt-6">
