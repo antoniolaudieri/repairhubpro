@@ -39,7 +39,7 @@ export function CustomerImportDialog({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
-    const csvContent = "nome,telefono,email,indirizzo,note\nMario Rossi,+39 333 1234567,mario.rossi@email.com,Via Roma 1,Cliente VIP\nGiulia Bianchi,+39 339 7654321,giulia.bianchi@email.com,,";
+    const csvContent = "nome,cognome,telefono,email,indirizzo,note\nMario,Rossi,+39 333 1234567,mario.rossi@email.com,Via Roma 1,Cliente VIP\nGiulia,Bianchi,+39 339 7654321,giulia.bianchi@email.com,,";
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -53,12 +53,13 @@ export function CustomerImportDialog({
 
     // Get header and normalize
     const headerLine = lines[0].toLowerCase();
-    const headers = headerLine.split(/[,;]/).map(h => h.trim().replace(/"/g, ""));
+    const headers = headerLine.split(/[,;|]/).map(h => h.trim().replace(/"/g, ""));
     
-    // Map headers to expected fields
-    const nameIdx = headers.findIndex(h => h.includes("nome") || h === "name");
-    const phoneIdx = headers.findIndex(h => h.includes("telefono") || h.includes("phone") || h.includes("tel"));
-    const emailIdx = headers.findIndex(h => h.includes("email") || h.includes("mail"));
+    // Map headers to expected fields - support both combined "nome" and separate "nome"/"cognome"
+    const nomeIdx = headers.findIndex(h => h === "nome" || h === "name" || h === "first name" || h === "firstname");
+    const cognomeIdx = headers.findIndex(h => h === "cognome" || h === "surname" || h === "last name" || h === "lastname");
+    const phoneIdx = headers.findIndex(h => h.includes("telefono") || h.includes("phone") || h.includes("tel") || h.includes("cellulare"));
+    const emailIdx = headers.findIndex(h => h.includes("email") || h.includes("e-mail") || h.includes("mail"));
     const addressIdx = headers.findIndex(h => h.includes("indirizzo") || h.includes("address") || h.includes("via"));
     const notesIdx = headers.findIndex(h => h.includes("note") || h.includes("notes") || h.includes("commento"));
 
@@ -76,7 +77,7 @@ export function CustomerImportDialog({
       for (const char of line) {
         if (char === '"') {
           inQuotes = !inQuotes;
-        } else if ((char === ',' || char === ';') && !inQuotes) {
+        } else if ((char === ',' || char === ';' || char === '|') && !inQuotes) {
           values.push(current.trim());
           current = "";
         } else {
@@ -85,19 +86,35 @@ export function CustomerImportDialog({
       }
       values.push(current.trim());
 
-      const name = nameIdx >= 0 ? values[nameIdx]?.replace(/"/g, "") || "" : "";
-      const phone = phoneIdx >= 0 ? values[phoneIdx]?.replace(/"/g, "") || "" : "";
-      const email = emailIdx >= 0 ? values[emailIdx]?.replace(/"/g, "") || "" : "";
-      const address = addressIdx >= 0 ? values[addressIdx]?.replace(/"/g, "") || "" : "";
-      const notes = notesIdx >= 0 ? values[notesIdx]?.replace(/"/g, "") || "" : "";
+      // Get nome and cognome separately, then combine
+      const nome = nomeIdx >= 0 ? values[nomeIdx]?.replace(/"/g, "").replace(/\\/g, "").trim() || "" : "";
+      const cognome = cognomeIdx >= 0 ? values[cognomeIdx]?.replace(/"/g, "").replace(/\\/g, "").trim() || "" : "";
+      
+      // Combine nome + cognome, or use whichever is available
+      let fullName = "";
+      if (nome && cognome) {
+        fullName = `${nome} ${cognome}`;
+      } else if (cognome) {
+        fullName = cognome;
+      } else if (nome) {
+        fullName = nome;
+      }
+
+      const phone = phoneIdx >= 0 ? values[phoneIdx]?.replace(/"/g, "").replace(/\\/g, "").trim() || "" : "";
+      const email = emailIdx >= 0 ? values[emailIdx]?.replace(/"/g, "").replace(/\\/g, "").trim() || "" : "";
+      const address = addressIdx >= 0 ? values[addressIdx]?.replace(/"/g, "").replace(/\\/g, "").trim() || "" : "";
+      const notes = notesIdx >= 0 ? values[notesIdx]?.replace(/"/g, "").replace(/\\/g, "").trim() || "" : "";
+
+      // Skip completely empty rows
+      if (!fullName && !phone && !email) continue;
 
       const errors: string[] = [];
-      if (!name) errors.push("Nome mancante");
+      if (!fullName) errors.push("Nome mancante");
       if (!phone) errors.push("Telefono mancante");
       if (email && !email.includes("@")) errors.push("Email non valida");
 
       customers.push({
-        name,
+        name: fullName,
         phone,
         email,
         address,
@@ -203,7 +220,7 @@ export function CustomerImportDialog({
             <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
               <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-sm text-muted-foreground mb-4">
-                Carica un file CSV con le colonne: nome, telefono, email, indirizzo, note
+                Carica un file CSV con le colonne: nome, cognome, telefono, email, indirizzo, note
               </p>
               <Input
                 ref={fileInputRef}
