@@ -672,34 +672,84 @@ serve(async (req) => {
       }
       
       case 'verify_access': {
-        const { customer_email, centro_id } = data;
+        const { loyalty_card_id, customer_email, centro_id } = data;
         
-        // Get customer
-        const { data: customer } = await supabase
-          .from('customers')
-          .select('id, name')
-          .eq('email', customer_email)
-          .single();
+        let loyaltyCard: any = null;
+        let customer: any = null;
+        let targetCentroId: string | null = null;
         
-        if (!customer) {
+        // If loyalty_card_id provided, use it directly
+        if (loyalty_card_id) {
+          const { data: card, error: cardError } = await supabase
+            .from('loyalty_cards')
+            .select('id, card_number, expires_at, customer_id, centro_id, status')
+            .eq('id', loyalty_card_id)
+            .single();
+          
+          if (cardError || !card) {
+            console.log('Loyalty card not found:', loyalty_card_id);
+            return new Response(
+              JSON.stringify({ has_access: false, reason: 'card_not_found' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          if (card.status !== 'active') {
+            console.log('Loyalty card not active:', card.status);
+            return new Response(
+              JSON.stringify({ has_access: false, reason: 'card_not_active' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          loyaltyCard = card;
+          targetCentroId = card.centro_id;
+          
+          // Get customer info
+          const { data: cust } = await supabase
+            .from('customers')
+            .select('id, name')
+            .eq('id', card.customer_id)
+            .single();
+          
+          customer = cust;
+        } else if (customer_email && centro_id) {
+          // Legacy: use email + centro_id
+          const { data: cust } = await supabase
+            .from('customers')
+            .select('id, name')
+            .eq('email', customer_email)
+            .single();
+          
+          if (!cust) {
+            return new Response(
+              JSON.stringify({ has_access: false, reason: 'customer_not_found' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          customer = cust;
+          targetCentroId = centro_id;
+          
+          const { data: card } = await supabase
+            .from('loyalty_cards')
+            .select('id, card_number, expires_at')
+            .eq('customer_id', cust.id)
+            .eq('centro_id', centro_id)
+            .eq('status', 'active')
+            .single();
+          
+          if (!card) {
+            return new Response(
+              JSON.stringify({ has_access: false, reason: 'no_active_loyalty_card' }),
+              { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+          
+          loyaltyCard = card;
+        } else {
           return new Response(
-            JSON.stringify({ hasAccess: false, reason: 'customer_not_found' }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        
-        // Check loyalty card
-        const { data: loyaltyCard } = await supabase
-          .from('loyalty_cards')
-          .select('id, card_number, expires_at')
-          .eq('customer_id', customer.id)
-          .eq('centro_id', centro_id)
-          .eq('status', 'active')
-          .single();
-        
-        if (!loyaltyCard) {
-          return new Response(
-            JSON.stringify({ hasAccess: false, reason: 'no_active_loyalty_card' }),
+            JSON.stringify({ has_access: false, reason: 'missing_parameters' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -708,27 +758,30 @@ serve(async (req) => {
         const { data: settings } = await supabase
           .from('device_health_settings')
           .select('is_enabled, android_monitoring_enabled, ios_webapp_enabled')
-          .eq('centro_id', centro_id)
+          .eq('centro_id', targetCentroId)
           .single();
         
         if (settings && !settings.is_enabled) {
           return new Response(
-            JSON.stringify({ hasAccess: false, reason: 'service_disabled' }),
+            JSON.stringify({ has_access: false, reason: 'service_disabled' }),
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         
+        console.log('Access granted for loyalty card:', loyaltyCard.id);
+        
         return new Response(
           JSON.stringify({
-            hasAccess: true,
+            has_access: true,
             customer: {
-              id: customer.id,
-              name: customer.name
+              id: customer?.id,
+              name: customer?.name
             },
-            loyaltyCard: {
+            loyalty_card: {
               id: loyaltyCard.id,
-              cardNumber: loyaltyCard.card_number,
-              expiresAt: loyaltyCard.expires_at
+              card_number: loyaltyCard.card_number,
+              expires_at: loyaltyCard.expires_at,
+              centro_id: targetCentroId
             },
             settings: settings || { is_enabled: true, android_monitoring_enabled: true, ios_webapp_enabled: true }
           }),
