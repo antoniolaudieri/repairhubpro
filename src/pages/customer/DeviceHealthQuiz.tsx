@@ -53,25 +53,38 @@ export default function DeviceHealthQuiz() {
       if (!userEmail || loyaltyCardIdFromUrl) return;
       
       try {
-        // Use fetch to avoid Supabase client type inference issues
-        const baseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const apiKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        // First find customers with this email, then their active loyalty cards
+        const { data: customers, error: customersError } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("email", userEmail);
         
-        // Fetch loyalty cards
-        const cardsRes = await fetch(
-          `${baseUrl}/rest/v1/loyalty_cards?customer_email=eq.${encodeURIComponent(userEmail)}&status=eq.active&select=id,card_number,centro_id`,
-          { headers: { "apikey": apiKey, "Authorization": `Bearer ${apiKey}` } }
-        );
-        const cards = await cardsRes.json() as { id: string; card_number: string | null; centro_id: string }[];
+        if (customersError) throw customersError;
+        
+        if (!customers || customers.length === 0) {
+          setLoading(false);
+          return;
+        }
+        
+        const customerIds = customers.map(c => c.id);
+        
+        // Fetch loyalty cards for these customers
+        const { data: cards, error: cardsError } = await supabase
+          .from("loyalty_cards")
+          .select("id, card_number, centro_id")
+          .in("customer_id", customerIds)
+          .eq("status", "active");
+        
+        if (cardsError) throw cardsError;
         
         if (cards && cards.length > 0) {
           // Fetch centro names
           const centroIds = [...new Set(cards.map(c => c.centro_id))];
-          const centroRes = await fetch(
-            `${baseUrl}/rest/v1/centri_assistenza?id=in.(${centroIds.join(",")})&select=id,business_name`,
-            { headers: { "apikey": apiKey, "Authorization": `Bearer ${apiKey}` } }
-          );
-          const centri = await centroRes.json() as { id: string; business_name: string }[];
+          const { data: centri } = await supabase
+            .from("centri_assistenza")
+            .select("id, business_name")
+            .in("id", centroIds);
+          
           const centroMap = new Map(centri?.map(c => [c.id, c.business_name]) || []);
           
           const cardsWithCentro = cards.map(card => ({
