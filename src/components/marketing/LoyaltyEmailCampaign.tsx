@@ -181,88 +181,140 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
   const generateEmailHtml = (customerName: string, customerId: string, customerEmail: string, trackingId: string) => {
     const firstName = getFirstName(customerName);
     const personalizedMessage = customMessage.replace(/\{\{nome\}\}/g, firstName);
-    const messageHtml = personalizedMessage.replace(/\n/g, '<br/>');
     
-    // Build checkout URL with tracking
+    // Convert message to HTML paragraphs (avoid long lines)
+    const messageParagraphs = personalizedMessage
+      .split('\n\n')
+      .map(para => para.trim())
+      .filter(para => para.length > 0)
+      .map(para => {
+        // Skip greeting lines that will be duplicated
+        if (para.match(/^(Ciao|Gentile)\s/i)) {
+          return '';
+        }
+        return `<p style="margin:0 0 12px 0;">${para.replace(/\n/g, '<br>')}</p>`;
+      })
+      .filter(p => p.length > 0)
+      .join('\n');
+    
     const baseUrl = window.location.origin;
-    const checkoutUrl = `${baseUrl}/attiva-tessera?customer_id=${customerId}&centro_id=${centroId}&email=${encodeURIComponent(customerEmail || '')}&centro=${encodeURIComponent(centroName)}&track=${trackingId}`;
+    const checkoutUrl = [
+      baseUrl,
+      '/attiva-tessera?customer_id=', customerId,
+      '&centro_id=', centroId,
+      '&email=', encodeURIComponent(customerEmail || ''),
+      '&centro=', encodeURIComponent(centroName),
+      '&track=', trackingId
+    ].join('');
     
-    return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; background: #f8fafc;">
+    const unsubUrl = [
+      baseUrl,
+      '/disiscrizione?email=', encodeURIComponent(customerEmail || ''),
+      '&centro=', centroId,
+      '&nome=', encodeURIComponent(centroName)
+    ].join('');
     
-    <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
-      <h1 style="color: white; margin: 0; font-size: 24px;">🎁 Tessera Fedeltà</h1>
-      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0;">${centroName}</p>
-    </div>
+    // Build HTML with short lines to avoid quoted-printable encoding issues
+    const parts = [
+      '<!DOCTYPE html>',
+      '<html>',
+      '<head>',
+      '<meta charset="utf-8">',
+      '<meta name="viewport" content="width=device-width,initial-scale=1.0">',
+      '</head>',
+      '<body style="margin:0;padding:0;background:#f8fafc;">',
+      '<table width="100%" cellpadding="0" cellspacing="0" border="0">',
+      '<tr><td align="center" style="padding:20px;">',
+      '<table width="600" cellpadding="0" cellspacing="0" border="0"',
+      ' style="max-width:600px;width:100%;font-family:Arial,sans-serif;">',
+      
+      // Header
+      '<tr><td style="background:#f59e0b;padding:30px;text-align:center;',
+      'border-radius:16px 16px 0 0;">',
+      '<h1 style="color:#fff;margin:0;font-size:24px;">',
+      '&#127873; Tessera Fedelt&agrave;</h1>',
+      '<p style="color:#fff;margin:10px 0 0;opacity:0.9;">',
+      centroName,
+      '</p></td></tr>',
+      
+      // Content
+      '<tr><td style="background:#fff;padding:30px;',
+      'border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">',
+      '<p style="font-size:16px;margin:0 0 20px;">',
+      'Ciao <strong>', firstName, '</strong>!</p>',
+      '<div style="margin:0 0 20px;line-height:1.6;color:#333;">',
+      messageParagraphs,
+      '</div>',
+      '</td></tr>',
+      
+      // WebApp section
+      '<tr><td style="background:#3b82f6;padding:25px;color:#fff;">',
+      '<p style="text-align:center;font-size:40px;margin:0 0 15px;">',
+      '&#128241;</p>',
+      '<h3 style="margin:0 0 12px;text-align:center;font-size:18px;">',
+      '&#127381; NOVIT&Agrave;: WebApp Diagnosi Smart</h3>',
+      '<p style="margin:0;text-align:center;font-size:14px;opacity:0.9;">',
+      'Monitora la salute dei tuoi dispositivi!</p>',
+      '</td></tr>',
+      
+      // Benefits
+      '<tr><td style="background:#fef3c7;padding:25px;',
+      'border-left:1px solid #e5e7eb;border-right:1px solid #e5e7eb;">',
+      '<h3 style="margin:0 0 15px;color:#92400e;text-align:center;">',
+      '&#10024; I tuoi vantaggi esclusivi</h3>',
+      '<table width="100%" cellpadding="10" cellspacing="0">',
+      '<tr>',
+      '<td width="50%" style="text-align:center;">',
+      '<div style="font-size:28px;">&#128241;</div>',
+      '<div style="font-weight:bold;color:#92400e;">DIAGNOSI GRATIS</div>',
+      '<div style="font-size:13px;color:#78350f;">',
+      'Per ', String(settings?.max_devices || 3), ' dispositivi</div></td>',
+      '<td width="50%" style="text-align:center;">',
+      '<div style="font-size:28px;">&#128176;</div>',
+      '<div style="font-weight:bold;color:#92400e;">',
+      String(settings?.repair_discount_percent || 10), '% SCONTO</div>',
+      '<div style="font-size:13px;color:#78350f;">',
+      'Su tutte le riparazioni</div></td>',
+      '</tr>',
+      '</table>',
+      '<div style="text-align:center;margin-top:15px;padding:15px;',
+      'background:#92400e;border-radius:12px;">',
+      '<span style="color:#fef3c7;font-size:14px;">TUTTO QUESTO A SOLI</span>',
+      '<div style="color:#fff;font-size:32px;font-weight:bold;">',
+      '&euro;', String(settings?.annual_price || 30), '/anno</div>',
+      '</div></td></tr>',
+      
+      // CTA
+      '<tr><td style="background:#fff;padding:30px;text-align:center;',
+      'border-radius:0 0 16px 16px;',
+      'border:1px solid #e5e7eb;border-top:none;">',
+      '<a href="', checkoutUrl, '"',
+      ' style="display:inline-block;background:#f59e0b;color:#fff;',
+      'text-decoration:none;padding:18px 40px;border-radius:12px;',
+      'font-size:18px;font-weight:bold;">',
+      '&#127873; ATTIVA ORA LA TUA TESSERA</a>',
+      '<p style="margin:15px 0 0;font-size:13px;color:#6b7280;">',
+      'Pagamento sicuro con Stripe</p>',
+      '</td></tr>',
+      
+      // Footer
+      '<tr><td style="padding:20px;text-align:center;">',
+      '<p style="color:#6b7280;font-size:12px;margin:0 0 10px;">',
+      centroName, ' - Email inviata perch&eacute; sei un nostro cliente.',
+      '</p>',
+      '<p style="font-size:11px;margin:0;">',
+      '<a href="', unsubUrl, '"',
+      ' style="color:#9ca3af;text-decoration:underline;">',
+      'Annulla iscrizione</a>',
+      ' | GDPR: puoi revocare il consenso in qualsiasi momento.',
+      '</p></td></tr>',
+      
+      '</table>',
+      '</td></tr></table>',
+      '</body></html>'
+    ];
     
-    <div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none;">
-      <p style="font-size: 16px;">Ciao <strong>${firstName}</strong>!</p>
-      <div style="margin: 20px 0;">${messageHtml.replace(/Ciao \{\{nome\}\}[!,]?<br\/?><br\/?>?/gi, '').replace(/Gentile \{\{nome\}\}[,]?<br\/?><br\/?>?/gi, '').replace(new RegExp(firstName + '[!,]?<br/?><br/?>?', 'gi'), '')}</div>
-    </div>
-    
-    <!-- WEBAPP HIGHLIGHT SECTION -->
-    <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 25px; margin: 0; color: white;">
-      <div style="text-align: center; margin-bottom: 15px;">
-        <span style="font-size: 40px;">📱</span>
-      </div>
-      <h3 style="margin: 0 0 12px 0; text-align: center; font-size: 18px;">🆕 NOVITÀ: WebApp Diagnosi Smart</h3>
-      <p style="margin: 0 0 15px 0; text-align: center; font-size: 14px; opacity: 0.9;">Monitora la salute dei tuoi dispositivi in tempo reale!</p>
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
-        <span style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 12px;">🔋 Stato Batteria</span>
-        <span style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 12px;">💾 Analisi Memoria</span>
-        <span style="background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 20px; font-size: 12px;">🔔 Alert Automatici</span>
-      </div>
-    </div>
-    
-    <!-- BENEFITS SECTION -->
-    <div style="background: #fef3c7; padding: 25px; border: 1px solid #e5e7eb; border-top: none;">
-      <h3 style="margin: 0 0 15px 0; color: #92400e; text-align: center;">✨ I tuoi vantaggi esclusivi</h3>
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr>
-          <td style="padding: 10px; text-align: center; width: 50%;">
-            <div style="font-size: 28px;">📱</div>
-            <div style="font-weight: bold; color: #92400e;">DIAGNOSI GRATIS</div>
-            <div style="font-size: 13px; color: #78350f;">Per ${settings?.max_devices || 3} dispositivi</div>
-          </td>
-          <td style="padding: 10px; text-align: center; width: 50%;">
-            <div style="font-size: 28px;">💰</div>
-            <div style="font-weight: bold; color: #92400e;">${settings?.repair_discount_percent || 10}% SCONTO</div>
-            <div style="font-size: 13px; color: #78350f;">Su tutte le riparazioni</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 10px; text-align: center; width: 50%;">
-            <div style="font-size: 28px;">📊</div>
-            <div style="font-weight: bold; color: #92400e;">WEBAPP INCLUSA</div>
-            <div style="font-size: 13px; color: #78350f;">Monitoraggio salute</div>
-          </td>
-          <td style="padding: 10px; text-align: center; width: 50%;">
-            <div style="font-size: 28px;">🛡️</div>
-            <div style="font-weight: bold; color: #92400e;">PREVENZIONE</div>
-            <div style="font-size: 13px; color: #78350f;">Alert prima dei guasti</div>
-          </td>
-        </tr>
-      </table>
-      <div style="text-align: center; margin-top: 15px; padding: 15px; background: #92400e; border-radius: 12px;">
-        <span style="color: #fef3c7; font-size: 14px;">TUTTO QUESTO A SOLI</span>
-        <div style="color: white; font-size: 32px; font-weight: bold;">€${settings?.annual_price || 30}/anno</div>
-      </div>
-    </div>
-    
-    <!-- CTA SECTION -->
-    <div style="background: #fff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 16px 16px; text-align: center;">
-      <a href="${checkoutUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-size: 18px; font-weight: bold; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);">🎁 ATTIVA ORA LA TUA TESSERA</a>
-      <p style="margin: 15px 0 0 0; font-size: 13px; color: #6b7280;">Pagamento sicuro con Stripe</p>
-    </div>
-    
-    <p style="text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px;">
-      ${centroName} - Questa email è stata inviata perché sei un nostro cliente.
-    </p>
-    <p style="text-align: center; font-size: 11px; margin-top: 10px;">
-      <a href="${baseUrl}/disiscrizione?email=${encodeURIComponent(customerEmail || '')}&centro=${centroId}&nome=${encodeURIComponent(centroName)}" style="color: #9ca3af; text-decoration: underline;">Annulla iscrizione</a> | 
-      Ai sensi del GDPR hai il diritto di revocare il consenso in qualsiasi momento.
-    </p>
-    
-    </body></html>`;
+    return parts.join('\n');
   };
 
   const getPersonalizedSubject = (customerName: string) => {
