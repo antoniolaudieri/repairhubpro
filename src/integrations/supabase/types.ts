@@ -834,13 +834,170 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_profiles: {
+        Row: {
+          acquisition_source: string | null
+          app_user: boolean | null
+          avg_visit_duration_minutes: number | null
+          behavioral_tags: string[] | null
+          birth_date: string | null
+          centro_id: string
+          consent_updated_at: string | null
+          created_at: string | null
+          customer_id: string
+          device_preferences: string[] | null
+          email_consent: boolean | null
+          gender: string | null
+          id: string
+          last_app_visit: string | null
+          marketing_consent: boolean | null
+          preferred_contact_method: string | null
+          preferred_language: string | null
+          push_enabled: boolean | null
+          referred_by_customer_id: string | null
+          sms_consent: boolean | null
+          typical_visit_days: string[] | null
+          typical_visit_time: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          acquisition_source?: string | null
+          app_user?: boolean | null
+          avg_visit_duration_minutes?: number | null
+          behavioral_tags?: string[] | null
+          birth_date?: string | null
+          centro_id: string
+          consent_updated_at?: string | null
+          created_at?: string | null
+          customer_id: string
+          device_preferences?: string[] | null
+          email_consent?: boolean | null
+          gender?: string | null
+          id?: string
+          last_app_visit?: string | null
+          marketing_consent?: boolean | null
+          preferred_contact_method?: string | null
+          preferred_language?: string | null
+          push_enabled?: boolean | null
+          referred_by_customer_id?: string | null
+          sms_consent?: boolean | null
+          typical_visit_days?: string[] | null
+          typical_visit_time?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          acquisition_source?: string | null
+          app_user?: boolean | null
+          avg_visit_duration_minutes?: number | null
+          behavioral_tags?: string[] | null
+          birth_date?: string | null
+          centro_id?: string
+          consent_updated_at?: string | null
+          created_at?: string | null
+          customer_id?: string
+          device_preferences?: string[] | null
+          email_consent?: boolean | null
+          gender?: string | null
+          id?: string
+          last_app_visit?: string | null
+          marketing_consent?: boolean | null
+          preferred_contact_method?: string | null
+          preferred_language?: string | null
+          push_enabled?: boolean | null
+          referred_by_customer_id?: string | null
+          sms_consent?: boolean | null
+          typical_visit_days?: string[] | null
+          typical_visit_time?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_profiles_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_profiles_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_profiles_referred_by_customer_id_fkey"
+            columns: ["referred_by_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_visits: {
+        Row: {
+          centro_id: string
+          check_in_at: string | null
+          check_out_at: string | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string
+          duration_minutes: number | null
+          id: string
+          notes: string | null
+          visit_type: string | null
+        }
+        Insert: {
+          centro_id: string
+          check_in_at?: string | null
+          check_out_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id: string
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          visit_type?: string | null
+        }
+        Update: {
+          centro_id?: string
+          check_in_at?: string | null
+          check_out_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          visit_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_visits_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_visits_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string | null
           centro_id: string | null
+          churn_risk_score: number | null
           created_at: string
           email: string | null
           id: string
+          last_interaction_at: string | null
+          ltv_score: number | null
           name: string
           notes: string | null
           phone: string
@@ -849,9 +1006,12 @@ export type Database = {
         Insert: {
           address?: string | null
           centro_id?: string | null
+          churn_risk_score?: number | null
           created_at?: string
           email?: string | null
           id?: string
+          last_interaction_at?: string | null
+          ltv_score?: number | null
           name: string
           notes?: string | null
           phone: string
@@ -860,9 +1020,12 @@ export type Database = {
         Update: {
           address?: string | null
           centro_id?: string | null
+          churn_risk_score?: number | null
           created_at?: string
           email?: string | null
           id?: string
+          last_interaction_at?: string | null
+          ltv_score?: number | null
           name?: string
           notes?: string | null
           phone?: string
