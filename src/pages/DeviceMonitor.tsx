@@ -90,17 +90,23 @@ const DeviceMonitor = () => {
   // Fetch centro info
   useEffect(() => {
     const fetchCentro = async () => {
-      if (!centroId) return;
+      // If no centroId, just stop loading and show standalone mode
+      if (!centroId) {
+        setLoading(false);
+        return;
+      }
       
       try {
         const { data, error } = await supabase
           .from('centri_assistenza')
           .select('id, business_name, logo_url')
           .eq('id', centroId)
-          .single();
+          .maybeSingle();
         
         if (error) throw error;
-        setCentro(data);
+        if (data) {
+          setCentro(data);
+        }
       } catch (error: any) {
         console.error('Error fetching centro:', error);
         toast({
