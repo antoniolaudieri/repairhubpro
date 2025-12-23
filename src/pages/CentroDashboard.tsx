@@ -26,7 +26,8 @@ import {
   Monitor,
   Gamepad2,
   BarChart3,
-  UserPlus
+  UserPlus,
+  CalendarDays
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -39,6 +40,7 @@ import { PrepaidCommissionsHistory } from "@/components/centro/PrepaidCommission
 import { GamificationWidget } from "@/components/centro/GamificationWidget";
 import { GoalsWidget } from "@/components/centro/GoalsWidget";
 import { MaintenanceWidget } from "@/components/centro/MaintenanceWidget";
+import { AppointmentCalendar } from "@/components/corner/AppointmentCalendar";
 
 interface CentroSettings {
   monthly_goal?: number;
@@ -91,6 +93,22 @@ interface ChartData {
   guadagni: number;
 }
 
+interface Appointment {
+  id: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
+  device_type: string;
+  device_brand: string | null;
+  device_model: string | null;
+  issue_description: string;
+  preferred_date: string;
+  preferred_time: string;
+  status: string;
+  notes: string | null;
+  created_at: string;
+}
+
 type ChartPeriod = 'today' | 'yesterday' | 'thisWeek' | 'lastWeek';
 type FinancePeriod = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -120,6 +138,7 @@ export default function CentroDashboard() {
     centroEarnings: 0,
     platformCommission: 0,
   });
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -151,6 +170,7 @@ export default function CentroDashboard() {
           loadWeeklyData(centroData.id),
           loadDailyData(centroData.id),
           loadFinanceStats(centroData.id, financePeriod),
+          loadAppointments(centroData.id),
         ]);
       }
     } catch (error: any) {
@@ -452,6 +472,18 @@ export default function CentroDashboard() {
     }
   };
 
+  const loadAppointments = async (centroId: string) => {
+    const { data } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("centro_id", centroId)
+      .order("preferred_date", { ascending: true });
+
+    if (data) {
+      setAppointments(data);
+    }
+  };
+
   // Set up realtime subscription
   useEffect(() => {
     if (!centro) return;
@@ -476,8 +508,27 @@ export default function CentroDashboard() {
       )
       .subscribe();
 
+    // Realtime appointments subscription
+    const appointmentsChannel = supabase
+      .channel("centro-appointments-dashboard")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+        },
+        () => {
+          if (centro.id) {
+            loadAppointments(centro.id);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(repairChannel);
+      supabase.removeChannel(appointmentsChannel);
     };
   }, [centro]);
 
@@ -1032,6 +1083,42 @@ export default function CentroDashboard() {
             {/* Prepaid Commissions History */}
             {centro && (
               <PrepaidCommissionsHistory centroId={centro.id} />
+            )}
+
+            {/* Appointments Calendar */}
+            {centro && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35 }}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                      <h2 className="font-medium text-foreground text-sm">Prenotazioni</h2>
+                      {appointments.filter(a => a.status === 'pending').length > 0 && (
+                        <Badge className="bg-amber-500 text-white text-xs">
+                          {appointments.filter(a => a.status === 'pending').length} in attesa
+                        </Badge>
+                      )}
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => navigate("/centro/prenotazioni")}
+                      className="h-7 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                    >
+                      Gestisci
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+                  <AppointmentCalendar 
+                    appointments={appointments}
+                    onSelectAppointment={(apt) => navigate("/centro/prenotazioni")}
+                  />
+                </div>
+              </motion.div>
             )}
 
             {/* Main Grid */}
