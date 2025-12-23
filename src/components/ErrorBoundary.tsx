@@ -40,11 +40,15 @@ export class ErrorBoundary extends Component<Props, State> {
         await Promise.all(cacheNames.map(name => caches.delete(name)));
       }
       
-      // Clear localStorage auth data
-      const keysToRemove = Object.keys(localStorage).filter(key => 
-        key.includes('supabase') || key.includes('auth')
-      );
-      keysToRemove.forEach(key => localStorage.removeItem(key));
+      // Clear localStorage auth data (with try-catch for Android WebView)
+      try {
+        const keysToRemove = Object.keys(localStorage).filter(key => 
+          key.includes('supabase') || key.includes('auth')
+        );
+        keysToRemove.forEach(key => localStorage.removeItem(key));
+      } catch (storageError) {
+        console.error('localStorage clear error:', storageError);
+      }
       
       // Unregister service workers
       if ('serviceWorker' in navigator) {
@@ -90,7 +94,8 @@ export class ErrorBoundary extends Component<Props, State> {
               </Button>
             </div>
             
-            {process.env.NODE_ENV === 'development' && this.state.error && (
+            {/* Always show error details to help debug on Android */}
+            {this.state.error && (
               <details className="text-left mt-4 p-3 bg-muted rounded-lg text-xs">
                 <summary className="cursor-pointer font-medium">Dettagli errore</summary>
                 <pre className="mt-2 whitespace-pre-wrap text-destructive overflow-auto max-h-40">

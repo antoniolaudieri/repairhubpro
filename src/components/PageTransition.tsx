@@ -4,9 +4,15 @@ interface PageTransitionProps {
   children: ReactNode;
 }
 
-// Detect if running as PWA on iOS - animations cause white screen issues
-const isIOSPWA = () => {
+// Detect if running as native app (Capacitor) or PWA on iOS
+const shouldSkipAnimations = () => {
   if (typeof window === 'undefined') return false;
+  
+  // Check for Capacitor native app (Android/iOS)
+  const isCapacitorNative = !!(window as any).Capacitor?.isNativePlatform?.();
+  if (isCapacitorNative) return true;
+  
+  // Check for iOS PWA
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
   const isStandalone = (window.navigator as any).standalone === true || 
                        window.matchMedia('(display-mode: standalone)').matches;
@@ -24,8 +30,8 @@ export const PageTransition = ({ children }: PageTransitionProps) => {
     return () => cancelAnimationFrame(timer);
   }, []);
 
-  // On iOS PWA, skip all animations to prevent white screen
-  if (isIOSPWA()) {
+  // On native apps or iOS PWA, skip all animations to prevent crashes
+  if (shouldSkipAnimations()) {
     return <div className="h-full">{children}</div>;
   }
 
