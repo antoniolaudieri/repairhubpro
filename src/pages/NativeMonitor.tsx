@@ -34,28 +34,34 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
   const [syncing, setSyncing] = useState(false);
   const deviceInfo = useDeviceInfo();
 
-  // Fetch active loyalty card by finding customer first
+  // Fetch active loyalty card - search across all customers with this email
   const fetchLoyaltyCard = useCallback(async () => {
     try {
-      // First find the customer by email
-      const { data: customer } = await supabase
+      // Find all customers with this email
+      const { data: customers } = await supabase
         .from("customers")
         .select("id")
-        .eq("email", user.email)
-        .maybeSingle();
+        .eq("email", user.email);
 
-      if (!customer) {
+      if (!customers || customers.length === 0) {
         setLoyaltyCard(null);
         setLoading(false);
         return;
       }
 
-      // Then find active loyalty card for this customer
+      // Get customer IDs
+      const customerIds = customers.map(c => c.id);
+
+      // Find active loyalty card for any of these customers
       const { data, error } = await supabase
         .from("loyalty_cards")
         .select("id, centro_id, status, customer_id")
-        .eq("customer_id", customer.id)
+        .in("customer_id", customerIds)
         .eq("status", "active")
+        .not("expires_at", "is", null)
+        .gte("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) {
