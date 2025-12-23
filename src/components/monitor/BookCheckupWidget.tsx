@@ -1,5 +1,5 @@
 import { Calendar, Clock, MapPin, Phone, CheckCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,29 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { sendPushNotification, getCentroUserId } from '@/services/pushNotificationService';
+import { format } from 'date-fns';
+import { it } from 'date-fns/locale';
+
+interface DayHours {
+  open_am: string;
+  close_am: string;
+  open_pm: string;
+  close_pm: string;
+  closed: boolean;
+  morning_closed?: boolean;
+  afternoon_closed?: boolean;
+}
+
+interface OpeningHours {
+  monday: DayHours;
+  tuesday: DayHours;
+  wednesday: DayHours;
+  thursday: DayHours;
+  friday: DayHours;
+  saturday: DayHours;
+  sunday: DayHours;
+}
 
 interface BookCheckupWidgetProps {
   centroId: string;
@@ -29,6 +52,8 @@ interface BookCheckupWidgetProps {
   };
   onBooked?: () => void;
 }
+
+const dayKeys: (keyof OpeningHours)[] = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 export const BookCheckupWidget = ({
   centroId,
@@ -45,24 +70,54 @@ export const BookCheckupWidget = ({
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [success, setSuccess] = useState(false);
+  const [openingHours, setOpeningHours] = useState<OpeningHours | null>(null);
+  const [centroName, setCentroName] = useState<string>('');
 
-  // Generate available dates (next 7 business days)
+  // Fetch centro opening hours
+  useEffect(() => {
+    const fetchCentroHours = async () => {
+      if (!centroId) return;
+      const { data } = await supabase
+        .from('centri_assistenza')
+        .select('opening_hours, business_name')
+        .eq('id', centroId)
+        .single();
+      
+      if (data) {
+        setOpeningHours(data.opening_hours as unknown as OpeningHours | null);
+        setCentroName(data.business_name || 'Centro Assistenza');
+      }
+    };
+    fetchCentroHours();
+  }, [centroId]);
+
+  // Generate available dates based on centro opening hours
   const getAvailableDates = () => {
     const dates = [];
     const today = new Date();
     let count = 0;
     let dayOffset = 1;
     
-    while (count < 7) {
+    while (count < 7 && dayOffset < 30) {
       const date = new Date(today);
       date.setDate(today.getDate() + dayOffset);
       const dayOfWeek = date.getDay();
+      const dayKey = dayKeys[dayOfWeek];
       
-      // Skip weekends
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      // Check if the day is open based on centro hours
+      let isOpen = true;
+      if (openingHours && openingHours[dayKey]) {
+        isOpen = !openingHours[dayKey].closed;
+      } else {
+        // Default: skip weekends if no opening hours defined
+        isOpen = dayOfWeek !== 0 && dayOfWeek !== 6;
+      }
+      
+      if (isOpen) {
         dates.push({
           value: date.toISOString().split('T')[0],
-          label: date.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })
+          label: date.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' }),
+          dayKey
         });
         count++;
       }
@@ -71,10 +126,48 @@ export const BookCheckupWidget = ({
     return dates;
   };
 
-  const timeSlots = [
-    '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
-    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
-  ];
+  // Generate time slots based on selected date and centro opening hours
+  const getTimeSlots = () => {
+    if (!selectedDate) return [];
+    
+    const selectedDateObj = new Date(selectedDate);
+    const dayOfWeek = selectedDateObj.getDay();
+    const dayKey = dayKeys[dayOfWeek];
+    
+    const dayHours = openingHours?.[dayKey];
+    
+    // Default time slots
+    const defaultSlots = [
+      '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+      '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
+    ];
+    
+    if (!dayHours) return defaultSlots;
+    
+    const slots: string[] = [];
+    
+    // Morning slots
+    if (!dayHours.morning_closed && dayHours.open_am && dayHours.close_am) {
+      const openHour = parseInt(dayHours.open_am.split(':')[0]);
+      const closeHour = parseInt(dayHours.close_am.split(':')[0]);
+      for (let h = openHour; h < closeHour; h++) {
+        slots.push(`${h.toString().padStart(2, '0')}:00`);
+        slots.push(`${h.toString().padStart(2, '0')}:30`);
+      }
+    }
+    
+    // Afternoon slots
+    if (!dayHours.afternoon_closed && dayHours.open_pm && dayHours.close_pm) {
+      const openHour = parseInt(dayHours.open_pm.split(':')[0]);
+      const closeHour = parseInt(dayHours.close_pm.split(':')[0]);
+      for (let h = openHour; h < closeHour; h++) {
+        slots.push(`${h.toString().padStart(2, '0')}:00`);
+        slots.push(`${h.toString().padStart(2, '0')}:30`);
+      }
+    }
+    
+    return slots.length > 0 ? slots : defaultSlots;
+  };
 
   const handleBook = async () => {
     if (!selectedDate || !selectedTime) {
@@ -89,6 +182,7 @@ export const BookCheckupWidget = ({
       const { error } = await supabase
         .from('appointments')
         .insert({
+          centro_id: centroId,
           customer_name: customerName,
           customer_email: customerEmail,
           customer_phone: customerPhone || '',
@@ -103,6 +197,20 @@ export const BookCheckupWidget = ({
         });
 
       if (error) throw error;
+
+      // Send push notification to Centro
+      try {
+        const centroUserId = await getCentroUserId(centroId);
+        if (centroUserId) {
+          await sendPushNotification([centroUserId], {
+            title: "Nuova Prenotazione 📅",
+            body: `${customerName} ha prenotato per il ${format(new Date(selectedDate), "d MMMM", { locale: it })} alle ${selectedTime}`,
+            data: { type: "new_appointment" }
+          });
+        }
+      } catch (err) {
+        console.error("Error sending push to centro:", err);
+      }
 
       setSuccess(true);
       toast.success('Appuntamento prenotato con successo!');
@@ -218,8 +326,8 @@ export const BookCheckupWidget = ({
                 {/* Time Selection */}
                 <div className="space-y-2">
                   <Label>Seleziona Orario</Label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {timeSlots.map(time => (
+                  <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto">
+                    {getTimeSlots().map(time => (
                       <Button
                         key={time}
                         variant={selectedTime === time ? 'default' : 'outline'}
@@ -231,6 +339,9 @@ export const BookCheckupWidget = ({
                       </Button>
                     ))}
                   </div>
+                  {selectedDate && getTimeSlots().length === 0 && (
+                    <p className="text-xs text-muted-foreground">Nessun orario disponibile per questa data</p>
+                  )}
                 </div>
 
                 {/* Notes */}

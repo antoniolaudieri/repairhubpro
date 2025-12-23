@@ -51,6 +51,7 @@ import CentroUsato from "@/pages/centro/CentroUsato";
 import CentroPerizie from "@/pages/centro/CentroPerizie";
 import CentroPeriziaDetail from "@/pages/centro/CentroPeriziaDetail";
 import CentroMarketing from "@/pages/centro/CentroMarketing";
+import CentroPrenotazioni from "@/pages/centro/CentroPrenotazioni";
 import UsatoCatalog from "@/pages/UsatoCatalog";
 import UsatoDetail from "@/pages/UsatoDetail";
 // Admin pages
@@ -488,6 +489,14 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute requireCentro>
               <CentroMarketing />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/centro/prenotazioni"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroPrenotazioni />
             </ProtectedRoute>
           }
         />
