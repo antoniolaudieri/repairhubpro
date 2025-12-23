@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { RefreshCw, Bell, Cloud, CloudOff, Settings, LogIn, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,9 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNativeDeviceInfo } from '@/hooks/useNativeDeviceInfo';
-import { useAutoSync } from '@/hooks/useAutoSync';
 import { useAuth } from '@/hooks/useAuth';
-import { Capacitor } from '@capacitor/core';
 import { 
   BatteryWidget, 
   StorageWidget, 
@@ -52,13 +50,6 @@ const DeviceMonitor = () => {
   const centroId = urlCentroId || loyaltyCard?.centro_id;
   
   const deviceInfo = useNativeDeviceInfo(centroId);
-  
-  // Auto-sync based on centro settings
-  useAutoSync({
-    centroId,
-    syncToServer: deviceInfo.syncToServer,
-    enabled: !!centroId
-  });
 
   // Check if running in native environment and setup Capacitor
   useEffect(() => {
@@ -66,6 +57,7 @@ const DeviceMonitor = () => {
     
     const initCapacitor = async () => {
       try {
+        const { Capacitor } = await import('@capacitor/core');
         const nativePlatform = Capacitor.isNativePlatform();
         if (!mounted) return;
         setIsNative(nativePlatform);
