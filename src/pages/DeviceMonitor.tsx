@@ -30,6 +30,7 @@ interface LoyaltyCardInfo {
   id: string;
   centro_id: string;
   status: string;
+  customer_id: string | null;
 }
 
 const DeviceMonitor = () => {
@@ -48,8 +49,9 @@ const DeviceMonitor = () => {
   
   // Use centroId from URL or from loyalty card
   const centroId = urlCentroId || loyaltyCard?.centro_id;
+  const customerId = loyaltyCard?.customer_id || undefined;
   
-  const deviceInfo = useNativeDeviceInfo(centroId);
+  const deviceInfo = useNativeDeviceInfo(centroId, customerId, loyaltyCard?.id);
 
   // Check if running in native environment and setup Capacitor
   useEffect(() => {
@@ -157,6 +159,19 @@ const DeviceMonitor = () => {
           return;
         }
         
+        // First, find customer by email
+        const { data: customerData, error: customerError } = await supabase
+          .from('customers')
+          .select('id')
+          .eq('email', userEmail)
+          .maybeSingle();
+        
+        if (customerError) {
+          console.log('Error finding customer:', customerError);
+        }
+        
+        const foundCustomerId = customerData?.id || null;
+
         // Fetch active loyalty card for this user
         const { data: cards, error: cardError } = await supabase
           .from('loyalty_cards')
@@ -164,6 +179,7 @@ const DeviceMonitor = () => {
             id,
             centro_id,
             status,
+            customer_id,
             centri_assistenza (
               id,
               business_name,
@@ -186,7 +202,8 @@ const DeviceMonitor = () => {
         setLoyaltyCard({
           id: card.id,
           centro_id: card.centro_id,
-          status: card.status
+          status: card.status,
+          customer_id: foundCustomerId || card.customer_id || null
         });
         
         // Set centro info from the joined data
