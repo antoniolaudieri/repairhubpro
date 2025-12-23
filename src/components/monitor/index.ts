@@ -7,3 +7,6 @@ export { NetworkWidget } from './NetworkWidget';
 export { ScreenWidget } from './ScreenWidget';
 export { HardwareWidget } from './HardwareWidget';
 export { LocaleWidget } from './LocaleWidget';
+export { SensorWidget } from './SensorWidget';
+export { BatteryAdvancedWidget } from './BatteryAdvancedWidget';
+export { BookCheckupWidget } from './BookCheckupWidget';
