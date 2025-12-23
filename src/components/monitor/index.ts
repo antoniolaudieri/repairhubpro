@@ -10,3 +10,5 @@ export { LocaleWidget } from './LocaleWidget';
 export { SensorWidget } from './SensorWidget';
 export { BatteryAdvancedWidget } from './BatteryAdvancedWidget';
 export { BookCheckupWidget } from './BookCheckupWidget';
+export { DeviceImageWidget } from './DeviceImageWidget';
+export { AppStorageWidget } from './AppStorageWidget';

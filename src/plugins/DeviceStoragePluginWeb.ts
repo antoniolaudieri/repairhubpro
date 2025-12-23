@@ -5,7 +5,8 @@ import type {
   RamInfo, 
   SensorsInfo, 
   BatteryAdvancedInfo,
-  SensorStatus 
+  SensorStatus,
+  AppStorageInfo 
 } from './DeviceStoragePlugin';
 
 export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnosticsPlugin {
@@ -319,5 +320,15 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
     } catch (e: any) {
       return { working: false, error: e.message || 'Errore test sensore' };
     }
+  }
+
+  async getInstalledAppsStorage(): Promise<AppStorageInfo[]> {
+    // Web cannot access installed apps - this requires native Android API
+    throw new Error('Questa funzione è disponibile solo nell\'app nativa Android');
+  }
+
+  async requestUsageStatsPermission(): Promise<{ granted: boolean }> {
+    // Web cannot request this permission
+    throw new Error('Questa funzione è disponibile solo nell\'app nativa Android');
   }
 }
