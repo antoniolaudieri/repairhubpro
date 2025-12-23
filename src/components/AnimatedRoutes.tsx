@@ -107,6 +107,7 @@ export const AnimatedRoutes = () => {
         <Route path="/disiscrizione" element={<PageTransition><Disiscrizione /></PageTransition>} />
         
         {/* Device Monitor - Native Android App */}
+        <Route path="/device-monitor" element={<PageTransition><DeviceMonitor /></PageTransition>} />
         <Route path="/device-monitor/:centroId" element={<PageTransition><DeviceMonitor /></PageTransition>} />
         
         {/* Device Health Quiz - iOS WebApp */}
