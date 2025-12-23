@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Device, DeviceInfo, BatteryInfo } from '@capacitor/device';
-import { Network, ConnectionStatus } from '@capacitor/network';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface NativeDeviceData {
@@ -116,6 +114,16 @@ const calculateHealthScore = (data: Partial<NativeDeviceData>): number => {
   return Math.max(0, Math.min(100, score - penalties));
 };
 
+// Check if running in native Capacitor environment
+const isNativePlatform = async (): Promise<boolean> => {
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+};
+
 export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loyaltyCardId?: string) => {
   const [data, setData] = useState<NativeDeviceData>({
     batteryLevel: null,
@@ -163,15 +171,21 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
     try {
       setData(prev => ({ ...prev, isLoading: true, error: null }));
       
-      // === DEVICE INFO ===
-      let deviceInfo: DeviceInfo | null = null;
-      let batteryInfo: BatteryInfo | null = null;
+      // === CHECK NATIVE PLATFORM ===
+      const isNative = await isNativePlatform();
       
-      try {
-        deviceInfo = await Device.getInfo();
-        batteryInfo = await Device.getBatteryInfo();
-      } catch (e) {
-        console.log('Running in web mode, using fallback APIs');
+      // === DEVICE INFO (Native only) ===
+      let deviceInfo: any = null;
+      let batteryInfo: any = null;
+      
+      if (isNative) {
+        try {
+          const { Device } = await import('@capacitor/device');
+          deviceInfo = await Device.getInfo();
+          batteryInfo = await Device.getBatteryInfo();
+        } catch (e) {
+          console.log('Capacitor Device plugin not available');
+        }
       }
       
       // === BATTERY ===
@@ -201,11 +215,19 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
       let networkType: string | null = null;
       let networkConnected = true;
       
-      try {
-        const status: ConnectionStatus = await Network.getStatus();
-        networkConnected = status.connected;
-        networkType = status.connectionType;
-      } catch (e) {
+      if (isNative) {
+        try {
+          const { Network } = await import('@capacitor/network');
+          const status = await Network.getStatus();
+          networkConnected = status.connected;
+          networkType = status.connectionType;
+        } catch (e) {
+          console.log('Capacitor Network plugin not available');
+          networkConnected = navigator.onLine;
+          const conn = (navigator as any).connection;
+          networkType = conn?.type || 'unknown';
+        }
+      } else {
         networkConnected = navigator.onLine;
         const conn = (navigator as any).connection;
         networkType = conn?.type || 'unknown';
@@ -262,7 +284,6 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
           const performance = window.performance as any;
           if (performance?.memory) {
             const usedHeap = performance.memory.usedJSHeapSize / (1024 * 1024);
-            const totalHeap = performance.memory.jsHeapSizeLimit / (1024 * 1024);
             ramAvailableMb = Math.round(ramTotalMb - usedHeap);
             ramPercentUsed = Math.round((usedHeap / ramTotalMb) * 100);
           }
@@ -448,18 +469,29 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
     let unsubscribe: (() => void) | undefined;
     
     const setupNetworkListener = async () => {
-      try {
-        const handle = await Network.addListener('networkStatusChange', (status) => {
-          setData(prev => ({
-            ...prev,
-            networkConnected: status.connected,
-            networkType: status.connectionType,
-            onlineStatus: status.connected
-          }));
-        });
-        unsubscribe = () => handle.remove();
-      } catch (e) {
-        // Web fallback
+      const isNative = await isNativePlatform();
+      
+      if (isNative) {
+        try {
+          const { Network } = await import('@capacitor/network');
+          const handle = await Network.addListener('networkStatusChange', (status) => {
+            setData(prev => ({
+              ...prev,
+              networkConnected: status.connected,
+              networkType: status.connectionType,
+              onlineStatus: status.connected
+            }));
+          });
+          unsubscribe = () => handle.remove();
+        } catch (e) {
+          console.log('Capacitor Network listener not available, using web fallback');
+          setupWebNetworkListener();
+        }
+      } else {
+        setupWebNetworkListener();
+      }
+      
+      function setupWebNetworkListener() {
         const handleOnline = () => setData(prev => ({ ...prev, onlineStatus: true, networkConnected: true }));
         const handleOffline = () => setData(prev => ({ ...prev, onlineStatus: false, networkConnected: false }));
         
@@ -499,38 +531,34 @@ function extractDeviceFromUserAgent(): string | null {
   const androidMatch = ua.match(/Android[\s\d.]+;[\s]*([\w\s]+)[\s]+Build/i);
   if (androidMatch) return androidMatch[1].trim();
   
-  // Generic mobile
-  if (/Mobile/i.test(ua)) return 'Mobile Device';
-  
   return null;
 }
 
 function extractManufacturerFromUserAgent(): string | null {
   const ua = navigator.userAgent.toLowerCase();
   
-  if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('mac')) return 'Apple';
-  if (ua.includes('samsung')) return 'Samsung';
-  if (ua.includes('huawei')) return 'Huawei';
-  if (ua.includes('xiaomi') || ua.includes('redmi')) return 'Xiaomi';
-  if (ua.includes('oppo')) return 'Oppo';
-  if (ua.includes('vivo')) return 'Vivo';
-  if (ua.includes('oneplus')) return 'OnePlus';
-  if (ua.includes('google') || ua.includes('pixel')) return 'Google';
-  if (ua.includes('motorola')) return 'Motorola';
-  if (ua.includes('lg')) return 'LG';
-  if (ua.includes('sony')) return 'Sony';
-  if (ua.includes('nokia')) return 'Nokia';
+  const brands = ['samsung', 'huawei', 'xiaomi', 'oppo', 'vivo', 'realme', 'oneplus', 'google', 'motorola', 'lg', 'sony', 'nokia', 'asus', 'lenovo'];
+  
+  for (const brand of brands) {
+    if (ua.includes(brand)) {
+      return brand.charAt(0).toUpperCase() + brand.slice(1);
+    }
+  }
+  
+  if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) {
+    return 'Apple';
+  }
   
   return null;
 }
 
 function detectPlatform(): string {
-  const ua = navigator.userAgent;
+  const ua = navigator.userAgent.toLowerCase();
   
-  if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
-  if (/Android/.test(ua)) return 'android';
-  if (/Windows/.test(ua)) return 'windows';
-  if (/Mac/.test(ua)) return 'mac';
+  if (/iphone|ipad|ipod/.test(ua)) return 'ios';
+  if (/android/.test(ua)) return 'android';
+  if (/windows/.test(ua)) return 'windows';
+  if (/mac/.test(ua)) return 'mac';
   
   return 'web';
 }
