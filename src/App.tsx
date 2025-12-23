@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { AnimatedRoutes } from "@/components/AnimatedRoutes";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { UpdateNotification } from "@/components/UpdateNotification";
+import { NativeAppRedirect } from "@/components/NativeAppRedirect";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,6 +29,7 @@ const App = () => (
           <Sonner />
           <UpdateNotification />
           <BrowserRouter>
+            <NativeAppRedirect />
             <AnimatedRoutes />
           </BrowserRouter>
         </TooltipProvider>
