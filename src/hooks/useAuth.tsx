@@ -84,17 +84,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Initialize auth
     initializeAuth();
 
-    // Set up auth state listener
+    // Set up auth state listener - CRITICAL: NO async callback to prevent Android deadlock
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("Auth state change:", event);
       
+      // Synchronous state updates only
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // Use setTimeout to avoid race conditions
+        // Defer async operations with setTimeout to prevent deadlock
         setTimeout(() => {
           fetchUserRoles(session.user.id);
         }, 0);
