@@ -39,6 +39,9 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       
+      - name: Initialize Capacitor
+        run: npx cap init "LabLinkRiparo" "com.lablinkriparo.monitor" --web-dir dist || true
+      
       - name: Add Android platform
         run: npx cap add android
       
