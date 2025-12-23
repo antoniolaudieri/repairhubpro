@@ -3,3 +3,7 @@ export { StorageWidget } from './StorageWidget';
 export { DeviceInfoWidget } from './DeviceInfoWidget';
 export { HealthScoreWidget } from './HealthScoreWidget';
 export { RamWidget } from './RamWidget';
+export { NetworkWidget } from './NetworkWidget';
+export { ScreenWidget } from './ScreenWidget';
+export { HardwareWidget } from './HardwareWidget';
+export { LocaleWidget } from './LocaleWidget';

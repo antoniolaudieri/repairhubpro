@@ -13,7 +13,11 @@ import {
   StorageWidget, 
   DeviceInfoWidget, 
   HealthScoreWidget,
-  RamWidget 
+  RamWidget,
+  NetworkWidget,
+  ScreenWidget,
+  HardwareWidget,
+  LocaleWidget
 } from '@/components/monitor';
 
 interface CentroInfo {
@@ -375,6 +379,38 @@ const DeviceMonitor = () => {
             totalMb={deviceInfo.ramTotalMb}
             availableMb={deviceInfo.ramAvailableMb}
             percentUsed={deviceInfo.ramPercentUsed}
+          />
+          
+          <NetworkWidget
+            networkType={deviceInfo.networkType}
+            networkConnected={deviceInfo.networkConnected}
+            connectionDownlink={deviceInfo.connectionDownlink}
+            connectionEffectiveType={deviceInfo.connectionEffectiveType}
+            connectionRtt={deviceInfo.connectionRtt}
+            onlineStatus={deviceInfo.onlineStatus}
+          />
+          
+          <ScreenWidget
+            screenWidth={deviceInfo.screenWidth}
+            screenHeight={deviceInfo.screenHeight}
+            pixelRatio={deviceInfo.pixelRatio}
+            colorDepth={deviceInfo.colorDepth}
+            orientation={deviceInfo.orientation}
+            touchSupport={deviceInfo.touchSupport}
+          />
+          
+          <HardwareWidget
+            cpuCores={deviceInfo.cpuCores}
+            deviceMemoryGb={deviceInfo.deviceMemoryGb}
+            hardwareConcurrency={deviceInfo.hardwareConcurrency}
+            maxTouchPoints={deviceInfo.maxTouchPoints}
+          />
+          
+          <LocaleWidget
+            timezone={deviceInfo.timezone}
+            language={deviceInfo.language}
+            latitude={deviceInfo.latitude}
+            longitude={deviceInfo.longitude}
           />
           
           <DeviceInfoWidget 
