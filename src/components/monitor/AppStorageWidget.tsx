@@ -37,11 +37,24 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
   }, []);
 
   const loadApps = async () => {
+    // Skip if not on native platform
+    if (!Capacitor.isNativePlatform()) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     
     try {
       const appList = await DeviceDiagnostics.getInstalledAppsStorage();
+      
+      // If empty array returned, plugin is not implemented natively
+      if (appList.length === 0) {
+        setError('"DeviceDiagnostics" plugin is not implemented on android');
+        return;
+      }
+      
       // Sort by size descending
       appList.sort((a, b) => b.totalSizeMb - a.totalSizeMb);
       setApps(appList);

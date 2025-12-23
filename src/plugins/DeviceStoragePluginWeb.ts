@@ -323,12 +323,14 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
   }
 
   async getInstalledAppsStorage(): Promise<AppStorageInfo[]> {
-    // Web cannot access installed apps - this requires native Android API
-    throw new Error('Questa funzione è disponibile solo nell\'app nativa Android');
+    // Web cannot access installed apps - return empty array with message
+    console.log('getInstalledAppsStorage: Not available on web platform');
+    return [];
   }
 
   async requestUsageStatsPermission(): Promise<{ granted: boolean }> {
-    // Web cannot request this permission
-    throw new Error('Questa funzione è disponibile solo nell\'app nativa Android');
+    // Web cannot request this permission - return false
+    console.log('requestUsageStatsPermission: Not available on web platform');
+    return { granted: false };
   }
 }
