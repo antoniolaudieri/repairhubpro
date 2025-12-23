@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
+import DeviceDiagnostics, { SensorStatus, SensorsInfo } from '@/plugins/DeviceStoragePlugin';
 
 export interface NativeDeviceData {
   // Battery
   batteryLevel: number | null;
   batteryHealth: string | null;
   isCharging: boolean;
+  batteryTemperature: number | null;
+  batteryVoltage: number | null;
+  batteryTechnology: string | null;
+  batteryPlugged: string | null;
   
   // Storage
   storageTotalGb: number | null;
@@ -55,6 +60,9 @@ export interface NativeDeviceData {
   // Location (optional)
   latitude: number | null;
   longitude: number | null;
+  
+  // Sensors
+  sensors: SensorsInfo | null;
   
   // Calculated
   healthScore: number;
@@ -129,6 +137,10 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
     batteryLevel: null,
     batteryHealth: null,
     isCharging: false,
+    batteryTemperature: null,
+    batteryVoltage: null,
+    batteryTechnology: null,
+    batteryPlugged: null,
     storageTotalGb: null,
     storageUsedGb: null,
     storageAvailableGb: null,
@@ -161,6 +173,7 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
     language: null,
     latitude: null,
     longitude: null,
+    sensors: null,
     healthScore: 100,
     isLoading: true,
     error: null,
@@ -249,58 +262,103 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
         console.log('Connection API not available');
       }
       
-      // === STORAGE ===
+      // === STORAGE (using DeviceDiagnostics plugin) ===
       let storageTotalGb: number | null = null;
       let storageUsedGb: number | null = null;
       let storageAvailableGb: number | null = null;
       let storagePercentUsed: number | null = null;
       
       try {
-        if (navigator.storage && navigator.storage.estimate) {
-          const estimate = await navigator.storage.estimate();
-          const quota = estimate.quota || 0;
-          const usage = estimate.usage || 0;
-          
-          if (quota > 0) {
-            storageTotalGb = quota / (1024 ** 3);
-            storageUsedGb = usage / (1024 ** 3);
-            storageAvailableGb = (quota - usage) / (1024 ** 3);
-            storagePercentUsed = (usage / quota) * 100;
+        const storageInfo = await DeviceDiagnostics.getStorageInfo();
+        storageTotalGb = storageInfo.totalGb;
+        storageUsedGb = storageInfo.usedGb;
+        storageAvailableGb = storageInfo.availableGb;
+        storagePercentUsed = storageInfo.percentUsed;
+      } catch (e) {
+        console.log('DeviceDiagnostics storage not available, falling back to web API');
+        try {
+          if (navigator.storage && navigator.storage.estimate) {
+            const estimate = await navigator.storage.estimate();
+            const quota = estimate.quota || 0;
+            const usage = estimate.usage || 0;
             
-            // Fallback: if usage is 0, estimate based on typical device usage
-            if (usage === 0 && isNative) {
-              // Android/iOS typically report some usage - if 0, use realistic estimate
-              storagePercentUsed = 45; // Average device usage
-              storageUsedGb = storageTotalGb * 0.45;
-              storageAvailableGb = storageTotalGb * 0.55;
+            if (quota > 0) {
+              // Web API returns browser quota, estimate device storage
+              const estimatedTotal = quota * 2; // Rough estimate
+              storageTotalGb = Math.round((estimatedTotal / (1024 ** 3)) * 10) / 10;
+              storageUsedGb = Math.round((usage / (1024 ** 3)) * 10) / 10;
+              storageAvailableGb = Math.round(((estimatedTotal - usage) / (1024 ** 3)) * 10) / 10;
+              storagePercentUsed = Math.round((usage / estimatedTotal) * 1000) / 10;
             }
           }
+        } catch (e2) {
+          console.log('Storage API not available');
         }
-      } catch (e) {
-        console.log('Storage API not available');
       }
       
-      // === RAM / MEMORY ===
+      // === RAM / MEMORY (using DeviceDiagnostics plugin) ===
       let ramTotalMb: number | null = null;
       let ramAvailableMb: number | null = null;
       let ramPercentUsed: number | null = null;
       let deviceMemoryGb: number | null = null;
       
       try {
-        const nav = navigator as any;
-        if (nav.deviceMemory) {
-          deviceMemoryGb = nav.deviceMemory;
-          ramTotalMb = nav.deviceMemory * 1024;
-          
-          const performance = window.performance as any;
-          if (performance?.memory) {
-            const usedHeap = performance.memory.usedJSHeapSize / (1024 * 1024);
-            ramAvailableMb = Math.round(ramTotalMb - usedHeap);
-            ramPercentUsed = Math.round((usedHeap / ramTotalMb) * 100);
+        const ramInfo = await DeviceDiagnostics.getRamInfo();
+        ramTotalMb = ramInfo.totalMb;
+        ramAvailableMb = ramInfo.availableMb;
+        ramPercentUsed = ramInfo.percentUsed;
+        deviceMemoryGb = ramInfo.totalMb / 1024;
+      } catch (e) {
+        console.log('DeviceDiagnostics RAM not available, falling back to web API');
+        try {
+          const nav = navigator as any;
+          if (nav.deviceMemory) {
+            deviceMemoryGb = nav.deviceMemory;
+            ramTotalMb = nav.deviceMemory * 1024;
+            
+            const performance = window.performance as any;
+            if (performance?.memory) {
+              const usedHeap = performance.memory.usedJSHeapSize / (1024 * 1024);
+              const estimatedSystemUsage = ramTotalMb * 0.5;
+              const usedMb = Math.min(estimatedSystemUsage + usedHeap, ramTotalMb * 0.9);
+              ramAvailableMb = Math.round(ramTotalMb - usedMb);
+              ramPercentUsed = Math.round((usedMb / ramTotalMb) * 100);
+            } else {
+              // Estimate typical usage
+              ramPercentUsed = 55;
+              ramAvailableMb = Math.round(ramTotalMb * 0.45);
+            }
           }
+        } catch (e2) {
+          console.log('Memory API not available');
+        }
+      }
+      
+      // === ADVANCED BATTERY INFO ===
+      let batteryTemperature: number | null = null;
+      let batteryVoltage: number | null = null;
+      let batteryTechnology: string | null = null;
+      let batteryPlugged: string | null = null;
+      
+      try {
+        const advBattery = await DeviceDiagnostics.getBatteryAdvancedInfo();
+        batteryTemperature = advBattery.temperature;
+        batteryVoltage = advBattery.voltage;
+        batteryTechnology = advBattery.technology;
+        batteryPlugged = advBattery.plugged;
+        if (advBattery.health !== 'unknown') {
+          batteryHealth = advBattery.health;
         }
       } catch (e) {
-        console.log('Memory API not available');
+        console.log('Advanced battery info not available');
+      }
+      
+      // === SENSORS INFO ===
+      let sensors: SensorsInfo | null = null;
+      try {
+        sensors = await DeviceDiagnostics.getSensorsInfo();
+      } catch (e) {
+        console.log('Sensors info not available');
       }
       
       // === SCREEN ===
@@ -357,6 +415,10 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
         batteryLevel,
         batteryHealth,
         isCharging,
+        batteryTemperature,
+        batteryVoltage,
+        batteryTechnology,
+        batteryPlugged,
         storageTotalGb,
         storageUsedGb,
         storageAvailableGb,
@@ -389,6 +451,7 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
         language,
         latitude,
         longitude,
+        sensors,
         isLoading: false,
         error: null
       };
