@@ -206,10 +206,20 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
       let isCharging = false;
       let batteryHealth = 'unknown';
       
+      // Valid battery_health values for DB: 'good', 'overheat', 'dead', 'over_voltage', 'unspecified_failure', 'cold', 'unknown'
+      const mapBatteryHealth = (level: number | null, charging: boolean): string => {
+        if (level === null) return 'unknown';
+        // Map based on battery level to valid DB values
+        if (level > 50) return 'good';
+        if (level > 20) return 'good'; // 'fair' is not valid, use 'good'
+        if (level > 5) return 'unspecified_failure'; // Low battery warning
+        return 'dead'; // Critically low
+      };
+      
       if (batteryInfo) {
         batteryLevel = Math.round((batteryInfo.batteryLevel || 0) * 100);
         isCharging = batteryInfo.isCharging || false;
-        batteryHealth = isCharging ? 'charging' : batteryLevel > 80 ? 'good' : batteryLevel > 30 ? 'fair' : 'low';
+        batteryHealth = mapBatteryHealth(batteryLevel, isCharging);
       } else {
         try {
           const nav = navigator as any;
@@ -217,7 +227,7 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
             const battery = await nav.getBattery();
             batteryLevel = Math.round(battery.level * 100);
             isCharging = battery.charging;
-            batteryHealth = isCharging ? 'charging' : batteryLevel > 80 ? 'good' : batteryLevel > 30 ? 'fair' : 'low';
+            batteryHealth = mapBatteryHealth(batteryLevel, isCharging);
           }
         } catch (e) {
           console.log('Battery API not available');

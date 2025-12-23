@@ -482,6 +482,20 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
       return;
     }
 
+    // Map battery health to valid DB values
+    const validBatteryHealthValues = ['good', 'overheat', 'dead', 'over_voltage', 'unspecified_failure', 'cold', 'unknown'];
+    let batteryHealthValue = deviceData.batteryHealth || 'unknown';
+    if (!validBatteryHealthValues.includes(batteryHealthValue)) {
+      // Map invalid values
+      if (batteryHealthValue === 'charging' || batteryHealthValue === 'fair') {
+        batteryHealthValue = 'good';
+      } else if (batteryHealthValue === 'low') {
+        batteryHealthValue = 'unspecified_failure';
+      } else {
+        batteryHealthValue = 'unknown';
+      }
+    }
+
     setSyncing(true);
     try {
       const { error: insertError } = await supabase
@@ -492,7 +506,7 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
           loyalty_card_id: loyaltyCard.id,
           source: "android_native",
           battery_level: deviceData.batteryLevel,
-          battery_health: deviceData.batteryHealth,
+          battery_health: batteryHealthValue,
           is_charging: deviceData.isCharging,
           storage_total_gb: deviceData.storageTotalGb,
           storage_used_gb: deviceData.storageUsedGb,
