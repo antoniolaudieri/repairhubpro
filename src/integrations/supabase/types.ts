@@ -94,6 +94,7 @@ export type Database = {
       }
       appointments: {
         Row: {
+          centro_id: string | null
           corner_id: string | null
           created_at: string
           customer_email: string
@@ -113,6 +114,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          centro_id?: string | null
           corner_id?: string | null
           created_at?: string
           customer_email: string
@@ -132,6 +134,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          centro_id?: string | null
           corner_id?: string | null
           created_at?: string
           customer_email?: string
@@ -151,6 +154,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_corner_id_fkey"
             columns: ["corner_id"]

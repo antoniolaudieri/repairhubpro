@@ -51,6 +51,7 @@ const menuItems = [
   { title: "Trova Partner", url: "/centro/trova-partner", icon: Search },
   { title: "Lavori Corner", url: "/centro/lavori-corner", icon: Store, hasBadge: true },
   { title: "Lavori", url: "/centro/lavori", icon: Wrench },
+  { title: "Prenotazioni", url: "/centro/prenotazioni", icon: Bell, hasAppointmentBadge: true },
   { title: "Guide IA", url: "/centro/guide", icon: BookOpen },
   { title: "Clienti", url: "/centro/clienti", icon: UserRound },
   { title: "Preventivi", url: "/centro/preventivi", icon: FileText },
