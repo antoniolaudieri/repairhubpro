@@ -119,13 +119,14 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
       const storageUsed = deviceInfo.storage?.used ? deviceInfo.storage.used / (1024 * 1024 * 1024) : null;
       const storageAvailable = deviceInfo.storage?.available ? deviceInfo.storage.available / (1024 * 1024 * 1024) : null;
 
-      // Save device health reading
+      // Save to device_health_logs (the table that CentroClienteDetail reads from)
       const { error: insertError } = await supabase
-        .from("device_health_readings")
+        .from("device_health_logs")
         .insert({
           centro_id: loyaltyCard.centro_id,
           customer_id: loyaltyCard.customer_id,
           loyalty_card_id: loyaltyCard.id,
+          source: "android_app",
           battery_level: deviceInfo.battery?.level,
           is_charging: deviceInfo.battery?.charging,
           storage_total_gb: storageTotal,
@@ -135,10 +136,8 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
           device_memory_gb: deviceInfo.memory?.deviceMemory,
           network_connected: deviceInfo.network?.effectiveType !== null,
           network_type: deviceInfo.network?.type,
-          device_model: deviceInfo.model,
-          device_manufacturer: deviceInfo.manufacturer,
+          device_model_info: deviceInfo.model,
           os_version: deviceInfo.osVersion,
-          platform: deviceInfo.platform,
           screen_width: deviceInfo.screen?.width,
           screen_height: deviceInfo.screen?.height,
           language: navigator.language,
