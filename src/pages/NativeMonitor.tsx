@@ -105,7 +105,7 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
           centro_id: loyaltyCard.centro_id,
           customer_id: loyaltyCard.customer_id,
           loyalty_card_id: loyaltyCard.id,
-          source: "android_app",
+          source: "android_native",
           battery_level: deviceData.batteryLevel,
           battery_health: deviceData.batteryHealth,
           is_charging: deviceData.isCharging,
