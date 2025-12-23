@@ -1,14 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
-import { preloadBrandLogos } from "./utils/brandLogos";
 
-// Preload brand logos cache early - wrapped in try-catch for Android compatibility
-try {
-  preloadBrandLogos();
-} catch (e) {
-  console.warn('Brand logos preload failed:', e);
-}
 // Remove initial loader once React is ready
 const removeInitialLoader = () => {
   const loader = document.getElementById('initial-loader');

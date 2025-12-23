@@ -82,6 +82,16 @@ import InstallCentro from "@/pages/InstallCentro";
 import DeviceHealthQuiz from "@/pages/customer/DeviceHealthQuiz";
 import Disiscrizione from "@/pages/Disiscrizione";
 import DeviceMonitor from "@/pages/DeviceMonitor";
+import NativeRedirectPage from "@/pages/NativeRedirectPage";
+import { Capacitor } from '@capacitor/core';
+
+// Check if running as native app at module level (safe, synchronous)
+let isNativeApp = false;
+try {
+  isNativeApp = Capacitor.isNativePlatform();
+} catch (e) {
+  // Not running in Capacitor
+}
 
 export const AnimatedRoutes = () => {
   return (
@@ -114,7 +124,12 @@ export const AnimatedRoutes = () => {
         <Route path="/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />
         <Route path="/customer/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />
         
-        <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
+        {/* Root Route - Native apps go to device monitor, web goes to CustomerHome */}
+        <Route path="/" element={
+          isNativeApp 
+            ? <NativeRedirectPage /> 
+            : <PageTransition><CustomerHome /></PageTransition>
+        } />
         <Route path="/auth" element={<PageTransition><Auth /></PageTransition>} />
         <Route
           path="/customer-dashboard"
