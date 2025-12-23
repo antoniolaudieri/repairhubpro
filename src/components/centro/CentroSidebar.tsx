@@ -77,6 +77,7 @@ export function CentroSidebar() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [businessName, setBusinessName] = useState<string>("Centro");
   const [pendingCornerJobs, setPendingCornerJobs] = useState(0);
+  const [pendingAppointments, setPendingAppointments] = useState(0);
 
   useEffect(() => {
     const fetchCentroInfo = async () => {
@@ -104,7 +105,7 @@ export function CentroSidebar() {
         setPendingCornerJobs(count || 0);
         
         // Subscribe to repair_requests changes
-        const channel = supabase
+        const repairChannel = supabase
           .channel("sidebar-corner-requests")
           .on(
             "postgres_changes",
@@ -127,8 +128,40 @@ export function CentroSidebar() {
           )
           .subscribe();
         
+        // Fetch pending appointments count
+        const { count: appointmentCount } = await supabase
+          .from("appointments")
+          .select("*", { count: "exact", head: true })
+          .eq("centro_id", data.id)
+          .eq("status", "pending");
+        
+        setPendingAppointments(appointmentCount || 0);
+        
+        // Subscribe to appointments changes
+        const appointmentChannel = supabase
+          .channel("sidebar-appointments")
+          .on(
+            "postgres_changes",
+            {
+              event: "*",
+              schema: "public",
+              table: "appointments",
+            },
+            async () => {
+              const { count: newAppointmentCount } = await supabase
+                .from("appointments")
+                .select("*", { count: "exact", head: true })
+                .eq("centro_id", data.id)
+                .eq("status", "pending");
+              
+              setPendingAppointments(newAppointmentCount || 0);
+            }
+          )
+          .subscribe();
+        
         return () => {
-          supabase.removeChannel(channel);
+          supabase.removeChannel(repairChannel);
+          supabase.removeChannel(appointmentChannel);
         };
       }
     };
@@ -228,7 +261,7 @@ export function CentroSidebar() {
                               transition={{ type: "spring", stiffness: 400, damping: 17 }}
                               className="relative z-10 flex-shrink-0"
                             >
-                              <Icon className={`h-5 w-5 ${isActive ? 'drop-shadow-glow' : ''} ${(item as any).hasBadge && pendingCornerJobs > 0 ? 'text-amber-500' : ''}`} />
+                              <Icon className={`h-5 w-5 ${isActive ? 'drop-shadow-glow' : ''} ${(item as any).hasBadge && pendingCornerJobs > 0 ? 'text-amber-500' : ''} ${(item as any).hasAppointmentBadge && pendingAppointments > 0 ? 'text-primary' : ''}`} />
                             </motion.div>
                             <AnimatePresence mode="wait">
                               {!isCollapsed && (
@@ -245,12 +278,22 @@ export function CentroSidebar() {
                                       {pendingCornerJobs}
                                     </Badge>
                                   )}
+                                  {(item as any).hasAppointmentBadge && pendingAppointments > 0 && (
+                                    <Badge className="h-5 min-w-[20px] px-1.5 bg-primary text-primary-foreground text-xs animate-pulse">
+                                      {pendingAppointments}
+                                    </Badge>
+                                  )}
                                 </motion.div>
                               )}
                             </AnimatePresence>
                             {isCollapsed && (item as any).hasBadge && pendingCornerJobs > 0 && (
                               <Badge className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-amber-500 text-white text-[10px] animate-pulse">
                                 {pendingCornerJobs}
+                              </Badge>
+                            )}
+                            {isCollapsed && (item as any).hasAppointmentBadge && pendingAppointments > 0 && (
+                              <Badge className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 bg-primary text-primary-foreground text-[10px] animate-pulse">
+                                {pendingAppointments}
                               </Badge>
                             )}
                           </NavLink>
