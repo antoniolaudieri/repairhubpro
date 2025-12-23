@@ -1,12 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
-import { RefreshCw, Bell, Cloud, CloudOff, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { RefreshCw, Bell, Cloud, CloudOff, Settings, LogIn, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNativeDeviceInfo } from '@/hooks/useNativeDeviceInfo';
+import { useAuth } from '@/hooks/useAuth';
 import { 
   BatteryWidget, 
   StorageWidget, 
@@ -21,14 +22,28 @@ interface CentroInfo {
   logo_url: string | null;
 }
 
+interface LoyaltyCardInfo {
+  id: string;
+  centro_id: string;
+  status: string;
+}
+
 const DeviceMonitor = () => {
-  const { centroId } = useParams<{ centroId: string }>();
+  const { centroId: urlCentroId } = useParams<{ centroId: string }>();
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
+  
   const [centro, setCentro] = useState<CentroInfo | null>(null);
+  const [loyaltyCard, setLoyaltyCard] = useState<LoyaltyCardInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [isNative, setIsNative] = useState(false);
+  const [noLoyaltyCard, setNoLoyaltyCard] = useState(false);
+  
+  // Use centroId from URL or from loyalty card
+  const centroId = urlCentroId || loyaltyCard?.centro_id;
   
   const deviceInfo = useNativeDeviceInfo(centroId);
 
@@ -87,31 +102,85 @@ const DeviceMonitor = () => {
     initCapacitor();
   }, [toast, deviceInfo]);
 
-  // Fetch centro info
+  // Fetch loyalty card and centro info for logged-in user
   useEffect(() => {
-    const fetchCentro = async () => {
-      // If no centroId, just stop loading and show standalone mode
-      if (!centroId) {
+    const fetchUserData = async () => {
+      // Wait for auth to complete
+      if (authLoading) return;
+      
+      // If no user and no URL centroId, need to show login
+      if (!user && !urlCentroId) {
         setLoading(false);
         return;
       }
       
       try {
-        const { data, error } = await supabase
-          .from('centri_assistenza')
-          .select('id, business_name, logo_url')
-          .eq('id', centroId)
-          .maybeSingle();
-        
-        if (error) throw error;
-        if (data) {
-          setCentro(data);
+        // If we have urlCentroId, just fetch centro info
+        if (urlCentroId) {
+          const { data: centroData, error: centroError } = await supabase
+            .from('centri_assistenza')
+            .select('id, business_name, logo_url')
+            .eq('id', urlCentroId)
+            .maybeSingle();
+          
+          if (centroError) throw centroError;
+          if (centroData) {
+            setCentro(centroData);
+          }
+          setLoading(false);
+          return;
         }
+        
+        // Get user email from JWT
+        const userEmail = user?.email;
+        if (!userEmail) {
+          setLoading(false);
+          return;
+        }
+        
+        // Fetch active loyalty card for this user
+        const { data: cards, error: cardError } = await supabase
+          .from('loyalty_cards')
+          .select(`
+            id,
+            centro_id,
+            status,
+            centri_assistenza (
+              id,
+              business_name,
+              logo_url
+            )
+          `)
+          .eq('status', 'active')
+          .order('activated_at', { ascending: false })
+          .limit(1);
+        
+        if (cardError) throw cardError;
+        
+        if (!cards || cards.length === 0) {
+          setNoLoyaltyCard(true);
+          setLoading(false);
+          return;
+        }
+        
+        const card = cards[0];
+        setLoyaltyCard({
+          id: card.id,
+          centro_id: card.centro_id,
+          status: card.status
+        });
+        
+        // Set centro info from the joined data
+        if (card.centri_assistenza) {
+          const centroData = card.centri_assistenza as unknown as CentroInfo;
+          setCentro(centroData);
+        }
+        
       } catch (error: any) {
-        console.error('Error fetching centro:', error);
+        console.error('Error fetching user data:', error);
         toast({
           title: 'Errore',
-          description: 'Impossibile caricare le info del centro',
+          description: 'Impossibile caricare i dati',
           variant: 'destructive'
         });
       } finally {
@@ -119,8 +188,8 @@ const DeviceMonitor = () => {
       }
     };
     
-    fetchCentro();
-  }, [centroId, toast]);
+    fetchUserData();
+  }, [user, authLoading, urlCentroId, toast]);
 
   const handleSync = async () => {
     setSyncing(true);
@@ -149,7 +218,7 @@ const DeviceMonitor = () => {
     deviceInfo.refresh();
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-background p-4 space-y-4">
         <Skeleton className="h-16 w-full" />
@@ -158,6 +227,55 @@ const DeviceMonitor = () => {
           <Skeleton className="h-40" />
           <Skeleton className="h-40" />
         </div>
+      </div>
+    );
+  }
+
+  // Not logged in - show login prompt
+  if (!user && !urlCentroId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+              <LogIn className="h-8 w-8 text-primary" />
+            </div>
+            <h1 className="text-xl font-bold">Accedi per continuare</h1>
+            <p className="text-muted-foreground">
+              Per monitorare il tuo dispositivo e sincronizzare i dati con il centro, devi accedere con il tuo account.
+            </p>
+            <Button 
+              className="w-full" 
+              size="lg"
+              onClick={() => navigate('/auth?redirect=/device-monitor')}
+            >
+              <LogIn className="h-5 w-5 mr-2" />
+              Accedi
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Logged in but no loyalty card
+  if (noLoyaltyCard) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="p-6 text-center space-y-4">
+            <div className="h-16 w-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto">
+              <CreditCard className="h-8 w-8 text-amber-500" />
+            </div>
+            <h1 className="text-xl font-bold">Nessuna Tessera Attiva</h1>
+            <p className="text-muted-foreground">
+              Per utilizzare il monitoraggio del dispositivo, devi avere una tessera fedeltà attiva presso un centro assistenza.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Contatta il tuo centro assistenza per attivare una tessera fedeltà.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
