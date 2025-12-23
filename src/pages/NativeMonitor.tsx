@@ -12,10 +12,11 @@ import {
   Upload, 
   LogOut,
   CheckCircle2,
-  CreditCard
+  CreditCard,
+  Cpu
 } from "lucide-react";
 import { toast } from "sonner";
-import { useDeviceInfo, DeviceInfo } from "@/hooks/useDeviceInfo";
+import { useNativeDeviceInfo } from "@/hooks/useNativeDeviceInfo";
 
 interface LoyaltyCard {
   id: string;
@@ -32,7 +33,9 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
   const [loyaltyCard, setLoyaltyCard] = useState<LoyaltyCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const deviceInfo = useDeviceInfo();
+  
+  // Use native device info hook (better for Capacitor apps)
+  const deviceData = useNativeDeviceInfo();
 
   // Fetch active loyalty card - search across all customers with this email
   const fetchLoyaltyCard = useCallback(async () => {
@@ -82,43 +85,19 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
     fetchLoyaltyCard();
   }, [fetchLoyaltyCard]);
 
-  const calculateHealthScore = (info: DeviceInfo): number => {
-    let score = 100;
-    
-    // Battery penalty
-    if (info.battery?.level !== null) {
-      if (info.battery.level < 20) score -= 20;
-      else if (info.battery.level < 50) score -= 10;
-    }
-    
-    // Storage penalty
-    if (info.storage?.percentUsed !== null) {
-      if (info.storage.percentUsed > 90) score -= 25;
-      else if (info.storage.percentUsed > 80) score -= 15;
-      else if (info.storage.percentUsed > 70) score -= 5;
-    }
-    
-    return Math.max(0, Math.min(100, score));
-  };
-
   const handleSync = async () => {
     if (!loyaltyCard) {
       toast.error("Nessuna tessera fedeltà attiva");
       return;
     }
 
-    if (deviceInfo.loading) {
+    if (deviceData.isLoading) {
       toast.error("Dati dispositivo non disponibili");
       return;
     }
 
     setSyncing(true);
     try {
-      // Convert storage from bytes to GB
-      const storageTotal = deviceInfo.storage?.total ? deviceInfo.storage.total / (1024 * 1024 * 1024) : null;
-      const storageUsed = deviceInfo.storage?.used ? deviceInfo.storage.used / (1024 * 1024 * 1024) : null;
-      const storageAvailable = deviceInfo.storage?.available ? deviceInfo.storage.available / (1024 * 1024 * 1024) : null;
-
       // Save to device_health_logs (the table that CentroClienteDetail reads from)
       const { error: insertError } = await supabase
         .from("device_health_logs")
@@ -127,24 +106,39 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
           customer_id: loyaltyCard.customer_id,
           loyalty_card_id: loyaltyCard.id,
           source: "android_app",
-          battery_level: deviceInfo.battery?.level,
-          is_charging: deviceInfo.battery?.charging,
-          storage_total_gb: storageTotal,
-          storage_used_gb: storageUsed,
-          storage_available_gb: storageAvailable,
-          storage_percent_used: deviceInfo.storage?.percentUsed,
-          device_memory_gb: deviceInfo.memory?.deviceMemory,
-          network_connected: deviceInfo.network?.effectiveType !== null,
-          network_type: deviceInfo.network?.type,
-          device_model_info: deviceInfo.model,
-          os_version: deviceInfo.osVersion,
-          screen_width: deviceInfo.screen?.width,
-          screen_height: deviceInfo.screen?.height,
-          language: navigator.language,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          health_score: calculateHealthScore(deviceInfo),
-          cpu_cores: deviceInfo.cpu?.cores,
-          hardware_concurrency: deviceInfo.cpu?.cores,
+          battery_level: deviceData.batteryLevel,
+          battery_health: deviceData.batteryHealth,
+          is_charging: deviceData.isCharging,
+          storage_total_gb: deviceData.storageTotalGb,
+          storage_used_gb: deviceData.storageUsedGb,
+          storage_available_gb: deviceData.storageAvailableGb,
+          storage_percent_used: deviceData.storagePercentUsed,
+          ram_total_mb: deviceData.ramTotalMb,
+          ram_available_mb: deviceData.ramAvailableMb,
+          ram_percent_used: deviceData.ramPercentUsed,
+          device_model_info: deviceData.deviceModel,
+          os_version: deviceData.osVersion,
+          network_type: deviceData.networkType,
+          network_connected: deviceData.networkConnected,
+          online_status: deviceData.onlineStatus,
+          screen_width: deviceData.screenWidth,
+          screen_height: deviceData.screenHeight,
+          pixel_ratio: deviceData.pixelRatio,
+          color_depth: deviceData.colorDepth,
+          orientation: deviceData.orientation,
+          cpu_cores: deviceData.cpuCores,
+          device_memory_gb: deviceData.deviceMemoryGb,
+          hardware_concurrency: deviceData.hardwareConcurrency,
+          touch_support: deviceData.touchSupport,
+          max_touch_points: deviceData.maxTouchPoints,
+          timezone: deviceData.timezone,
+          language: deviceData.language,
+          latitude: deviceData.latitude,
+          longitude: deviceData.longitude,
+          health_score: deviceData.healthScore,
+          connection_downlink: deviceData.connectionDownlink,
+          connection_effective_type: deviceData.connectionEffectiveType,
+          connection_rtt: deviceData.connectionRtt,
         });
 
       if (insertError) {
@@ -203,8 +197,6 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
     );
   }
 
-  const healthScore = calculateHealthScore(deviceInfo);
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -250,14 +242,19 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
           <CardContent>
             <div className="flex items-center justify-center">
               <div className={`text-5xl font-bold ${
-                healthScore >= 80 ? 'text-green-500' :
-                healthScore >= 60 ? 'text-yellow-500' :
+                deviceData.healthScore >= 80 ? 'text-green-500' :
+                deviceData.healthScore >= 60 ? 'text-yellow-500' :
                 'text-red-500'
               }`}>
-                {healthScore}
+                {deviceData.healthScore}
               </div>
               <span className="text-2xl text-muted-foreground ml-1">/100</span>
             </div>
+            {deviceData.deviceModel && (
+              <p className="text-center text-sm text-muted-foreground mt-2">
+                {deviceData.deviceModel}
+              </p>
+            )}
           </CardContent>
         </Card>
 
@@ -271,12 +268,12 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
                 <span className="text-sm font-medium">Batteria</span>
               </div>
               <p className="text-2xl font-bold">
-                {deviceInfo.battery?.level !== null 
-                  ? `${Math.round(deviceInfo.battery.level)}%` 
+                {deviceData.batteryLevel !== null 
+                  ? `${Math.round(deviceData.batteryLevel)}%` 
                   : '--'}
               </p>
               <p className="text-xs text-muted-foreground">
-                {deviceInfo.battery?.charging ? 'In carica' : 'Non in carica'}
+                {deviceData.isCharging ? 'In carica' : 'Non in carica'}
               </p>
             </CardContent>
           </Card>
@@ -289,13 +286,13 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
                 <span className="text-sm font-medium">Memoria</span>
               </div>
               <p className="text-2xl font-bold">
-                {deviceInfo.storage?.percentUsed !== null 
-                  ? `${Math.round(deviceInfo.storage.percentUsed)}%` 
+                {deviceData.storagePercentUsed !== null 
+                  ? `${Math.round(deviceData.storagePercentUsed)}%` 
                   : '--'}
               </p>
               <p className="text-xs text-muted-foreground">
-                {deviceInfo.storage?.available !== null 
-                  ? `${(deviceInfo.storage.available / (1024 * 1024 * 1024)).toFixed(1)} GB liberi` 
+                {deviceData.storageAvailableGb !== null 
+                  ? `${deviceData.storageAvailableGb.toFixed(1)} GB liberi` 
                   : '--'}
               </p>
             </CardContent>
@@ -309,30 +306,62 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
                 <span className="text-sm font-medium">Rete</span>
               </div>
               <p className="text-lg font-bold">
-                {deviceInfo.network?.effectiveType ? 'Connesso' : 'Offline'}
+                {deviceData.networkConnected ? 'Connesso' : 'Offline'}
               </p>
               <p className="text-xs text-muted-foreground">
-                {deviceInfo.network?.effectiveType || deviceInfo.network?.type || '--'}
+                {deviceData.networkType || deviceData.connectionEffectiveType || '--'}
               </p>
             </CardContent>
           </Card>
 
-          {/* Device */}
+          {/* RAM / CPU */}
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <Smartphone className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Dispositivo</span>
+                <Cpu className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Hardware</span>
               </div>
-              <p className="text-sm font-bold truncate">
-                {deviceInfo.model || '--'}
+              <p className="text-lg font-bold">
+                {deviceData.deviceMemoryGb !== null 
+                  ? `${deviceData.deviceMemoryGb} GB RAM` 
+                  : '--'}
               </p>
-              <p className="text-xs text-muted-foreground truncate">
-                {deviceInfo.osVersion || '--'}
+              <p className="text-xs text-muted-foreground">
+                {deviceData.cpuCores !== null 
+                  ? `${deviceData.cpuCores} core` 
+                  : '--'}
               </p>
             </CardContent>
           </Card>
         </div>
+
+        {/* Device Details */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Smartphone className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Dettagli Dispositivo</span>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Modello:</span>
+                <span className="font-medium">{deviceData.deviceModel || '--'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Sistema:</span>
+                <span className="font-medium">{deviceData.platform} {deviceData.osVersion || ''}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Schermo:</span>
+                <span className="font-medium">
+                  {deviceData.screenWidth && deviceData.screenHeight 
+                    ? `${deviceData.screenWidth}x${deviceData.screenHeight}` 
+                    : '--'}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Fixed Sync Button */}
@@ -340,7 +369,7 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
         <Button 
           className="w-full h-14 text-lg"
           onClick={handleSync}
-          disabled={syncing || deviceInfo.loading}
+          disabled={syncing || deviceData.isLoading}
         >
           {syncing ? (
             <>
