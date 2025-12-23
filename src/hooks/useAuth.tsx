@@ -103,8 +103,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUserRoles([]);
       }
 
-      // If token was refreshed or session expired, update loading state
-      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
+      // Set loading to false for ALL auth events that indicate auth state is determined
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'SIGNED_OUT') {
         setLoading(false);
       }
     });
