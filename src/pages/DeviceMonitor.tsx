@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNativeDeviceInfo } from '@/hooks/useNativeDeviceInfo';
 import { useAuth } from '@/hooks/useAuth';
+import { Capacitor } from '@capacitor/core';
 import { 
   BatteryWidget, 
   StorageWidget, 
@@ -53,57 +54,71 @@ const DeviceMonitor = () => {
 
   // Check if running in native environment and setup Capacitor
   useEffect(() => {
+    let mounted = true;
+    
     const initCapacitor = async () => {
       try {
-        const { Capacitor } = await import('@capacitor/core');
         const nativePlatform = Capacitor.isNativePlatform();
+        if (!mounted) return;
         setIsNative(nativePlatform);
         
         if (nativePlatform) {
           // Setup push notifications
-          const { PushNotifications } = await import('@capacitor/push-notifications');
-          
-          const result = await PushNotifications.checkPermissions();
-          
-          if (result.receive === 'prompt') {
-            const requestResult = await PushNotifications.requestPermissions();
-            setPushEnabled(requestResult.receive === 'granted');
-          } else {
-            setPushEnabled(result.receive === 'granted');
-          }
+          try {
+            const { PushNotifications } = await import('@capacitor/push-notifications');
+            
+            const result = await PushNotifications.checkPermissions();
+            
+            if (result.receive === 'prompt') {
+              const requestResult = await PushNotifications.requestPermissions();
+              if (mounted) setPushEnabled(requestResult.receive === 'granted');
+            } else {
+              if (mounted) setPushEnabled(result.receive === 'granted');
+            }
 
-          if (result.receive === 'granted') {
-            await PushNotifications.register();
-            
-            PushNotifications.addListener('pushNotificationReceived', notification => {
-              toast({
-                title: notification.title || 'Notifica',
-                description: notification.body || ''
+            if (result.receive === 'granted') {
+              await PushNotifications.register();
+              
+              PushNotifications.addListener('pushNotificationReceived', notification => {
+                toast({
+                  title: notification.title || 'Notifica',
+                  description: notification.body || ''
+                });
               });
-            });
-            
-            PushNotifications.addListener('pushNotificationActionPerformed', action => {
-              console.log('Push action performed:', action);
-            });
+              
+              PushNotifications.addListener('pushNotificationActionPerformed', action => {
+                console.log('Push action performed:', action);
+              });
+            }
+          } catch (e) {
+            console.log('Push notifications not available:', e);
           }
 
           // Setup app lifecycle
-          const { App } = await import('@capacitor/app');
-          App.addListener('appStateChange', async ({ isActive }) => {
-            if (isActive) {
-              deviceInfo.refresh();
-            } else {
-              await deviceInfo.syncToServer();
-            }
-          });
+          try {
+            const { App } = await import('@capacitor/app');
+            App.addListener('appStateChange', async ({ isActive }) => {
+              if (isActive) {
+                deviceInfo.refresh();
+              } else {
+                await deviceInfo.syncToServer();
+              }
+            });
+          } catch (e) {
+            console.log('App lifecycle not available:', e);
+          }
         }
       } catch (e) {
-        console.log('Capacitor not available - running in web mode');
-        setIsNative(false);
+        console.log('Capacitor initialization error:', e);
+        if (mounted) setIsNative(false);
       }
     };
     
     initCapacitor();
+    
+    return () => {
+      mounted = false;
+    };
   }, [toast, deviceInfo]);
 
   // Fetch loyalty card and centro info for logged-in user

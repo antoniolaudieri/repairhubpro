@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Capacitor } from '@capacitor/core';
 
 export interface NativeDeviceData {
   // Battery
@@ -115,9 +116,8 @@ const calculateHealthScore = (data: Partial<NativeDeviceData>): number => {
 };
 
 // Check if running in native Capacitor environment
-const isNativePlatform = async (): Promise<boolean> => {
+const isNativePlatform = (): boolean => {
   try {
-    const { Capacitor } = await import('@capacitor/core');
     return Capacitor.isNativePlatform();
   } catch {
     return false;
@@ -172,7 +172,7 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
       setData(prev => ({ ...prev, isLoading: true, error: null }));
       
       // === CHECK NATIVE PLATFORM ===
-      const isNative = await isNativePlatform();
+      const isNative = isNativePlatform();
       
       // === DEVICE INFO (Native only) ===
       let deviceInfo: any = null;
@@ -469,7 +469,7 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
     let unsubscribe: (() => void) | undefined;
     
     const setupNetworkListener = async () => {
-      const isNative = await isNativePlatform();
+      const isNative = isNativePlatform();
       
       if (isNative) {
         try {
