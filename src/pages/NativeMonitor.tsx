@@ -45,10 +45,14 @@ import {
   BatteryWarning,
   Flame,
   Snowflake,
-  Info
+  Info,
+  Compass
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNativeDeviceInfo } from "@/hooks/useNativeDeviceInfo";
+import { SensorWidget } from "@/components/monitor/SensorWidget";
+import { BatteryAdvancedWidget } from "@/components/monitor/BatteryAdvancedWidget";
+import { BookCheckupWidget } from "@/components/monitor/BookCheckupWidget";
 
 interface LoyaltyCard {
   id: string;
@@ -692,9 +696,10 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
-        <TabsList className="w-full grid grid-cols-5">
+        <TabsList className="w-full grid grid-cols-6">
           <TabsTrigger value="overview" className="text-xs px-1">Stato</TabsTrigger>
           <TabsTrigger value="hardware" className="text-xs px-1">Hardware</TabsTrigger>
+          <TabsTrigger value="sensors" className="text-xs px-1">Sensori</TabsTrigger>
           <TabsTrigger value="network" className="text-xs px-1">Rete</TabsTrigger>
           <TabsTrigger value="issues" className="text-xs px-1">
             Problemi
@@ -889,10 +894,35 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Book Checkup Widget */}
+            {loyaltyCard && (
+              <BookCheckupWidget
+                centroId={loyaltyCard.centro_id}
+                customerId={loyaltyCard.customer_id}
+                customerEmail={user.email || ''}
+                customerName={user.email?.split('@')[0] || 'Cliente'}
+                deviceInfo={{
+                  model: deviceData.deviceModel,
+                  manufacturer: deviceData.deviceManufacturer,
+                  healthScore: deviceData.healthScore
+                }}
+              />
+            )}
           </TabsContent>
 
           {/* Hardware Tab */}
           <TabsContent value="hardware" className="space-y-3 m-0">
+            {/* Battery Advanced Info */}
+            <BatteryAdvancedWidget
+              level={deviceData.batteryLevel}
+              isCharging={deviceData.isCharging}
+              health={deviceData.batteryHealth}
+              temperature={deviceData.batteryTemperature}
+              voltage={deviceData.batteryVoltage}
+              technology={deviceData.batteryTechnology}
+              plugged={deviceData.batteryPlugged}
+            />
             {/* Device Info */}
             <Card>
               <CardHeader className="pb-2">
@@ -1053,6 +1083,34 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
                     </p>
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Sensors Tab */}
+          <TabsContent value="sensors" className="space-y-3 m-0">
+            <SensorWidget 
+              sensors={deviceData.sensors}
+              onRefresh={() => deviceData.refresh?.()}
+            />
+            
+            {/* Additional sensor info */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Compass className="h-4 w-4" />
+                  Informazioni Sensori
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  I sensori permettono al dispositivo di rilevare movimenti, orientamento, luce ambientale e altro.
+                  Tocca "Test" per verificare il funzionamento di ciascun sensore.
+                </p>
+                <div className="flex items-start gap-2 text-xs">
+                  <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                  <span>Alcuni sensori potrebbero richiedere permessi specifici o non essere disponibili su tutti i dispositivi.</span>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
