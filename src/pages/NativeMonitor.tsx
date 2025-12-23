@@ -50,6 +50,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNativeDeviceInfo } from "@/hooks/useNativeDeviceInfo";
+import { useDevicePermissions } from "@/hooks/useDevicePermissions";
 import { SensorWidget } from "@/components/monitor/SensorWidget";
 import { BatteryAdvancedWidget } from "@/components/monitor/BatteryAdvancedWidget";
 import { BookCheckupWidget } from "@/components/monitor/BookCheckupWidget";
@@ -88,7 +89,14 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
   const [activeTab, setActiveTab] = useState("overview");
   
   const deviceData = useNativeDeviceInfo();
+  const { requestAllPermissions, hasRequested } = useDevicePermissions();
 
+  // Request permissions on mount
+  useEffect(() => {
+    if (!hasRequested) {
+      requestAllPermissions();
+    }
+  }, [hasRequested, requestAllPermissions]);
   // Generate health tips based on device data
   const generateHealthTips = useCallback((): HealthTip[] => {
     const tips: HealthTip[] = [];
