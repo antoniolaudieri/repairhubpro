@@ -1,5 +1,4 @@
 import { createRoot } from "react-dom/client";
-import App from "./App.tsx";
 import "./index.css";
 
 // Remove initial loader once React is ready
@@ -12,15 +11,37 @@ const removeInitialLoader = () => {
   }
 };
 
-const rootElement = document.getElementById("root");
-if (rootElement) {
-  const root = createRoot(rootElement);
-  root.render(<App />);
+// Check if running in native Capacitor environment
+const isNative = () => {
+  try {
+    return !!(window as any).Capacitor?.isNativePlatform?.();
+  } catch {
+    return false;
+  }
+};
+
+const renderApp = async () => {
+  const rootElement = document.getElementById("root");
+  if (!rootElement) return;
   
-  // Remove loader after a small delay to ensure React has mounted
+  const root = createRoot(rootElement);
+  
+  if (isNative()) {
+    // Native app: use simple minimal version
+    const { default: NativeApp } = await import("./NativeApp.tsx");
+    root.render(<NativeApp />);
+  } else {
+    // Web app: use full version with routing
+    const { default: App } = await import("./App.tsx");
+    root.render(<App />);
+  }
+  
+  // Remove loader
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       removeInitialLoader();
     });
   });
-}
+};
+
+renderApp();
