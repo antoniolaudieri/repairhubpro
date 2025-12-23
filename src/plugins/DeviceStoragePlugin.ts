@@ -45,12 +45,25 @@ export interface BatteryAdvancedInfo {
   plugged: 'ac' | 'usb' | 'wireless' | 'none';
 }
 
+export interface AppStorageInfo {
+  packageName: string;
+  appName: string | null;
+  totalSizeMb: number;
+  appSizeMb: number;
+  dataSizeMb: number;
+  cacheSizeMb: number;
+  isSystemApp: boolean;
+  iconBase64?: string;
+}
+
 export interface DeviceDiagnosticsPlugin {
   getStorageInfo(): Promise<DeviceStorageInfo>;
   getRamInfo(): Promise<RamInfo>;
   getSensorsInfo(): Promise<SensorsInfo>;
   getBatteryAdvancedInfo(): Promise<BatteryAdvancedInfo>;
   testSensor(options: { sensorType: string }): Promise<{ working: boolean; value?: any; error?: string }>;
+  getInstalledAppsStorage(): Promise<AppStorageInfo[]>;
+  requestUsageStatsPermission(): Promise<{ granted: boolean }>;
 }
 
 // This will use the native implementation on Android/iOS, or fallback to web

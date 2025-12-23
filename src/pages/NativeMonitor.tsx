@@ -54,6 +54,8 @@ import { useDevicePermissions } from "@/hooks/useDevicePermissions";
 import { SensorWidget } from "@/components/monitor/SensorWidget";
 import { BatteryAdvancedWidget } from "@/components/monitor/BatteryAdvancedWidget";
 import { BookCheckupWidget } from "@/components/monitor/BookCheckupWidget";
+import { DeviceImageWidget } from "@/components/monitor/DeviceImageWidget";
+import { AppStorageWidget } from "@/components/monitor/AppStorageWidget";
 
 interface LoyaltyCard {
   id: string;
@@ -650,8 +652,16 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
         </div>
       </div>
 
-      {/* Health Score Banner */}
-      <div className="p-4">
+      {/* Device Image + Health Score Banner */}
+      <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Device Image Widget */}
+        <DeviceImageWidget
+          manufacturer={deviceData.deviceManufacturer}
+          model={deviceData.deviceModel}
+          platform={deviceData.platform}
+        />
+
+        {/* Health Score Card */}
         <Card className="overflow-hidden">
           <div className={`h-2 ${getHealthBg(deviceData.healthScore)}`} />
           <CardContent className="p-4">
@@ -704,8 +714,9 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
-        <TabsList className="w-full grid grid-cols-6">
+        <TabsList className="w-full grid grid-cols-7">
           <TabsTrigger value="overview" className="text-xs px-1">Stato</TabsTrigger>
+          <TabsTrigger value="apps" className="text-xs px-1">App</TabsTrigger>
           <TabsTrigger value="hardware" className="text-xs px-1">Hardware</TabsTrigger>
           <TabsTrigger value="sensors" className="text-xs px-1">Sensori</TabsTrigger>
           <TabsTrigger value="network" className="text-xs px-1">Rete</TabsTrigger>
@@ -917,6 +928,11 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
                 }}
               />
             )}
+          </TabsContent>
+
+          {/* Apps Tab - Storage per app */}
+          <TabsContent value="apps" className="space-y-3 m-0">
+            <AppStorageWidget onRefresh={() => deviceData.refresh?.()} />
           </TabsContent>
 
           {/* Hardware Tab */}
