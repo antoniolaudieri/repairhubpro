@@ -1210,24 +1210,44 @@ export type Database = {
           battery_level: number | null
           battery_temperature: number | null
           centro_id: string
+          color_depth: number | null
+          connection_downlink: number | null
+          connection_effective_type: string | null
+          connection_rtt: number | null
+          cpu_cores: number | null
           created_at: string
           customer_id: string
           device_id: string | null
           device_manufacturer: string | null
+          device_memory_gb: number | null
           device_model_info: string | null
+          hardware_concurrency: number | null
           health_score: number | null
           id: string
           is_charging: boolean | null
+          language: string | null
+          latitude: number | null
+          longitude: number | null
           loyalty_card_id: string | null
+          max_touch_points: number | null
+          network_connected: boolean | null
+          network_type: string | null
+          online_status: boolean | null
+          orientation: string | null
           os_version: string | null
+          pixel_ratio: number | null
           ram_available_mb: number | null
           ram_percent_used: number | null
           ram_total_mb: number | null
+          screen_height: number | null
+          screen_width: number | null
           source: string
           storage_available_gb: number | null
           storage_percent_used: number | null
           storage_total_gb: number | null
           storage_used_gb: number | null
+          timezone: string | null
+          touch_support: boolean | null
         }
         Insert: {
           ai_analysis?: string | null
@@ -1238,24 +1258,44 @@ export type Database = {
           battery_level?: number | null
           battery_temperature?: number | null
           centro_id: string
+          color_depth?: number | null
+          connection_downlink?: number | null
+          connection_effective_type?: string | null
+          connection_rtt?: number | null
+          cpu_cores?: number | null
           created_at?: string
           customer_id: string
           device_id?: string | null
           device_manufacturer?: string | null
+          device_memory_gb?: number | null
           device_model_info?: string | null
+          hardware_concurrency?: number | null
           health_score?: number | null
           id?: string
           is_charging?: boolean | null
+          language?: string | null
+          latitude?: number | null
+          longitude?: number | null
           loyalty_card_id?: string | null
+          max_touch_points?: number | null
+          network_connected?: boolean | null
+          network_type?: string | null
+          online_status?: boolean | null
+          orientation?: string | null
           os_version?: string | null
+          pixel_ratio?: number | null
           ram_available_mb?: number | null
           ram_percent_used?: number | null
           ram_total_mb?: number | null
+          screen_height?: number | null
+          screen_width?: number | null
           source?: string
           storage_available_gb?: number | null
           storage_percent_used?: number | null
           storage_total_gb?: number | null
           storage_used_gb?: number | null
+          timezone?: string | null
+          touch_support?: boolean | null
         }
         Update: {
           ai_analysis?: string | null
@@ -1266,24 +1306,44 @@ export type Database = {
           battery_level?: number | null
           battery_temperature?: number | null
           centro_id?: string
+          color_depth?: number | null
+          connection_downlink?: number | null
+          connection_effective_type?: string | null
+          connection_rtt?: number | null
+          cpu_cores?: number | null
           created_at?: string
           customer_id?: string
           device_id?: string | null
           device_manufacturer?: string | null
+          device_memory_gb?: number | null
           device_model_info?: string | null
+          hardware_concurrency?: number | null
           health_score?: number | null
           id?: string
           is_charging?: boolean | null
+          language?: string | null
+          latitude?: number | null
+          longitude?: number | null
           loyalty_card_id?: string | null
+          max_touch_points?: number | null
+          network_connected?: boolean | null
+          network_type?: string | null
+          online_status?: boolean | null
+          orientation?: string | null
           os_version?: string | null
+          pixel_ratio?: number | null
           ram_available_mb?: number | null
           ram_percent_used?: number | null
           ram_total_mb?: number | null
+          screen_height?: number | null
+          screen_width?: number | null
           source?: string
           storage_available_gb?: number | null
           storage_percent_used?: number | null
           storage_total_gb?: number | null
           storage_used_gb?: number | null
+          timezone?: string | null
+          touch_support?: boolean | null
         }
         Relationships: [
           {
@@ -1322,72 +1382,132 @@ export type Database = {
           battery_health: string | null
           battery_level: number | null
           centro_id: string
+          color_depth: number | null
+          connection_downlink: number | null
+          connection_effective_type: string | null
+          connection_rtt: number | null
+          cpu_cores: number | null
           created_at: string
           customer_id: string | null
           device_manufacturer: string | null
+          device_memory_gb: number | null
           device_model: string | null
           device_token: string | null
+          hardware_concurrency: number | null
           health_score: number | null
           id: string
           is_charging: boolean | null
+          language: string | null
+          latitude: number | null
+          longitude: number | null
           loyalty_card_id: string | null
+          max_touch_points: number | null
+          network_connected: boolean | null
+          network_type: string | null
+          online_status: boolean | null
+          orientation: string | null
           os_version: string | null
+          pixel_ratio: number | null
           platform: string | null
           ram_available_mb: number | null
           ram_percent_used: number | null
           ram_total_mb: number | null
+          screen_height: number | null
+          screen_width: number | null
           storage_available_gb: number | null
           storage_percent_used: number | null
           storage_total_gb: number | null
           storage_used_gb: number | null
+          timezone: string | null
+          touch_support: boolean | null
         }
         Insert: {
           app_version?: string | null
           battery_health?: string | null
           battery_level?: number | null
           centro_id: string
+          color_depth?: number | null
+          connection_downlink?: number | null
+          connection_effective_type?: string | null
+          connection_rtt?: number | null
+          cpu_cores?: number | null
           created_at?: string
           customer_id?: string | null
           device_manufacturer?: string | null
+          device_memory_gb?: number | null
           device_model?: string | null
           device_token?: string | null
+          hardware_concurrency?: number | null
           health_score?: number | null
           id?: string
           is_charging?: boolean | null
+          language?: string | null
+          latitude?: number | null
+          longitude?: number | null
           loyalty_card_id?: string | null
+          max_touch_points?: number | null
+          network_connected?: boolean | null
+          network_type?: string | null
+          online_status?: boolean | null
+          orientation?: string | null
           os_version?: string | null
+          pixel_ratio?: number | null
           platform?: string | null
           ram_available_mb?: number | null
           ram_percent_used?: number | null
           ram_total_mb?: number | null
+          screen_height?: number | null
+          screen_width?: number | null
           storage_available_gb?: number | null
           storage_percent_used?: number | null
           storage_total_gb?: number | null
           storage_used_gb?: number | null
+          timezone?: string | null
+          touch_support?: boolean | null
         }
         Update: {
           app_version?: string | null
           battery_health?: string | null
           battery_level?: number | null
           centro_id?: string
+          color_depth?: number | null
+          connection_downlink?: number | null
+          connection_effective_type?: string | null
+          connection_rtt?: number | null
+          cpu_cores?: number | null
           created_at?: string
           customer_id?: string | null
           device_manufacturer?: string | null
+          device_memory_gb?: number | null
           device_model?: string | null
           device_token?: string | null
+          hardware_concurrency?: number | null
           health_score?: number | null
           id?: string
           is_charging?: boolean | null
+          language?: string | null
+          latitude?: number | null
+          longitude?: number | null
           loyalty_card_id?: string | null
+          max_touch_points?: number | null
+          network_connected?: boolean | null
+          network_type?: string | null
+          online_status?: boolean | null
+          orientation?: string | null
           os_version?: string | null
+          pixel_ratio?: number | null
           platform?: string | null
           ram_available_mb?: number | null
           ram_percent_used?: number | null
           ram_total_mb?: number | null
+          screen_height?: number | null
+          screen_width?: number | null
           storage_available_gb?: number | null
           storage_percent_used?: number | null
           storage_total_gb?: number | null
           storage_used_gb?: number | null
+          timezone?: string | null
+          touch_support?: boolean | null
         }
         Relationships: [
           {
