@@ -578,8 +578,8 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
         </div>
 
         {/* Apps List */}
-        <ScrollArea className={cn("pr-4", expanded ? "h-[400px]" : "")}>
-          <div className="space-y-2">
+        <ScrollArea className={cn("pr-2", expanded ? "h-[400px]" : "")}>
+          <div className="space-y-2 pr-2">
             {displayedApps.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">
                 Nessuna app trovata con questo filtro
@@ -657,7 +657,7 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
                   </div>
 
                   {/* Actions + Size */}
-                  <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                  <div className="flex flex-col items-end gap-1 shrink-0 min-w-[60px]">
                     <p className={cn(
                       "text-sm font-bold whitespace-nowrap",
                       getStorageImpactColor(analysis.storageImpact)
@@ -672,8 +672,11 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
-                      onClick={() => openAppSettings(analysis.app.packageName)}
+                      className="h-8 w-8"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openAppSettings(analysis.app.packageName);
+                      }}
                     >
                       <Settings className="h-4 w-4" />
                     </Button>
@@ -708,10 +711,15 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
 
         {/* Actions */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1 gap-1 text-xs" onClick={() => {
-            // Open device settings
+          <Button variant="outline" size="sm" className="flex-1 gap-1 text-xs" onClick={async () => {
+            // Open device settings using plugin
             if (isNative) {
-              window.open('intent:#Intent;action=android.settings.APPLICATION_SETTINGS;end', '_blank');
+              try {
+                await DeviceDiagnostics.openDeviceSettings();
+              } catch (e) {
+                console.error('Error opening device settings:', e);
+                toast.error('Impossibile aprire le impostazioni');
+              }
             }
           }}>
             <Settings className="h-3 w-3" />

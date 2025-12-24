@@ -367,6 +367,12 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
     throw new Error('not implemented - native plugin required');
   }
 
+  async openDeviceSettings(): Promise<{ opened: boolean }> {
+    // Web cannot open device settings
+    console.log('[DeviceDiagnosticsWeb] openDeviceSettings: Not available on web platform');
+    throw new Error('not implemented - native plugin required');
+  }
+
   async getAppUsageStats(): Promise<{ stats: any[]; hasPermission: boolean; count?: number }> {
     // Web cannot get app usage stats
     console.log('[DeviceDiagnosticsWeb] getAppUsageStats: Not available on web platform');
