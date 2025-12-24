@@ -9,16 +9,16 @@
 ### 1. Copia il file del plugin
 Copia il file `DeviceDiagnosticsPlugin.java` nella cartella:
 ```
-android/app/src/main/java/app/lovable/repairhubpro/
+android/app/src/main/java/com/lablinkriparo/monitor/
 ```
 
-Se la cartella `repairhubpro` non esiste, creala.
+Se la cartella `monitor` non esiste, creala.
 
 ### 2. Registra il plugin in MainActivity
-Apri il file `android/app/src/main/java/app/lovable/repairhubpro/MainActivity.java` e modifica così:
+Apri il file `android/app/src/main/java/com/lablinkriparo/monitor/MainActivity.java` e modifica così:
 
 ```java
-package app.lovable.repairhubpro;
+package com.lablinkriparo.monitor;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
