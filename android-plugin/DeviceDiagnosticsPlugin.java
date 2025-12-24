@@ -506,6 +506,21 @@ public class DeviceDiagnosticsPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void openDeviceSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_SETTINGS);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            
+            JSObject result = new JSObject();
+            result.put("opened", true);
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("Error opening device settings: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
     public void getAppUsageStats(PluginCall call) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
