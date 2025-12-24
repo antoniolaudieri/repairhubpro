@@ -69,7 +69,7 @@ export const useAppUpdate = () => {
     }
 
     // Verifica che il repo sia configurato
-    if (GITHUB_REPO === "YOUR_GITHUB_USERNAME/YOUR_REPO_NAME") {
+    if (!GITHUB_REPO || GITHUB_REPO.includes("YOUR_GITHUB")) {
       console.log("GitHub repo not configured for updates");
       return;
     }
