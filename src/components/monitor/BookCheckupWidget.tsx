@@ -266,7 +266,7 @@ export const BookCheckupWidget = ({
       </Card>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto mx-4">
           {success ? (
             <div className="text-center py-6">
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
@@ -357,11 +357,15 @@ export const BookCheckupWidget = ({
                 </div>
               </div>
 
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsOpen(false)}>
+              <DialogFooter className="flex-col gap-2 sm:flex-row sticky bottom-0 bg-background pt-4 pb-2 -mb-2 border-t mt-4">
+                <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto">
                   Annulla
                 </Button>
-                <Button onClick={handleBook} disabled={loading || !selectedDate || !selectedTime}>
+                <Button 
+                  onClick={handleBook} 
+                  disabled={loading || !selectedDate || !selectedTime}
+                  className="w-full sm:w-auto h-12"
+                >
                   {loading ? 'Prenotazione...' : 'Conferma Prenotazione'}
                 </Button>
               </DialogFooter>
