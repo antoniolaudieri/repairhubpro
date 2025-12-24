@@ -74,12 +74,12 @@ export function TopupRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Richiedi Ricarica Credito</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto">
           <Card className="bg-muted/50">
             <CardContent className="p-3">
               <div className="flex justify-between items-center">
