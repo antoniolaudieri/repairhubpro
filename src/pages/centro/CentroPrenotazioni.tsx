@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { CentroLayout } from "@/layouts/CentroLayout";
@@ -20,7 +21,8 @@ import {
   CalendarDays,
   List,
   Bell,
-  Trash2
+  Trash2,
+  ExternalLink
 } from "lucide-react";
 import {
   AlertDialog,
@@ -58,6 +60,7 @@ interface Appointment {
 }
 
 export default function CentroPrenotazioni() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -386,7 +389,27 @@ export default function CentroPrenotazioni() {
                           <div className="space-y-1">
                             <CardTitle className="text-lg flex items-center gap-2">
                               <User className="h-4 w-4" />
-                              {appointment.customer_name}
+                              <button
+                                onClick={async () => {
+                                  // Find customer by email or phone
+                                  const { data: customer } = await supabase
+                                    .from("customers")
+                                    .select("id")
+                                    .eq("centro_id", centroId)
+                                    .or(`email.eq.${appointment.customer_email},phone.eq.${appointment.customer_phone}`)
+                                    .maybeSingle();
+                                  
+                                  if (customer) {
+                                    navigate(`/centro/clienti/${customer.id}`);
+                                  } else {
+                                    toast.info("Cliente non ancora registrato nel sistema");
+                                  }
+                                }}
+                                className="text-left hover:text-primary hover:underline transition-colors flex items-center gap-1"
+                              >
+                                {appointment.customer_name}
+                                <ExternalLink className="h-3 w-3 opacity-50" />
+                              </button>
                             </CardTitle>
                             <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
                               <span className="flex items-center gap-1">
