@@ -520,7 +520,11 @@ export default function CentroClienteDetail() {
           {/* Device Health */}
           {centroId && (
             <motion.div variants={itemVariants}>
-              <CustomerDeviceHealth customerId={id!} centroId={centroId} />
+              <CustomerDeviceHealth 
+                customerId={id!} 
+                centroId={centroId} 
+                onDeviceCreated={loadCustomerData}
+              />
             </motion.div>
           )}
 
