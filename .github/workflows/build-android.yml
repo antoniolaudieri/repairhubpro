@@ -185,19 +185,21 @@ jobs:
         run: |
           BUILD_GRADLE="android/app/build.gradle"
           
-          # Add signing config
-          SIGNING_CONFIG='
-    signingConfigs {
-        release {
-            storeFile file("release-keystore.jks")
-            storePassword "lablinkriparo2024"
-            keyAlias "lablinkriparo"
-            keyPassword "lablinkriparo2024"
-        }
-    }
-'
-          # Insert signing config before buildTypes
-          sed -i "/buildTypes {/i\\$SIGNING_CONFIG" "$BUILD_GRADLE"
+          # Create signing config block
+          cat > /tmp/signing_config.txt << 'SIGNCONFIG'
+              signingConfigs {
+                  release {
+                      storeFile file("release-keystore.jks")
+                      storePassword "lablinkriparo2024"
+                      keyAlias "lablinkriparo"
+                      keyPassword "lablinkriparo2024"
+                  }
+              }
+          SIGNCONFIG
+          
+          # Insert signing config before buildTypes using awk
+          awk '/buildTypes \{/{while((getline line < "/tmp/signing_config.txt") > 0) print line}1' "$BUILD_GRADLE" > /tmp/build_gradle_new
+          mv /tmp/build_gradle_new "$BUILD_GRADLE"
           
           # Update release buildType to use signing config
           sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' "$BUILD_GRADLE"
