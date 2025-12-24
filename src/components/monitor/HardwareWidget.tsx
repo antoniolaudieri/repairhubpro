@@ -67,7 +67,7 @@ export const HardwareWidget = ({
         <Progress value={performance.percentage} className="h-2" />
         
         <div className="grid grid-cols-2 gap-2 text-sm">
-          {cpuCores !== null && (
+          {cpuCores !== null && cpuCores > 0 && (
             <div className="bg-muted/50 rounded-lg p-2 flex items-center gap-2">
               <Cpu className="h-4 w-4 text-muted-foreground" />
               <div>
@@ -76,7 +76,7 @@ export const HardwareWidget = ({
               </div>
             </div>
           )}
-          {deviceMemoryGb !== null && (
+          {deviceMemoryGb !== null && deviceMemoryGb > 0 && (
             <div className="bg-muted/50 rounded-lg p-2 flex items-center gap-2">
               <HardDrive className="h-4 w-4 text-muted-foreground" />
               <div>
@@ -85,7 +85,7 @@ export const HardwareWidget = ({
               </div>
             </div>
           )}
-          {hardwareConcurrency !== null && (
+          {hardwareConcurrency !== null && hardwareConcurrency > 0 && (
             <div className="bg-muted/50 rounded-lg p-2">
               <div className="text-muted-foreground text-xs">Thread</div>
               <div className="font-medium">{hardwareConcurrency}</div>
@@ -95,6 +95,12 @@ export const HardwareWidget = ({
             <div className="bg-muted/50 rounded-lg p-2">
               <div className="text-muted-foreground text-xs">Punti Touch</div>
               <div className="font-medium">{maxTouchPoints}</div>
+            </div>
+          )}
+          {/* Show message if no data available */}
+          {(!cpuCores || cpuCores === 0) && (!deviceMemoryGb || deviceMemoryGb === 0) && (
+            <div className="col-span-2 text-xs text-muted-foreground text-center py-2">
+              Dati hardware non disponibili nel browser. Usa l'app nativa per info complete.
             </div>
           )}
         </div>
