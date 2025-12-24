@@ -236,39 +236,42 @@ export const BookCheckupWidget = ({
 
   return (
     <>
-      <Card className="border-primary/30 bg-primary/5">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" />
-            Prenota Controllo
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Prenota un controllo completo del tuo dispositivo presso il centro assistenza.
-          </p>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <CheckCircle className="h-3 w-3 text-green-500" />
-            <span>Diagnosi professionale gratuita</span>
+      {/* Compact banner version for prominent placement */}
+      <div 
+        className="bg-gradient-to-r from-primary to-primary/80 rounded-xl p-4 shadow-lg cursor-pointer active:scale-[0.98] transition-transform"
+        onClick={() => setIsOpen(true)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+              <Calendar className="h-6 w-6 text-white" />
+            </div>
+            <div className="text-white">
+              <p className="font-semibold text-base">Prenota Controllo</p>
+              <p className="text-xs text-white/80">{centroName || 'Centro Assistenza'}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <CheckCircle className="h-3 w-3 text-green-500" />
-            <span>Consigli personalizzati</span>
+          <div className="bg-white text-primary px-4 py-2 rounded-full font-semibold text-sm flex items-center gap-1">
+            <Phone className="h-4 w-4" />
+            Prenota
           </div>
-          <Button 
-            className="w-full" 
-            onClick={() => setIsOpen(true)}
-          >
-            <Calendar className="h-4 w-4 mr-2" />
-            Prenota Ora
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+        <div className="flex gap-3 mt-3 text-xs text-white/90">
+          <span className="flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Diagnosi gratuita
+          </span>
+          <span className="flex items-center gap-1">
+            <CheckCircle className="h-3 w-3" />
+            Assistenza rapida
+          </span>
+        </div>
+      </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto mx-4">
+        <DialogContent className="sm:max-w-md max-h-[80vh] flex flex-col mx-4 p-0">
           {success ? (
-            <div className="text-center py-6">
+            <div className="text-center py-8 px-4">
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
                 <CheckCircle className="h-8 w-8 text-green-600" />
               </div>
@@ -279,42 +282,97 @@ export const BookCheckupWidget = ({
             </div>
           ) : (
             <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  Prenota Controllo Dispositivo
-                </DialogTitle>
-                <DialogDescription>
-                  Scegli data e ora per il controllo del tuo dispositivo
-                </DialogDescription>
-              </DialogHeader>
+              {/* Fixed Header with Confirm Button */}
+              <div className="sticky top-0 z-10 bg-background border-b px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <DialogTitle className="flex items-center gap-2 text-base">
+                      <Calendar className="h-5 w-5 text-primary" />
+                      Prenota Controllo
+                    </DialogTitle>
+                    <DialogDescription className="text-xs mt-0.5">
+                      {centroName || 'Seleziona data e ora'}
+                    </DialogDescription>
+                  </div>
+                  <Button 
+                    onClick={handleBook} 
+                    disabled={loading || !selectedDate || !selectedTime}
+                    size="sm"
+                    className="h-10 px-4"
+                  >
+                    {loading ? 'Invio...' : 'Conferma'}
+                  </Button>
+                </div>
+              </div>
               
-              <div className="space-y-4 py-4">
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
                 {/* Device Info Summary */}
                 {deviceInfo && (
-                  <div className="bg-muted/50 rounded-lg p-3">
-                    <p className="text-sm font-medium">
-                      {deviceInfo.manufacturer} {deviceInfo.model}
-                    </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-muted-foreground">Salute:</span>
-                      <Badge variant={deviceInfo.healthScore >= 70 ? 'default' : deviceInfo.healthScore >= 50 ? 'secondary' : 'destructive'}>
-                        {deviceInfo.healthScore}/100
-                      </Badge>
+                  <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {deviceInfo.manufacturer} {deviceInfo.model}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Dispositivo da controllare</p>
+                    </div>
+                    <Badge variant={deviceInfo.healthScore >= 70 ? 'default' : deviceInfo.healthScore >= 50 ? 'secondary' : 'destructive'}>
+                      {deviceInfo.healthScore}/100
+                    </Badge>
+                  </div>
+                )}
+
+                {/* Centro Opening Hours Info */}
+                {openingHours && (
+                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-primary text-sm font-medium mb-2">
+                      <Clock className="h-4 w-4" />
+                      Orari del Centro
+                    </div>
+                    <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+                      {selectedDate ? (
+                        <>
+                          {(() => {
+                            const dayOfWeek = new Date(selectedDate).getDay();
+                            const dayKey = dayKeys[dayOfWeek];
+                            const hours = openingHours[dayKey];
+                            if (hours?.closed) {
+                              return <p className="col-span-2">Chiuso in questa data</p>;
+                            }
+                            return (
+                              <>
+                                {!hours?.morning_closed && hours?.open_am && hours?.close_am && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-foreground">Mattina:</span>
+                                    <span>{hours.open_am} - {hours.close_am}</span>
+                                  </div>
+                                )}
+                                {!hours?.afternoon_closed && hours?.open_pm && hours?.close_pm && (
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-foreground">Pomeriggio:</span>
+                                    <span>{hours.open_pm} - {hours.close_pm}</span>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </>
+                      ) : (
+                        <p className="col-span-2">Seleziona una data per vedere gli orari</p>
+                      )}
                     </div>
                   </div>
                 )}
 
                 {/* Date Selection */}
                 <div className="space-y-2">
-                  <Label>Seleziona Data</Label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <Label className="text-sm font-medium">📅 Seleziona Data</Label>
+                  <div className="grid grid-cols-2 gap-2">
                     {availableDates.map(date => (
                       <Button
                         key={date.value}
                         variant={selectedDate === date.value ? 'default' : 'outline'}
                         size="sm"
-                        className="text-xs"
+                        className="text-sm h-11"
                         onClick={() => setSelectedDate(date.value)}
                       >
                         {date.label}
@@ -325,50 +383,65 @@ export const BookCheckupWidget = ({
 
                 {/* Time Selection */}
                 <div className="space-y-2">
-                  <Label>Seleziona Orario</Label>
-                  <div className="grid grid-cols-4 gap-2 max-h-32 overflow-y-auto">
-                    {getTimeSlots().map(time => (
-                      <Button
-                        key={time}
-                        variant={selectedTime === time ? 'default' : 'outline'}
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => setSelectedTime(time)}
-                      >
-                        {time}
-                      </Button>
-                    ))}
-                  </div>
-                  {selectedDate && getTimeSlots().length === 0 && (
-                    <p className="text-xs text-muted-foreground">Nessun orario disponibile per questa data</p>
+                  <Label className="text-sm font-medium">🕐 Seleziona Orario</Label>
+                  {!selectedDate ? (
+                    <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg text-center">
+                      Prima seleziona una data
+                    </p>
+                  ) : getTimeSlots().length === 0 ? (
+                    <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg text-center">
+                      Nessun orario disponibile per questa data
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-2">
+                      {getTimeSlots().map(time => (
+                        <Button
+                          key={time}
+                          variant={selectedTime === time ? 'default' : 'outline'}
+                          size="sm"
+                          className="text-sm h-10"
+                          onClick={() => setSelectedTime(time)}
+                        >
+                          {time}
+                        </Button>
+                      ))}
+                    </div>
                   )}
                 </div>
 
                 {/* Notes */}
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Note (opzionale)</Label>
+                  <Label htmlFor="notes" className="text-sm font-medium">📝 Note (opzionale)</Label>
                   <Textarea
                     id="notes"
                     placeholder="Descrivi eventuali problemi o richieste..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    rows={3}
+                    rows={2}
+                    className="resize-none"
                   />
                 </div>
+
+                {/* Selection Summary */}
+                {(selectedDate || selectedTime) && (
+                  <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">Riepilogo</p>
+                    <div className="text-sm text-green-700 dark:text-green-300">
+                      {selectedDate && (
+                        <p>📅 {new Date(selectedDate).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+                      )}
+                      {selectedTime && <p>🕐 Ore {selectedTime}</p>}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <DialogFooter className="flex-col gap-2 sm:flex-row sticky bottom-0 bg-background pt-4 pb-2 -mb-2 border-t mt-4">
-                <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full sm:w-auto">
+              {/* Bottom Cancel Button */}
+              <div className="sticky bottom-0 border-t bg-background px-4 py-3">
+                <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full">
                   Annulla
                 </Button>
-                <Button 
-                  onClick={handleBook} 
-                  disabled={loading || !selectedDate || !selectedTime}
-                  className="w-full sm:w-auto h-12"
-                >
-                  {loading ? 'Prenotazione...' : 'Conferma Prenotazione'}
-                </Button>
-              </DialogFooter>
+              </div>
             </>
           )}
         </DialogContent>
