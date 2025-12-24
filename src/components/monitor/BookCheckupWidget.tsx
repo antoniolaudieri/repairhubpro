@@ -126,6 +126,12 @@ export const BookCheckupWidget = ({
     return dates;
   };
 
+  // Helper: convert time string to minutes for comparison
+  const timeToMinutes = (time: string): number => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + (minutes || 0);
+  };
+
   // Generate time slots based on selected date and centro opening hours
   const getTimeSlots = () => {
     if (!selectedDate) return [];
@@ -136,7 +142,7 @@ export const BookCheckupWidget = ({
     
     const dayHours = openingHours?.[dayKey];
     
-    // Default time slots
+    // Default time slots if no opening hours
     const defaultSlots = [
       '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
       '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
@@ -146,23 +152,37 @@ export const BookCheckupWidget = ({
     
     const slots: string[] = [];
     
-    // Morning slots
+    // Morning slots - respect exact opening time including minutes
     if (!dayHours.morning_closed && dayHours.open_am && dayHours.close_am) {
-      const openHour = parseInt(dayHours.open_am.split(':')[0]);
-      const closeHour = parseInt(dayHours.close_am.split(':')[0]);
-      for (let h = openHour; h < closeHour; h++) {
-        slots.push(`${h.toString().padStart(2, '0')}:00`);
-        slots.push(`${h.toString().padStart(2, '0')}:30`);
+      const openMinutes = timeToMinutes(dayHours.open_am);
+      const closeMinutes = timeToMinutes(dayHours.close_am);
+      
+      // Generate slots every 30 minutes, starting from first valid slot
+      for (let m = 0; m < 24 * 60; m += 30) {
+        if (m >= openMinutes && m < closeMinutes) {
+          const hours = Math.floor(m / 60);
+          const mins = m % 60;
+          slots.push(`${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`);
+        }
       }
     }
     
-    // Afternoon slots
+    // Afternoon slots - respect exact opening time including minutes
     if (!dayHours.afternoon_closed && dayHours.open_pm && dayHours.close_pm) {
-      const openHour = parseInt(dayHours.open_pm.split(':')[0]);
-      const closeHour = parseInt(dayHours.close_pm.split(':')[0]);
-      for (let h = openHour; h < closeHour; h++) {
-        slots.push(`${h.toString().padStart(2, '0')}:00`);
-        slots.push(`${h.toString().padStart(2, '0')}:30`);
+      const openMinutes = timeToMinutes(dayHours.open_pm);
+      const closeMinutes = timeToMinutes(dayHours.close_pm);
+      
+      // Generate slots every 30 minutes, starting from first valid slot
+      for (let m = 0; m < 24 * 60; m += 30) {
+        if (m >= openMinutes && m < closeMinutes) {
+          const hours = Math.floor(m / 60);
+          const mins = m % 60;
+          const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+          // Avoid duplicates if morning and afternoon overlap somehow
+          if (!slots.includes(timeStr)) {
+            slots.push(timeStr);
+          }
+        }
       }
     }
     
@@ -269,111 +289,110 @@ export const BookCheckupWidget = ({
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md max-h-[80vh] flex flex-col mx-4 p-0">
+        <DialogContent className="sm:max-w-md max-h-[85vh] flex flex-col mx-4 p-0 rounded-2xl overflow-hidden">
           {success ? (
-            <div className="text-center py-8 px-4">
-              <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle className="h-8 w-8 text-green-600" />
+            <div className="text-center py-12 px-6">
+              <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-green-100 flex items-center justify-center animate-in zoom-in-50">
+                <CheckCircle className="h-10 w-10 text-green-600" />
               </div>
-              <DialogTitle className="text-xl mb-2">Prenotazione Confermata!</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-xl font-bold mb-2">Prenotazione Confermata!</DialogTitle>
+              <DialogDescription className="text-base">
                 Ti contatteremo per confermare l'appuntamento.
               </DialogDescription>
             </div>
           ) : (
             <>
-              {/* Fixed Header with Confirm Button */}
-              <div className="sticky top-0 z-10 bg-background border-b px-4 py-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <DialogTitle className="flex items-center gap-2 text-base">
-                      <Calendar className="h-5 w-5 text-primary" />
+              {/* Header with gradient */}
+              <div className="bg-gradient-to-r from-primary to-primary/80 px-5 py-4 text-white">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center">
+                    <Calendar className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <DialogTitle className="text-lg font-bold text-white">
                       Prenota Controllo
                     </DialogTitle>
-                    <DialogDescription className="text-xs mt-0.5">
-                      {centroName || 'Seleziona data e ora'}
+                    <DialogDescription className="text-white/80 text-sm">
+                      {centroName || 'Centro Assistenza'}
                     </DialogDescription>
                   </div>
-                  <Button 
-                    onClick={handleBook} 
-                    disabled={loading || !selectedDate || !selectedTime}
-                    size="sm"
-                    className="h-10 px-4"
-                  >
-                    {loading ? 'Invio...' : 'Conferma'}
-                  </Button>
                 </div>
               </div>
               
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
                 {/* Device Info Summary */}
                 {deviceInfo && (
-                  <div className="bg-muted/50 rounded-lg p-3 flex items-center justify-between">
+                  <div className="bg-gradient-to-r from-muted/80 to-muted/40 rounded-xl p-4 flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium">
+                      <p className="font-semibold text-foreground">
                         {deviceInfo.manufacturer} {deviceInfo.model}
                       </p>
-                      <p className="text-xs text-muted-foreground">Dispositivo da controllare</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Dispositivo da controllare</p>
                     </div>
-                    <Badge variant={deviceInfo.healthScore >= 70 ? 'default' : deviceInfo.healthScore >= 50 ? 'secondary' : 'destructive'}>
+                    <Badge 
+                      className="text-base px-3 py-1"
+                      variant={deviceInfo.healthScore >= 70 ? 'default' : deviceInfo.healthScore >= 50 ? 'secondary' : 'destructive'}
+                    >
                       {deviceInfo.healthScore}/100
                     </Badge>
                   </div>
                 )}
 
-                {/* Centro Opening Hours Info */}
-                {openingHours && (
-                  <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-primary text-sm font-medium mb-2">
-                      <Clock className="h-4 w-4" />
-                      Orari del Centro
+                {/* Centro Opening Hours Info - shown when date selected */}
+                {openingHours && selectedDate && (
+                  <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-4">
+                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-semibold mb-2">
+                      <Clock className="h-5 w-5" />
+                      Orari disponibili per questa data
                     </div>
-                    <div className="grid grid-cols-2 gap-1 text-xs text-muted-foreground">
-                      {selectedDate ? (
-                        <>
-                          {(() => {
-                            const dayOfWeek = new Date(selectedDate).getDay();
-                            const dayKey = dayKeys[dayOfWeek];
-                            const hours = openingHours[dayKey];
-                            if (hours?.closed) {
-                              return <p className="col-span-2">Chiuso in questa data</p>;
-                            }
-                            return (
-                              <>
-                                {!hours?.morning_closed && hours?.open_am && hours?.close_am && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-foreground">Mattina:</span>
-                                    <span>{hours.open_am} - {hours.close_am}</span>
-                                  </div>
-                                )}
-                                {!hours?.afternoon_closed && hours?.open_pm && hours?.close_pm && (
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-foreground">Pomeriggio:</span>
-                                    <span>{hours.open_pm} - {hours.close_pm}</span>
-                                  </div>
-                                )}
-                              </>
-                            );
-                          })()}
-                        </>
-                      ) : (
-                        <p className="col-span-2">Seleziona una data per vedere gli orari</p>
-                      )}
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      {(() => {
+                        const dayOfWeek = new Date(selectedDate).getDay();
+                        const dayKey = dayKeys[dayOfWeek];
+                        const hours = openingHours[dayKey];
+                        if (hours?.closed) {
+                          return <p className="text-muted-foreground">Chiuso in questa data</p>;
+                        }
+                        return (
+                          <>
+                            {!hours?.morning_closed && hours?.open_am && hours?.close_am && (
+                              <div className="flex items-center gap-2 bg-white dark:bg-background px-3 py-1.5 rounded-lg">
+                                <span className="text-muted-foreground">☀️ Mattina:</span>
+                                <span className="font-medium">{hours.open_am} - {hours.close_am}</span>
+                              </div>
+                            )}
+                            {!hours?.afternoon_closed && hours?.open_pm && hours?.close_pm && (
+                              <div className="flex items-center gap-2 bg-white dark:bg-background px-3 py-1.5 rounded-lg">
+                                <span className="text-muted-foreground">🌙 Pomeriggio:</span>
+                                <span className="font-medium">{hours.open_pm} - {hours.close_pm}</span>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
 
                 {/* Date Selection */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">📅 Seleziona Data</Label>
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    📅 Seleziona Data
+                  </Label>
                   <div className="grid grid-cols-2 gap-2">
                     {availableDates.map(date => (
                       <Button
                         key={date.value}
                         variant={selectedDate === date.value ? 'default' : 'outline'}
-                        size="sm"
-                        className="text-sm h-11"
-                        onClick={() => setSelectedDate(date.value)}
+                        className={`text-sm h-12 rounded-xl font-medium transition-all ${
+                          selectedDate === date.value 
+                            ? 'shadow-md scale-[1.02]' 
+                            : 'hover:border-primary/50'
+                        }`}
+                        onClick={() => {
+                          setSelectedDate(date.value);
+                          setSelectedTime(''); // Reset time when date changes
+                        }}
                       >
                         {date.label}
                       </Button>
@@ -382,24 +401,29 @@ export const BookCheckupWidget = ({
                 </div>
 
                 {/* Time Selection */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">🕐 Seleziona Orario</Label>
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold flex items-center gap-2">
+                    🕐 Seleziona Orario
+                  </Label>
                   {!selectedDate ? (
-                    <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg text-center">
-                      Prima seleziona una data
-                    </p>
+                    <div className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-xl text-center border-2 border-dashed border-muted">
+                      👆 Prima seleziona una data
+                    </div>
                   ) : getTimeSlots().length === 0 ? (
-                    <p className="text-xs text-muted-foreground p-3 bg-muted/30 rounded-lg text-center">
-                      Nessun orario disponibile per questa data
-                    </p>
+                    <div className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-xl text-center">
+                      ❌ Nessun orario disponibile per questa data
+                    </div>
                   ) : (
                     <div className="grid grid-cols-3 gap-2">
                       {getTimeSlots().map(time => (
                         <Button
                           key={time}
                           variant={selectedTime === time ? 'default' : 'outline'}
-                          size="sm"
-                          className="text-sm h-10"
+                          className={`text-sm h-11 rounded-xl font-medium transition-all ${
+                            selectedTime === time 
+                              ? 'shadow-md scale-[1.02]' 
+                              : 'hover:border-primary/50'
+                          }`}
                           onClick={() => setSelectedTime(time)}
                         >
                           {time}
@@ -411,34 +435,48 @@ export const BookCheckupWidget = ({
 
                 {/* Notes */}
                 <div className="space-y-2">
-                  <Label htmlFor="notes" className="text-sm font-medium">📝 Note (opzionale)</Label>
+                  <Label htmlFor="notes" className="text-base font-semibold">📝 Note (opzionale)</Label>
                   <Textarea
                     id="notes"
                     placeholder="Descrivi eventuali problemi o richieste..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     rows={2}
-                    className="resize-none"
+                    className="resize-none rounded-xl"
                   />
                 </div>
 
                 {/* Selection Summary */}
-                {(selectedDate || selectedTime) && (
-                  <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200 mb-1">Riepilogo</p>
-                    <div className="text-sm text-green-700 dark:text-green-300">
-                      {selectedDate && (
-                        <p>📅 {new Date(selectedDate).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
-                      )}
-                      {selectedTime && <p>🕐 Ore {selectedTime}</p>}
+                {selectedDate && selectedTime && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/30 border border-green-200 dark:border-green-800 rounded-xl p-4">
+                    <p className="font-semibold text-green-800 dark:text-green-200 mb-2 flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5" />
+                      Riepilogo Prenotazione
+                    </p>
+                    <div className="text-sm text-green-700 dark:text-green-300 space-y-1">
+                      <p className="font-medium">
+                        📅 {new Date(selectedDate).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })}
+                      </p>
+                      <p className="font-medium">🕐 Ore {selectedTime}</p>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Bottom Cancel Button */}
-              <div className="sticky bottom-0 border-t bg-background px-4 py-3">
-                <Button variant="outline" onClick={() => setIsOpen(false)} className="w-full">
+              {/* Bottom Actions */}
+              <div className="border-t bg-muted/30 px-5 py-4 space-y-2">
+                <Button 
+                  onClick={handleBook} 
+                  disabled={loading || !selectedDate || !selectedTime}
+                  className="w-full h-12 rounded-xl text-base font-semibold"
+                >
+                  {loading ? 'Invio in corso...' : '✅ Conferma Prenotazione'}
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setIsOpen(false)} 
+                  className="w-full h-10 rounded-xl text-muted-foreground"
+                >
                   Annulla
                 </Button>
               </div>
