@@ -62,20 +62,18 @@ jobs:
       - name: Update MainActivity to register plugin
         run: |
           MAIN_ACTIVITY="android/app/src/main/java/com/lablinkriparo/monitor/MainActivity.java"
-          cat > "$MAIN_ACTIVITY" << 'EOF'
-          package com.lablinkriparo.monitor;
-
-          import android.os.Bundle;
-          import com.getcapacitor.BridgeActivity;
-
-          public class MainActivity extends BridgeActivity {
-              @Override
-              public void onCreate(Bundle savedInstanceState) {
-                  registerPlugin(DeviceDiagnosticsPlugin.class);
-                  super.onCreate(savedInstanceState);
-              }
-          }
-          EOF
+          echo 'package com.lablinkriparo.monitor;' > "$MAIN_ACTIVITY"
+          echo '' >> "$MAIN_ACTIVITY"
+          echo 'import android.os.Bundle;' >> "$MAIN_ACTIVITY"
+          echo 'import com.getcapacitor.BridgeActivity;' >> "$MAIN_ACTIVITY"
+          echo '' >> "$MAIN_ACTIVITY"
+          echo 'public class MainActivity extends BridgeActivity {' >> "$MAIN_ACTIVITY"
+          echo '    @Override' >> "$MAIN_ACTIVITY"
+          echo '    public void onCreate(Bundle savedInstanceState) {' >> "$MAIN_ACTIVITY"
+          echo '        registerPlugin(DeviceDiagnosticsPlugin.class);' >> "$MAIN_ACTIVITY"
+          echo '        super.onCreate(savedInstanceState);' >> "$MAIN_ACTIVITY"
+          echo '    }' >> "$MAIN_ACTIVITY"
+          echo '}' >> "$MAIN_ACTIVITY"
       
       - name: Update version in build.gradle
         run: |
@@ -93,51 +91,26 @@ jobs:
       - name: Add permissions to AndroidManifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          cat > /tmp/permissions.txt << 'PERMSEOF'
-              <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
-              <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
-              <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
-              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-              <queries>
-                  <intent>
-                      <action android:name="android.intent.action.MAIN" />
-                  </intent>
-              </queries>
-          PERMSEOF
-          awk '/<\/manifest>/{while((getline line < "/tmp/permissions.txt") > 0) print line}1' "$MANIFEST" > /tmp/manifest_new.xml
-          mv /tmp/manifest_new.xml "$MANIFEST"
+          PERMISSIONS='    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />\n    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />\n        </intent>\n    </queries>'
+          sed -i "s|</manifest>|${PERMISSIONS}\n</manifest>|" "$MANIFEST"
 
       - name: Add FileProvider to AndroidManifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          cat > /tmp/provider.txt << 'PROVIDEREOF'
-                  <provider
-                      android:name="androidx.core.content.FileProvider"
-                      android:authorities="${applicationId}.fileprovider"
-                      android:exported="false"
-                      android:grantUriPermissions="true">
-                      <meta-data
-                          android:name="android.support.FILE_PROVIDER_PATHS"
-                          android:resource="@xml/file_paths" />
-                  </provider>
-          PROVIDEREOF
-          awk '/<\/application>/{while((getline line < "/tmp/provider.txt") > 0) print line}1' "$MANIFEST" > /tmp/manifest_new.xml
-          mv /tmp/manifest_new.xml "$MANIFEST"
+          PROVIDER='        <provider\n            android:name="androidx.core.content.FileProvider"\n            android:authorities="${applicationId}.fileprovider"\n            android:exported="false"\n            android:grantUriPermissions="true">\n            <meta-data\n                android:name="android.support.FILE_PROVIDER_PATHS"\n                android:resource="@xml/file_paths" />\n        </provider>'
+          sed -i "s|</application>|${PROVIDER}\n    </application>|" "$MANIFEST"
       
       - name: Create file_paths.xml for FileProvider
         run: |
           mkdir -p android/app/src/main/res/xml
-          cat > android/app/src/main/res/xml/file_paths.xml << 'XMLEOF'
-          <?xml version="1.0" encoding="utf-8"?>
-          <paths xmlns:android="http://schemas.android.com/apk/res/android">
-              <external-path name="external_files" path="." />
-              <external-files-path name="external_files_path" path="." />
-              <cache-path name="cache" path="." />
-              <files-path name="files" path="." />
-              <root-path name="root" path="." />
-          </paths>
-          XMLEOF
+          echo '<?xml version="1.0" encoding="utf-8"?>' > android/app/src/main/res/xml/file_paths.xml
+          echo '<paths xmlns:android="http://schemas.android.com/apk/res/android">' >> android/app/src/main/res/xml/file_paths.xml
+          echo '    <external-path name="external_files" path="." />' >> android/app/src/main/res/xml/file_paths.xml
+          echo '    <external-files-path name="external_files_path" path="." />' >> android/app/src/main/res/xml/file_paths.xml
+          echo '    <cache-path name="cache" path="." />' >> android/app/src/main/res/xml/file_paths.xml
+          echo '    <files-path name="files" path="." />' >> android/app/src/main/res/xml/file_paths.xml
+          echo '    <root-path name="root" path="." />' >> android/app/src/main/res/xml/file_paths.xml
+          echo '</paths>' >> android/app/src/main/res/xml/file_paths.xml
 
       - name: Generate keystore
         run: |
@@ -147,25 +120,13 @@ jobs:
           else
             keytool -genkeypair -v -storetype PKCS12 -keystore android/app/release-keystore.jks -alias lablinkriparo -keyalg RSA -keysize 2048 -validity 10000 -storepass lablinkriparo2024 -keypass lablinkriparo2024 -dname "CN=LabLinkRiparo, OU=Mobile, O=LabLinkRiparo, L=Italy, ST=Italy, C=IT"
             echo "Generated new keystore"
-            echo "To enable automatic updates, run: base64 -w 0 android/app/release-keystore.jks"
-            echo "Then add output as GitHub secret KEYSTORE_BASE64"
           fi
 
       - name: Configure signing in build.gradle
         run: |
           BUILD_GRADLE="android/app/build.gradle"
-          cat > /tmp/signing_config.txt << 'SIGNEOF'
-              signingConfigs {
-                  release {
-                      storeFile file("release-keystore.jks")
-                      storePassword "lablinkriparo2024"
-                      keyAlias "lablinkriparo"
-                      keyPassword "lablinkriparo2024"
-                  }
-              }
-          SIGNEOF
-          awk '/buildTypes \{/{while((getline line < "/tmp/signing_config.txt") > 0) print line}1' "$BUILD_GRADLE" > /tmp/build_gradle_new
-          mv /tmp/build_gradle_new "$BUILD_GRADLE"
+          SIGNING_CONFIG='    signingConfigs {\n        release {\n            storeFile file("release-keystore.jks")\n            storePassword "lablinkriparo2024"\n            keyAlias "lablinkriparo"\n            keyPassword "lablinkriparo2024"\n        }\n    }\n'
+          sed -i "s|buildTypes {|${SIGNING_CONFIG}\n    buildTypes {|" "$BUILD_GRADLE"
           sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' "$BUILD_GRADLE"
           sed -i 's/debug {/debug {\n            signingConfig signingConfigs.release/' "$BUILD_GRADLE"
       
