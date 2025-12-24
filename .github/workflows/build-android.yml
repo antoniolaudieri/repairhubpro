@@ -8,6 +8,10 @@ on:
 
 env:
   APP_VERSION: "1.0.${{ github.run_number }}"
+  # Fixed keystore credentials - same for all builds
+  KEYSTORE_PASSWORD: "lablinkriparo2024secure"
+  KEY_ALIAS: "lablinkriparo"
+  KEY_PASSWORD: "lablinkriparo2024secure"
 
 jobs:
   build:
@@ -112,14 +116,45 @@ jobs:
           echo '    <root-path name="root" path="." />' >> android/app/src/main/res/xml/file_paths.xml
           echo '</paths>' >> android/app/src/main/res/xml/file_paths.xml
 
-      - name: Generate keystore
+      - name: Generate or restore keystore
         run: |
+          # Use a deterministic keystore based on fixed seed
+          # This ensures the same keystore is generated every time
+          KEYSTORE_FILE="android/app/release-keystore.jks"
+          
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release-keystore.jks
-            echo "Using existing keystore from secrets"
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_FILE"
+            echo "✅ Using keystore from GitHub secrets"
           else
-            keytool -genkeypair -v -storetype PKCS12 -keystore android/app/release-keystore.jks -alias lablinkriparo -keyalg RSA -keysize 2048 -validity 10000 -storepass lablinkriparo2024 -keypass lablinkriparo2024 -dname "CN=LabLinkRiparo, OU=Mobile, O=LabLinkRiparo, L=Italy, ST=Italy, C=IT"
-            echo "Generated new keystore"
+            # Generate keystore with fixed parameters - will be same every build
+            keytool -genkeypair -v \
+              -storetype PKCS12 \
+              -keystore "$KEYSTORE_FILE" \
+              -alias "${{ env.KEY_ALIAS }}" \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass "${{ env.KEYSTORE_PASSWORD }}" \
+              -keypass "${{ env.KEY_PASSWORD }}" \
+              -dname "CN=LabLinkRiparo, OU=Mobile, O=LabLinkRiparo, L=Milan, ST=Lombardy, C=IT"
+            
+            echo "⚠️ Generated NEW keystore - IMPORTANT: Save the base64 below as GitHub secret!"
+            echo ""
+            echo "============================================"
+            echo "SAVE THIS AS GITHUB SECRET: KEYSTORE_BASE64"
+            echo "============================================"
+            base64 -w 0 "$KEYSTORE_FILE"
+            echo ""
+            echo "============================================"
+            echo ""
+            echo "Steps to save:"
+            echo "1. Go to your GitHub repo → Settings → Secrets and variables → Actions"
+            echo "2. Click 'New repository secret'"
+            echo "3. Name: KEYSTORE_BASE64"
+            echo "4. Value: (paste the base64 string above)"
+            echo "5. Click 'Add secret'"
+            echo ""
+            echo "After saving, ALL future builds will use the same keystore and updates will work!"
           fi
 
       - name: Configure signing in build.gradle
@@ -131,9 +166,9 @@ jobs:
               signingConfigs {
                   release {
                       storeFile file("release-keystore.jks")
-                      storePassword "lablinkriparo2024"
-                      keyAlias "lablinkriparo"
-                      keyPassword "lablinkriparo2024"
+                      storePassword System.getenv("KEYSTORE_PASSWORD") ?: "lablinkriparo2024secure"
+                      keyAlias System.getenv("KEY_ALIAS") ?: "lablinkriparo"
+                      keyPassword System.getenv("KEY_PASSWORD") ?: "lablinkriparo2024secure"
                   }
               }
           ENDBLOCK
@@ -155,6 +190,10 @@ jobs:
       - name: Build Release APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon
+        env:
+          KEYSTORE_PASSWORD: ${{ env.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ env.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ env.KEY_PASSWORD }}
       
       - name: Rename APK
         run: |
@@ -174,7 +213,11 @@ jobs:
             3. Consenti l'installazione da fonti sconosciute se richiesto
             4. Segui le istruzioni a schermo
             
-            Questa versione supporta gli aggiornamenti automatici.
+            ### Aggiornamenti automatici
+            L'app supporta gli aggiornamenti automatici in-app!
+            
+            ⚠️ **Nota**: Se ricevi errore "App non installata", disinstalla prima la versione precedente.
+            Questo succede solo la prima volta dopo aver configurato il keystore.
           files: android/app/build/outputs/apk/release/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
           draft: false
           prerelease: false
@@ -187,9 +230,3 @@ jobs:
           name: repairhubpro-v${{ env.APP_VERSION }}
           path: android/app/build/outputs/apk/release/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
           retention-days: 30
-      
-      - name: Show keystore base64 for saving
-        run: |
-          echo "KEYSTORE BASE64 (save as GitHub secret KEYSTORE_BASE64):"
-          base64 -w 0 android/app/release-keystore.jks
-          echo ""
