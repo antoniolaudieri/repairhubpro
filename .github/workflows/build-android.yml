@@ -62,7 +62,7 @@ jobs:
       - name: Update MainActivity to register plugin
         run: |
           MAIN_ACTIVITY="android/app/src/main/java/com/lablinkriparo/monitor/MainActivity.java"
-          cat > "$MAIN_ACTIVITY" << 'EOF'
+          cat > "$MAIN_ACTIVITY" << 'MAINEOF'
           package com.lablinkriparo.monitor;
 
           import android.os.Bundle;
@@ -75,7 +75,7 @@ jobs:
                   super.onCreate(savedInstanceState);
               }
           }
-          EOF
+          MAINEOF
       
       - name: Update version in build.gradle
         run: |
@@ -93,35 +93,25 @@ jobs:
       - name: Add permissions to AndroidManifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          
-          # Create a proper permissions block file
-          cat > /tmp/permissions.txt << 'PERMS'
-              <!-- Device diagnostics permissions -->
+          cat > /tmp/permissions.txt << 'PERMSEOF'
               <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
               <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
-              
-              <!-- APK installation permissions -->
               <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
               <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
               <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-              
               <queries>
                   <intent>
                       <action android:name="android.intent.action.MAIN" />
                   </intent>
               </queries>
-          PERMS
-          
-          # Insert permissions before </manifest> using awk for reliability
+          PERMSEOF
           awk '/<\/manifest>/{while((getline line < "/tmp/permissions.txt") > 0) print line}1' "$MANIFEST" > /tmp/manifest_new.xml
           mv /tmp/manifest_new.xml "$MANIFEST"
 
       - name: Add FileProvider to AndroidManifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          
-          # Create FileProvider block
-          cat > /tmp/provider.txt << 'PROVIDER'
+          cat > /tmp/provider.txt << 'PROVIDEREOF'
                   <provider
                       android:name="androidx.core.content.FileProvider"
                       android:authorities="${applicationId}.fileprovider"
@@ -131,16 +121,14 @@ jobs:
                           android:name="android.support.FILE_PROVIDER_PATHS"
                           android:resource="@xml/file_paths" />
                   </provider>
-          PROVIDER
-          
-          # Insert provider before </application> using awk
+          PROVIDEREOF
           awk '/<\/application>/{while((getline line < "/tmp/provider.txt") > 0) print line}1' "$MANIFEST" > /tmp/manifest_new.xml
           mv /tmp/manifest_new.xml "$MANIFEST"
       
       - name: Create file_paths.xml for FileProvider
         run: |
           mkdir -p android/app/src/main/res/xml
-          cat > android/app/src/main/res/xml/file_paths.xml << 'EOF'
+          cat > android/app/src/main/res/xml/file_paths.xml << 'XMLEOF'
           <?xml version="1.0" encoding="utf-8"?>
           <paths xmlns:android="http://schemas.android.com/apk/res/android">
               <external-path name="external_files" path="." />
@@ -149,44 +137,24 @@ jobs:
               <files-path name="files" path="." />
               <root-path name="root" path="." />
           </paths>
-          EOF
+          XMLEOF
 
-      - name: Generate or decode keystore
+      - name: Generate keystore
         run: |
-          # Se esiste il secret KEYSTORE_BASE64, usa quello
-          # Altrimenti genera un keystore nuovo e mostra come salvarlo
           if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
             echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release-keystore.jks
-            echo "✅ Using existing keystore from secrets"
+            echo "Using existing keystore from secrets"
           else
-            # Genera un nuovo keystore
-            keytool -genkeypair \
-              -v \
-              -storetype PKCS12 \
-              -keystore android/app/release-keystore.jks \
-              -alias lablinkriparo \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -storepass lablinkriparo2024 \
-              -keypass lablinkriparo2024 \
-              -dname "CN=LabLinkRiparo, OU=Mobile, O=LabLinkRiparo, L=Italy, ST=Italy, C=IT"
-            
-            echo "⚠️ Generated new keystore. To enable automatic updates, save this keystore:"
-            echo "1. Run: base64 android/app/release-keystore.jks"
-            echo "2. Add the output as GitHub secret: KEYSTORE_BASE64"
-            echo ""
-            echo "🔐 Keystore credentials:"
-            echo "   Alias: lablinkriparo"
-            echo "   Password: lablinkriparo2024"
+            keytool -genkeypair -v -storetype PKCS12 -keystore android/app/release-keystore.jks -alias lablinkriparo -keyalg RSA -keysize 2048 -validity 10000 -storepass lablinkriparo2024 -keypass lablinkriparo2024 -dname "CN=LabLinkRiparo, OU=Mobile, O=LabLinkRiparo, L=Italy, ST=Italy, C=IT"
+            echo "Generated new keystore"
+            echo "To enable automatic updates, run: base64 -w 0 android/app/release-keystore.jks"
+            echo "Then add output as GitHub secret KEYSTORE_BASE64"
           fi
 
       - name: Configure signing in build.gradle
         run: |
           BUILD_GRADLE="android/app/build.gradle"
-          
-          # Create signing config block
-          cat > /tmp/signing_config.txt << 'SIGNCONFIG'
+          cat > /tmp/signing_config.txt << 'SIGNEOF'
               signingConfigs {
                   release {
                       storeFile file("release-keystore.jks")
@@ -195,16 +163,10 @@ jobs:
                       keyPassword "lablinkriparo2024"
                   }
               }
-          SIGNCONFIG
-          
-          # Insert signing config before buildTypes using awk
+          SIGNEOF
           awk '/buildTypes \{/{while((getline line < "/tmp/signing_config.txt") > 0) print line}1' "$BUILD_GRADLE" > /tmp/build_gradle_new
           mv /tmp/build_gradle_new "$BUILD_GRADLE"
-          
-          # Update release buildType to use signing config
           sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' "$BUILD_GRADLE"
-          
-          # Also sign debug builds with same key for consistency
           sed -i 's/debug {/debug {\n            signingConfig signingConfigs.release/' "$BUILD_GRADLE"
       
       - name: Sync Capacitor
@@ -227,11 +189,7 @@ jobs:
           tag_name: v${{ env.APP_VERSION }}
           name: LabLinkRiparo v${{ env.APP_VERSION }}
           body: |
-            ## 📱 LabLinkRiparo v${{ env.APP_VERSION }}
-            
-            ### Novità in questa versione
-            - Build automatica #${{ github.run_number }}
-            - Miglioramenti e correzioni
+            ## LabLinkRiparo v${{ env.APP_VERSION }}
             
             ### Come installare
             1. Scarica il file APK qui sotto
@@ -239,9 +197,7 @@ jobs:
             3. Consenti l'installazione da fonti sconosciute se richiesto
             4. Segui le istruzioni a schermo
             
-            ### Aggiornamenti automatici
-            ✅ Questa versione supporta gli aggiornamenti automatici!
-            L'app ti avviserà quando è disponibile una nuova versione.
+            Questa versione supporta gli aggiornamenti automatici.
           files: android/app/build/outputs/apk/release/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
           draft: false
           prerelease: false
@@ -255,20 +211,8 @@ jobs:
           path: android/app/build/outputs/apk/release/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
           retention-days: 30
       
-      - name: Output keystore for first run
-        if: ${{ secrets.KEYSTORE_BASE64 == '' }}
+      - name: Show keystore base64 for saving
         run: |
-          echo "📋 IMPORTANTE: Per abilitare gli aggiornamenti automatici:"
-          echo ""
-          echo "1. Copia questo valore base64 del keystore:"
-          echo "----------------------------------------"
+          echo "KEYSTORE BASE64 (save as GitHub secret KEYSTORE_BASE64):"
           base64 -w 0 android/app/release-keystore.jks
           echo ""
-          echo "----------------------------------------"
-          echo ""
-          echo "2. Vai su GitHub → Settings → Secrets → Actions"
-          echo "3. Aggiungi un nuovo secret chiamato: KEYSTORE_BASE64"
-          echo "4. Incolla il valore base64 copiato sopra"
-          echo ""
-          echo "Dopo aver fatto questo, tutte le future build useranno"
-          echo "la stessa chiave e gli aggiornamenti funzioneranno!"
