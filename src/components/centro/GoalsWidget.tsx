@@ -71,8 +71,8 @@ export const GoalsWidget = ({ centroId, monthlyGoal, onGoalUpdate }: GoalsWidget
       const dailyTarget = monthlyGoal / workDaysInMonth;
       const weeklyTarget = dailyTarget * 5; // 5 work days per week
 
-      // Fetch revenue for each period
-      const [dailyRes, weeklyRes, monthlyRes] = await Promise.all([
+      // Fetch revenue for each period (repairs + loyalty cards)
+      const [dailyCommissions, weeklyCommissions, monthlyCommissions, dailyLoyalty, weeklyLoyalty, monthlyLoyalty] = await Promise.all([
         supabase
           .from("commission_ledger")
           .select("gross_revenue")
@@ -91,11 +91,42 @@ export const GoalsWidget = ({ centroId, monthlyGoal, onGoalUpdate }: GoalsWidget
           .eq("centro_id", centroId)
           .gte("created_at", monthStart.toISOString())
           .lte("created_at", monthEnd.toISOString()),
+        // Loyalty cards revenue
+        supabase
+          .from("loyalty_cards")
+          .select("amount_paid")
+          .eq("centro_id", centroId)
+          .eq("status", "active")
+          .gte("activated_at", dayStart.toISOString())
+          .lte("activated_at", dayEnd.toISOString()),
+        supabase
+          .from("loyalty_cards")
+          .select("amount_paid")
+          .eq("centro_id", centroId)
+          .eq("status", "active")
+          .gte("activated_at", weekStart.toISOString())
+          .lte("activated_at", weekEnd.toISOString()),
+        supabase
+          .from("loyalty_cards")
+          .select("amount_paid")
+          .eq("centro_id", centroId)
+          .eq("status", "active")
+          .gte("activated_at", monthStart.toISOString())
+          .lte("activated_at", monthEnd.toISOString()),
       ]);
 
-      const dailyRevenue = dailyRes.data?.reduce((sum, r) => sum + (r.gross_revenue || 0), 0) || 0;
-      const weeklyRevenue = weeklyRes.data?.reduce((sum, r) => sum + (r.gross_revenue || 0), 0) || 0;
-      const monthlyRevenue = monthlyRes.data?.reduce((sum, r) => sum + (r.gross_revenue || 0), 0) || 0;
+      // Sum repairs + loyalty cards revenue
+      const dailyRepairs = dailyCommissions.data?.reduce((sum, r) => sum + (r.gross_revenue || 0), 0) || 0;
+      const dailyCards = dailyLoyalty.data?.reduce((sum, r) => sum + (r.amount_paid || 0), 0) || 0;
+      const dailyRevenue = dailyRepairs + dailyCards;
+
+      const weeklyRepairs = weeklyCommissions.data?.reduce((sum, r) => sum + (r.gross_revenue || 0), 0) || 0;
+      const weeklyCards = weeklyLoyalty.data?.reduce((sum, r) => sum + (r.amount_paid || 0), 0) || 0;
+      const weeklyRevenue = weeklyRepairs + weeklyCards;
+
+      const monthlyRepairs = monthlyCommissions.data?.reduce((sum, r) => sum + (r.gross_revenue || 0), 0) || 0;
+      const monthlyCards = monthlyLoyalty.data?.reduce((sum, r) => sum + (r.amount_paid || 0), 0) || 0;
+      const monthlyRevenue = monthlyRepairs + monthlyCards;
 
       // Days remaining calculations
       const daysLeftInWeek = differenceInDays(weekEnd, now) + 1;
@@ -149,14 +180,26 @@ export const GoalsWidget = ({ centroId, monthlyGoal, onGoalUpdate }: GoalsWidget
         const dayStart = startOfDay(checkDate);
         const dayEnd = endOfDay(checkDate);
         
-        const { data } = await supabase
-          .from("commission_ledger")
-          .select("gross_revenue")
-          .eq("centro_id", centroId)
-          .gte("created_at", dayStart.toISOString())
-          .lte("created_at", dayEnd.toISOString());
+        // Fetch both repairs and loyalty cards
+        const [commissionsRes, loyaltyRes] = await Promise.all([
+          supabase
+            .from("commission_ledger")
+            .select("gross_revenue")
+            .eq("centro_id", centroId)
+            .gte("created_at", dayStart.toISOString())
+            .lte("created_at", dayEnd.toISOString()),
+          supabase
+            .from("loyalty_cards")
+            .select("amount_paid")
+            .eq("centro_id", centroId)
+            .eq("status", "active")
+            .gte("activated_at", dayStart.toISOString())
+            .lte("activated_at", dayEnd.toISOString()),
+        ]);
         
-        const dayRevenue = data?.reduce((sum, r) => sum + (r.gross_revenue || 0), 0) || 0;
+        const repairsRevenue = commissionsRes.data?.reduce((sum, r) => sum + (r.gross_revenue || 0), 0) || 0;
+        const loyaltyRevenue = loyaltyRes.data?.reduce((sum, r) => sum + (r.amount_paid || 0), 0) || 0;
+        const dayRevenue = repairsRevenue + loyaltyRevenue;
         
         if (dayRevenue >= dailyTarget) {
           currentStreak++;
