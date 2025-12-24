@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -10,27 +11,47 @@ import {
   Settings,
   Usb,
   Bug,
-  Key
+  Loader2
 } from "lucide-react";
-import type { SecurityStatus } from "@/plugins/DeviceStoragePlugin";
+import { Capacitor } from "@capacitor/core";
+import DeviceDiagnostics, { SecurityStatus } from "@/plugins/DeviceStoragePlugin";
 
-interface SecurityWidgetProps {
-  securityStatus: SecurityStatus | null;
-  loading?: boolean;
-}
+export const SecurityWidget = () => {
+  const [securityStatus, setSecurityStatus] = useState<SecurityStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const isNative = Capacitor.isNativePlatform();
 
-export const SecurityWidget = ({ securityStatus, loading }: SecurityWidgetProps) => {
+  useEffect(() => {
+    const loadSecurityStatus = async () => {
+      if (!isNative) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const result = await DeviceDiagnostics.getSecurityStatus();
+        setSecurityStatus(result);
+      } catch (error) {
+        console.error("Error loading security status:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSecurityStatus();
+  }, [isNative]);
+
   if (loading) {
     return (
-      <Card className="animate-pulse">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Shield className="h-4 w-4" />
             Sicurezza
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-32 bg-muted rounded" />
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -192,15 +213,7 @@ export const SecurityWidget = ({ securityStatus, loading }: SecurityWidgetProps)
         {/* Additional Info */}
         <div className="space-y-1 text-xs text-muted-foreground border-t pt-3">
           <div className="flex justify-between">
-            <span>Patch Sicurezza:</span>
-            <span className="font-medium text-foreground">
-              {securityStatus.securityPatchLevel !== 'unknown' 
-                ? securityStatus.securityPatchLevel 
-                : 'N/D'}
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span>Build:</span>
+            <span>Build Tags:</span>
             <span className={`font-medium ${securityStatus.isTestBuild ? 'text-red-500' : 'text-foreground'}`}>
               {securityStatus.isTestBuild ? 'Test Keys' : 'Release Keys'}
             </span>

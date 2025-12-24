@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,14 +15,11 @@ import {
   Users,
   HardDrive,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
-import type { DangerousPermissionApp } from "@/plugins/DeviceStoragePlugin";
-
-interface DangerousPermissionsWidgetProps {
-  apps: DangerousPermissionApp[] | null;
-  loading?: boolean;
-}
+import { Capacitor } from "@capacitor/core";
+import DeviceDiagnostics, { DangerousPermissionApp } from "@/plugins/DeviceStoragePlugin";
 
 const getPermissionIcon = (permission: string) => {
   const p = permission.toUpperCase();
@@ -59,21 +56,44 @@ const getPermissionLabel = (permission: string): string => {
   return labels[permission] || permission;
 };
 
-export const DangerousPermissionsWidget = ({ apps, loading }: DangerousPermissionsWidgetProps) => {
+export const DangerousPermissionsWidget = () => {
+  const [apps, setApps] = useState<DangerousPermissionApp[] | null>(null);
+  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [showSystemApps, setShowSystemApps] = useState(false);
+  const isNative = Capacitor.isNativePlatform();
+
+  useEffect(() => {
+    const loadPermissions = async () => {
+      if (!isNative) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const result = await DeviceDiagnostics.getDangerousPermissions();
+        setApps(result.apps || []);
+      } catch (error) {
+        console.error("Error loading dangerous permissions:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPermissions();
+  }, [isNative]);
 
   if (loading) {
     return (
-      <Card className="animate-pulse">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <ShieldAlert className="h-4 w-4" />
             Permessi Sensibili
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-40 bg-muted rounded" />
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -102,7 +122,6 @@ export const DangerousPermissionsWidget = ({ apps, loading }: DangerousPermissio
     : apps.filter(app => !app.isSystemApp);
 
   const userAppsCount = apps.filter(app => !app.isSystemApp).length;
-  const systemAppsCount = apps.filter(app => app.isSystemApp).length;
 
   // Sort by permission count
   const sortedApps = [...filteredApps].sort((a, b) => b.permissionCount - a.permissionCount);
@@ -144,7 +163,7 @@ export const DangerousPermissionsWidget = ({ apps, loading }: DangerousPermissio
 
         {/* Apps List */}
         <ScrollArea className={expanded ? "h-64" : "h-auto"}>
-          <div className="space-y-2">
+          <div className="space-y-2 pr-2">
             {displayApps.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Nessuna app con permessi sensibili
@@ -199,7 +218,7 @@ export const DangerousPermissionsWidget = ({ apps, loading }: DangerousPermissio
 
                   {/* Permission Count */}
                   <Badge 
-                    className={`${
+                    className={`shrink-0 ${
                       app.permissionCount >= 5 
                         ? 'bg-red-500/20 text-red-500 border-red-500/30' 
                         : app.permissionCount >= 3
