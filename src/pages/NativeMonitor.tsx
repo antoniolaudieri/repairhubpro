@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { User } from "@supabase/supabase-js";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -935,31 +936,52 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {loyaltyCard.centro?.logo_url ? (
-              <img 
-                src={loyaltyCard.centro.logo_url} 
-                alt={loyaltyCard.centro.business_name || "Centro"} 
-                className="h-8 w-8 rounded-full object-cover bg-white"
-              />
-            ) : (
-              <Smartphone className="h-6 w-6" />
-            )}
-            <div>
-              <h1 className="font-semibold">Device Health Pro</h1>
-              <p className="text-xs opacity-80 truncate max-w-[180px]">{user.email}</p>
+      {/* Header - Premium Glass Design */}
+      <div className="sticky top-0 z-10">
+        {/* Gradient background with blur */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary/95 to-primary/90" />
+        <div className="absolute inset-0 backdrop-blur-sm" />
+        
+        <div className="relative p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {loyaltyCard.centro?.logo_url ? (
+                <div className="relative">
+                  <div className="absolute inset-0 bg-white/20 rounded-full blur-sm" />
+                  <img 
+                    src={loyaltyCard.centro.logo_url} 
+                    alt={loyaltyCard.centro.business_name || "Centro"} 
+                    className="relative h-10 w-10 rounded-full object-cover bg-white/90 ring-2 ring-white/30"
+                  />
+                </div>
+              ) : (
+                <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center ring-2 ring-white/30">
+                  <Activity className="h-5 w-5 text-primary-foreground" />
+                </div>
+              )}
+              <div>
+                <h1 className="font-bold text-primary-foreground text-lg">Device Health Pro</h1>
+                <p className="text-xs text-primary-foreground/70 truncate max-w-[180px]">{user.email}</p>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" onClick={handleRefresh}>
-              <RefreshCw className={`h-5 w-5 ${deviceData.isLoading ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleRefresh}
+                className="text-primary-foreground hover:bg-white/10 rounded-full"
+              >
+                <RefreshCw className={`h-5 w-5 ${deviceData.isLoading ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleLogout}
+                className="text-primary-foreground hover:bg-white/10 rounded-full"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </div>
@@ -1026,42 +1048,74 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 pb-24">
-        {/* Tab Navigation - Scrollable on mobile */}
-        <div className="overflow-x-auto -mx-4 px-4 pb-2">
-          <TabsList className="inline-flex min-w-max gap-1 h-auto p-1">
-            <TabsTrigger value="overview" className="text-sm px-3 py-2 whitespace-nowrap">
-              📊 Stato
+        {/* Tab Navigation - Modern Pill Style */}
+        <div className="overflow-x-auto -mx-4 px-4 pb-2 scrollbar-hide">
+          <TabsList className="inline-flex min-w-max gap-1.5 h-auto p-1.5 bg-muted/50 backdrop-blur-sm rounded-2xl border border-border/50">
+            <TabsTrigger 
+              value="overview" 
+              className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
+            >
+              <Activity className="h-4 w-4" />
+              Stato
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="text-sm px-3 py-2 whitespace-nowrap flex items-center gap-1">
-              🔔 Notifiche
+            <TabsTrigger 
+              value="notifications" 
+              className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
+            >
+              <Bell className="h-4 w-4" />
+              Notifiche
               {unreadCount > 0 && (
-                <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+                <span className="h-5 min-w-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-semibold animate-pulse">
                   {unreadCount}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="apps" className="text-sm px-3 py-2 whitespace-nowrap">
-              📱 App
+            <TabsTrigger 
+              value="apps" 
+              className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
+            >
+              <Smartphone className="h-4 w-4" />
+              App
             </TabsTrigger>
-            <TabsTrigger value="hardware" className="text-sm px-3 py-2 whitespace-nowrap">
-              🔧 Hardware
+            <TabsTrigger 
+              value="hardware" 
+              className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
+            >
+              <Cpu className="h-4 w-4" />
+              Hardware
             </TabsTrigger>
-            <TabsTrigger value="sensors" className="text-sm px-3 py-2 whitespace-nowrap">
-              🧭 Sensori
+            <TabsTrigger 
+              value="sensors" 
+              className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
+            >
+              <Compass className="h-4 w-4" />
+              Sensori
             </TabsTrigger>
-            <TabsTrigger value="network" className="text-sm px-3 py-2 whitespace-nowrap">
-              📶 Rete
+            <TabsTrigger 
+              value="network" 
+              className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
+            >
+              <Wifi className="h-4 w-4" />
+              Rete
             </TabsTrigger>
-            <TabsTrigger value="issues" className="text-sm px-3 py-2 whitespace-nowrap flex items-center gap-1">
-              ⚠️ Problemi
+            <TabsTrigger 
+              value="issues" 
+              className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Problemi
               {issues.length > 0 && (
-                <span className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium">
+                <span className="h-5 min-w-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-semibold">
                   {issues.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="tips" className="text-sm px-3 py-2 whitespace-nowrap">
-              💡 Consigli
+            <TabsTrigger 
+              value="tips" 
+              className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
+            >
+              <Lightbulb className="h-4 w-4" />
+              Consigli
             </TabsTrigger>
           </TabsList>
         </div>
@@ -2097,25 +2151,42 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
         </div>
       </Tabs>
 
-      {/* Fixed Sync Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t safe-area-inset-bottom z-20">
+      {/* Fixed Sync Button - Premium Glow Effect */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent backdrop-blur-sm safe-area-inset-bottom z-20">
         <Button 
-          className="w-full h-14 text-base font-medium shadow-lg"
+          className={cn(
+            "w-full h-14 text-base font-semibold rounded-2xl",
+            "bg-gradient-to-r from-primary to-primary/80",
+            "shadow-xl shadow-primary/25",
+            "relative overflow-hidden group",
+            "transition-all duration-300",
+            syncing && "animate-pulse"
+          )}
           size="lg"
           onClick={handleSync}
           disabled={syncing || deviceData.isLoading}
         >
-          {syncing ? (
-            <>
-              <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
-              Sincronizzazione...
-            </>
-          ) : (
-            <>
-              <Upload className="mr-2 h-5 w-5" />
-              Sincronizza con Centro
-            </>
+          {/* Glow effect on hover */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+          
+          {/* Pulse ring when syncing */}
+          {syncing && (
+            <div className="absolute inset-0 rounded-2xl animate-ping bg-primary/30" />
           )}
+          
+          <span className="relative flex items-center justify-center">
+            {syncing ? (
+              <>
+                <RefreshCw className="mr-2 h-5 w-5 animate-spin" />
+                Sincronizzazione in corso...
+              </>
+            ) : (
+              <>
+                <Upload className="mr-2 h-5 w-5 group-hover:animate-bounce" />
+                Sincronizza con Centro
+              </>
+            )}
+          </span>
         </Button>
       </div>
     </div>
