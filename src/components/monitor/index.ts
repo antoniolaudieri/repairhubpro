@@ -12,3 +12,7 @@ export { BatteryAdvancedWidget } from './BatteryAdvancedWidget';
 export { BookCheckupWidget } from './BookCheckupWidget';
 export { DeviceImageWidget } from './DeviceImageWidget';
 export { AppStorageWidget } from './AppStorageWidget';
+export { SecurityWidget } from './SecurityWidget';
+export { DangerousPermissionsWidget } from './DangerousPermissionsWidget';
+export { UptimeWidget } from './UptimeWidget';
+export { SystemIntegrityWidget } from './SystemIntegrityWidget';

@@ -63,6 +63,48 @@ export interface AppUsageStat {
   lastTimeUsed: number;
 }
 
+export interface SecurityStatus {
+  isRooted: boolean;
+  rootMethod: string | null;
+  isBootloaderUnlocked: boolean;
+  verifiedBootState: string;
+  isDeveloperOptionsEnabled: boolean;
+  isUsbDebuggingEnabled: boolean;
+  buildTags: string;
+  isTestBuild: boolean;
+  securityPatchLevel: string;
+}
+
+export interface DangerousPermissionApp {
+  packageName: string;
+  appName: string;
+  permissions: string[];
+  permissionCount: number;
+  isSystemApp: boolean;
+  iconBase64?: string;
+}
+
+export interface DeviceUptime {
+  uptimeMs: number;
+  uptimeSeconds: number;
+  uptimeMinutes: number;
+  uptimeHours: number;
+  uptimeDays: number;
+  lastBootTime: number;
+  formattedUptime: string;
+}
+
+export interface SystemIntegrityStatus {
+  systemReadOnly: boolean;
+  officialBuild: boolean;
+  seLinuxStatus: string;
+  seLinuxEnforcing: boolean;
+  systemModified: boolean;
+  verifiedBootState: string;
+  isEncrypted: boolean;
+  integrityScore: number;
+}
+
 export interface DeviceDiagnosticsPlugin {
   getStorageInfo(): Promise<DeviceStorageInfo>;
   getRamInfo(): Promise<RamInfo>;
@@ -77,6 +119,11 @@ export interface DeviceDiagnosticsPlugin {
   getAppVersion(): Promise<{ versionName: string; versionCode: number }>;
   downloadApk(options: { url: string; fileName: string }): Promise<{ success: boolean; filePath?: string; error?: string }>;
   installApk(options: { filePath: string }): Promise<{ success: boolean; error?: string }>;
+  // Security & Integrity methods
+  getSecurityStatus(): Promise<SecurityStatus>;
+  getDangerousPermissions(): Promise<{ apps: DangerousPermissionApp[]; totalApps: number }>;
+  getDeviceUptime(): Promise<DeviceUptime>;
+  checkSystemIntegrity(): Promise<SystemIntegrityStatus>;
 }
 
 // This will use the native implementation on Android/iOS, or fallback to web
