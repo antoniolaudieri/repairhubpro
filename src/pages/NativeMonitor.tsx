@@ -681,26 +681,26 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
         };
         setLoyaltyCard(cardWithCentro as LoyaltyCard);
         
-        // Fetch program settings from the centro
-        const { data: centroData } = await supabase
-          .from("centri_assistenza")
-          .select("settings")
-          .eq("id", data.centro_id)
-          .single();
+        // Fetch program settings from the loyalty_program_settings table
+        const { data: loyaltySettings } = await supabase
+          .from("loyalty_program_settings")
+          .select("*")
+          .eq("centro_id", data.centro_id)
+          .eq("is_active", true)
+          .maybeSingle();
         
-        if (centroData?.settings) {
-          const settings = centroData.settings as Record<string, unknown>;
+        if (loyaltySettings) {
           setProgramSettings({
-            loyalty_program_active: settings.loyalty_program_active as boolean,
-            loyalty_card_price: settings.loyalty_card_price as number,
-            loyalty_discount_percent: settings.loyalty_discount_percent as number,
-            loyalty_max_devices: settings.loyalty_max_devices as number,
-            loyalty_validity_months: settings.loyalty_validity_months as number,
-            loyalty_card_bg_color: settings.loyalty_card_bg_color as string,
-            loyalty_card_text_color: settings.loyalty_card_text_color as string,
-            loyalty_free_checkup_enabled: settings.loyalty_free_checkup_enabled as boolean,
-            loyalty_priority_service: settings.loyalty_priority_service as boolean,
-            loyalty_additional_benefits: settings.loyalty_additional_benefits as string,
+            loyalty_program_active: loyaltySettings.is_active,
+            loyalty_card_price: loyaltySettings.annual_price,
+            loyalty_discount_percent: loyaltySettings.repair_discount_percent,
+            loyalty_max_devices: loyaltySettings.max_devices,
+            loyalty_validity_months: loyaltySettings.validity_months,
+            loyalty_card_bg_color: loyaltySettings.card_accent_color || '#10b981',
+            loyalty_card_text_color: loyaltySettings.card_text_color || '#ffffff',
+            loyalty_free_checkup_enabled: loyaltySettings.diagnostic_fee === 0,
+            loyalty_priority_service: true, // Always enabled for loyalty customers
+            loyalty_additional_benefits: loyaltySettings.promo_tagline,
           });
         }
       } else {
