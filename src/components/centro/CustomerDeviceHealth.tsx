@@ -40,6 +40,8 @@ interface InstalledApp {
   dataSizeMb: number;
   cacheSizeMb: number;
   isSystemApp: boolean;
+  totalTimeMinutes?: number;
+  lastTimeUsed?: number;
 }
 
 interface HealthLog {
@@ -479,31 +481,55 @@ export function CustomerDeviceHealth({ customerId, centroId, onDeviceCreated }: 
                           <p className="text-xs font-medium text-muted-foreground mb-2">
                             Top {selectedLog.installed_apps.length} App per dimensione
                           </p>
-                          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
                             {selectedLog.installed_apps.slice(0, 10).map((app, idx) => (
-                              <div key={app.packageName || idx} className="flex items-center justify-between text-xs">
-                                <div className="flex items-center gap-2 min-w-0 flex-1">
-                                  <div className="w-5 h-5 rounded bg-muted flex items-center justify-center shrink-0">
-                                    <Package className="h-3 w-3 text-muted-foreground" />
+                              <div key={app.packageName || idx} className="p-2 rounded-lg bg-muted/30 space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <div className="w-5 h-5 rounded bg-muted flex items-center justify-center shrink-0">
+                                      <Package className="h-3 w-3 text-muted-foreground" />
+                                    </div>
+                                    <span className="text-xs font-medium truncate">{app.appName || app.packageName.split('.').pop()}</span>
+                                    {app.isSystemApp && (
+                                      <Badge variant="outline" className="text-[8px] h-3 px-1">SYS</Badge>
+                                    )}
                                   </div>
-                                  <span className="truncate">{app.appName || app.packageName.split('.').pop()}</span>
-                                  {app.isSystemApp && (
-                                    <Badge variant="outline" className="text-[8px] h-3 px-1">SYS</Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                  {app.cacheSizeMb > 10 && (
-                                    <span className="text-amber-500 text-[10px]">
-                                      Cache: {app.cacheSizeMb.toFixed(0)}MB
-                                    </span>
-                                  )}
-                                  <span className={app.totalSizeMb > 500 ? 'text-orange-500 font-medium' : ''}>
+                                  <span className={`text-xs shrink-0 ${app.totalSizeMb > 500 ? 'text-orange-500 font-medium' : ''}`}>
                                     {app.totalSizeMb >= 1024 
                                       ? `${(app.totalSizeMb / 1024).toFixed(1)} GB`
                                       : `${app.totalSizeMb.toFixed(0)} MB`
                                     }
                                   </span>
                                 </div>
+                                <div className="flex items-center justify-between text-[10px] text-muted-foreground pl-7">
+                                  <div className="flex items-center gap-3">
+                                    <span>
+                                      Utilizzo: {app.totalTimeMinutes && app.totalTimeMinutes > 0 
+                                        ? app.totalTimeMinutes >= 60 
+                                          ? `${Math.floor(app.totalTimeMinutes / 60)}h ${app.totalTimeMinutes % 60}min`
+                                          : `${app.totalTimeMinutes} min`
+                                        : 'Mai usata'}
+                                    </span>
+                                    <span>
+                                      Dati: {app.dataSizeMb > 0 ? `${app.dataSizeMb.toFixed(0)} MB` : '0 MB'}
+                                    </span>
+                                  </div>
+                                  {app.cacheSizeMb > 10 && (
+                                    <span className="text-amber-500">
+                                      Cache: {app.cacheSizeMb.toFixed(0)}MB
+                                    </span>
+                                  )}
+                                </div>
+                                {app.lastTimeUsed && app.lastTimeUsed > 0 && (
+                                  <div className="text-[10px] text-muted-foreground pl-7">
+                                    Ultimo uso: {new Date(app.lastTimeUsed).toLocaleDateString('it-IT', { 
+                                      day: 'numeric', 
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
