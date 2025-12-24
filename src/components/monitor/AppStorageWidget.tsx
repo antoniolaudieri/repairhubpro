@@ -26,7 +26,7 @@ interface AppAnalysis {
 }
 
 type SortOption = 'risk' | 'size' | 'usage' | 'lastUsed';
-type FilterOption = 'all' | 'problems' | 'heavy' | 'unused';
+type FilterOption = 'all' | 'problems' | 'heavy' | 'unused' | 'recent';
 
 export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
   const [apps, setApps] = useState<AppStorageInfo[]>([]);
@@ -276,6 +276,12 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
           (a.lastUsed && a.lastUsed < thirtyDaysAgo)
         );
         break;
+      case 'recent':
+        // Apps used in the last 24 hours, sorted by last used
+        const oneDayAgo = Date.now() - (24 * 60 * 60 * 1000);
+        filtered = filtered.filter(a => a.lastUsed && a.lastUsed > oneDayAgo);
+        filtered.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0));
+        break;
     }
     
     // Apply sort
@@ -475,6 +481,7 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Tutte le app</SelectItem>
+              <SelectItem value="recent">Usate di recente</SelectItem>
               <SelectItem value="problems">Con problemi</SelectItem>
               <SelectItem value="heavy">Pesanti (&gt;100MB)</SelectItem>
               <SelectItem value="unused">Non usate</SelectItem>
@@ -575,9 +582,9 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
                   </div>
 
                   {/* Actions + Size */}
-                  <div className="flex flex-col items-end gap-1 shrink-0">
+                  <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
                     <p className={cn(
-                      "text-sm font-bold",
+                      "text-sm font-bold whitespace-nowrap",
                       getStorageImpactColor(analysis.storageImpact)
                     )}>
                       {analysis.app.totalSizeMb >= 1024 
@@ -589,12 +596,11 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
                     {/* Open Settings button */}
                     <Button
                       variant="ghost"
-                      size="sm"
-                      className="h-6 text-[10px] px-2 gap-1"
+                      size="icon"
+                      className="h-7 w-7"
                       onClick={() => openAppSettings(analysis.app.packageName)}
                     >
-                      <Settings className="h-3 w-3" />
-                      Gestisci
+                      <Settings className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
