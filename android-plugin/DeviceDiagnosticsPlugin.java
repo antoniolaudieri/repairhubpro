@@ -38,7 +38,9 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @CapacitorPlugin(name = "DeviceDiagnostics")
@@ -429,31 +431,48 @@ public class DeviceDiagnosticsPlugin extends Plugin {
                 UsageStatsManager usageStatsManager = (UsageStatsManager) 
                     getContext().getSystemService(Context.USAGE_STATS_SERVICE);
                 
-                // Get stats for the last 30 days
+                // Get stats for the last 7 days for more accurate recent data
                 long endTime = System.currentTimeMillis();
-                long startTime = endTime - (30L * 24 * 60 * 60 * 1000);
+                long startTime = endTime - (7L * 24 * 60 * 60 * 1000);
                 
                 List<UsageStats> usageStatsList = usageStatsManager.queryUsageStats(
-                    UsageStatsManager.INTERVAL_MONTHLY, startTime, endTime);
+                    UsageStatsManager.INTERVAL_DAILY, startTime, endTime);
+                
+                // Aggregate stats by package (since we're querying daily)
+                Map<String, long[]> aggregatedStats = new HashMap<>();
+                
+                if (usageStatsList != null) {
+                    for (UsageStats usageStats : usageStatsList) {
+                        String pkg = usageStats.getPackageName();
+                        long timeMs = usageStats.getTotalTimeInForeground();
+                        long lastUsed = usageStats.getLastTimeUsed();
+                        
+                        if (aggregatedStats.containsKey(pkg)) {
+                            long[] existing = aggregatedStats.get(pkg);
+                            existing[0] += timeMs; // Add time
+                            existing[1] = Math.max(existing[1], lastUsed); // Keep latest
+                        } else {
+                            aggregatedStats.put(pkg, new long[]{timeMs, lastUsed});
+                        }
+                    }
+                }
                 
                 JSArray statsArray = new JSArray();
                 
-                if (usageStatsList != null && !usageStatsList.isEmpty()) {
-                    for (UsageStats usageStats : usageStatsList) {
-                        if (usageStats.getTotalTimeInForeground() > 0) {
-                            JSObject stat = new JSObject();
-                            stat.put("packageName", usageStats.getPackageName());
-                            stat.put("totalTimeMs", usageStats.getTotalTimeInForeground());
-                            stat.put("totalTimeMinutes", usageStats.getTotalTimeInForeground() / (1000 * 60));
-                            stat.put("lastTimeUsed", usageStats.getLastTimeUsed());
-                            statsArray.put(stat);
-                        }
-                    }
+                for (Map.Entry<String, long[]> entry : aggregatedStats.entrySet()) {
+                    long[] values = entry.getValue();
+                    JSObject stat = new JSObject();
+                    stat.put("packageName", entry.getKey());
+                    stat.put("totalTimeMs", values[0]);
+                    stat.put("totalTimeMinutes", values[0] / (1000 * 60));
+                    stat.put("lastTimeUsed", values[1]);
+                    statsArray.put(stat);
                 }
                 
                 JSObject result = new JSObject();
                 result.put("stats", statsArray);
                 result.put("hasPermission", usageStatsList != null && !usageStatsList.isEmpty());
+                result.put("count", statsArray.length());
                 call.resolve(result);
             } else {
                 JSObject result = new JSObject();
