@@ -152,6 +152,16 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
         try {
           console.log('Loading installed apps storage...');
           
+          // First, explicitly check if USAGE_ACCESS permission is granted
+          let hasUsagePermission = false;
+          try {
+            const permCheck = await DeviceDiagnostics.checkUsageStatsPermission();
+            hasUsagePermission = permCheck.granted;
+            console.log('Usage stats permission:', hasUsagePermission);
+          } catch (e) {
+            console.log('Could not check usage permission:', e);
+          }
+          
           // Load apps and usage stats in parallel
           const [result, usageResult] = await Promise.all([
             DeviceDiagnostics.getInstalledAppsStorage(),
@@ -173,51 +183,40 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
           }
           setUsageStats(statsMap);
           
-          // Check if result has apps array (new format) or is array directly
-          const appsData = Array.isArray(result) ? result : (result as any).apps || [];
+          // Get apps array from result
+          const appsData = (result as any).apps || [];
           
           console.log('Apps data count:', appsData.length);
           
-          // Check if we have size data - if all apps have 0 size, permission is needed
-          const hasValidSizeData = appsData.some((app: AppStorageInfo) => 
-            app.totalSizeMb > 0 || app.appSizeMb > 0 || app.dataSizeMb > 0
-          );
-          
           if (appsData.length === 0) {
-            // No apps found
             setNeedsPermission(true);
             setError('no_apps');
-          } else if (!hasValidSizeData) {
-            // Apps found but no size data - need USAGE_ACCESS permission
-            console.log('No valid size data - permission needed');
-            setApps(appsData);
+            return;
+          }
+          
+          setApps(appsData);
+          
+          // Analyze all apps with usage data
+          const analyzed = appsData.map((app: AppStorageInfo) => {
+            const analysis = analyzeApp(app);
+            const usageStat = statsMap.get(app.packageName);
+            return {
+              ...analysis,
+              usageMinutes: usageStat?.totalTimeMinutes || 0,
+              lastUsed: usageStat?.lastTimeUsed || 0
+            };
+          });
+          setAnalyzedApps(analyzed);
+          
+          // Check if we need to show permission warning
+          // dataSizeMb will be 0 for all apps if USAGE_ACCESS is not granted
+          const hasDataSizes = appsData.some((app: AppStorageInfo) => app.dataSizeMb > 0);
+          const hasUsageData = usageResult.hasPermission && usageResult.stats?.length > 0;
+          
+          if (!hasUsagePermission || (!hasDataSizes && !hasUsageData)) {
+            console.log('Missing detailed data - permission likely needed');
             setNeedsPermission(true);
             setError('need_usage_permission');
-            
-            // Still analyze what we have
-            const analyzed = appsData.map((app: AppStorageInfo) => {
-              const analysis = analyzeApp(app);
-              const usageStat = statsMap.get(app.packageName);
-              return {
-                ...analysis,
-                usageMinutes: usageStat?.totalTimeMinutes || 0,
-                lastUsed: usageStat?.lastTimeUsed || 0
-              };
-            });
-            setAnalyzedApps(analyzed);
-          } else {
-            setApps(appsData);
-            // Analyze all apps with usage data
-            const analyzed = appsData.map((app: AppStorageInfo) => {
-              const analysis = analyzeApp(app);
-              const usageStat = statsMap.get(app.packageName);
-              return {
-                ...analysis,
-                usageMinutes: usageStat?.totalTimeMinutes || 0,
-                lastUsed: usageStat?.lastTimeUsed || 0
-              };
-            });
-            setAnalyzedApps(analyzed);
           }
         } catch (e: any) {
           console.error('Error loading apps:', e);

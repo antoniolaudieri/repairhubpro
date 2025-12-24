@@ -339,16 +339,22 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
     }
   }
 
-  async getInstalledAppsStorage(): Promise<AppStorageInfo[]> {
+  async getInstalledAppsStorage(): Promise<{ apps: AppStorageInfo[] }> {
     // Web cannot access installed apps - throw error to trigger "plugin required" message
     console.log('[DeviceDiagnosticsWeb] getInstalledAppsStorage: Not available on web platform');
     throw new Error('not implemented - native plugin required');
   }
 
-  async requestUsageStatsPermission(): Promise<{ granted: boolean }> {
+  async checkUsageStatsPermission(): Promise<{ granted: boolean; error?: string }> {
+    // Web cannot check this permission - return false
+    console.log('[DeviceDiagnosticsWeb] checkUsageStatsPermission: Not available on web platform');
+    return { granted: false };
+  }
+
+  async requestUsageStatsPermission(): Promise<{ granted: boolean; settingsOpened?: boolean }> {
     // Web cannot request this permission - return false
     console.log('[DeviceDiagnosticsWeb] requestUsageStatsPermission: Not available on web platform');
-    return { granted: false };
+    return { granted: false, settingsOpened: false };
   }
 
   async openAppSettings(options: { packageName: string }): Promise<{ opened: boolean }> {
@@ -357,10 +363,10 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
     throw new Error('not implemented - native plugin required');
   }
 
-  async getAppUsageStats(): Promise<{ stats: any[]; hasPermission: boolean }> {
+  async getAppUsageStats(): Promise<{ stats: any[]; hasPermission: boolean; count?: number }> {
     // Web cannot get app usage stats
     console.log('[DeviceDiagnosticsWeb] getAppUsageStats: Not available on web platform');
-    return { stats: [], hasPermission: false };
+    return { stats: [], hasPermission: false, count: 0 };
   }
 
   async getAppVersion(): Promise<{ versionName: string; versionCode: number }> {

@@ -69,10 +69,11 @@ export interface DeviceDiagnosticsPlugin {
   getSensorsInfo(): Promise<SensorsInfo>;
   getBatteryAdvancedInfo(): Promise<BatteryAdvancedInfo>;
   testSensor(options: { sensorType: string }): Promise<{ working: boolean; value?: any; error?: string }>;
-  getInstalledAppsStorage(): Promise<AppStorageInfo[]>;
-  requestUsageStatsPermission(): Promise<{ granted: boolean }>;
+  getInstalledAppsStorage(): Promise<{ apps: AppStorageInfo[] }>;
+  checkUsageStatsPermission(): Promise<{ granted: boolean; error?: string }>;
+  requestUsageStatsPermission(): Promise<{ granted: boolean; settingsOpened?: boolean }>;
   openAppSettings(options: { packageName: string }): Promise<{ opened: boolean }>;
-  getAppUsageStats(): Promise<{ stats: AppUsageStat[]; hasPermission: boolean }>;
+  getAppUsageStats(): Promise<{ stats: AppUsageStat[]; hasPermission: boolean; count?: number }>;
   getAppVersion(): Promise<{ versionName: string; versionCode: number }>;
   downloadApk(options: { url: string; fileName: string }): Promise<{ success: boolean; filePath?: string; error?: string }>;
   installApk(options: { filePath: string }): Promise<{ success: boolean; error?: string }>;
