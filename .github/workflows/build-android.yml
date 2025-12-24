@@ -93,9 +93,49 @@ jobs:
       - name: Add permissions to AndroidManifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          sed -i 's|</manifest>|    <!-- Device diagnostics permissions -->\n    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />\n    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />\n    \n    <!-- APK installation permissions -->\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    \n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />\n        </intent>\n    </queries>\n</manifest>|' "$MANIFEST"
           
-          sed -i 's|</application>|        <provider\n            android:name="androidx.core.content.FileProvider"\n            android:authorities="${applicationId}.fileprovider"\n            android:exported="false"\n            android:grantUriPermissions="true">\n            <meta-data\n                android:name="android.support.FILE_PROVIDER_PATHS"\n                android:resource="@xml/file_paths" />\n        </provider>\n    </application>|' "$MANIFEST"
+          # Create a proper permissions block file
+          cat > /tmp/permissions.txt << 'PERMS'
+              <!-- Device diagnostics permissions -->
+              <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+              <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />
+              
+              <!-- APK installation permissions -->
+              <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+              <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+              <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+              
+              <queries>
+                  <intent>
+                      <action android:name="android.intent.action.MAIN" />
+                  </intent>
+              </queries>
+          PERMS
+          
+          # Insert permissions before </manifest> using awk for reliability
+          awk '/<\/manifest>/{while((getline line < "/tmp/permissions.txt") > 0) print line}1' "$MANIFEST" > /tmp/manifest_new.xml
+          mv /tmp/manifest_new.xml "$MANIFEST"
+
+      - name: Add FileProvider to AndroidManifest
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          
+          # Create FileProvider block
+          cat > /tmp/provider.txt << 'PROVIDER'
+                  <provider
+                      android:name="androidx.core.content.FileProvider"
+                      android:authorities="${applicationId}.fileprovider"
+                      android:exported="false"
+                      android:grantUriPermissions="true">
+                      <meta-data
+                          android:name="android.support.FILE_PROVIDER_PATHS"
+                          android:resource="@xml/file_paths" />
+                  </provider>
+          PROVIDER
+          
+          # Insert provider before </application> using awk
+          awk '/<\/application>/{while((getline line < "/tmp/provider.txt") > 0) print line}1' "$MANIFEST" > /tmp/manifest_new.xml
+          mv /tmp/manifest_new.xml "$MANIFEST"
       
       - name: Create file_paths.xml for FileProvider
         run: |

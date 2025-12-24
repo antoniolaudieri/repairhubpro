@@ -390,16 +390,50 @@ public class DeviceDiagnosticsPlugin extends Plugin {
             // Check current permission status first
             boolean alreadyGranted = hasUsageStatsPermission();
             
-            Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            getContext().startActivity(intent);
+            Intent intent;
+            
+            // Try to open settings directly for this app (Android 10+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+                    intent.setData(Uri.parse("package:" + getContext().getPackageName()));
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getContext().startActivity(intent);
+                } catch (Exception e) {
+                    // Fallback to general usage access settings
+                    intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getContext().startActivity(intent);
+                }
+            } else {
+                // For older Android versions, open general usage access settings
+                intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(intent);
+            }
             
             JSObject result = new JSObject();
             result.put("granted", alreadyGranted);
             result.put("settingsOpened", true);
+            result.put("packageName", getContext().getPackageName());
             call.resolve(result);
         } catch (Exception e) {
-            call.reject("Error requesting permission: " + e.getMessage());
+            // Last resort: open app info settings
+            try {
+                Intent appSettingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                appSettingsIntent.setData(Uri.parse("package:" + getContext().getPackageName()));
+                appSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(appSettingsIntent);
+                
+                JSObject result = new JSObject();
+                result.put("granted", false);
+                result.put("settingsOpened", true);
+                result.put("openedAppInfo", true);
+                result.put("message", "Vai su Permessi > Accesso utilizzo e attivalo");
+                call.resolve(result);
+            } catch (Exception ex) {
+                call.reject("Error requesting permission: " + e.getMessage());
+            }
         }
     }
 
