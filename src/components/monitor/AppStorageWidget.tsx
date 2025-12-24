@@ -578,7 +578,7 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
         </div>
 
         {/* Apps List */}
-        <ScrollArea className={cn("pr-2", expanded ? "h-[400px]" : "")}>
+        <ScrollArea className={cn("pr-4", expanded ? "h-[400px]" : "")}>
           <div className="space-y-2">
             {displayedApps.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-4">

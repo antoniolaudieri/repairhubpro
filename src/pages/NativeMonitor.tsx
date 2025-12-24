@@ -61,8 +61,13 @@ import { BatteryAdvancedWidget } from "@/components/monitor/BatteryAdvancedWidge
 import { BookCheckupWidget } from "@/components/monitor/BookCheckupWidget";
 import { DeviceImageWidget } from "@/components/monitor/DeviceImageWidget";
 import { AppStorageWidget } from "@/components/monitor/AppStorageWidget";
+import { SecurityWidget } from "@/components/monitor/SecurityWidget";
+import { DangerousPermissionsWidget } from "@/components/monitor/DangerousPermissionsWidget";
+import { UptimeWidget } from "@/components/monitor/UptimeWidget";
+import { SystemIntegrityWidget } from "@/components/monitor/SystemIntegrityWidget";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { ShieldCheck } from "lucide-react";
 
 interface CustomerNotification {
   id: string;
@@ -1111,6 +1116,13 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
               )}
             </TabsTrigger>
             <TabsTrigger 
+              value="security" 
+              className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Sicurezza
+            </TabsTrigger>
+            <TabsTrigger 
               value="tips" 
               className="text-sm px-4 py-2.5 rounded-xl whitespace-nowrap flex items-center gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground transition-all"
             >
@@ -2082,6 +2094,14 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
                 )}
               </>
             )}
+          </TabsContent>
+
+          {/* Security Tab */}
+          <TabsContent value="security" className="space-y-3 m-0">
+            <SecurityWidget />
+            <UptimeWidget />
+            <SystemIntegrityWidget />
+            <DangerousPermissionsWidget />
           </TabsContent>
 
           {/* Tips Tab */}

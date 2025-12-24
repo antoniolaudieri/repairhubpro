@@ -1,27 +1,48 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Power, Timer } from "lucide-react";
+import { Clock, Power, Timer, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import type { DeviceUptime } from "@/plugins/DeviceStoragePlugin";
+import { Capacitor } from "@capacitor/core";
+import DeviceDiagnostics, { DeviceUptime } from "@/plugins/DeviceStoragePlugin";
 
-interface UptimeWidgetProps {
-  uptime: DeviceUptime | null;
-  loading?: boolean;
-}
+export const UptimeWidget = () => {
+  const [uptime, setUptime] = useState<DeviceUptime | null>(null);
+  const [loading, setLoading] = useState(true);
+  const isNative = Capacitor.isNativePlatform();
 
-export const UptimeWidget = ({ uptime, loading }: UptimeWidgetProps) => {
+  useEffect(() => {
+    const loadUptime = async () => {
+      if (!isNative) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const result = await DeviceDiagnostics.getDeviceUptime();
+        setUptime(result);
+      } catch (error) {
+        console.error("Error loading uptime:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUptime();
+  }, [isNative]);
+
   if (loading) {
     return (
-      <Card className="animate-pulse">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Clock className="h-4 w-4" />
             Uptime
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-20 bg-muted rounded" />
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );

@@ -1,9 +1,9 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { 
   ShieldCheck, 
-  ShieldX, 
   Lock, 
   Unlock,
   FileCheck,
@@ -12,27 +12,48 @@ import {
   EyeOff,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
-import type { SystemIntegrityStatus } from "@/plugins/DeviceStoragePlugin";
+import { Capacitor } from "@capacitor/core";
+import DeviceDiagnostics, { SystemIntegrityStatus } from "@/plugins/DeviceStoragePlugin";
 
-interface SystemIntegrityWidgetProps {
-  integrity: SystemIntegrityStatus | null;
-  loading?: boolean;
-}
+export const SystemIntegrityWidget = () => {
+  const [integrity, setIntegrity] = useState<SystemIntegrityStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const isNative = Capacitor.isNativePlatform();
 
-export const SystemIntegrityWidget = ({ integrity, loading }: SystemIntegrityWidgetProps) => {
+  useEffect(() => {
+    const loadIntegrity = async () => {
+      if (!isNative) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const result = await DeviceDiagnostics.checkSystemIntegrity();
+        setIntegrity(result);
+      } catch (error) {
+        console.error("Error loading system integrity:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadIntegrity();
+  }, [isNative]);
+
   if (loading) {
     return (
-      <Card className="animate-pulse">
+      <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <ShieldCheck className="h-4 w-4" />
             Integrità Sistema
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-32 bg-muted rounded" />
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
