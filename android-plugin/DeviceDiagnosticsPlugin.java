@@ -26,10 +26,12 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.os.storage.StorageManager;
+import android.os.SystemClock;
 import android.app.AppOpsManager;
 import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
+import android.Manifest;
 
 import androidx.core.content.FileProvider;
 
@@ -698,6 +700,424 @@ public class DeviceDiagnosticsPlugin extends Plugin {
             Log.e(TAG, "Error installing APK: " + e.getMessage());
             call.reject("Error installing APK: " + e.getMessage());
         }
+    }
+
+    // ==================== SECURITY & INTEGRITY METHODS ====================
+
+    @PluginMethod
+    public void getSecurityStatus(PluginCall call) {
+        try {
+            JSObject result = new JSObject();
+            
+            // Root detection
+            boolean isRooted = checkRootStatus();
+            result.put("isRooted", isRooted);
+            result.put("rootMethod", detectRootMethod());
+            
+            // Bootloader status
+            String bootState = getSystemProperty("ro.boot.verifiedbootstate");
+            String flashLocked = getSystemProperty("ro.boot.flash.locked");
+            boolean isBootloaderUnlocked = "orange".equals(bootState) || "1".equals(flashLocked) == false;
+            result.put("isBootloaderUnlocked", isBootloaderUnlocked);
+            result.put("verifiedBootState", bootState != null ? bootState : "unknown");
+            
+            // Developer options
+            int devOptions = Settings.Global.getInt(
+                getContext().getContentResolver(),
+                Settings.Global.DEVELOPMENT_SETTINGS_ENABLED, 0);
+            result.put("isDeveloperOptionsEnabled", devOptions == 1);
+            
+            // USB Debugging
+            int adbEnabled = Settings.Global.getInt(
+                getContext().getContentResolver(),
+                Settings.Global.ADB_ENABLED, 0);
+            result.put("isUsbDebuggingEnabled", adbEnabled == 1);
+            
+            // Build tags
+            String buildTags = Build.TAGS;
+            result.put("buildTags", buildTags != null ? buildTags : "unknown");
+            result.put("isTestBuild", buildTags != null && buildTags.contains("test-keys"));
+            
+            // Security patch level
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                result.put("securityPatchLevel", Build.VERSION.SECURITY_PATCH);
+            } else {
+                result.put("securityPatchLevel", "unknown");
+            }
+            
+            call.resolve(result);
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting security status: " + e.getMessage());
+            call.reject("Error getting security status: " + e.getMessage());
+        }
+    }
+
+    private boolean checkRootStatus() {
+        // Check for common root indicators
+        String[] rootPaths = {
+            "/system/app/Superuser.apk",
+            "/sbin/su",
+            "/system/bin/su",
+            "/system/xbin/su",
+            "/data/local/xbin/su",
+            "/data/local/bin/su",
+            "/system/sd/xbin/su",
+            "/system/bin/failsafe/su",
+            "/data/local/su",
+            "/su/bin/su",
+            "/system/app/SuperSU.apk",
+            "/system/app/SuperSU/SuperSU.apk",
+            "/system/etc/init.d/99SuperSUDaemon",
+            "/dev/com.koushikdutta.superuser.daemon/",
+            "/system/xbin/daemonsu"
+        };
+        
+        for (String path : rootPaths) {
+            if (new File(path).exists()) {
+                return true;
+            }
+        }
+        
+        // Check for Magisk
+        String[] magiskPaths = {
+            "/sbin/.magisk",
+            "/cache/.disable_magisk",
+            "/dev/.magisk.unblock",
+            "/data/adb/magisk",
+            "/data/adb/magisk.img",
+            "/data/adb/magisk.db"
+        };
+        
+        for (String path : magiskPaths) {
+            if (new File(path).exists()) {
+                return true;
+            }
+        }
+        
+        // Check for root packages
+        PackageManager pm = getContext().getPackageManager();
+        String[] rootPackages = {
+            "com.noshufou.android.su",
+            "com.thirdparty.superuser",
+            "eu.chainfire.supersu",
+            "com.koushikdutta.superuser",
+            "com.zachspong.temprootremovejb",
+            "com.ramdroid.appquarantine",
+            "com.topjohnwu.magisk"
+        };
+        
+        for (String pkg : rootPackages) {
+            try {
+                pm.getPackageInfo(pkg, 0);
+                return true;
+            } catch (PackageManager.NameNotFoundException e) {
+                // Package not found, continue
+            }
+        }
+        
+        return false;
+    }
+
+    private String detectRootMethod() {
+        // Check for Magisk
+        if (new File("/data/adb/magisk").exists() || 
+            new File("/sbin/.magisk").exists()) {
+            return "magisk";
+        }
+        
+        // Check for SuperSU
+        if (new File("/system/app/SuperSU.apk").exists() ||
+            new File("/system/app/SuperSU/SuperSU.apk").exists()) {
+            return "supersu";
+        }
+        
+        // Check for generic su binary
+        if (new File("/system/xbin/su").exists() ||
+            new File("/system/bin/su").exists()) {
+            return "su_binary";
+        }
+        
+        return null;
+    }
+
+    private String getSystemProperty(String propName) {
+        try {
+            Class<?> systemProperties = Class.forName("android.os.SystemProperties");
+            java.lang.reflect.Method get = systemProperties.getMethod("get", String.class);
+            String value = (String) get.invoke(null, propName);
+            return (value != null && !value.isEmpty()) ? value : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    @PluginMethod
+    public void getDangerousPermissions(PluginCall call) {
+        try {
+            PackageManager pm = getContext().getPackageManager();
+            List<ApplicationInfo> apps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+            
+            String[] dangerousPermissions = {
+                Manifest.permission.READ_CONTACTS,
+                Manifest.permission.WRITE_CONTACTS,
+                Manifest.permission.READ_SMS,
+                Manifest.permission.SEND_SMS,
+                Manifest.permission.READ_CALL_LOG,
+                Manifest.permission.WRITE_CALL_LOG,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_PHONE_STATE,
+                Manifest.permission.CALL_PHONE,
+                Manifest.permission.READ_CALENDAR,
+                Manifest.permission.WRITE_CALENDAR
+            };
+            
+            JSArray appsArray = new JSArray();
+            
+            for (ApplicationInfo appInfo : apps) {
+                try {
+                    PackageInfo pkgInfo = pm.getPackageInfo(appInfo.packageName, 
+                        PackageManager.GET_PERMISSIONS);
+                    
+                    if (pkgInfo.requestedPermissions == null) continue;
+                    
+                    JSArray grantedDangerous = new JSArray();
+                    
+                    for (int i = 0; i < pkgInfo.requestedPermissions.length; i++) {
+                        String perm = pkgInfo.requestedPermissions[i];
+                        int flags = pkgInfo.requestedPermissionsFlags[i];
+                        
+                        // Check if permission is granted
+                        if ((flags & PackageInfo.REQUESTED_PERMISSION_GRANTED) != 0) {
+                            for (String dangerous : dangerousPermissions) {
+                                if (perm.equals(dangerous)) {
+                                    // Get short name
+                                    String shortName = perm.substring(perm.lastIndexOf('.') + 1);
+                                    grantedDangerous.put(shortName);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (grantedDangerous.length() > 0) {
+                        JSObject appData = new JSObject();
+                        appData.put("packageName", appInfo.packageName);
+                        appData.put("appName", pm.getApplicationLabel(appInfo).toString());
+                        appData.put("permissions", grantedDangerous);
+                        appData.put("permissionCount", grantedDangerous.length());
+                        appData.put("isSystemApp", (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0);
+                        
+                        // Get app icon
+                        try {
+                            Drawable icon = pm.getApplicationIcon(appInfo);
+                            Bitmap bitmap = drawableToBitmap(icon);
+                            if (bitmap != null) {
+                                Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, 48, 48, true);
+                                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                                scaledBitmap.compress(Bitmap.CompressFormat.PNG, 80, baos);
+                                byte[] byteArray = baos.toByteArray();
+                                String base64 = Base64.encodeToString(byteArray, Base64.NO_WRAP);
+                                appData.put("iconBase64", "data:image/png;base64," + base64);
+                                scaledBitmap.recycle();
+                            }
+                        } catch (Exception e) {
+                            // Icon not available
+                        }
+                        
+                        appsArray.put(appData);
+                    }
+                } catch (Exception e) {
+                    // Skip this app
+                }
+            }
+            
+            JSObject result = new JSObject();
+            result.put("apps", appsArray);
+            result.put("totalApps", appsArray.length());
+            call.resolve(result);
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting dangerous permissions: " + e.getMessage());
+            call.reject("Error getting dangerous permissions: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void getDeviceUptime(PluginCall call) {
+        try {
+            long uptimeMs = SystemClock.elapsedRealtime();
+            long uptimeSeconds = uptimeMs / 1000;
+            long uptimeMinutes = uptimeSeconds / 60;
+            long uptimeHours = uptimeMinutes / 60;
+            long uptimeDays = uptimeHours / 24;
+            
+            // Calculate last boot time
+            long currentTimeMs = System.currentTimeMillis();
+            long bootTimeMs = currentTimeMs - uptimeMs;
+            
+            JSObject result = new JSObject();
+            result.put("uptimeMs", uptimeMs);
+            result.put("uptimeSeconds", uptimeSeconds);
+            result.put("uptimeMinutes", uptimeMinutes);
+            result.put("uptimeHours", uptimeHours);
+            result.put("uptimeDays", uptimeDays);
+            result.put("lastBootTime", bootTimeMs);
+            result.put("formattedUptime", formatUptime(uptimeMs));
+            
+            call.resolve(result);
+        } catch (Exception e) {
+            Log.e(TAG, "Error getting device uptime: " + e.getMessage());
+            call.reject("Error getting device uptime: " + e.getMessage());
+        }
+    }
+
+    private String formatUptime(long uptimeMs) {
+        long seconds = uptimeMs / 1000;
+        long minutes = seconds / 60;
+        long hours = minutes / 60;
+        long days = hours / 24;
+        
+        hours = hours % 24;
+        minutes = minutes % 60;
+        
+        if (days > 0) {
+            return String.format("%dd %dh %dm", days, hours, minutes);
+        } else if (hours > 0) {
+            return String.format("%dh %dm", hours, minutes);
+        } else {
+            return String.format("%dm", minutes);
+        }
+    }
+
+    @PluginMethod
+    public void checkSystemIntegrity(PluginCall call) {
+        try {
+            JSObject result = new JSObject();
+            
+            // Check if /system is read-only
+            boolean systemReadOnly = isSystemReadOnly();
+            result.put("systemReadOnly", systemReadOnly);
+            
+            // Check for official build
+            String buildTags = Build.TAGS;
+            boolean officialBuild = buildTags == null || !buildTags.contains("test-keys");
+            result.put("officialBuild", officialBuild);
+            
+            // Check SELinux status
+            String seLinuxStatus = getSeLinuxStatus();
+            result.put("seLinuxStatus", seLinuxStatus);
+            result.put("seLinuxEnforcing", "Enforcing".equals(seLinuxStatus));
+            
+            // Check for system modifications
+            boolean systemModified = checkSystemModifications();
+            result.put("systemModified", systemModified);
+            
+            // Check verified boot state
+            String verifiedBootState = getSystemProperty("ro.boot.verifiedbootstate");
+            result.put("verifiedBootState", verifiedBootState != null ? verifiedBootState : "unknown");
+            
+            // Check device encryption
+            boolean isEncrypted = checkDeviceEncryption();
+            result.put("isEncrypted", isEncrypted);
+            
+            // Calculate integrity score (0-100)
+            int integrityScore = 100;
+            if (!systemReadOnly) integrityScore -= 25;
+            if (!officialBuild) integrityScore -= 20;
+            if (!"Enforcing".equals(seLinuxStatus)) integrityScore -= 20;
+            if (systemModified) integrityScore -= 25;
+            if (!isEncrypted) integrityScore -= 10;
+            result.put("integrityScore", Math.max(0, integrityScore));
+            
+            call.resolve(result);
+        } catch (Exception e) {
+            Log.e(TAG, "Error checking system integrity: " + e.getMessage());
+            call.reject("Error checking system integrity: " + e.getMessage());
+        }
+    }
+
+    private boolean isSystemReadOnly() {
+        try {
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.FileReader("/proc/mounts"));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.contains("/system")) {
+                    reader.close();
+                    return line.contains("ro,") || line.contains(",ro ");
+                }
+            }
+            reader.close();
+        } catch (Exception e) {
+            // Default to true if cannot read
+        }
+        return true;
+    }
+
+    private String getSeLinuxStatus() {
+        try {
+            // Try to read SELinux status from /sys/fs/selinux/enforce
+            File enforceFile = new File("/sys/fs/selinux/enforce");
+            if (enforceFile.exists()) {
+                java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.FileReader(enforceFile));
+                String status = reader.readLine();
+                reader.close();
+                return "1".equals(status) ? "Enforcing" : "Permissive";
+            }
+            
+            // Fallback: use getenforce command
+            Process process = Runtime.getRuntime().exec("getenforce");
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(process.getInputStream()));
+            String status = reader.readLine();
+            reader.close();
+            return status != null ? status : "Unknown";
+        } catch (Exception e) {
+            return "Unknown";
+        }
+    }
+
+    private boolean checkSystemModifications() {
+        // Check for common system modification indicators
+        String[] modIndicators = {
+            "/system/xposed.prop",
+            "/system/framework/XposedBridge.jar",
+            "/data/data/de.robv.android.xposed.installer",
+            "/data/user/0/org.meowcat.edxposed.manager",
+            "/data/adb/lspd"
+        };
+        
+        for (String path : modIndicators) {
+            if (new File(path).exists()) {
+                return true;
+            }
+        }
+        
+        // Check for modified build.prop
+        File buildProp = new File("/system/build.prop");
+        if (!buildProp.canRead()) {
+            return true; // Cannot read, might be modified
+        }
+        
+        return false;
+    }
+
+    private boolean checkDeviceEncryption() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                // Check if device is encrypted
+                String encryptionState = getSystemProperty("ro.crypto.state");
+                return "encrypted".equals(encryptionState);
+            }
+        } catch (Exception e) {
+            // Default to false if cannot determine
+        }
+        return false;
     }
 
     private Bitmap drawableToBitmap(Drawable drawable) {
