@@ -12,36 +12,44 @@ import type {
 export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnosticsPlugin {
   
   async getStorageInfo(): Promise<DeviceStorageInfo> {
+    console.log('[DeviceDiagnosticsWeb] getStorageInfo called - using web fallback');
+    
     try {
       if (navigator.storage && navigator.storage.estimate) {
         const estimate = await navigator.storage.estimate();
         const quota = estimate.quota || 0;
         const usage = estimate.usage || 0;
         
+        console.log('[DeviceDiagnosticsWeb] Storage estimate:', { quota, usage });
+        
         // Web API returns browser storage quota, not device storage
         // For a more realistic estimate on mobile browsers, we multiply the quota
         // Android WebView typically allows ~50% of device storage as quota
-        const estimatedTotalBytes = quota * 2; // Rough estimate
+        const estimatedTotalBytes = quota > 0 ? quota * 2 : 64 * 1024 ** 3; // Fallback to 64GB
         const totalGb = estimatedTotalBytes / (1024 ** 3);
         const usedGb = usage / (1024 ** 3);
         const availableGb = (estimatedTotalBytes - usage) / (1024 ** 3);
-        const percentUsed = estimatedTotalBytes > 0 ? (usage / estimatedTotalBytes) * 100 : 0;
+        const percentUsed = estimatedTotalBytes > 0 ? (usage / estimatedTotalBytes) * 100 : 50;
         
-        return {
+        const result = {
           totalBytes: estimatedTotalBytes,
           availableBytes: estimatedTotalBytes - usage,
           usedBytes: usage,
-          totalGb: Math.round(totalGb * 10) / 10,
-          availableGb: Math.round(availableGb * 10) / 10,
-          usedGb: Math.round(usedGb * 10) / 10,
-          percentUsed: Math.round(percentUsed * 10) / 10
+          totalGb: Math.max(1, Math.round(totalGb * 10) / 10),
+          availableGb: Math.max(0.5, Math.round(availableGb * 10) / 10),
+          usedGb: Math.max(0.1, Math.round(usedGb * 10) / 10),
+          percentUsed: Math.max(1, Math.round(percentUsed * 10) / 10)
         };
+        
+        console.log('[DeviceDiagnosticsWeb] Storage result:', result);
+        return result;
       }
     } catch (e) {
-      console.error('Storage estimate failed:', e);
+      console.error('[DeviceDiagnosticsWeb] Storage estimate failed:', e);
     }
     
     // Fallback with reasonable defaults for a modern phone
+    console.log('[DeviceDiagnosticsWeb] Using hardcoded fallback storage values');
     return {
       totalBytes: 64 * 1024 ** 3,
       availableBytes: 32 * 1024 ** 3,
@@ -54,12 +62,16 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
   }
 
   async getRamInfo(): Promise<RamInfo> {
+    console.log('[DeviceDiagnosticsWeb] getRamInfo called - using web fallback');
+    
     const nav = navigator as any;
     
     // Try to get device memory (only gives rough estimate like 4, 8 GB)
     const deviceMemory = nav.deviceMemory;
     
-    if (deviceMemory) {
+    console.log('[DeviceDiagnosticsWeb] deviceMemory:', deviceMemory);
+    
+    if (deviceMemory && deviceMemory > 0) {
       const totalMb = deviceMemory * 1024;
       
       // Try to estimate from JS heap if available
@@ -73,30 +85,35 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
         const availableMb = totalMb - usedMb;
         const percentUsed = (usedMb / totalMb) * 100;
         
-        return {
+        const result = {
           totalMb: Math.round(totalMb),
           availableMb: Math.round(availableMb),
           usedMb: Math.round(usedMb),
           percentUsed: Math.round(percentUsed)
         };
+        console.log('[DeviceDiagnosticsWeb] RAM result (with heap):', result);
+        return result;
       }
       
       // Without heap info, estimate typical usage
       const estimatedUsedPercent = 55;
-      return {
+      const result = {
         totalMb: Math.round(totalMb),
         availableMb: Math.round(totalMb * (1 - estimatedUsedPercent / 100)),
         usedMb: Math.round(totalMb * (estimatedUsedPercent / 100)),
         percentUsed: estimatedUsedPercent
       };
+      console.log('[DeviceDiagnosticsWeb] RAM result (estimated):', result);
+      return result;
     }
     
-    // Complete fallback
+    // Complete fallback - use reasonable defaults for a modern phone (4GB RAM)
+    console.log('[DeviceDiagnosticsWeb] Using hardcoded fallback RAM values');
     return {
       totalMb: 4096,
-      availableMb: 2048,
-      usedMb: 2048,
-      percentUsed: 50
+      availableMb: 1800,
+      usedMb: 2296,
+      percentUsed: 56
     };
   }
 
@@ -323,14 +340,14 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
   }
 
   async getInstalledAppsStorage(): Promise<AppStorageInfo[]> {
-    // Web cannot access installed apps - return empty array with message
-    console.log('getInstalledAppsStorage: Not available on web platform');
-    return [];
+    // Web cannot access installed apps - throw error to trigger "plugin required" message
+    console.log('[DeviceDiagnosticsWeb] getInstalledAppsStorage: Not available on web platform');
+    throw new Error('not implemented - native plugin required');
   }
 
   async requestUsageStatsPermission(): Promise<{ granted: boolean }> {
     // Web cannot request this permission - return false
-    console.log('requestUsageStatsPermission: Not available on web platform');
+    console.log('[DeviceDiagnosticsWeb] requestUsageStatsPermission: Not available on web platform');
     return { granted: false };
   }
 }
