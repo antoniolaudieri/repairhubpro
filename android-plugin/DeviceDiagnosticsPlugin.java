@@ -26,6 +26,7 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.StatFs;
 import android.os.storage.StorageManager;
+import android.app.AppOpsManager;
 import android.provider.Settings;
 import android.util.Base64;
 import android.util.Log;
@@ -353,15 +354,49 @@ public class DeviceDiagnosticsPlugin extends Plugin {
         }
     }
 
+    // Helper method to check if USAGE_STATS permission is granted
+    private boolean hasUsageStatsPermission() {
+        try {
+            AppOpsManager appOps = (AppOpsManager) getContext().getSystemService(Context.APP_OPS_SERVICE);
+            int mode = appOps.checkOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(),
+                getContext().getPackageName()
+            );
+            return mode == AppOpsManager.MODE_ALLOWED;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @PluginMethod
+    public void checkUsageStatsPermission(PluginCall call) {
+        try {
+            boolean granted = hasUsageStatsPermission();
+            JSObject result = new JSObject();
+            result.put("granted", granted);
+            call.resolve(result);
+        } catch (Exception e) {
+            JSObject result = new JSObject();
+            result.put("granted", false);
+            result.put("error", e.getMessage());
+            call.resolve(result);
+        }
+    }
+
     @PluginMethod
     public void requestUsageStatsPermission(PluginCall call) {
         try {
+            // Check current permission status first
+            boolean alreadyGranted = hasUsageStatsPermission();
+            
             Intent intent = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
             intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             getContext().startActivity(intent);
             
             JSObject result = new JSObject();
-            result.put("granted", false); // User needs to grant manually
+            result.put("granted", alreadyGranted);
+            result.put("settingsOpened", true);
             call.resolve(result);
         } catch (Exception e) {
             call.reject("Error requesting permission: " + e.getMessage());
