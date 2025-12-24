@@ -46,16 +46,44 @@ import {
   Flame,
   Snowflake,
   Info,
-  Compass
+  Compass,
+  Bell,
+  BellRing,
+  Calendar
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNativeDeviceInfo } from "@/hooks/useNativeDeviceInfo";
 import { useDevicePermissions } from "@/hooks/useDevicePermissions";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { SensorWidget } from "@/components/monitor/SensorWidget";
 import { BatteryAdvancedWidget } from "@/components/monitor/BatteryAdvancedWidget";
 import { BookCheckupWidget } from "@/components/monitor/BookCheckupWidget";
 import { DeviceImageWidget } from "@/components/monitor/DeviceImageWidget";
 import { AppStorageWidget } from "@/components/monitor/AppStorageWidget";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
+
+interface CustomerNotification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  read: boolean;
+  created_at: string;
+  data?: Record<string, unknown>;
+}
+
+interface Appointment {
+  id: string;
+  preferred_date: string;
+  preferred_time: string;
+  status: string;
+  device_type: string;
+  device_brand: string | null;
+  device_model: string | null;
+  issue_description: string;
+  created_at: string;
+}
 
 interface LoyaltyCard {
   id: string;
@@ -112,9 +140,13 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [notifications, setNotifications] = useState<CustomerNotification[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   const deviceData = useNativeDeviceInfo();
   const { requestAllPermissions, hasRequested } = useDevicePermissions();
+  const pushNotifications = usePushNotifications();
 
   // Request permissions on mount
   useEffect(() => {
@@ -122,6 +154,170 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
       requestAllPermissions();
     }
   }, [hasRequested, requestAllPermissions]);
+
+  // Fetch notifications and appointments
+  useEffect(() => {
+    if (!user.email) return;
+
+    const fetchNotifications = async () => {
+      const { data } = await supabase
+        .from("customer_notifications")
+        .select("*")
+        .eq("customer_email", user.email)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      
+      if (data) {
+        setNotifications(data as CustomerNotification[]);
+        setUnreadCount(data.filter(n => !n.read).length);
+      }
+    };
+
+    const fetchAppointments = async () => {
+      // Find customer IDs by email
+      const { data: customers } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("email", user.email);
+
+      if (customers && customers.length > 0) {
+        const customerIds = customers.map(c => c.id);
+        
+        // Also try to get appointments by email directly
+        const { data: appointmentsByEmail } = await supabase
+          .from("appointments")
+          .select("*")
+          .eq("customer_email", user.email)
+          .order("preferred_date", { ascending: false })
+          .limit(20);
+        
+        if (appointmentsByEmail) {
+          setAppointments(appointmentsByEmail as Appointment[]);
+        }
+      } else {
+        // Try by email directly
+        const { data: appointmentsByEmail } = await supabase
+          .from("appointments")
+          .select("*")
+          .eq("customer_email", user.email)
+          .order("preferred_date", { ascending: false })
+          .limit(20);
+        
+        if (appointmentsByEmail) {
+          setAppointments(appointmentsByEmail as Appointment[]);
+        }
+      }
+    };
+
+    fetchNotifications();
+    fetchAppointments();
+
+    // Subscribe to realtime notifications
+    const notificationChannel = supabase
+      .channel(`customer-notifications-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "customer_notifications",
+          filter: `customer_email=eq.${user.email}`,
+        },
+        (payload) => {
+          const newNotification = payload.new as CustomerNotification;
+          setNotifications(prev => [newNotification, ...prev]);
+          setUnreadCount(prev => prev + 1);
+          toast.success(newNotification.title, {
+            description: newNotification.message,
+            duration: 8000,
+          });
+        }
+      )
+      .subscribe();
+
+    // Subscribe to appointment updates
+    const appointmentChannel = supabase
+      .channel(`customer-appointments-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `customer_email=eq.${user.email}`,
+        },
+        (payload) => {
+          if (payload.eventType === "UPDATE") {
+            const updated = payload.new as Appointment;
+            setAppointments(prev => prev.map(a => a.id === updated.id ? updated : a));
+            
+            // Show toast for status changes
+            if (updated.status === "confirmed") {
+              toast.success("Prenotazione Confermata! ✅", {
+                description: `Il tuo appuntamento del ${format(new Date(updated.preferred_date), "d MMMM", { locale: it })} alle ${updated.preferred_time} è stato confermato`,
+                duration: 10000,
+              });
+            } else if (updated.status === "cancelled") {
+              toast.error("Prenotazione Annullata ❌", {
+                description: `La prenotazione del ${format(new Date(updated.preferred_date), "d MMMM", { locale: it })} è stata annullata`,
+                duration: 10000,
+              });
+            }
+          } else if (payload.eventType === "INSERT") {
+            const newApp = payload.new as Appointment;
+            setAppointments(prev => [newApp, ...prev]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationChannel);
+      supabase.removeChannel(appointmentChannel);
+    };
+  }, [user.email, user.id]);
+
+  // Mark notification as read
+  const markAsRead = async (notificationId: string) => {
+    await supabase
+      .from("customer_notifications")
+      .update({ read: true })
+      .eq("id", notificationId);
+    
+    setNotifications(prev => prev.map(n => 
+      n.id === notificationId ? { ...n, read: true } : n
+    ));
+    setUnreadCount(prev => Math.max(0, prev - 1));
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    if (!user.email) return;
+    
+    await supabase
+      .from("customer_notifications")
+      .update({ read: true })
+      .eq("customer_email", user.email)
+      .eq("read", false);
+    
+    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    setUnreadCount(0);
+  };
+
+  // Enable push notifications
+  const handleEnablePush = async () => {
+    const success = await pushNotifications.subscribe();
+    if (success) {
+      toast.success("Notifiche push attivate!", {
+        description: "Riceverai aggiornamenti anche quando l'app è chiusa",
+      });
+    } else {
+      toast.error("Impossibile attivare le notifiche", {
+        description: "Controlla i permessi nelle impostazioni del dispositivo",
+      });
+    }
+  };
+
   // Generate health tips based on device data
   const generateHealthTips = useCallback((): HealthTip[] => {
     const tips: HealthTip[] = [];
@@ -785,6 +981,14 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
             <TabsTrigger value="overview" className="text-sm px-3 py-2 whitespace-nowrap">
               📊 Stato
             </TabsTrigger>
+            <TabsTrigger value="notifications" className="text-sm px-3 py-2 whitespace-nowrap flex items-center gap-1">
+              🔔 Notifiche
+              {unreadCount > 0 && (
+                <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-medium">
+                  {unreadCount}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="apps" className="text-sm px-3 py-2 whitespace-nowrap">
               📱 App
             </TabsTrigger>
@@ -943,6 +1147,186 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
               </Card>
             )}
 
+            {/* Book Checkup Widget */}
+            {loyaltyCard && (
+              <BookCheckupWidget
+                centroId={loyaltyCard.centro_id}
+                customerId={loyaltyCard.customer_id}
+                customerEmail={user.email || ""}
+                customerName={user.email?.split("@")[0] || "Cliente"}
+                deviceInfo={{
+                  model: deviceData.deviceModel,
+                  manufacturer: deviceData.deviceManufacturer,
+                  healthScore: deviceData.healthScore,
+                }}
+              />
+            )}
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="space-y-3 m-0">
+            {/* Push Notification Banner */}
+            {!pushNotifications.isSubscribed && pushNotifications.isSupported && (
+              <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+                      <BellRing className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-sm">Attiva le Notifiche Push</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Ricevi aggiornamenti sulle tue prenotazioni anche quando l'app è chiusa
+                      </p>
+                      <Button 
+                        size="sm" 
+                        className="mt-3"
+                        onClick={handleEnablePush}
+                        disabled={pushNotifications.isLoading}
+                      >
+                        {pushNotifications.isLoading ? "Attivazione..." : "Attiva Notifiche"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {pushNotifications.isSubscribed && (
+              <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800">
+                <CardContent className="p-3 flex items-center gap-2">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <span className="text-sm text-green-700 dark:text-green-300">Notifiche push attive</span>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Appointments Section */}
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Calendar className="h-4 w-4" />
+                    Le Tue Prenotazioni
+                  </CardTitle>
+                  <Badge variant="outline">{appointments.length}</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {appointments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nessuna prenotazione trovata
+                  </p>
+                ) : (
+                  appointments.slice(0, 5).map((appointment) => (
+                    <div 
+                      key={appointment.id} 
+                      className={`p-3 rounded-lg border ${
+                        appointment.status === 'confirmed' 
+                          ? 'bg-green-50 dark:bg-green-950/30 border-green-200' 
+                          : appointment.status === 'cancelled'
+                          ? 'bg-red-50 dark:bg-red-950/30 border-red-200'
+                          : 'bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm">
+                              {format(new Date(appointment.preferred_date), "d MMMM yyyy", { locale: it })}
+                            </p>
+                            <Badge variant="outline" className="text-xs">
+                              {appointment.preferred_time}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {appointment.device_brand} {appointment.device_model || appointment.device_type}
+                          </p>
+                        </div>
+                        <Badge 
+                          className={`text-xs ${
+                            appointment.status === 'confirmed' 
+                              ? 'bg-green-500' 
+                              : appointment.status === 'cancelled'
+                              ? 'bg-red-500'
+                              : appointment.status === 'completed'
+                              ? 'bg-blue-500'
+                              : 'bg-yellow-500'
+                          }`}
+                        >
+                          {appointment.status === 'pending' ? 'In Attesa' :
+                           appointment.status === 'confirmed' ? 'Confermata' :
+                           appointment.status === 'cancelled' ? 'Annullata' :
+                           appointment.status === 'completed' ? 'Completata' : appointment.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Notifications List */}
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Bell className="h-4 w-4" />
+                    Notifiche Recenti
+                  </CardTitle>
+                  {unreadCount > 0 && (
+                    <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-xs h-7">
+                      Segna tutte come lette
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {notifications.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nessuna notifica
+                  </p>
+                ) : (
+                  notifications.slice(0, 10).map((notification) => (
+                    <div 
+                      key={notification.id}
+                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                        notification.read 
+                          ? 'bg-muted/30' 
+                          : 'bg-primary/5 border-primary/20'
+                      }`}
+                      onClick={() => !notification.read && markAsRead(notification.id)}
+                    >
+                      <div className="flex items-start gap-2">
+                        {!notification.read && (
+                          <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm ${notification.read ? 'text-muted-foreground' : 'font-medium'}`}>
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {format(new Date(notification.created_at), "d MMM, HH:mm", { locale: it })}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Apps Tab - Storage per app */}
+          <TabsContent value="apps" className="space-y-3 m-0">
+            <AppStorageWidget onRefresh={() => deviceData.refresh?.()} />
+          </TabsContent>
+
+          {/* Hardware Tab - Battery Card moved here */}
+          <TabsContent value="hardware" className="space-y-3 m-0">
             {/* Battery Card - Enhanced */}
             <Card>
               <CardContent className="p-4">
@@ -1124,11 +1508,6 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
                 }}
               />
             )}
-          </TabsContent>
-
-          {/* Apps Tab - Storage per app */}
-          <TabsContent value="apps" className="space-y-3 m-0">
-            <AppStorageWidget onRefresh={() => deviceData.refresh?.()} />
           </TabsContent>
 
           {/* Hardware Tab */}
