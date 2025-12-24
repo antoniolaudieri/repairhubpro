@@ -745,23 +745,44 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
 
     setSyncing(true);
     try {
-      // Try to get installed apps data for sync
+      // Try to get installed apps data with usage stats for sync
       let installedAppsData: any[] | null = null;
       try {
         const DeviceDiagnostics = (await import('@/plugins/DeviceStoragePlugin')).default;
-        const appsResult = await DeviceDiagnostics.getInstalledAppsStorage();
+        
+        // Get both apps storage and usage stats in parallel
+        const [appsResult, usageResult] = await Promise.all([
+          DeviceDiagnostics.getInstalledAppsStorage(),
+          DeviceDiagnostics.getAppUsageStats().catch(() => ({ stats: [], hasPermission: false }))
+        ]);
+        
         const appsData = Array.isArray(appsResult) ? appsResult : (appsResult as any).apps || [];
+        const usageStats = usageResult.stats || [];
+        
+        // Create a map of usage stats by package name for quick lookup
+        const usageMap = new Map<string, { totalTimeMinutes: number; lastTimeUsed: number }>();
+        usageStats.forEach((stat: any) => {
+          usageMap.set(stat.packageName, {
+            totalTimeMinutes: stat.totalTimeMinutes || 0,
+            lastTimeUsed: stat.lastTimeUsed || 0
+          });
+        });
         
         // Only store top 30 apps to avoid huge payload, and strip icons
-        installedAppsData = appsData.slice(0, 30).map((app: any) => ({
-          packageName: app.packageName,
-          appName: app.appName,
-          totalSizeMb: app.totalSizeMb,
-          appSizeMb: app.appSizeMb,
-          dataSizeMb: app.dataSizeMb,
-          cacheSizeMb: app.cacheSizeMb,
-          isSystemApp: app.isSystemApp
-        }));
+        installedAppsData = appsData.slice(0, 30).map((app: any) => {
+          const usage = usageMap.get(app.packageName);
+          return {
+            packageName: app.packageName,
+            appName: app.appName,
+            totalSizeMb: app.totalSizeMb,
+            appSizeMb: app.appSizeMb,
+            dataSizeMb: app.dataSizeMb,
+            cacheSizeMb: app.cacheSizeMb,
+            isSystemApp: app.isSystemApp,
+            totalTimeMinutes: usage?.totalTimeMinutes || 0,
+            lastTimeUsed: usage?.lastTimeUsed || 0
+          };
+        });
       } catch (e) {
         console.log('Could not get installed apps for sync:', e);
       }
