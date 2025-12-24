@@ -83,11 +83,18 @@ jobs:
           sed -i "s/versionName \"1.0\"/versionName \"${{ env.APP_VERSION }}\"/" "$BUILD_GRADLE"
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" "$BUILD_GRADLE"
       
+      - name: Add tools namespace to AndroidManifest
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "xmlns:tools" "$MANIFEST"; then
+            sed -i 's/<manifest /<manifest xmlns:tools="http:\/\/schemas.android.com\/tools" /' "$MANIFEST"
+          fi
+
       - name: Add permissions to AndroidManifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          # Add permissions for update functionality
-          sed -i 's|</manifest>|    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />\n        </intent>\n    </queries>\n</manifest>|' "$MANIFEST"
+          # Add all required permissions before </manifest>
+          sed -i 's|</manifest>|    <!-- Device diagnostics permissions -->\n    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />\n    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />\n    \n    <!-- APK installation permissions -->\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    \n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />\n        </intent>\n    </queries>\n</manifest>|' "$MANIFEST"
           
           # Add FileProvider for APK installation
           sed -i 's|</application>|        <provider\n            android:name="androidx.core.content.FileProvider"\n            android:authorities="${applicationId}.fileprovider"\n            android:exported="false"\n            android:grantUriPermissions="true">\n            <meta-data\n                android:name="android.support.FILE_PROVIDER_PATHS"\n                android:resource="@xml/file_paths" />\n        </provider>\n    </application>|' "$MANIFEST"
@@ -97,9 +104,12 @@ jobs:
           mkdir -p android/app/src/main/res/xml
           cat > android/app/src/main/res/xml/file_paths.xml << 'EOF'
           <?xml version="1.0" encoding="utf-8"?>
-          <paths>
-              <external-path name="downloads" path="Download/" />
-              <cache-path name="cache" path="/" />
+          <paths xmlns:android="http://schemas.android.com/apk/res/android">
+              <external-path name="external_files" path="." />
+              <external-files-path name="external_files_path" path="." />
+              <cache-path name="cache" path="." />
+              <files-path name="files" path="." />
+              <root-path name="root" path="." />
           </paths>
           EOF
       
