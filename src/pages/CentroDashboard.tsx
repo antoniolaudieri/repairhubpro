@@ -254,20 +254,36 @@ export default function CentroDashboard() {
         break;
     }
 
+    // Fetch repair commissions
     const { data: commissions } = await supabase
       .from("commission_ledger")
       .select("gross_revenue, platform_commission, centro_commission")
       .eq("centro_id", centroId)
       .gte("created_at", startDate.toISOString());
 
-    const totalRevenue = commissions?.reduce((sum, c) => sum + (c.gross_revenue || 0), 0) || 0;
-    const platformCommission = commissions?.reduce((sum, c) => sum + (c.platform_commission || 0), 0) || 0;
-    const centroEarnings = commissions?.reduce((sum, c) => sum + (c.centro_commission || 0), 0) || 0;
+    // Fetch loyalty card revenue for the same period
+    const { data: loyaltyCards } = await supabase
+      .from("loyalty_cards")
+      .select("amount_paid, centro_revenue, platform_commission")
+      .eq("centro_id", centroId)
+      .eq("status", "active")
+      .gte("activated_at", startDate.toISOString());
 
+    // Sum repair commissions
+    const repairRevenue = commissions?.reduce((sum, c) => sum + (c.gross_revenue || 0), 0) || 0;
+    const repairPlatformCommission = commissions?.reduce((sum, c) => sum + (c.platform_commission || 0), 0) || 0;
+    const repairCentroEarnings = commissions?.reduce((sum, c) => sum + (c.centro_commission || 0), 0) || 0;
+
+    // Sum loyalty card revenue
+    const loyaltyRevenue = loyaltyCards?.reduce((sum, c) => sum + (c.amount_paid || 0), 0) || 0;
+    const loyaltyPlatformCommission = loyaltyCards?.reduce((sum, c) => sum + (c.platform_commission || 0), 0) || 0;
+    const loyaltyCentroEarnings = loyaltyCards?.reduce((sum, c) => sum + (c.centro_revenue || 0), 0) || 0;
+
+    // Combine totals
     setFinanceStats({
-      totalRevenue,
-      platformCommission,
-      centroEarnings,
+      totalRevenue: repairRevenue + loyaltyRevenue,
+      platformCommission: repairPlatformCommission + loyaltyPlatformCommission,
+      centroEarnings: repairCentroEarnings + loyaltyCentroEarnings,
     });
   };
 
