@@ -896,7 +896,15 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
       <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Smartphone className="h-6 w-6" />
+            {loyaltyCard.centro?.logo_url ? (
+              <img 
+                src={loyaltyCard.centro.logo_url} 
+                alt={loyaltyCard.centro.business_name || "Centro"} 
+                className="h-8 w-8 rounded-full object-cover bg-white"
+              />
+            ) : (
+              <Smartphone className="h-6 w-6" />
+            )}
             <div>
               <h1 className="font-semibold">Device Health Pro</h1>
               <p className="text-xs opacity-80 truncate max-w-[180px]">{user.email}</p>
