@@ -1,4 +1,4 @@
-package app.lovable.repairhubpro;
+package com.lablinkriparo.monitor;
 
 import android.app.ActivityManager;
 import android.app.usage.StorageStats;

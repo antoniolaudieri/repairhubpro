@@ -47,14 +47,14 @@ jobs:
       
       - name: Copy DeviceDiagnostics Plugin
         run: |
-          mkdir -p android/app/src/main/java/app/lovable/repairhubpro
-          cp android-plugin/DeviceDiagnosticsPlugin.java android/app/src/main/java/app/lovable/repairhubpro/
+          mkdir -p android/app/src/main/java/com/lablinkriparo/monitor
+          cp android-plugin/DeviceDiagnosticsPlugin.java android/app/src/main/java/com/lablinkriparo/monitor/
       
       - name: Update MainActivity to register plugin
         run: |
-          MAIN_ACTIVITY="android/app/src/main/java/app/lovable/repairhubpro/MainActivity.java"
+          MAIN_ACTIVITY="android/app/src/main/java/com/lablinkriparo/monitor/MainActivity.java"
           cat > "$MAIN_ACTIVITY" << 'EOF'
-          package app.lovable.repairhubpro;
+          package com.lablinkriparo.monitor;
 
           import android.os.Bundle;
           import com.getcapacitor.BridgeActivity;

@@ -2,7 +2,7 @@
 # Script to setup Android plugin after cap sync
 
 PLUGIN_SOURCE="android-plugin/DeviceDiagnosticsPlugin.java"
-ANDROID_DIR="android/app/src/main/java/app/lovable/repairhubpro"
+ANDROID_DIR="android/app/src/main/java/com/lablinkriparo/monitor"
 
 # Create directory if it doesn't exist
 mkdir -p "$ANDROID_DIR"
@@ -17,7 +17,7 @@ else
 fi
 
 # Check if MainActivity exists and needs patching
-MAIN_ACTIVITY="android/app/src/main/java/app/lovable/repairhubpro/MainActivity.java"
+MAIN_ACTIVITY="android/app/src/main/java/com/lablinkriparo/monitor/MainActivity.java"
 
 if [ -f "$MAIN_ACTIVITY" ]; then
   # Check if plugin is already registered
