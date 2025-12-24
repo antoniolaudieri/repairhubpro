@@ -1,10 +1,12 @@
 package com.lablinkriparo.monitor;
 
 import android.app.ActivityManager;
+import android.app.DownloadManager;
 import android.app.usage.StorageStats;
 import android.app.usage.StorageStatsManager;
 import android.app.usage.UsageStats;
 import android.app.usage.UsageStatsManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -12,6 +14,7 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.BitmapDrawable;
@@ -25,6 +28,9 @@ import android.os.StatFs;
 import android.os.storage.StorageManager;
 import android.provider.Settings;
 import android.util.Base64;
+import android.util.Log;
+
+import androidx.core.content.FileProvider;
 
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
@@ -45,6 +51,10 @@ import java.util.UUID;
 
 @CapacitorPlugin(name = "DeviceDiagnostics")
 public class DeviceDiagnosticsPlugin extends Plugin {
+
+    private static final String TAG = "DeviceDiagnostics";
+    private long downloadId = -1;
+    private PluginCall pendingDownloadCall = null;
 
     @PluginMethod
     public void getStorageInfo(PluginCall call) {
@@ -483,6 +493,141 @@ public class DeviceDiagnosticsPlugin extends Plugin {
             }
         } catch (Exception e) {
             call.reject("Error getting usage stats: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void getAppVersion(PluginCall call) {
+        try {
+            PackageInfo pInfo = getContext().getPackageManager().getPackageInfo(
+                getContext().getPackageName(), 0);
+            
+            JSObject result = new JSObject();
+            result.put("versionName", pInfo.versionName);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                result.put("versionCode", pInfo.getLongVersionCode());
+            } else {
+                result.put("versionCode", pInfo.versionCode);
+            }
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("Error getting app version: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void downloadApk(PluginCall call) {
+        String url = call.getString("url", "");
+        String fileName = call.getString("fileName", "update.apk");
+        
+        if (url.isEmpty()) {
+            call.reject("URL is required");
+            return;
+        }
+        
+        try {
+            DownloadManager downloadManager = (DownloadManager) 
+                getContext().getSystemService(Context.DOWNLOAD_SERVICE);
+            
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url));
+            request.setTitle("Aggiornamento LabLinkRiparo");
+            request.setDescription("Download in corso...");
+            request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+            request.setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName);
+            request.setMimeType("application/vnd.android.package-archive");
+            
+            downloadId = downloadManager.enqueue(request);
+            pendingDownloadCall = call;
+            
+            // Register receiver to handle download completion
+            BroadcastReceiver onComplete = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                    if (id == downloadId && pendingDownloadCall != null) {
+                        // Query for the download file path
+                        DownloadManager.Query query = new DownloadManager.Query();
+                        query.setFilterById(downloadId);
+                        Cursor cursor = downloadManager.query(query);
+                        
+                        if (cursor.moveToFirst()) {
+                            int statusIndex = cursor.getColumnIndex(DownloadManager.COLUMN_STATUS);
+                            int status = cursor.getInt(statusIndex);
+                            
+                            if (status == DownloadManager.STATUS_SUCCESSFUL) {
+                                int uriIndex = cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI);
+                                String localUri = cursor.getString(uriIndex);
+                                
+                                JSObject result = new JSObject();
+                                result.put("success", true);
+                                result.put("filePath", localUri);
+                                pendingDownloadCall.resolve(result);
+                            } else {
+                                JSObject result = new JSObject();
+                                result.put("success", false);
+                                result.put("error", "Download failed");
+                                pendingDownloadCall.resolve(result);
+                            }
+                        }
+                        cursor.close();
+                        pendingDownloadCall = null;
+                        context.unregisterReceiver(this);
+                    }
+                }
+            };
+            
+            getContext().registerReceiver(onComplete, 
+                new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Error downloading APK: " + e.getMessage());
+            call.reject("Error downloading APK: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void installApk(PluginCall call) {
+        String filePath = call.getString("filePath", "");
+        
+        if (filePath.isEmpty()) {
+            call.reject("File path is required");
+            return;
+        }
+        
+        try {
+            // Remove file:// prefix if present
+            if (filePath.startsWith("file://")) {
+                filePath = filePath.substring(7);
+            }
+            
+            File file = new File(filePath);
+            if (!file.exists()) {
+                call.reject("APK file not found");
+                return;
+            }
+            
+            Intent intent = new Intent(Intent.ACTION_VIEW);
+            Uri apkUri;
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                apkUri = FileProvider.getUriForFile(getContext(),
+                    getContext().getPackageName() + ".fileprovider", file);
+                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            } else {
+                apkUri = Uri.fromFile(file);
+            }
+            
+            intent.setDataAndType(apkUri, "application/vnd.android.package-archive");
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            
+            getContext().startActivity(intent);
+            
+            JSObject result = new JSObject();
+            result.put("success", true);
+            call.resolve(result);
+        } catch (Exception e) {
+            Log.e(TAG, "Error installing APK: " + e.getMessage());
+            call.reject("Error installing APK: " + e.getMessage());
         }
     }
 

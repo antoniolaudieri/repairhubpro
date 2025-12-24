@@ -6,9 +6,14 @@ on:
     branches:
       - main
 
+env:
+  APP_VERSION: "1.0.${{ github.run_number }}"
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
       - name: Checkout code
@@ -24,6 +29,10 @@ jobs:
       
       - name: Install Capacitor packages
         run: npm install @capacitor/cli @capacitor/core @capacitor/android --legacy-peer-deps
+      
+      - name: Update app version in config
+        run: |
+          sed -i "s/APP_VERSION = \".*\"/APP_VERSION = \"${{ env.APP_VERSION }}\"/" src/config/appVersion.ts
       
       - name: Build web app
         run: npm run build
@@ -68,11 +77,31 @@ jobs:
           }
           EOF
       
+      - name: Update version in build.gradle
+        run: |
+          BUILD_GRADLE="android/app/build.gradle"
+          sed -i "s/versionName \"1.0\"/versionName \"${{ env.APP_VERSION }}\"/" "$BUILD_GRADLE"
+          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" "$BUILD_GRADLE"
+      
       - name: Add permissions to AndroidManifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          # Add QUERY_ALL_PACKAGES permission for listing installed apps
-          sed -i 's|</manifest>|    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />\n        </intent>\n    </queries>\n</manifest>|' "$MANIFEST"
+          # Add permissions for update functionality
+          sed -i 's|</manifest>|    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />\n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />\n        </intent>\n    </queries>\n</manifest>|' "$MANIFEST"
+          
+          # Add FileProvider for APK installation
+          sed -i 's|</application>|        <provider\n            android:name="androidx.core.content.FileProvider"\n            android:authorities="${applicationId}.fileprovider"\n            android:exported="false"\n            android:grantUriPermissions="true">\n            <meta-data\n                android:name="android.support.FILE_PROVIDER_PATHS"\n                android:resource="@xml/file_paths" />\n        </provider>\n    </application>|' "$MANIFEST"
+      
+      - name: Create file_paths.xml for FileProvider
+        run: |
+          mkdir -p android/app/src/main/res/xml
+          cat > android/app/src/main/res/xml/file_paths.xml << 'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <paths>
+              <external-path name="downloads" path="Download/" />
+              <cache-path name="cache" path="/" />
+          </paths>
+          EOF
       
       - name: Sync Capacitor
         run: npx cap sync android
@@ -84,9 +113,36 @@ jobs:
         working-directory: android
         run: ./gradlew assembleDebug --no-daemon
       
-      - name: Upload APK
+      - name: Rename APK
+        run: |
+          mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ env.APP_VERSION }}
+          name: LabLinkRiparo v${{ env.APP_VERSION }}
+          body: |
+            ## 📱 LabLinkRiparo v${{ env.APP_VERSION }}
+            
+            ### Novità in questa versione
+            - Build automatica #${{ github.run_number }}
+            - Miglioramenti e correzioni
+            
+            ### Come installare
+            1. Scarica il file APK qui sotto
+            2. Apri il file sul tuo dispositivo Android
+            3. Consenti l'installazione da fonti sconosciute se richiesto
+            4. Segui le istruzioni a schermo
+          files: android/app/build/outputs/apk/debug/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload APK as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: repairhubpro-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: repairhubpro-v${{ env.APP_VERSION }}
+          path: android/app/build/outputs/apk/debug/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
           retention-days: 30

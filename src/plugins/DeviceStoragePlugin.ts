@@ -73,6 +73,9 @@ export interface DeviceDiagnosticsPlugin {
   requestUsageStatsPermission(): Promise<{ granted: boolean }>;
   openAppSettings(options: { packageName: string }): Promise<{ opened: boolean }>;
   getAppUsageStats(): Promise<{ stats: AppUsageStat[]; hasPermission: boolean }>;
+  getAppVersion(): Promise<{ versionName: string; versionCode: number }>;
+  downloadApk(options: { url: string; fileName: string }): Promise<{ success: boolean; filePath?: string; error?: string }>;
+  installApk(options: { filePath: string }): Promise<{ success: boolean; error?: string }>;
 }
 
 // This will use the native implementation on Android/iOS, or fallback to web

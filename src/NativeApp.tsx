@@ -4,10 +4,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import NativeLogin from "@/pages/NativeLogin";
 import NativeMonitor from "@/pages/NativeMonitor";
+import { useAppUpdate } from "@/hooks/useAppUpdate";
+import { UpdateAvailableDialog } from "@/components/native/UpdateAvailableDialog";
 
 const NativeApp = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const {
+    showUpdateDialog,
+    currentVersion,
+    latestVersion,
+    changelog,
+    downloadUrl,
+    releaseDate,
+    dismissUpdate,
+  } = useAppUpdate();
 
   useEffect(() => {
     // Check current session
@@ -39,6 +51,15 @@ const NativeApp = () => {
     <>
       <Toaster />
       {user ? <NativeMonitor user={user} /> : <NativeLogin />}
+      <UpdateAvailableDialog
+        open={showUpdateDialog}
+        onDismiss={() => dismissUpdate(latestVersion)}
+        currentVersion={currentVersion}
+        latestVersion={latestVersion}
+        changelog={changelog}
+        downloadUrl={downloadUrl}
+        releaseDate={releaseDate}
+      />
     </>
   );
 };
