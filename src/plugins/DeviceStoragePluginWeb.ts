@@ -362,4 +362,20 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
     console.log('[DeviceDiagnosticsWeb] getAppUsageStats: Not available on web platform');
     return { stats: [], hasPermission: false };
   }
+
+  async getAppVersion(): Promise<{ versionName: string; versionCode: number }> {
+    // Return version from config file for web
+    return { versionName: '1.0.0', versionCode: 1 };
+  }
+
+  async downloadApk(options: { url: string; fileName: string }): Promise<{ success: boolean; filePath?: string; error?: string }> {
+    // Web cannot download APK natively - open in new tab
+    window.open(options.url, '_blank');
+    return { success: true };
+  }
+
+  async installApk(options: { filePath: string }): Promise<{ success: boolean; error?: string }> {
+    // Web cannot install APK
+    return { success: false, error: 'Not available on web platform' };
+  }
 }
