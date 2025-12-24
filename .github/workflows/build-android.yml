@@ -62,7 +62,7 @@ jobs:
       - name: Update MainActivity to register plugin
         run: |
           MAIN_ACTIVITY="android/app/src/main/java/com/lablinkriparo/monitor/MainActivity.java"
-          cat > "$MAIN_ACTIVITY" << 'MAINEOF'
+          cat > "$MAIN_ACTIVITY" << 'EOF'
           package com.lablinkriparo.monitor;
 
           import android.os.Bundle;
@@ -75,7 +75,7 @@ jobs:
                   super.onCreate(savedInstanceState);
               }
           }
-          MAINEOF
+          EOF
       
       - name: Update version in build.gradle
         run: |
