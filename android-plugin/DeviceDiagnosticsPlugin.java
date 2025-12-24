@@ -3,11 +3,14 @@ package com.lablinkriparo.monitor;
 import android.app.ActivityManager;
 import android.app.usage.StorageStats;
 import android.app.usage.StorageStatsManager;
+import android.app.usage.UsageStats;
+import android.app.usage.UsageStatsManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
+import android.net.Uri;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -395,9 +398,72 @@ public class DeviceDiagnosticsPlugin extends Plugin {
             result.put("working", working);
             call.resolve(result);
         } catch (Exception e) {
-            result.put("working", false);
+        result.put("working", false);
             result.put("error", e.getMessage());
             call.resolve(result);
+        }
+    }
+
+    @PluginMethod
+    public void openAppSettings(PluginCall call) {
+        String packageName = call.getString("packageName", "");
+        
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+            intent.setData(Uri.parse("package:" + packageName));
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            
+            JSObject result = new JSObject();
+            result.put("opened", true);
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("Error opening app settings: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void getAppUsageStats(PluginCall call) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+                UsageStatsManager usageStatsManager = (UsageStatsManager) 
+                    getContext().getSystemService(Context.USAGE_STATS_SERVICE);
+                
+                // Get stats for the last 30 days
+                long endTime = System.currentTimeMillis();
+                long startTime = endTime - (30L * 24 * 60 * 60 * 1000);
+                
+                List<UsageStats> usageStatsList = usageStatsManager.queryUsageStats(
+                    UsageStatsManager.INTERVAL_MONTHLY, startTime, endTime);
+                
+                JSArray statsArray = new JSArray();
+                
+                if (usageStatsList != null && !usageStatsList.isEmpty()) {
+                    for (UsageStats usageStats : usageStatsList) {
+                        if (usageStats.getTotalTimeInForeground() > 0) {
+                            JSObject stat = new JSObject();
+                            stat.put("packageName", usageStats.getPackageName());
+                            stat.put("totalTimeMs", usageStats.getTotalTimeInForeground());
+                            stat.put("totalTimeMinutes", usageStats.getTotalTimeInForeground() / (1000 * 60));
+                            stat.put("lastTimeUsed", usageStats.getLastTimeUsed());
+                            statsArray.put(stat);
+                        }
+                    }
+                }
+                
+                JSObject result = new JSObject();
+                result.put("stats", statsArray);
+                result.put("hasPermission", usageStatsList != null && !usageStatsList.isEmpty());
+                call.resolve(result);
+            } else {
+                JSObject result = new JSObject();
+                result.put("stats", new JSArray());
+                result.put("hasPermission", false);
+                result.put("error", "API level too low");
+                call.resolve(result);
+            }
+        } catch (Exception e) {
+            call.reject("Error getting usage stats: " + e.getMessage());
         }
     }
 
