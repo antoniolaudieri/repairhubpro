@@ -1,5 +1,5 @@
-import { Activity, TrendingUp, TrendingDown, Minus, Sparkles } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Activity, TrendingUp, TrendingDown, Minus, Sparkles, Shield, Zap } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 interface HealthScoreWidgetProps {
@@ -14,16 +14,16 @@ export const HealthScoreWidget = ({ score, lastSyncAt }: HealthScoreWidgetProps)
     return 'text-destructive';
   };
 
-  const getScoreGradient = () => {
-    if (score >= 80) return 'from-green-500/20 via-green-500/10 to-transparent';
-    if (score >= 60) return 'from-amber-500/20 via-amber-500/10 to-transparent';
-    return 'from-destructive/20 via-destructive/10 to-transparent';
+  const getScoreGradientId = () => {
+    if (score >= 80) return 'gradient-excellent';
+    if (score >= 60) return 'gradient-good';
+    return 'gradient-critical';
   };
 
-  const getScoreBorderColor = () => {
-    if (score >= 80) return 'border-green-500/30';
-    if (score >= 60) return 'border-amber-500/30';
-    return 'border-destructive/30';
+  const getScoreRingClass = () => {
+    if (score >= 80) return 'score-ring-excellent';
+    if (score >= 60) return 'score-ring-good';
+    return 'score-ring-critical';
   };
 
   const getScoreLabel = () => {
@@ -33,6 +33,13 @@ export const HealthScoreWidget = ({ score, lastSyncAt }: HealthScoreWidgetProps)
     return 'Critico';
   };
 
+  const getScoreDescription = () => {
+    if (score >= 80) return 'Il tuo dispositivo è in ottime condizioni';
+    if (score >= 60) return 'Alcune aree possono essere migliorate';
+    if (score >= 40) return 'Si consiglia una manutenzione';
+    return 'Richiede attenzione immediata';
+  };
+
   const getScoreIcon = () => {
     if (score >= 80) return TrendingUp;
     if (score >= 60) return Minus;
@@ -40,89 +47,139 @@ export const HealthScoreWidget = ({ score, lastSyncAt }: HealthScoreWidgetProps)
   };
 
   const ScoreIcon = getScoreIcon();
+  const circumference = 2 * Math.PI * 54; // radius = 54
+  const strokeDashoffset = circumference - (score / 100) * circumference;
 
   return (
-    <Card className={cn(
-      'relative overflow-hidden border-2 transition-all duration-300',
-      getScoreBorderColor(),
-      'bg-card/80 backdrop-blur-sm'
-    )}>
-      {/* Gradient overlay */}
-      <div className={cn(
-        'absolute inset-0 bg-gradient-to-br opacity-50',
-        getScoreGradient()
-      )} />
+    <Card className="card-glass relative overflow-hidden border-0">
+      {/* Background decorations */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute -bottom-24 -left-24 w-48 h-48 rounded-full bg-accent/5 blur-3xl" />
+      </div>
       
-      {/* Animated glow for good scores */}
-      {score >= 80 && (
-        <div className="absolute top-2 right-2">
-          <Sparkles className="h-4 w-4 text-green-500 animate-pulse" />
-        </div>
-      )}
+      {/* SVG Gradients */}
+      <svg width="0" height="0" className="absolute">
+        <defs>
+          <linearGradient id="gradient-excellent" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="hsl(142, 76%, 36%)" />
+            <stop offset="50%" stopColor="hsl(160, 84%, 39%)" />
+            <stop offset="100%" stopColor="hsl(142, 76%, 46%)" />
+          </linearGradient>
+          <linearGradient id="gradient-good" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="hsl(38, 92%, 50%)" />
+            <stop offset="50%" stopColor="hsl(45, 93%, 47%)" />
+            <stop offset="100%" stopColor="hsl(38, 92%, 60%)" />
+          </linearGradient>
+          <linearGradient id="gradient-critical" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="hsl(0, 84%, 60%)" />
+            <stop offset="50%" stopColor="hsl(350, 89%, 60%)" />
+            <stop offset="100%" stopColor="hsl(0, 84%, 70%)" />
+          </linearGradient>
+        </defs>
+      </svg>
       
-      <CardHeader className="pb-2 relative z-10">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <div className={cn(
-            'p-1.5 rounded-lg',
-            score >= 80 ? 'bg-green-500/20' : score >= 60 ? 'bg-amber-500/20' : 'bg-destructive/20'
-          )}>
-            <Activity className={cn('h-4 w-4', getScoreColor())} />
-          </div>
-          Punteggio Salute
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="relative z-10">
-        <div className="text-center space-y-3">
-          {/* Score with animated ring */}
-          <div className="relative inline-flex items-center justify-center">
-            <svg className="w-24 h-24 -rotate-90">
-              <circle
-                cx="48"
-                cy="48"
-                r="40"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="8"
-                className="text-muted/30"
-              />
-              <circle
-                cx="48"
-                cy="48"
-                r="40"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="8"
-                strokeLinecap="round"
-                className={getScoreColor()}
-                strokeDasharray={`${(score / 100) * 251.2} 251.2`}
-                style={{ transition: 'stroke-dasharray 1s ease-in-out' }}
-              />
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className={cn('text-3xl font-bold', getScoreColor())}>
-                {score}
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-center gap-2">
+      <CardContent className="p-6 relative z-10">
+        <div className="flex items-center gap-6">
+          {/* Score Circle */}
+          <div className="relative flex-shrink-0">
+            {/* Glow effect */}
             <div className={cn(
-              'flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium',
-              score >= 80 ? 'bg-green-500/20 text-green-600' : 
-              score >= 60 ? 'bg-amber-500/20 text-amber-600' : 
-              'bg-destructive/20 text-destructive'
-            )}>
-              <ScoreIcon className="h-3.5 w-3.5" />
-              {getScoreLabel()}
+              'absolute inset-0 rounded-full blur-xl opacity-30',
+              score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-amber-500' : 'bg-destructive'
+            )} />
+            
+            {/* Animated ring */}
+            <div className="relative animate-score-pulse">
+              <svg width="128" height="128" className="-rotate-90">
+                {/* Background ring */}
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="54"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="10"
+                  className="text-muted/20"
+                />
+                {/* Score ring */}
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="54"
+                  fill="none"
+                  stroke={`url(#${getScoreGradientId()})`}
+                  strokeWidth="10"
+                  strokeLinecap="round"
+                  className={cn('animate-score-ring', getScoreRingClass())}
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  style={{ 
+                    transition: 'stroke-dashoffset 1.5s ease-out',
+                  }}
+                />
+              </svg>
+              
+              {/* Center content */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className={cn('text-4xl font-bold tracking-tight', getScoreColor())}>
+                  {score}
+                </span>
+                <span className="text-xs text-muted-foreground font-medium">
+                  / 100
+                </span>
+              </div>
             </div>
+            
+            {/* Sparkle for excellent score */}
+            {score >= 80 && (
+              <div className="absolute -top-1 -right-1 animate-bounce-gentle">
+                <div className="relative">
+                  <Sparkles className="h-5 w-5 text-green-500" />
+                  <div className="absolute inset-0 animate-ping">
+                    <Sparkles className="h-5 w-5 text-green-500/50" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           
-          {lastSyncAt && (
-            <p className="text-xs text-muted-foreground">
-              Ultimo sync: {lastSyncAt.toLocaleString('it-IT')}
+          {/* Info section */}
+          <div className="flex-1 space-y-3">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Shield className={cn('h-4 w-4', getScoreColor())} />
+                <h3 className="text-sm font-semibold text-foreground">
+                  Salute Dispositivo
+                </h3>
+              </div>
+              <div className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold',
+                score >= 80 ? 'bg-green-500/15 text-green-600 border border-green-500/20' : 
+                score >= 60 ? 'bg-amber-500/15 text-amber-600 border border-amber-500/20' : 
+                'bg-destructive/15 text-destructive border border-destructive/20'
+              )}>
+                <ScoreIcon className="h-4 w-4" />
+                {getScoreLabel()}
+              </div>
+            </div>
+            
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              {getScoreDescription()}
             </p>
-          )}
+            
+            {lastSyncAt && (
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Zap className="h-3 w-3" />
+                <span>Sincronizzato: {lastSyncAt.toLocaleString('it-IT', { 
+                  day: '2-digit', 
+                  month: '2-digit', 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })}</span>
+              </div>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -69,6 +69,10 @@ All colors MUST be HSL.
                         hsl(217 91% 70% / 0.08) 100%);
     --gradient-glass: linear-gradient(135deg, hsl(0 0% 100% / 0.9) 0%, hsl(0 0% 100% / 0.7) 100%);
     --gradient-shine: linear-gradient(110deg, transparent 25%, hsl(0 0% 100% / 0.3) 50%, transparent 75%);
+    --gradient-monitor-bg: linear-gradient(180deg, hsl(217 91% 60% / 0.03) 0%, hsl(220 17% 97%) 30%, hsl(220 17% 97%) 100%);
+    --gradient-score-excellent: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(160 84% 39%) 50%, hsl(142 76% 46%) 100%);
+    --gradient-score-good: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(45 93% 47%) 50%, hsl(38 92% 60%) 100%);
+    --gradient-score-critical: linear-gradient(135deg, hsl(0 84% 60%) 0%, hsl(350 89% 60%) 50%, hsl(0 84% 70%) 100%);
     
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.04);
     --shadow-md: 0 2px 8px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06);
@@ -81,6 +85,7 @@ All colors MUST be HSL.
     --shadow-card-hover: 0 4px 12px -2px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.08);
     --shadow-glass: 0 8px 32px 0 hsl(217 91% 60% / 0.1);
     --shadow-neon: 0 0 20px hsl(217 91% 60% / 0.4), 0 0 40px hsl(217 91% 60% / 0.2);
+    --shadow-score-glow: 0 0 30px hsl(142 76% 36% / 0.4), 0 0 60px hsl(142 76% 36% / 0.2);
 
     --transition-base: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -265,6 +270,71 @@ All colors MUST be HSL.
 
   .animate-scroll-ticker {
     animation: scroll-ticker linear infinite;
+  }
+
+  /* Score ring animation */
+  @keyframes score-ring-draw {
+    from {
+      stroke-dashoffset: 251.2;
+    }
+  }
+
+  @keyframes score-pulse {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.9;
+    }
+  }
+
+  @keyframes glow-breathe {
+    0%, 100% {
+      filter: drop-shadow(0 0 8px hsl(var(--primary) / 0.4));
+    }
+    50% {
+      filter: drop-shadow(0 0 16px hsl(var(--primary) / 0.6));
+    }
+  }
+
+  .animate-score-ring {
+    animation: score-ring-draw 1.5s ease-out forwards;
+  }
+
+  .animate-score-pulse {
+    animation: score-pulse 3s ease-in-out infinite;
+  }
+
+  .animate-glow-breathe {
+    animation: glow-breathe 2s ease-in-out infinite;
+  }
+
+  .bg-monitor {
+    background: var(--gradient-monitor-bg);
+  }
+
+  .card-glass {
+    background: linear-gradient(135deg, hsl(var(--card) / 0.95) 0%, hsl(var(--card) / 0.85) 100%);
+    backdrop-filter: blur(16px);
+    border: 1px solid hsl(var(--border) / 0.6);
+    box-shadow: var(--shadow-glass);
+  }
+
+  .score-ring-excellent {
+    stroke: url(#gradient-excellent);
+    filter: drop-shadow(0 0 8px hsl(142 76% 36% / 0.5));
+  }
+
+  .score-ring-good {
+    stroke: url(#gradient-good);
+    filter: drop-shadow(0 0 8px hsl(38 92% 50% / 0.5));
+  }
+
+  .score-ring-critical {
+    stroke: url(#gradient-critical);
+    filter: drop-shadow(0 0 8px hsl(0 84% 60% / 0.5));
   }
 }
 
