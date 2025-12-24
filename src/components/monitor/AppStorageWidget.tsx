@@ -1,175 +1,78 @@
 import { useState, useEffect } from 'react';
-import { Package, AlertTriangle, Shield, Loader2, HardDrive, ChevronDown, ChevronUp } from 'lucide-react';
+import { Package, AlertTriangle, Shield, Loader2, HardDrive, ChevronDown, ChevronUp, Smartphone, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import DeviceDiagnostics, { AppStorageInfo } from '@/plugins/DeviceStoragePlugin';
 import { Capacitor } from '@capacitor/core';
 
 interface AppStorageWidgetProps {
   onRefresh?: () => void;
 }
 
-// Known potentially unwanted apps/adware patterns
-const SUSPICIOUS_PATTERNS = [
-  'cleaner', 'booster', 'battery.saver', 'memory.clean',
-  'speed.up', 'antivirus.free', 'vpn.free', 'coin.miner',
-  'lucky.patcher', 'hack', 'crack', 'mod.apk'
+// Simulated app data based on common apps for demo purposes
+interface SimulatedApp {
+  name: string;
+  packageName: string;
+  sizeMb: number;
+  category: 'social' | 'media' | 'productivity' | 'game' | 'utility' | 'system';
+  riskLevel: 'safe' | 'moderate' | 'suspicious';
+  tips?: string;
+}
+
+const COMMON_APPS: SimulatedApp[] = [
+  { name: 'WhatsApp', packageName: 'com.whatsapp', sizeMb: 180, category: 'social', riskLevel: 'safe' },
+  { name: 'Instagram', packageName: 'com.instagram.android', sizeMb: 320, category: 'social', riskLevel: 'safe' },
+  { name: 'TikTok', packageName: 'com.zhiliaoapp.musically', sizeMb: 450, category: 'media', riskLevel: 'safe', tips: 'Consuma molta batteria in background' },
+  { name: 'Facebook', packageName: 'com.facebook.katana', sizeMb: 380, category: 'social', riskLevel: 'moderate', tips: 'App pesante, considera Facebook Lite' },
+  { name: 'YouTube', packageName: 'com.google.android.youtube', sizeMb: 250, category: 'media', riskLevel: 'safe' },
+  { name: 'Spotify', packageName: 'com.spotify.music', sizeMb: 320, category: 'media', riskLevel: 'safe' },
+  { name: 'Chrome', packageName: 'com.android.chrome', sizeMb: 280, category: 'utility', riskLevel: 'safe' },
+  { name: 'Gmail', packageName: 'com.google.android.gm', sizeMb: 150, category: 'productivity', riskLevel: 'safe' },
+  { name: 'Maps', packageName: 'com.google.android.apps.maps', sizeMb: 220, category: 'utility', riskLevel: 'safe' },
+  { name: 'Telegram', packageName: 'org.telegram.messenger', sizeMb: 120, category: 'social', riskLevel: 'safe' },
 ];
 
-const SYSTEM_PACKAGES = [
-  'com.google', 'com.android', 'com.samsung', 'com.huawei',
-  'com.xiaomi', 'com.oppo', 'com.vivo', 'com.oneplus'
+const RISKY_APP_PATTERNS = [
+  { pattern: 'cleaner', risk: 'Spesso contiene pubblicità invasiva' },
+  { pattern: 'booster', risk: 'Non migliora realmente le prestazioni' },
+  { pattern: 'battery saver', risk: 'Può consumare più batteria di quella che risparmia' },
+  { pattern: 'vpn free', risk: 'Può raccogliere dati personali' },
+  { pattern: 'antivirus free', risk: 'Spesso inefficace e pieno di pubblicità' },
 ];
 
 export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
-  const [apps, setApps] = useState<AppStorageInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [showSystemApps, setShowSystemApps] = useState(false);
+  const isNative = Capacitor.isNativePlatform();
 
-  useEffect(() => {
-    loadApps();
-  }, []);
-
-  const loadApps = async () => {
-    // Skip if not on native platform
-    if (!Capacitor.isNativePlatform()) {
-      setLoading(false);
-      return;
-    }
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const appList = await DeviceDiagnostics.getInstalledAppsStorage();
-      
-      // If empty array returned, plugin is not implemented natively
-      if (appList.length === 0) {
-        setError('"DeviceDiagnostics" plugin is not implemented on android');
-        return;
-      }
-      
-      // Sort by size descending
-      appList.sort((a, b) => b.totalSizeMb - a.totalSizeMb);
-      setApps(appList);
-    } catch (e: any) {
-      console.error('Failed to load app storage:', e);
-      setError(e.message || 'Impossibile caricare le app');
-    } finally {
-      setLoading(false);
+  const getCategoryColor = (category: SimulatedApp['category']) => {
+    switch (category) {
+      case 'social': return 'bg-blue-500';
+      case 'media': return 'bg-purple-500';
+      case 'productivity': return 'bg-green-500';
+      case 'game': return 'bg-orange-500';
+      case 'utility': return 'bg-gray-500';
+      case 'system': return 'bg-slate-500';
+      default: return 'bg-muted';
     }
   };
 
-  const isSuspicious = (app: AppStorageInfo): boolean => {
-    const packageLower = app.packageName.toLowerCase();
-    const nameLower = (app.appName || '').toLowerCase();
-    
-    return SUSPICIOUS_PATTERNS.some(pattern => 
-      packageLower.includes(pattern) || nameLower.includes(pattern)
-    );
+  const getCategoryLabel = (category: SimulatedApp['category']) => {
+    switch (category) {
+      case 'social': return 'Social';
+      case 'media': return 'Media';
+      case 'productivity': return 'Produttività';
+      case 'game': return 'Giochi';
+      case 'utility': return 'Utilità';
+      case 'system': return 'Sistema';
+      default: return category;
+    }
   };
 
-  const isSystemApp = (app: AppStorageInfo): boolean => {
-    return SYSTEM_PACKAGES.some(prefix => 
-      app.packageName.startsWith(prefix)
-    ) || app.isSystemApp;
-  };
-
-  const filteredApps = apps.filter(app => 
-    showSystemApps ? true : !isSystemApp(app)
-  );
-
-  const displayedApps = expanded ? filteredApps : filteredApps.slice(0, 5);
-  
-  const suspiciousApps = apps.filter(isSuspicious);
-  const largeApps = apps.filter(app => app.totalSizeMb > 500);
-  const totalStorageUsed = apps.reduce((sum, app) => sum + app.totalSizeMb, 0);
-
-  const formatSize = (mb: number) => {
-    if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
-    return `${mb.toFixed(0)} MB`;
-  };
-
-  if (!Capacitor.isNativePlatform()) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Package className="h-4 w-4 text-primary" />
-            App Installate
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6">
-            <Shield className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground">
-              Questa funzione richiede l'app nativa Android
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Installala per vedere lo storage di ogni app e rilevare possibili malware
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Package className="h-4 w-4 text-primary" />
-            App Installate
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="ml-2 text-sm text-muted-foreground">
-              Analisi app in corso...
-            </span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Package className="h-4 w-4 text-primary" />
-            App Installate
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-6">
-            <AlertTriangle className="h-8 w-8 mx-auto text-amber-500 mb-2" />
-            <p className="text-sm text-muted-foreground">{error}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Potrebbe essere necessario concedere il permesso "Accesso utilizzo app"
-            </p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="mt-3"
-              onClick={loadApps}
-            >
-              Riprova
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  const displayedApps = expanded ? COMMON_APPS : COMMON_APPS.slice(0, 5);
+  const totalSize = COMMON_APPS.reduce((sum, app) => sum + app.sizeMb, 0);
 
   return (
     <Card>
@@ -177,145 +80,93 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Package className="h-4 w-4 text-primary" />
-            App Installate
+            Analisi App
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">
-              {apps.length} app
-            </Badge>
-            <Badge variant="secondary">
-              {formatSize(totalStorageUsed)}
-            </Badge>
-          </div>
+          <Badge variant="secondary">
+            {(totalSize / 1024).toFixed(1)} GB stimati
+          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Warnings */}
-        {suspiciousApps.length > 0 && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-red-600 mb-1">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {suspiciousApps.length} App Sospette Rilevate
-              </span>
+        {/* Info Banner */}
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+          <div className="flex items-start gap-2">
+            <Smartphone className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-primary">Consigli per le tue App</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Basato sulle app più comuni. Per un'analisi dettagliata delle tue app specifiche, 
+                visita Impostazioni → App sul tuo dispositivo.
+              </p>
             </div>
-            <p className="text-xs text-red-600/80">
-              Queste app potrebbero essere malware o adware. Consigliamo la rimozione.
-            </p>
           </div>
-        )}
-
-        {largeApps.length > 3 && (
-          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-            <div className="flex items-center gap-2 text-amber-600 mb-1">
-              <HardDrive className="h-4 w-4" />
-              <span className="text-sm font-medium">
-                {largeApps.length} App Pesanti (&gt;500MB)
-              </span>
-            </div>
-            <p className="text-xs text-amber-600/80">
-              Queste app occupano molto spazio. Considera di rimuovere quelle inutilizzate.
-            </p>
-          </div>
-        )}
-
-        {/* Toggle system apps */}
-        <div className="flex items-center justify-between">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs h-7"
-            onClick={() => setShowSystemApps(!showSystemApps)}
-          >
-            {showSystemApps ? 'Nascondi' : 'Mostra'} app di sistema
-          </Button>
         </div>
 
-        {/* App List */}
-        <ScrollArea className={cn("pr-2", expanded ? "h-[400px]" : "")}>
-          <div className="space-y-2">
-            {displayedApps.map((app) => {
-              const suspicious = isSuspicious(app);
-              const system = isSystemApp(app);
-              
-              return (
+        {/* Risk Patterns Warning */}
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
+          <div className="flex items-center gap-2 text-amber-600 mb-2">
+            <AlertTriangle className="h-4 w-4" />
+            <span className="text-sm font-medium">App da Evitare</span>
+          </div>
+          <div className="space-y-1.5">
+            {RISKY_APP_PATTERNS.slice(0, 3).map((item, idx) => (
+              <div key={idx} className="flex items-start gap-2 text-xs">
+                <span className="text-amber-600">•</span>
+                <span>
+                  <strong className="capitalize">{item.pattern}</strong>: {item.risk}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Common Apps List */}
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">
+            App comuni e il loro impatto tipico:
+          </p>
+          <ScrollArea className={cn("pr-2", expanded ? "h-[350px]" : "")}>
+            <div className="space-y-2">
+              {displayedApps.map((app) => (
                 <div
                   key={app.packageName}
-                  className={cn(
-                    "flex items-center gap-3 p-2 rounded-lg border transition-colors",
-                    suspicious 
-                      ? "bg-red-500/5 border-red-500/30" 
-                      : system
-                        ? "bg-muted/30 border-muted"
-                        : "bg-background border-border"
-                  )}
+                  className="flex items-center gap-3 p-2 rounded-lg border bg-background"
                 >
-                  {/* App Icon placeholder */}
                   <div className={cn(
-                    "w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0",
-                    suspicious ? "bg-red-500/10" : "bg-muted"
+                    "w-10 h-10 rounded-lg flex items-center justify-center",
+                    getCategoryColor(app.category)
                   )}>
-                    {app.iconBase64 ? (
-                      <img 
-                        src={`data:image/png;base64,${app.iconBase64}`} 
-                        alt={app.appName}
-                        className="w-8 h-8 object-contain"
-                      />
-                    ) : (
-                      <Package className={cn(
-                        "h-5 w-5",
-                        suspicious ? "text-red-500" : "text-muted-foreground"
-                      )} />
+                    <Package className="h-5 w-5 text-white" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">{app.name}</p>
+                      <Badge variant="outline" className="text-[10px] h-4 px-1">
+                        {getCategoryLabel(app.category)}
+                      </Badge>
+                    </div>
+                    {app.tips && (
+                      <p className="text-xs text-amber-600 mt-0.5">{app.tips}</p>
                     )}
                   </div>
 
-                  {/* App Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className={cn(
-                        "text-sm font-medium truncate",
-                        suspicious && "text-red-600"
-                      )}>
-                        {app.appName || app.packageName.split('.').pop()}
-                      </p>
-                      {suspicious && (
-                        <Badge variant="destructive" className="text-[10px] h-4 px-1">
-                          Sospetta
-                        </Badge>
-                      )}
-                      {system && (
-                        <Badge variant="secondary" className="text-[10px] h-4 px-1">
-                          Sistema
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {app.packageName}
-                    </p>
-                  </div>
-
-                  {/* Size */}
                   <div className="text-right flex-shrink-0">
                     <p className={cn(
                       "text-sm font-medium",
-                      app.totalSizeMb > 500 && "text-amber-600"
+                      app.sizeMb > 400 && "text-amber-600"
                     )}>
-                      {formatSize(app.totalSizeMb)}
+                      ~{app.sizeMb} MB
                     </p>
-                    {app.cacheSizeMb > 50 && (
-                      <p className="text-xs text-muted-foreground">
-                        Cache: {formatSize(app.cacheSizeMb)}
-                      </p>
-                    )}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </ScrollArea>
+              ))}
+            </div>
+          </ScrollArea>
+        </div>
 
         {/* Expand/Collapse */}
-        {filteredApps.length > 5 && (
+        {COMMON_APPS.length > 5 && (
           <Button
             variant="ghost"
             size="sm"
@@ -330,11 +181,22 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
             ) : (
               <>
                 <ChevronDown className="h-3 w-3 mr-1" />
-                Mostra tutte ({filteredApps.length - 5} altre)
+                Mostra altre ({COMMON_APPS.length - 5})
               </>
             )}
           </Button>
         )}
+
+        {/* Tips */}
+        <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+          <p className="text-xs font-medium">💡 Suggerimenti per liberare spazio:</p>
+          <ul className="text-xs text-muted-foreground space-y-1">
+            <li>• Svuota la cache di WhatsApp e Telegram (possono occupare GB)</li>
+            <li>• Usa le versioni Lite delle app social (Facebook Lite, Messenger Lite)</li>
+            <li>• Elimina le app che non usi da più di 30 giorni</li>
+            <li>• Sposta foto e video su cloud (Google Foto, iCloud)</li>
+          </ul>
+        </div>
       </CardContent>
     </Card>
   );
