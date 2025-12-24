@@ -56,6 +56,13 @@ export interface AppStorageInfo {
   iconBase64?: string;
 }
 
+export interface AppUsageStat {
+  packageName: string;
+  totalTimeMs: number;
+  totalTimeMinutes: number;
+  lastTimeUsed: number;
+}
+
 export interface DeviceDiagnosticsPlugin {
   getStorageInfo(): Promise<DeviceStorageInfo>;
   getRamInfo(): Promise<RamInfo>;
@@ -64,6 +71,8 @@ export interface DeviceDiagnosticsPlugin {
   testSensor(options: { sensorType: string }): Promise<{ working: boolean; value?: any; error?: string }>;
   getInstalledAppsStorage(): Promise<AppStorageInfo[]>;
   requestUsageStatsPermission(): Promise<{ granted: boolean }>;
+  openAppSettings(options: { packageName: string }): Promise<{ opened: boolean }>;
+  getAppUsageStats(): Promise<{ stats: AppUsageStat[]; hasPermission: boolean }>;
 }
 
 // This will use the native implementation on Android/iOS, or fallback to web

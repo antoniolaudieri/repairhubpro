@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Package, AlertTriangle, Shield, Loader2, HardDrive, ChevronDown, ChevronUp, Smartphone, ExternalLink, RefreshCw, Settings, Trash2, Zap } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Package, AlertTriangle, Shield, Loader2, HardDrive, ChevronDown, ChevronUp, Smartphone, ExternalLink, RefreshCw, Settings, Trash2, Zap, Clock, Filter, ArrowUpDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Capacitor } from '@capacitor/core';
-import DeviceDiagnostics, { AppStorageInfo } from '@/plugins/DeviceStoragePlugin';
+import DeviceDiagnostics, { AppStorageInfo, AppUsageStat } from '@/plugins/DeviceStoragePlugin';
 
 interface AppStorageWidgetProps {
   onRefresh?: () => void;
@@ -19,15 +21,23 @@ interface AppAnalysis {
   issues: string[];
   recommendations: string[];
   storageImpact: 'minimal' | 'moderate' | 'heavy' | 'extreme';
+  usageMinutes?: number;
+  lastUsed?: number;
 }
+
+type SortOption = 'risk' | 'size' | 'usage' | 'lastUsed';
+type FilterOption = 'all' | 'problems' | 'heavy' | 'unused';
 
 export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
   const [apps, setApps] = useState<AppStorageInfo[]>([]);
   const [analyzedApps, setAnalyzedApps] = useState<AppAnalysis[]>([]);
+  const [usageStats, setUsageStats] = useState<Map<string, AppUsageStat>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsPermission, setNeedsPermission] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('risk');
+  const [filterBy, setFilterBy] = useState<FilterOption>('all');
   const isNative = Capacitor.isNativePlatform();
 
   useEffect(() => {
@@ -140,7 +150,20 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
 
       if (isNative) {
         try {
-          const result = await DeviceDiagnostics.getInstalledAppsStorage();
+          // Load apps and usage stats in parallel
+          const [result, usageResult] = await Promise.all([
+            DeviceDiagnostics.getInstalledAppsStorage(),
+            DeviceDiagnostics.getAppUsageStats().catch(() => ({ stats: [], hasPermission: false }))
+          ]);
+          
+          // Build usage stats map
+          const statsMap = new Map<string, AppUsageStat>();
+          if (usageResult.stats) {
+            usageResult.stats.forEach((stat: AppUsageStat) => {
+              statsMap.set(stat.packageName, stat);
+            });
+          }
+          setUsageStats(statsMap);
           
           // Check if result has apps array (new format) or is array directly
           const appsData = Array.isArray(result) ? result : (result as any).apps || [];
@@ -151,14 +174,15 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
             setError('no_apps');
           } else {
             setApps(appsData);
-            // Analyze all apps
-            const analyzed = appsData.map(analyzeApp);
-            // Sort by risk level and storage
-            analyzed.sort((a, b) => {
-              const riskOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-              const riskDiff = riskOrder[a.riskLevel] - riskOrder[b.riskLevel];
-              if (riskDiff !== 0) return riskDiff;
-              return b.app.totalSizeMb - a.app.totalSizeMb;
+            // Analyze all apps with usage data
+            const analyzed = appsData.map((app: AppStorageInfo) => {
+              const analysis = analyzeApp(app);
+              const usageStat = statsMap.get(app.packageName);
+              return {
+                ...analysis,
+                usageMinutes: usageStat?.totalTimeMinutes || 0,
+                lastUsed: usageStat?.lastTimeUsed || 0
+              };
             });
             setAnalyzedApps(analyzed);
           }
@@ -180,6 +204,18 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
       setError(e.message || 'Errore sconosciuto');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openAppSettings = async (packageName: string) => {
+    try {
+      await DeviceDiagnostics.openAppSettings({ packageName });
+      toast.success('Aperte impostazioni app', {
+        description: 'Qui puoi cancellare cache e dati'
+      });
+    } catch (e) {
+      console.error('Error opening app settings:', e);
+      toast.error('Impossibile aprire le impostazioni');
     }
   };
 
@@ -220,9 +256,76 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
     }
   };
 
+  // Filter and sort apps
+  const filteredAndSortedApps = useMemo(() => {
+    let filtered = [...analyzedApps];
+    
+    // Apply filter
+    switch (filterBy) {
+      case 'problems':
+        filtered = filtered.filter(a => a.riskLevel !== 'low');
+        break;
+      case 'heavy':
+        filtered = filtered.filter(a => a.app.totalSizeMb > 100);
+        break;
+      case 'unused':
+        // Apps not used in 30 days or with 0 usage minutes
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        filtered = filtered.filter(a => 
+          (a.usageMinutes === 0 || a.usageMinutes === undefined) ||
+          (a.lastUsed && a.lastUsed < thirtyDaysAgo)
+        );
+        break;
+    }
+    
+    // Apply sort
+    switch (sortBy) {
+      case 'risk':
+        filtered.sort((a, b) => {
+          const riskOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+          const riskDiff = riskOrder[a.riskLevel] - riskOrder[b.riskLevel];
+          if (riskDiff !== 0) return riskDiff;
+          return b.app.totalSizeMb - a.app.totalSizeMb;
+        });
+        break;
+      case 'size':
+        filtered.sort((a, b) => b.app.totalSizeMb - a.app.totalSizeMb);
+        break;
+      case 'usage':
+        filtered.sort((a, b) => (b.usageMinutes || 0) - (a.usageMinutes || 0));
+        break;
+      case 'lastUsed':
+        filtered.sort((a, b) => (b.lastUsed || 0) - (a.lastUsed || 0));
+        break;
+    }
+    
+    return filtered;
+  }, [analyzedApps, filterBy, sortBy]);
+
   const totalSize = apps.reduce((sum, app) => sum + app.totalSizeMb, 0);
   const problemApps = analyzedApps.filter(a => a.riskLevel !== 'low');
-  const displayedApps = expanded ? analyzedApps : analyzedApps.slice(0, 8);
+  const displayedApps = expanded ? filteredAndSortedApps : filteredAndSortedApps.slice(0, 8);
+
+  const formatLastUsed = (timestamp?: number) => {
+    if (!timestamp || timestamp === 0) return 'Mai usata';
+    const now = Date.now();
+    const diff = now - timestamp;
+    const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+    if (days === 0) return 'Oggi';
+    if (days === 1) return 'Ieri';
+    if (days < 7) return `${days} giorni fa`;
+    if (days < 30) return `${Math.floor(days / 7)} settimane fa`;
+    return `${Math.floor(days / 30)} mesi fa`;
+  };
+
+  const formatUsageTime = (minutes?: number) => {
+    if (!minutes || minutes === 0) return '0 min';
+    if (minutes < 60) return `${Math.round(minutes)} min`;
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    if (mins === 0) return `${hours}h`;
+    return `${hours}h ${mins}m`;
+  };
 
   if (loading) {
     return (
@@ -363,97 +466,145 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
           </div>
         )}
 
+        {/* Filter and Sort Controls */}
+        <div className="flex gap-2">
+          <Select value={filterBy} onValueChange={(v) => setFilterBy(v as FilterOption)}>
+            <SelectTrigger className="h-8 text-xs flex-1">
+              <Filter className="h-3 w-3 mr-1" />
+              <SelectValue placeholder="Filtra" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutte le app</SelectItem>
+              <SelectItem value="problems">Con problemi</SelectItem>
+              <SelectItem value="heavy">Pesanti (&gt;100MB)</SelectItem>
+              <SelectItem value="unused">Non usate</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger className="h-8 text-xs flex-1">
+              <ArrowUpDown className="h-3 w-3 mr-1" />
+              <SelectValue placeholder="Ordina" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="risk">Per rischio</SelectItem>
+              <SelectItem value="size">Per dimensione</SelectItem>
+              <SelectItem value="usage">Per utilizzo</SelectItem>
+              <SelectItem value="lastUsed">Ultimo uso</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Apps List */}
         <ScrollArea className={cn("pr-2", expanded ? "h-[400px]" : "")}>
           <div className="space-y-2">
-            {displayedApps.map((analysis, index) => (
-              <div
-                key={analysis.app.packageName + index}
-                className={cn(
-                  "flex items-start gap-3 p-3 rounded-lg border bg-background",
-                  analysis.riskLevel === 'critical' && "border-destructive/50 bg-destructive/5",
-                  analysis.riskLevel === 'high' && "border-orange-500/50 bg-orange-500/5"
-                )}
-              >
-                {/* App Icon */}
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted shrink-0 overflow-hidden">
-                  {analysis.app.iconBase64 ? (
-                    <img 
-                      src={analysis.app.iconBase64} 
-                      alt={analysis.app.appName || 'App'} 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Package className="h-5 w-5 text-muted-foreground" />
+            {displayedApps.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                Nessuna app trovata con questo filtro
+              </p>
+            ) : (
+              displayedApps.map((analysis, index) => (
+                <div
+                  key={analysis.app.packageName + index}
+                  className={cn(
+                    "flex items-start gap-3 p-3 rounded-lg border bg-background",
+                    analysis.riskLevel === 'critical' && "border-destructive/50 bg-destructive/5",
+                    analysis.riskLevel === 'high' && "border-orange-500/50 bg-orange-500/5"
                   )}
-                </div>
+                >
+                  {/* App Icon */}
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted shrink-0 overflow-hidden">
+                    {analysis.app.iconBase64 ? (
+                      <img 
+                        src={analysis.app.iconBase64} 
+                        alt={analysis.app.appName || 'App'} 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <Package className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
 
-                {/* App Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-medium truncate">
-                      {analysis.app.appName || analysis.app.packageName.split('.').pop()}
-                    </p>
-                    <Badge className={cn("text-[10px] h-4 px-1", getRiskColor(analysis.riskLevel))}>
-                      {getRiskLabel(analysis.riskLevel)}
-                    </Badge>
-                    {analysis.app.isSystemApp && (
-                      <Badge variant="outline" className="text-[10px] h-4 px-1">
-                        Sistema
+                  {/* App Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-sm font-medium truncate">
+                        {analysis.app.appName || analysis.app.packageName.split('.').pop()}
+                      </p>
+                      <Badge className={cn("text-[10px] h-4 px-1", getRiskColor(analysis.riskLevel))}>
+                        {getRiskLabel(analysis.riskLevel)}
                       </Badge>
-                    )}
-                  </div>
-                  
-                  {/* Issues */}
-                  {analysis.issues.length > 0 && (
-                    <div className="mt-1 space-y-0.5">
-                      {analysis.issues.slice(0, 2).map((issue, i) => (
-                        <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
-                          <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                          {issue}
-                        </p>
-                      ))}
+                      {analysis.app.isSystemApp && (
+                        <Badge variant="outline" className="text-[10px] h-4 px-1">
+                          Sistema
+                        </Badge>
+                      )}
                     </div>
-                  )}
-
-                  {/* Size breakdown */}
-                  <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
-                    <span>App: {analysis.app.appSizeMb.toFixed(0)} MB</span>
-                    <span>Dati: {analysis.app.dataSizeMb.toFixed(0)} MB</span>
-                    {analysis.app.cacheSizeMb > 0 && (
-                      <span className={analysis.app.cacheSizeMb > 50 ? 'text-amber-600' : ''}>
-                        Cache: {analysis.app.cacheSizeMb.toFixed(0)} MB
-                      </span>
+                    
+                    {/* Issues */}
+                    {analysis.issues.length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {analysis.issues.slice(0, 2).map((issue, i) => (
+                          <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
+                            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                            {issue}
+                          </p>
+                        ))}
+                      </div>
                     )}
+
+                    {/* Size breakdown + Usage */}
+                    <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground flex-wrap">
+                      <span>App: {analysis.app.appSizeMb.toFixed(0)} MB</span>
+                      <span>Dati: {analysis.app.dataSizeMb.toFixed(0)} MB</span>
+                      {analysis.app.cacheSizeMb > 0 && (
+                        <span className={analysis.app.cacheSizeMb > 50 ? 'text-amber-600' : ''}>
+                          Cache: {analysis.app.cacheSizeMb.toFixed(0)} MB
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Usage stats */}
+                    <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {formatUsageTime(analysis.usageMinutes)}
+                      </span>
+                      <span>{formatLastUsed(analysis.lastUsed)}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions + Size */}
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <p className={cn(
+                      "text-sm font-bold",
+                      getStorageImpactColor(analysis.storageImpact)
+                    )}>
+                      {analysis.app.totalSizeMb >= 1024 
+                        ? `${(analysis.app.totalSizeMb / 1024).toFixed(1)} GB`
+                        : `${analysis.app.totalSizeMb.toFixed(0)} MB`
+                      }
+                    </p>
+                    
+                    {/* Open Settings button */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] px-2 gap-1"
+                      onClick={() => openAppSettings(analysis.app.packageName)}
+                    >
+                      <Settings className="h-3 w-3" />
+                      Gestisci
+                    </Button>
                   </div>
                 </div>
-
-                {/* Total Size */}
-                <div className="text-right shrink-0">
-                  <p className={cn(
-                    "text-sm font-bold",
-                    getStorageImpactColor(analysis.storageImpact)
-                  )}>
-                    {analysis.app.totalSizeMb >= 1024 
-                      ? `${(analysis.app.totalSizeMb / 1024).toFixed(1)} GB`
-                      : `${analysis.app.totalSizeMb.toFixed(0)} MB`
-                    }
-                  </p>
-                  {analysis.storageImpact !== 'minimal' && (
-                    <p className="text-[10px] text-muted-foreground">
-                      {analysis.storageImpact === 'extreme' && '⚠️ Enorme'}
-                      {analysis.storageImpact === 'heavy' && '⚠️ Pesante'}
-                      {analysis.storageImpact === 'moderate' && 'Moderato'}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </ScrollArea>
 
         {/* Expand/Collapse */}
-        {analyzedApps.length > 8 && (
+        {filteredAndSortedApps.length > 8 && (
           <Button
             variant="ghost"
             size="sm"
@@ -468,7 +619,7 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
             ) : (
               <>
                 <ChevronDown className="h-3 w-3 mr-1" />
-                Mostra altre ({analyzedApps.length - 8})
+                Mostra altre ({filteredAndSortedApps.length - 8})
               </>
             )}
           </Button>
