@@ -125,10 +125,26 @@ jobs:
       - name: Configure signing in build.gradle
         run: |
           BUILD_GRADLE="android/app/build.gradle"
-          SIGNING_CONFIG='    signingConfigs {\n        release {\n            storeFile file("release-keystore.jks")\n            storePassword "lablinkriparo2024"\n            keyAlias "lablinkriparo"\n            keyPassword "lablinkriparo2024"\n        }\n    }\n'
-          sed -i "s|buildTypes {|${SIGNING_CONFIG}\n    buildTypes {|" "$BUILD_GRADLE"
-          sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' "$BUILD_GRADLE"
-          sed -i 's/debug {/debug {\n            signingConfig signingConfigs.release/' "$BUILD_GRADLE"
+          
+          # Create signing config block
+          SIGNING_BLOCK=$(cat << 'ENDBLOCK'
+              signingConfigs {
+                  release {
+                      storeFile file("release-keystore.jks")
+                      storePassword "lablinkriparo2024"
+                      keyAlias "lablinkriparo"
+                      keyPassword "lablinkriparo2024"
+                  }
+              }
+          ENDBLOCK
+          )
+          
+          # Insert signing config before buildTypes
+          awk -v signing="$SIGNING_BLOCK" '/buildTypes \{/{print signing}1' "$BUILD_GRADLE" > /tmp/build.gradle.tmp
+          mv /tmp/build.gradle.tmp "$BUILD_GRADLE"
+          
+          # Add signingConfig to release buildType
+          sed -i '/buildTypes/,/release {/ { s/release {/release {\n            signingConfig signingConfigs.release/ }' "$BUILD_GRADLE"
       
       - name: Sync Capacitor
         run: npx cap sync android
