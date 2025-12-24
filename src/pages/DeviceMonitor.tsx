@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { RefreshCw, Bell, Cloud, CloudOff, Settings, LogIn, CreditCard } from 'lucide-react';
+import { RefreshCw, Bell, Cloud, CloudOff, Settings, LogIn, CreditCard, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNativeDeviceInfo } from '@/hooks/useNativeDeviceInfo';
+import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   BatteryWidget, 
@@ -317,75 +318,107 @@ const DeviceMonitor = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header with Centro branding */}
-      <header className="bg-primary text-primary-foreground p-4 shadow-lg">
-        <div className="flex items-center gap-3">
-          {centro?.logo_url ? (
-            <img 
-              src={centro.logo_url} 
-              alt={centro.business_name}
-              className="h-12 w-12 rounded-full object-cover border-2 border-primary-foreground/20"
-            />
-          ) : (
-            <div className="h-12 w-12 rounded-full bg-primary-foreground/20 flex items-center justify-center">
-              <Settings className="h-6 w-6" />
-            </div>
-          )}
-          <div className="flex-1">
-            <h1 className="text-lg font-bold truncate">
-              {centro?.business_name || 'Device Monitor'}
-            </h1>
-            <p className="text-xs text-primary-foreground/70">
-              Monitoraggio Dispositivo
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {pushEnabled ? (
-              <Bell className="h-5 w-5 text-primary-foreground/80" />
+    <div className="min-h-screen bg-monitor">
+      {/* Header with Centro branding - modern glass effect */}
+      <header className="relative overflow-hidden">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary/90" />
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-50" />
+        
+        <div className="relative p-4 pb-5">
+          <div className="flex items-center gap-4">
+            {centro?.logo_url ? (
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-white/20 blur-md scale-110" />
+                <img 
+                  src={centro.logo_url} 
+                  alt={centro.business_name}
+                  className="relative h-14 w-14 rounded-full object-cover border-2 border-white/30 shadow-lg"
+                />
+              </div>
             ) : (
-              <Bell className="h-5 w-5 text-primary-foreground/40" />
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-white/20 blur-md scale-110" />
+                <div className="relative h-14 w-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
+                  <Settings className="h-7 w-7 text-white" />
+                </div>
+              </div>
             )}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold text-white truncate drop-shadow-sm">
+                {centro?.business_name || 'Device Monitor'}
+              </h1>
+              <p className="text-sm text-white/70 flex items-center gap-1.5">
+                <Activity className="h-3.5 w-3.5" />
+                Monitoraggio Dispositivo
+              </p>
+            </div>
+            <div className="flex items-center">
+              <div className={cn(
+                'p-2 rounded-full backdrop-blur transition-all',
+                pushEnabled ? 'bg-white/20 text-white' : 'bg-white/10 text-white/50'
+              )}>
+                <Bell className="h-5 w-5" />
+              </div>
+            </div>
           </div>
+        </div>
+        
+        {/* Wave separator */}
+        <div className="absolute bottom-0 left-0 right-0 h-4 overflow-hidden">
+          <svg className="absolute bottom-0 w-full" viewBox="0 0 1200 24" preserveAspectRatio="none">
+            <path 
+              d="M0,24 L0,12 Q300,0 600,12 T1200,12 L1200,24 Z" 
+              fill="hsl(var(--background))"
+            />
+          </svg>
         </div>
       </header>
 
       {/* Main content */}
-      <main className="p-4 space-y-4 pb-24">
+      <main className="p-4 space-y-4 pb-28">
         {/* Health Score - Featured */}
-        <HealthScoreWidget 
-          score={deviceInfo.healthScore} 
-          lastSyncAt={deviceInfo.lastSyncAt}
-        />
+        <div className="animate-fade-in">
+          <HealthScoreWidget 
+            score={deviceInfo.healthScore} 
+            lastSyncAt={deviceInfo.lastSyncAt}
+          />
+        </div>
 
         {/* Status Card */}
-        <Card>
+        <Card className="card-glass border-0 animate-fade-in" style={{ animationDelay: '0.1s' }}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {deviceInfo.lastSyncAt ? (
-                  <>
-                    <Cloud className="h-4 w-4 text-green-500" />
-                    <span className="text-sm text-muted-foreground">
-                      Connesso al centro
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <CloudOff className="h-4 w-4 text-amber-500" />
-                    <span className="text-sm text-muted-foreground">
-                      Non sincronizzato
-                    </span>
-                  </>
-                )}
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  'p-2 rounded-xl transition-all',
+                  deviceInfo.lastSyncAt 
+                    ? 'bg-green-500/15 text-green-600' 
+                    : 'bg-amber-500/15 text-amber-600'
+                )}>
+                  {deviceInfo.lastSyncAt ? (
+                    <Cloud className="h-5 w-5" />
+                  ) : (
+                    <CloudOff className="h-5 w-5" />
+                  )}
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-foreground">
+                    {deviceInfo.lastSyncAt ? 'Connesso al centro' : 'Non sincronizzato'}
+                  </span>
+                  <p className="text-xs text-muted-foreground">
+                    {deviceInfo.lastSyncAt ? 'Dati aggiornati' : 'Sincronizza per salvare i dati'}
+                  </p>
+                </div>
               </div>
               <Button 
                 size="sm" 
                 variant="outline"
                 onClick={handleRefresh}
                 disabled={deviceInfo.isLoading}
+                className="rounded-xl"
               >
-                <RefreshCw className={`h-4 w-4 mr-2 ${deviceInfo.isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={cn('h-4 w-4 mr-2', deviceInfo.isLoading && 'animate-spin')} />
                 Aggiorna
               </Button>
             </div>
@@ -465,9 +498,14 @@ const DeviceMonitor = () => {
       </main>
 
       {/* Bottom sync button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/90 backdrop-blur-xl border-t border-border/50">
         <Button 
-          className="w-full" 
+          className={cn(
+            "w-full rounded-2xl h-14 text-base font-semibold transition-all",
+            "bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary",
+            "shadow-lg hover:shadow-xl hover:shadow-primary/20",
+            syncing && "animate-pulse"
+          )}
           size="lg"
           onClick={handleSync}
           disabled={syncing || !centroId}
