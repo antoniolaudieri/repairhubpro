@@ -10,7 +10,7 @@ import {
   Activity, Battery, HardDrive, Cpu, Clock, AlertTriangle, 
   CheckCircle2, Sparkles, ChevronRight, RefreshCw, Loader2,
   Smartphone, FileText, Wifi, WifiOff, MemoryStick, Monitor,
-  Plus, Save, Image
+  Plus, Save, Image, Package
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -30,6 +30,16 @@ interface CustomerDeviceHealthProps {
   customerId: string;
   centroId: string;
   onDeviceCreated?: () => void;
+}
+
+interface InstalledApp {
+  packageName: string;
+  appName: string | null;
+  totalSizeMb: number;
+  appSizeMb: number;
+  dataSizeMb: number;
+  cacheSizeMb: number;
+  isSystemApp: boolean;
 }
 
 interface HealthLog {
@@ -58,6 +68,7 @@ interface HealthLog {
   screen_height: number | null;
   is_charging: boolean | null;
   device_id: string | null;
+  installed_apps: InstalledApp[] | null;
 }
 
 interface HardwareInfo {
@@ -123,9 +134,13 @@ export function CustomerDeviceHealth({ customerId, centroId, onDeviceCreated }: 
         .order("created_at", { ascending: false })
         .limit(20);
 
-      setHealthLogs(logsData || []);
-      if (logsData && logsData.length > 0) {
-        setSelectedLog(logsData[0]);
+      const mappedLogs: HealthLog[] = (logsData || []).map(log => ({
+        ...log,
+        installed_apps: Array.isArray(log.installed_apps) ? log.installed_apps as unknown as InstalledApp[] : null
+      }));
+      setHealthLogs(mappedLogs);
+      if (mappedLogs.length > 0) {
+        setSelectedLog(mappedLogs[0]);
       }
 
       // Fetch diagnostic quizzes
@@ -457,6 +472,48 @@ export function CustomerDeviceHealth({ customerId, centroId, onDeviceCreated }: 
                           </div>
                         )}
                       </div>
+                      
+                      {/* Installed Apps */}
+                      {selectedLog.installed_apps && selectedLog.installed_apps.length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-xs font-medium text-muted-foreground mb-2">
+                            Top {selectedLog.installed_apps.length} App per dimensione
+                          </p>
+                          <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                            {selectedLog.installed_apps.slice(0, 10).map((app, idx) => (
+                              <div key={app.packageName || idx} className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                  <div className="w-5 h-5 rounded bg-muted flex items-center justify-center shrink-0">
+                                    <Package className="h-3 w-3 text-muted-foreground" />
+                                  </div>
+                                  <span className="truncate">{app.appName || app.packageName.split('.').pop()}</span>
+                                  {app.isSystemApp && (
+                                    <Badge variant="outline" className="text-[8px] h-3 px-1">SYS</Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 ml-2">
+                                  {app.cacheSizeMb > 10 && (
+                                    <span className="text-amber-500 text-[10px]">
+                                      Cache: {app.cacheSizeMb.toFixed(0)}MB
+                                    </span>
+                                  )}
+                                  <span className={app.totalSizeMb > 500 ? 'text-orange-500 font-medium' : ''}>
+                                    {app.totalSizeMb >= 1024 
+                                      ? `${(app.totalSizeMb / 1024).toFixed(1)} GB`
+                                      : `${app.totalSizeMb.toFixed(0)} MB`
+                                    }
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          {selectedLog.installed_apps.length > 10 && (
+                            <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                              +{selectedLog.installed_apps.length - 10} altre app
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     {/* RAM */}
