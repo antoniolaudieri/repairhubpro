@@ -62,6 +62,28 @@ interface LoyaltyCard {
   centro_id: string;
   status: string;
   customer_id: string;
+  card_number?: string;
+  activated_at?: string;
+  expires_at?: string;
+  devices_used?: number;
+  max_devices?: number;
+  centro?: {
+    business_name: string;
+    logo_url?: string;
+  };
+}
+
+interface LoyaltyProgramSettings {
+  loyalty_program_active?: boolean;
+  loyalty_card_price?: number;
+  loyalty_discount_percent?: number;
+  loyalty_max_devices?: number;
+  loyalty_validity_months?: number;
+  loyalty_card_bg_color?: string;
+  loyalty_card_text_color?: string;
+  loyalty_free_checkup_enabled?: boolean;
+  loyalty_priority_service?: boolean;
+  loyalty_additional_benefits?: string;
 }
 
 interface NativeMonitorProps {
@@ -86,6 +108,7 @@ interface HealthTip {
 
 const NativeMonitor = ({ user }: NativeMonitorProps) => {
   const [loyaltyCard, setLoyaltyCard] = useState<LoyaltyCard | null>(null);
+  const [programSettings, setProgramSettings] = useState<LoyaltyProgramSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
@@ -402,20 +425,7 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
       });
     }
     
-    // Screen issues
-    if (deviceData.screenWidth && deviceData.screenHeight) {
-      const totalPixels = deviceData.screenWidth * deviceData.screenHeight;
-      if (totalPixels < 500000) { // Meno di ~720p
-        issues.push({
-          severity: 'info',
-          category: 'Schermo',
-          title: 'Risoluzione Base',
-          description: `Risoluzione schermo ${deviceData.screenWidth}x${deviceData.screenHeight}.`,
-          recommendation: 'Schermo con risoluzione base. Contenuti HD potrebbero non essere ottimali.',
-          icon: <Monitor className="h-4 w-4" />
-        });
-      }
-    }
+    // Note: Screen resolution is NOT flagged as an issue - it's just device info, not a problem
     
     return issues;
   }, [deviceData]);
@@ -444,7 +454,18 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
 
       const { data, error } = await supabase
         .from("loyalty_cards")
-        .select("id, centro_id, status, customer_id")
+        .select(`
+          id, 
+          centro_id, 
+          status, 
+          customer_id, 
+          card_number, 
+          activated_at, 
+          expires_at, 
+          devices_used, 
+          max_devices,
+          centro:centri_assistenza(business_name, logo_url)
+        `)
         .in("customer_id", customerIds)
         .eq("status", "active")
         .not("expires_at", "is", null)
@@ -456,8 +477,38 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
       if (error) {
         console.error("Error fetching loyalty card:", error);
         setLoyaltyCard(null);
+      } else if (data) {
+        // Flatten the centro relationship
+        const cardWithCentro = {
+          ...data,
+          centro: Array.isArray(data.centro) ? data.centro[0] : data.centro
+        };
+        setLoyaltyCard(cardWithCentro as LoyaltyCard);
+        
+        // Fetch program settings from the centro
+        const { data: centroData } = await supabase
+          .from("centri_assistenza")
+          .select("settings")
+          .eq("id", data.centro_id)
+          .single();
+        
+        if (centroData?.settings) {
+          const settings = centroData.settings as Record<string, unknown>;
+          setProgramSettings({
+            loyalty_program_active: settings.loyalty_program_active as boolean,
+            loyalty_card_price: settings.loyalty_card_price as number,
+            loyalty_discount_percent: settings.loyalty_discount_percent as number,
+            loyalty_max_devices: settings.loyalty_max_devices as number,
+            loyalty_validity_months: settings.loyalty_validity_months as number,
+            loyalty_card_bg_color: settings.loyalty_card_bg_color as string,
+            loyalty_card_text_color: settings.loyalty_card_text_color as string,
+            loyalty_free_checkup_enabled: settings.loyalty_free_checkup_enabled as boolean,
+            loyalty_priority_service: settings.loyalty_priority_service as boolean,
+            loyalty_additional_benefits: settings.loyalty_additional_benefits as string,
+          });
+        }
       } else {
-        setLoyaltyCard(data);
+        setLoyaltyCard(null);
       }
     } catch (err) {
       console.error("Error:", err);
@@ -763,18 +814,134 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
         <div className="mt-4 space-y-3">
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-3 m-0">
-            {/* Loyalty Card */}
-            <Card className="border-green-500/50 bg-green-50 dark:bg-green-950/20">
-              <CardContent className="p-3 flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-green-800 dark:text-green-200 text-sm">
-                    Tessera Fedeltà Attiva
-                  </p>
-                  <p className="text-xs text-green-600 truncate">ID: {loyaltyCard.id.slice(0, 8)}...</p>
+            {/* Loyalty Card - Full Display */}
+            <Card 
+              className="overflow-hidden border-2"
+              style={{
+                backgroundColor: programSettings?.loyalty_card_bg_color || '#10b981',
+                borderColor: programSettings?.loyalty_card_bg_color || '#10b981',
+              }}
+            >
+              <CardContent className="p-4 space-y-4" style={{ color: programSettings?.loyalty_card_text_color || 'white' }}>
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    {loyaltyCard.centro?.logo_url ? (
+                      <img 
+                        src={loyaltyCard.centro.logo_url} 
+                        alt={loyaltyCard.centro.business_name}
+                        className="h-12 w-12 rounded-lg object-cover bg-white/20"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 rounded-lg bg-white/20 flex items-center justify-center">
+                        <CreditCard className="h-6 w-6" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="font-bold text-lg">{loyaltyCard.centro?.business_name || 'Centro'}</p>
+                      <p className="text-sm opacity-80">Tessera Fedeltà</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-white/20 text-inherit border-0">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Attiva
+                  </Badge>
                 </div>
+
+                {/* Card Number */}
+                {loyaltyCard.card_number && (
+                  <div className="bg-white/10 rounded-lg p-3 text-center">
+                    <p className="text-xs opacity-70">Numero Tessera</p>
+                    <p className="font-mono text-xl font-bold tracking-wider">{loyaltyCard.card_number}</p>
+                  </div>
+                )}
+
+                {/* Dates & Usage */}
+                <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                  <div className="bg-white/10 rounded-lg p-2">
+                    <p className="text-xs opacity-70">Attivata</p>
+                    <p className="font-medium">
+                      {loyaltyCard.activated_at 
+                        ? new Date(loyaltyCard.activated_at).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : '--'}
+                    </p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-2">
+                    <p className="text-xs opacity-70">Scade</p>
+                    <p className="font-medium">
+                      {loyaltyCard.expires_at 
+                        ? new Date(loyaltyCard.expires_at).toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : '--'}
+                    </p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg p-2">
+                    <p className="text-xs opacity-70">Riparazioni</p>
+                    <p className="font-medium">{loyaltyCard.devices_used || 0}/{loyaltyCard.max_devices || programSettings?.loyalty_max_devices || '∞'}</p>
+                  </div>
+                </div>
+
+                {/* Days Remaining */}
+                {loyaltyCard.expires_at && (
+                  <div className="text-center">
+                    {(() => {
+                      const daysLeft = Math.ceil((new Date(loyaltyCard.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      return daysLeft <= 30 ? (
+                        <p className="text-sm bg-white/20 rounded-lg py-2 px-3">
+                          ⏰ Scade tra <strong>{daysLeft}</strong> giorni - Ricorda di rinnovare!
+                        </p>
+                      ) : (
+                        <p className="text-sm opacity-80">
+                          ✓ Valida per altri <strong>{daysLeft}</strong> giorni
+                        </p>
+                      );
+                    })()}
+                  </div>
+                )}
               </CardContent>
             </Card>
+
+            {/* Benefits Card */}
+            {programSettings && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    🎁 I Tuoi Benefici
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {programSettings.loyalty_discount_percent && programSettings.loyalty_discount_percent > 0 && (
+                    <div className="flex items-center gap-2 text-sm bg-green-50 dark:bg-green-950/30 p-2 rounded-lg">
+                      <span className="text-green-600">✓</span>
+                      <span><strong>{programSettings.loyalty_discount_percent}%</strong> di sconto su tutte le riparazioni</span>
+                    </div>
+                  )}
+                  {programSettings.loyalty_free_checkup_enabled && (
+                    <div className="flex items-center gap-2 text-sm bg-blue-50 dark:bg-blue-950/30 p-2 rounded-lg">
+                      <span className="text-blue-600">✓</span>
+                      <span>Checkup diagnostico <strong>gratuito</strong></span>
+                    </div>
+                  )}
+                  {programSettings.loyalty_priority_service && (
+                    <div className="flex items-center gap-2 text-sm bg-purple-50 dark:bg-purple-950/30 p-2 rounded-lg">
+                      <span className="text-purple-600">✓</span>
+                      <span>Servizio <strong>prioritario</strong></span>
+                    </div>
+                  )}
+                  {programSettings.loyalty_max_devices && programSettings.loyalty_max_devices > 0 && (
+                    <div className="flex items-center gap-2 text-sm bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg">
+                      <span className="text-amber-600">✓</span>
+                      <span>Valida per <strong>{programSettings.loyalty_max_devices}</strong> riparazioni</span>
+                    </div>
+                  )}
+                  {programSettings.loyalty_additional_benefits && (
+                    <div className="text-sm text-muted-foreground p-2 border rounded-lg">
+                      <p className="text-xs text-muted-foreground mb-1">Altri benefici:</p>
+                      <p>{programSettings.loyalty_additional_benefits}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Battery Card - Enhanced */}
             <Card>
