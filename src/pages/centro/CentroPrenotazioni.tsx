@@ -19,8 +19,20 @@ import {
   MapPin,
   CalendarDays,
   List,
-  Bell
+  Bell,
+  Trash2
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { toast } from "sonner";
@@ -198,6 +210,45 @@ export default function CentroPrenotazioni() {
   const filterByStatus = (status: string | null) => {
     if (!status) return appointments;
     return appointments.filter((a) => a.status === status);
+  };
+
+  const deleteAppointment = async (appointmentId: string, appointment: Appointment) => {
+    setProcessingId(appointmentId);
+    
+    const { error } = await supabase
+      .from("appointments")
+      .delete()
+      .eq("id", appointmentId);
+
+    if (error) {
+      toast.error("Errore nella cancellazione della prenotazione");
+    } else {
+      toast.success("Prenotazione cancellata definitivamente");
+      setAppointments((prev) => prev.filter((a) => a.id !== appointmentId));
+
+      // Notify customer about deletion
+      try {
+        const customerUserId = await getCustomerUserId(appointment.customer_email);
+        if (customerUserId) {
+          await sendPushNotification([customerUserId], {
+            title: "Prenotazione Cancellata",
+            body: `La tua prenotazione per il ${format(new Date(appointment.preferred_date), "d MMMM", { locale: it })} è stata cancellata da ${centroName}`,
+            data: { type: "appointment_deleted", appointmentId }
+          });
+        }
+
+        await supabase.from("customer_notifications").insert({
+          customer_email: appointment.customer_email,
+          type: "appointment_deleted",
+          title: "Prenotazione Cancellata",
+          message: `La tua prenotazione per il ${format(new Date(appointment.preferred_date), "d MMMM", { locale: it })} è stata cancellata`,
+          data: { appointmentId }
+        });
+      } catch (err) {
+        console.error("Error sending notification:", err);
+      }
+    }
+    setProcessingId(null);
   };
 
   const pendingCount = appointments.filter((a) => a.status === "pending").length;
@@ -423,7 +474,7 @@ export default function CentroPrenotazioni() {
                               variant="outline"
                               onClick={() => updateStatus(appointment.id, "completed", appointment)}
                               disabled={processingId === appointment.id}
-                              className="w-full"
+                              className="flex-1"
                             >
                               {processingId === appointment.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -434,6 +485,42 @@ export default function CentroPrenotazioni() {
                             </Button>
                           </div>
                         )}
+
+                        {/* Delete button - always visible */}
+                        <div className="flex justify-end pt-2 border-t mt-2">
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={processingId === appointment.id}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Elimina
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Eliminare questa prenotazione?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Stai per eliminare definitivamente la prenotazione di <strong>{appointment.customer_name}</strong> per il {format(new Date(appointment.preferred_date), "d MMMM yyyy", { locale: it })}.
+                                  <br /><br />
+                                  Questa azione non può essere annullata. Il cliente riceverà una notifica della cancellazione.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Annulla</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteAppointment(appointment.id, appointment)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Elimina definitivamente
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
                       </CardContent>
                     </Card>
                   ))
