@@ -41,6 +41,7 @@ import { GamificationWidget } from "@/components/centro/GamificationWidget";
 import { GoalsWidget } from "@/components/centro/GoalsWidget";
 import { MaintenanceWidget } from "@/components/centro/MaintenanceWidget";
 import { AppointmentCalendar } from "@/components/corner/AppointmentCalendar";
+import { LoyaltyStatsWidget } from "@/components/centro/LoyaltyStatsWidget";
 
 interface CentroSettings {
   monthly_goal?: number;
@@ -943,6 +944,8 @@ export default function CentroDashboard() {
               </motion.div>
             </div>
 
+            {/* Loyalty Stats Widget */}
+            {centro && <LoyaltyStatsWidget centroId={centro.id} />}
 
             {/* Activity Chart */}
             <Card className="border-border/50">

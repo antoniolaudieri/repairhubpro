@@ -329,6 +329,59 @@ export type Database = {
           },
         ]
       }
+      centro_goals: {
+        Row: {
+          achieved_at: string | null
+          centro_id: string
+          created_at: string
+          current_value: number
+          goal_type: string
+          id: string
+          is_achieved: boolean
+          period: string
+          period_end: string
+          period_start: string
+          target_value: number
+          updated_at: string
+        }
+        Insert: {
+          achieved_at?: string | null
+          centro_id: string
+          created_at?: string
+          current_value?: number
+          goal_type: string
+          id?: string
+          is_achieved?: boolean
+          period: string
+          period_end: string
+          period_start: string
+          target_value?: number
+          updated_at?: string
+        }
+        Update: {
+          achieved_at?: string | null
+          centro_id?: string
+          created_at?: string
+          current_value?: number
+          goal_type?: string
+          id?: string
+          is_achieved?: boolean
+          period?: string
+          period_end?: string
+          period_start?: string
+          target_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_goals_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       centro_promos: {
         Row: {
           applies_to: string
