@@ -93,10 +93,8 @@ jobs:
       - name: Add permissions to AndroidManifest
         run: |
           MANIFEST="android/app/src/main/AndroidManifest.xml"
-          # Add all required permissions before </manifest>
           sed -i 's|</manifest>|    <!-- Device diagnostics permissions -->\n    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />\n    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" tools:ignore="QueryAllPackagesPermission" />\n    \n    <!-- APK installation permissions -->\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />\n    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />\n    \n    <queries>\n        <intent>\n            <action android:name="android.intent.action.MAIN" />\n        </intent>\n    </queries>\n</manifest>|' "$MANIFEST"
           
-          # Add FileProvider for APK installation
           sed -i 's|</application>|        <provider\n            android:name="androidx.core.content.FileProvider"\n            android:authorities="${applicationId}.fileprovider"\n            android:exported="false"\n            android:grantUriPermissions="true">\n            <meta-data\n                android:name="android.support.FILE_PROVIDER_PATHS"\n                android:resource="@xml/file_paths" />\n        </provider>\n    </application>|' "$MANIFEST"
       
       - name: Create file_paths.xml for FileProvider
@@ -112,6 +110,60 @@ jobs:
               <root-path name="root" path="." />
           </paths>
           EOF
+
+      - name: Generate or decode keystore
+        run: |
+          # Se esiste il secret KEYSTORE_BASE64, usa quello
+          # Altrimenti genera un keystore nuovo e mostra come salvarlo
+          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/release-keystore.jks
+            echo "✅ Using existing keystore from secrets"
+          else
+            # Genera un nuovo keystore
+            keytool -genkeypair \
+              -v \
+              -storetype PKCS12 \
+              -keystore android/app/release-keystore.jks \
+              -alias lablinkriparo \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass lablinkriparo2024 \
+              -keypass lablinkriparo2024 \
+              -dname "CN=LabLinkRiparo, OU=Mobile, O=LabLinkRiparo, L=Italy, ST=Italy, C=IT"
+            
+            echo "⚠️ Generated new keystore. To enable automatic updates, save this keystore:"
+            echo "1. Run: base64 android/app/release-keystore.jks"
+            echo "2. Add the output as GitHub secret: KEYSTORE_BASE64"
+            echo ""
+            echo "🔐 Keystore credentials:"
+            echo "   Alias: lablinkriparo"
+            echo "   Password: lablinkriparo2024"
+          fi
+
+      - name: Configure signing in build.gradle
+        run: |
+          BUILD_GRADLE="android/app/build.gradle"
+          
+          # Add signing config
+          SIGNING_CONFIG='
+    signingConfigs {
+        release {
+            storeFile file("release-keystore.jks")
+            storePassword "lablinkriparo2024"
+            keyAlias "lablinkriparo"
+            keyPassword "lablinkriparo2024"
+        }
+    }
+'
+          # Insert signing config before buildTypes
+          sed -i "/buildTypes {/i\\$SIGNING_CONFIG" "$BUILD_GRADLE"
+          
+          # Update release buildType to use signing config
+          sed -i 's/release {/release {\n            signingConfig signingConfigs.release/' "$BUILD_GRADLE"
+          
+          # Also sign debug builds with same key for consistency
+          sed -i 's/debug {/debug {\n            signingConfig signingConfigs.release/' "$BUILD_GRADLE"
       
       - name: Sync Capacitor
         run: npx cap sync android
@@ -119,13 +171,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
       
-      - name: Build Debug APK
+      - name: Build Release APK
         working-directory: android
-        run: ./gradlew assembleDebug --no-daemon
+        run: ./gradlew assembleRelease --no-daemon
       
       - name: Rename APK
         run: |
-          mv android/app/build/outputs/apk/debug/app-debug.apk android/app/build/outputs/apk/debug/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
+          mv android/app/build/outputs/apk/release/app-release.apk android/app/build/outputs/apk/release/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
       
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -144,7 +196,11 @@ jobs:
             2. Apri il file sul tuo dispositivo Android
             3. Consenti l'installazione da fonti sconosciute se richiesto
             4. Segui le istruzioni a schermo
-          files: android/app/build/outputs/apk/debug/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
+            
+            ### Aggiornamenti automatici
+            ✅ Questa versione supporta gli aggiornamenti automatici!
+            L'app ti avviserà quando è disponibile una nuova versione.
+          files: android/app/build/outputs/apk/release/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
           draft: false
           prerelease: false
         env:
@@ -154,5 +210,23 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: repairhubpro-v${{ env.APP_VERSION }}
-          path: android/app/build/outputs/apk/debug/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
+          path: android/app/build/outputs/apk/release/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
           retention-days: 30
+      
+      - name: Output keystore for first run
+        if: ${{ secrets.KEYSTORE_BASE64 == '' }}
+        run: |
+          echo "📋 IMPORTANTE: Per abilitare gli aggiornamenti automatici:"
+          echo ""
+          echo "1. Copia questo valore base64 del keystore:"
+          echo "----------------------------------------"
+          base64 -w 0 android/app/release-keystore.jks
+          echo ""
+          echo "----------------------------------------"
+          echo ""
+          echo "2. Vai su GitHub → Settings → Secrets → Actions"
+          echo "3. Aggiungi un nuovo secret chiamato: KEYSTORE_BASE64"
+          echo "4. Incolla il valore base64 copiato sopra"
+          echo ""
+          echo "Dopo aver fatto questo, tutte le future build useranno"
+          echo "la stessa chiave e gli aggiornamenti funzioneranno!"
