@@ -727,25 +727,40 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4">
-        <TabsList className="w-full grid grid-cols-7">
-          <TabsTrigger value="overview" className="text-xs px-1">Stato</TabsTrigger>
-          <TabsTrigger value="apps" className="text-xs px-1">App</TabsTrigger>
-          <TabsTrigger value="hardware" className="text-xs px-1">Hardware</TabsTrigger>
-          <TabsTrigger value="sensors" className="text-xs px-1">Sensori</TabsTrigger>
-          <TabsTrigger value="network" className="text-xs px-1">Rete</TabsTrigger>
-          <TabsTrigger value="issues" className="text-xs px-1">
-            Problemi
-            {issues.length > 0 && (
-              <span className="ml-0.5 h-4 w-4 rounded-full bg-red-500 text-white text-[10px] flex items-center justify-center">
-                {issues.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="tips" className="text-xs px-1">Consigli</TabsTrigger>
-        </TabsList>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="px-4 pb-24">
+        {/* Tab Navigation - Scrollable on mobile */}
+        <div className="overflow-x-auto -mx-4 px-4 pb-2">
+          <TabsList className="inline-flex min-w-max gap-1 h-auto p-1">
+            <TabsTrigger value="overview" className="text-sm px-3 py-2 whitespace-nowrap">
+              📊 Stato
+            </TabsTrigger>
+            <TabsTrigger value="apps" className="text-sm px-3 py-2 whitespace-nowrap">
+              📱 App
+            </TabsTrigger>
+            <TabsTrigger value="hardware" className="text-sm px-3 py-2 whitespace-nowrap">
+              🔧 Hardware
+            </TabsTrigger>
+            <TabsTrigger value="sensors" className="text-sm px-3 py-2 whitespace-nowrap">
+              🧭 Sensori
+            </TabsTrigger>
+            <TabsTrigger value="network" className="text-sm px-3 py-2 whitespace-nowrap">
+              📶 Rete
+            </TabsTrigger>
+            <TabsTrigger value="issues" className="text-sm px-3 py-2 whitespace-nowrap flex items-center gap-1">
+              ⚠️ Problemi
+              {issues.length > 0 && (
+                <span className="h-5 w-5 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center font-medium">
+                  {issues.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="tips" className="text-sm px-3 py-2 whitespace-nowrap">
+              💡 Consigli
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
-        <ScrollArea className="h-[calc(100vh-340px)] mt-4">
+        <div className="mt-4 space-y-3">
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-3 m-0">
             {/* Loyalty Card */}
@@ -1482,13 +1497,14 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
               </CardContent>
             </Card>
           </TabsContent>
-        </ScrollArea>
+        </div>
       </Tabs>
 
       {/* Fixed Sync Button */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t safe-area-inset-bottom z-20">
         <Button 
-          className="w-full h-12"
+          className="w-full h-14 text-base font-medium shadow-lg"
+          size="lg"
           onClick={handleSync}
           disabled={syncing || deviceData.isLoading}
         >
