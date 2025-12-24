@@ -9,9 +9,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Download, Clock, Sparkles, ExternalLink } from "lucide-react";
+import { Download, Clock, Sparkles, CheckCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { Capacitor } from "@capacitor/core";
+import DeviceDiagnostics from "@/plugins/DeviceStoragePlugin";
+import { toast } from "sonner";
 
 interface UpdateAvailableDialogProps {
   open: boolean;
@@ -34,8 +37,82 @@ export const UpdateAvailableDialog = ({
 }: UpdateAvailableDialogProps) => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [downloadStatus, setDownloadStatus] = useState<'idle' | 'downloading' | 'installing' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleDownload = async () => {
+  const isNative = Capacitor.isNativePlatform();
+
+  const handleNativeDownload = async () => {
+    if (!downloadUrl) {
+      setErrorMessage("URL di download non disponibile");
+      setDownloadStatus('error');
+      return;
+    }
+
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    setDownloadStatus('downloading');
+    setErrorMessage(null);
+
+    try {
+      // Generate filename from version
+      const fileName = `repairhubpro-v${latestVersion}.apk`;
+      
+      // Simulate progress while downloading
+      const progressInterval = setInterval(() => {
+        setDownloadProgress((prev) => {
+          if (prev >= 80) {
+            return 80;
+          }
+          return prev + 5;
+        });
+      }, 300);
+
+      // Download APK using native plugin
+      const downloadResult = await DeviceDiagnostics.downloadApk({
+        url: downloadUrl,
+        fileName: fileName
+      });
+
+      clearInterval(progressInterval);
+
+      if (!downloadResult.success || !downloadResult.filePath) {
+        throw new Error(downloadResult.error || "Download fallito");
+      }
+
+      setDownloadProgress(90);
+      setDownloadStatus('installing');
+
+      // Install APK
+      const installResult = await DeviceDiagnostics.installApk({
+        filePath: downloadResult.filePath
+      });
+
+      if (!installResult.success) {
+        throw new Error(installResult.error || "Installazione fallita");
+      }
+
+      setDownloadProgress(100);
+      setDownloadStatus('success');
+      
+      toast.success("Installazione avviata", {
+        description: "Segui le istruzioni sullo schermo per completare l'aggiornamento"
+      });
+
+    } catch (error) {
+      console.error("Error during native update:", error);
+      setDownloadStatus('error');
+      setErrorMessage(error instanceof Error ? error.message : "Errore durante l'aggiornamento");
+      
+      toast.error("Errore aggiornamento", {
+        description: "Prova a scaricare manualmente dal browser"
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleBrowserDownload = () => {
     if (!downloadUrl) {
       console.error("No download URL available");
       return;
@@ -43,37 +120,47 @@ export const UpdateAvailableDialog = ({
 
     setIsDownloading(true);
     setDownloadProgress(0);
+    setDownloadStatus('downloading');
 
-    try {
-      // Simuliamo il progresso mentre scarichiamo
-      const progressInterval = setInterval(() => {
-        setDownloadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
+    // Simulate progress for browser download
+    const progressInterval = setInterval(() => {
+      setDownloadProgress((prev) => {
+        if (prev >= 90) {
+          clearInterval(progressInterval);
+          return 90;
+        }
+        return prev + 10;
+      });
+    }, 200);
 
-      // Apri l'URL di download direttamente (il browser/sistema gestirà il download)
-      window.open(downloadUrl, "_blank");
+    // Open download URL in browser
+    window.open(downloadUrl, "_blank");
 
-      // Completa il progresso
+    setTimeout(() => {
+      clearInterval(progressInterval);
+      setDownloadProgress(100);
+      setDownloadStatus('success');
+      
       setTimeout(() => {
-        clearInterval(progressInterval);
-        setDownloadProgress(100);
-        
-        setTimeout(() => {
-          setIsDownloading(false);
-          setDownloadProgress(0);
-        }, 1000);
-      }, 2000);
-    } catch (error) {
-      console.error("Error downloading update:", error);
-      setIsDownloading(false);
-      setDownloadProgress(0);
+        setIsDownloading(false);
+        setDownloadProgress(0);
+        setDownloadStatus('idle');
+      }, 1000);
+    }, 2000);
+  };
+
+  const handleDownload = () => {
+    if (isNative) {
+      handleNativeDownload();
+    } else {
+      handleBrowserDownload();
     }
+  };
+
+  const handleRetry = () => {
+    setDownloadStatus('idle');
+    setErrorMessage(null);
+    setDownloadProgress(0);
   };
 
   const formattedDate = releaseDate
@@ -143,43 +230,88 @@ export const UpdateAvailableDialog = ({
           )}
 
           {/* Progress bar durante il download */}
-          {isDownloading && (
+          {(downloadStatus === 'downloading' || downloadStatus === 'installing') && (
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
-                <span>Download in corso...</span>
+                <span>
+                  {downloadStatus === 'downloading' ? 'Download in corso...' : 'Installazione in corso...'}
+                </span>
                 <span>{downloadProgress}%</span>
               </div>
               <Progress value={downloadProgress} className="h-2" />
             </div>
           )}
+
+          {/* Success message */}
+          {downloadStatus === 'success' && (
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 p-3 rounded-lg">
+              <CheckCircle className="h-4 w-4" />
+              <span>
+                {isNative 
+                  ? "Installazione avviata! Segui le istruzioni sullo schermo."
+                  : "Download completato! Apri il file per installare."}
+              </span>
+            </div>
+          )}
+
+          {/* Error message */}
+          {downloadStatus === 'error' && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm text-red-600 bg-red-50 p-3 rounded-lg">
+                <AlertCircle className="h-4 w-4" />
+                <span>{errorMessage || "Errore durante l'aggiornamento"}</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRetry}
+                className="w-full"
+              >
+                Riprova
+              </Button>
+            </div>
+          )}
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-col">
-          <Button
-            onClick={handleDownload}
-            disabled={isDownloading || !downloadUrl}
-            className="w-full"
-          >
-            {isDownloading ? (
-              <>
-                <Download className="h-4 w-4 mr-2 animate-bounce" />
-                Download in corso...
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                Scarica e Installa
-              </>
-            )}
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={onDismiss}
-            disabled={isDownloading}
-            className="w-full"
-          >
-            Più tardi
-          </Button>
+          {downloadStatus !== 'success' && downloadStatus !== 'error' && (
+            <>
+              <Button
+                onClick={handleDownload}
+                disabled={isDownloading || !downloadUrl}
+                className="w-full"
+              >
+                {isDownloading ? (
+                  <>
+                    <Download className="h-4 w-4 mr-2 animate-bounce" />
+                    {downloadStatus === 'installing' ? 'Installazione...' : 'Download in corso...'}
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    Scarica e Installa
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={onDismiss}
+                disabled={isDownloading}
+                className="w-full"
+              >
+                Più tardi
+              </Button>
+            </>
+          )}
+          {(downloadStatus === 'success' || downloadStatus === 'error') && (
+            <Button
+              variant="ghost"
+              onClick={onDismiss}
+              className="w-full"
+            >
+              Chiudi
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
