@@ -1287,6 +1287,7 @@ export type Database = {
           hardware_concurrency: number | null
           health_score: number | null
           id: string
+          installed_apps: Json | null
           is_charging: boolean | null
           language: string | null
           latitude: number | null
@@ -1335,6 +1336,7 @@ export type Database = {
           hardware_concurrency?: number | null
           health_score?: number | null
           id?: string
+          installed_apps?: Json | null
           is_charging?: boolean | null
           language?: string | null
           latitude?: number | null
@@ -1383,6 +1385,7 @@ export type Database = {
           hardware_concurrency?: number | null
           health_score?: number | null
           id?: string
+          installed_apps?: Json | null
           is_charging?: boolean | null
           language?: string | null
           latitude?: number | null

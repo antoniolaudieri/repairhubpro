@@ -745,6 +745,27 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
 
     setSyncing(true);
     try {
+      // Try to get installed apps data for sync
+      let installedAppsData: any[] | null = null;
+      try {
+        const DeviceDiagnostics = (await import('@/plugins/DeviceStoragePlugin')).default;
+        const appsResult = await DeviceDiagnostics.getInstalledAppsStorage();
+        const appsData = Array.isArray(appsResult) ? appsResult : (appsResult as any).apps || [];
+        
+        // Only store top 30 apps to avoid huge payload, and strip icons
+        installedAppsData = appsData.slice(0, 30).map((app: any) => ({
+          packageName: app.packageName,
+          appName: app.appName,
+          totalSizeMb: app.totalSizeMb,
+          appSizeMb: app.appSizeMb,
+          dataSizeMb: app.dataSizeMb,
+          cacheSizeMb: app.cacheSizeMb,
+          isSystemApp: app.isSystemApp
+        }));
+      } catch (e) {
+        console.log('Could not get installed apps for sync:', e);
+      }
+
       const { error: insertError } = await supabase
         .from("device_health_logs")
         .insert({
@@ -786,6 +807,7 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
           connection_downlink: deviceData.connectionDownlink,
           connection_effective_type: deviceData.connectionEffectiveType,
           connection_rtt: deviceData.connectionRtt,
+          installed_apps: installedAppsData,
         });
 
       if (insertError) throw insertError;
