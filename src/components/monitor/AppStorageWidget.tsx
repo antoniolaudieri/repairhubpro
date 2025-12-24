@@ -150,11 +150,19 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
 
       if (isNative) {
         try {
+          console.log('Loading installed apps storage...');
+          
           // Load apps and usage stats in parallel
           const [result, usageResult] = await Promise.all([
             DeviceDiagnostics.getInstalledAppsStorage(),
-            DeviceDiagnostics.getAppUsageStats().catch(() => ({ stats: [], hasPermission: false }))
+            DeviceDiagnostics.getAppUsageStats().catch((e) => {
+              console.log('Usage stats not available:', e);
+              return { stats: [], hasPermission: false };
+            })
           ]);
+          
+          console.log('Apps result:', result);
+          console.log('Usage result:', usageResult);
           
           // Build usage stats map
           const statsMap = new Map<string, AppUsageStat>();
@@ -168,10 +176,35 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
           // Check if result has apps array (new format) or is array directly
           const appsData = Array.isArray(result) ? result : (result as any).apps || [];
           
+          console.log('Apps data count:', appsData.length);
+          
+          // Check if we have size data - if all apps have 0 size, permission is needed
+          const hasValidSizeData = appsData.some((app: AppStorageInfo) => 
+            app.totalSizeMb > 0 || app.appSizeMb > 0 || app.dataSizeMb > 0
+          );
+          
           if (appsData.length === 0) {
-            // Might need permission
+            // No apps found
             setNeedsPermission(true);
             setError('no_apps');
+          } else if (!hasValidSizeData) {
+            // Apps found but no size data - need USAGE_ACCESS permission
+            console.log('No valid size data - permission needed');
+            setApps(appsData);
+            setNeedsPermission(true);
+            setError('need_usage_permission');
+            
+            // Still analyze what we have
+            const analyzed = appsData.map((app: AppStorageInfo) => {
+              const analysis = analyzeApp(app);
+              const usageStat = statsMap.get(app.packageName);
+              return {
+                ...analysis,
+                usageMinutes: usageStat?.totalTimeMinutes || 0,
+                lastUsed: usageStat?.lastTimeUsed || 0
+              };
+            });
+            setAnalyzedApps(analyzed);
           } else {
             setApps(appsData);
             // Analyze all apps with usage data
@@ -387,7 +420,50 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
     );
   }
 
-  // Permission required
+  // Permission required for storage details
+  if (needsPermission && error === 'need_usage_permission') {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Package className="h-4 w-4 text-primary" />
+            App Installate ({apps.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Shield className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-700">Permesso "Accesso all'utilizzo" Richiesto</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Per vedere <strong>memoria e dati</strong> delle app, devi abilitare il permesso "Accesso all'utilizzo" per questa app.
+                </p>
+                <ol className="text-xs text-muted-foreground mt-2 space-y-1">
+                  <li>1. Tocca il pulsante sotto</li>
+                  <li>2. Trova <strong>LabLink Riparo</strong> nell'elenco</li>
+                  <li>3. Attiva il permesso</li>
+                  <li>4. Torna indietro e riprova</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+          
+          <Button onClick={requestPermission} className="w-full gap-2">
+            <Settings className="h-4 w-4" />
+            Apri Impostazioni Permessi
+          </Button>
+
+          <Button variant="outline" onClick={loadApps} className="w-full gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Ho attivato il permesso, Riprova
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // General permission required
   if (needsPermission) {
     return (
       <Card>
