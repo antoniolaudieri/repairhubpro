@@ -9,15 +9,27 @@ import { motion } from "framer-motion";
 import { 
   Activity, Battery, HardDrive, Cpu, Clock, AlertTriangle, 
   CheckCircle2, Sparkles, ChevronRight, RefreshCw, Loader2,
-  Smartphone, FileText
+  Smartphone, FileText, Wifi, WifiOff, MemoryStick, Monitor,
+  Plus, Save, Image
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface CustomerDeviceHealthProps {
   customerId: string;
   centroId: string;
+  onDeviceCreated?: () => void;
 }
 
 interface HealthLog {
@@ -29,13 +41,23 @@ interface HealthLog {
   storage_percent_used: number | null;
   storage_available_gb: number | null;
   storage_total_gb: number | null;
+  storage_used_gb: number | null;
   ram_percent_used: number | null;
   ram_available_mb: number | null;
+  ram_total_mb: number | null;
   device_model_info: string | null;
+  device_manufacturer: string | null;
   os_version: string | null;
   source: string;
   created_at: string;
   anomalies: any;
+  network_type: string | null;
+  network_connected: boolean | null;
+  cpu_cores: number | null;
+  screen_width: number | null;
+  screen_height: number | null;
+  is_charging: boolean | null;
+  device_id: string | null;
 }
 
 interface HardwareInfo {
@@ -70,13 +92,20 @@ interface HealthAlert {
   customer_response: string | null;
 }
 
-export function CustomerDeviceHealth({ customerId, centroId }: CustomerDeviceHealthProps) {
+export function CustomerDeviceHealth({ customerId, centroId, onDeviceCreated }: CustomerDeviceHealthProps) {
   const [loading, setLoading] = useState(true);
   const [healthLogs, setHealthLogs] = useState<HealthLog[]>([]);
   const [quizzes, setQuizzes] = useState<DiagnosticQuiz[]>([]);
   const [alerts, setAlerts] = useState<HealthAlert[]>([]);
   const [selectedLog, setSelectedLog] = useState<HealthLog | null>(null);
   const [selectedQuiz, setSelectedQuiz] = useState<DiagnosticQuiz | null>(null);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deviceToSave, setDeviceToSave] = useState<{
+    brand: string;
+    model: string;
+    device_type: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -85,7 +114,7 @@ export function CustomerDeviceHealth({ customerId, centroId }: CustomerDeviceHea
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch health logs
+      // Fetch health logs with more fields
       const { data: logsData } = await supabase
         .from("device_health_logs")
         .select("*")
@@ -135,6 +164,74 @@ export function CustomerDeviceHealth({ customerId, centroId }: CustomerDeviceHea
     }
   };
 
+  const openSaveDeviceDialog = (log: HealthLog) => {
+    // Extract brand and model from device info
+    const manufacturer = log.device_manufacturer || "Android";
+    const model = log.device_model_info || "Smartphone";
+    
+    setDeviceToSave({
+      brand: manufacturer,
+      model: model,
+      device_type: "smartphone"
+    });
+    setSaveDialogOpen(true);
+  };
+
+  const saveDeviceToCustomer = async () => {
+    if (!deviceToSave || !selectedLog) return;
+    
+    setSaving(true);
+    try {
+      // Create device linked to customer
+      const { data: newDevice, error } = await supabase
+        .from("devices")
+        .insert({
+          customer_id: customerId,
+          device_type: deviceToSave.device_type,
+          brand: deviceToSave.brand,
+          model: deviceToSave.model,
+          reported_issue: "Monitoraggio salute dispositivo"
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update the health log with the device_id
+      if (newDevice) {
+        await supabase
+          .from("device_health_logs")
+          .update({ device_id: newDevice.id })
+          .eq("id", selectedLog.id);
+      }
+
+      toast.success("Dispositivo salvato!", {
+        description: `${deviceToSave.brand} ${deviceToSave.model} aggiunto al cliente`
+      });
+      
+      setSaveDialogOpen(false);
+      onDeviceCreated?.();
+      fetchData();
+    } catch (error: any) {
+      toast.error("Errore nel salvataggio", { description: error.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getBatteryHealthLabel = (health: string | null) => {
+    if (!health) return { label: "Sconosciuto", color: "text-muted-foreground" };
+    const healthMap: Record<string, { label: string; color: string }> = {
+      good: { label: "Buona", color: "text-green-500" },
+      dead: { label: "Critica", color: "text-red-500" },
+      overheat: { label: "Surriscaldamento", color: "text-orange-500" },
+      over_voltage: { label: "Sovratensione", color: "text-red-400" },
+      cold: { label: "Fredda", color: "text-blue-400" },
+      unspecified_failure: { label: "Errore", color: "text-yellow-500" }
+    };
+    return healthMap[health] || { label: health, color: "text-muted-foreground" };
+  };
+
   if (loading) {
     return (
       <Card>
@@ -172,271 +269,539 @@ export function CustomerDeviceHealth({ customerId, centroId }: CustomerDeviceHea
   const latestScore = selectedLog?.health_score || selectedQuiz?.health_score || 0;
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Activity className="h-4 w-4 text-primary" />
-            Salute Dispositivo
-          </CardTitle>
-          <Button variant="ghost" size="sm" onClick={fetchData} className="h-8">
-            <RefreshCw className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Tabs defaultValue={healthLogs.length > 0 ? "android" : "quiz"} className="w-full">
-          <TabsList className="w-full">
-            <TabsTrigger value="android" className="flex-1" disabled={healthLogs.length === 0}>
-              <Smartphone className="h-3.5 w-3.5 mr-1" />
-              Android
-              {healthLogs.length > 0 && (
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
-                  {healthLogs.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="quiz" className="flex-1" disabled={quizzes.length === 0}>
-              <FileText className="h-3.5 w-3.5 mr-1" />
-              iOS Quiz
-              {quizzes.length > 0 && (
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
-                  {quizzes.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            {alerts.length > 0 && (
-              <TabsTrigger value="alerts" className="flex-1">
-                <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                Alert
-                <Badge variant="destructive" className="ml-1.5 h-5 px-1.5 text-xs">
-                  {alerts.filter(a => a.status === "pending").length}
-                </Badge>
+    <>
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className="h-4 w-4 text-primary" />
+              Salute Dispositivo
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={fetchData} className="h-8">
+              <RefreshCw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Tabs defaultValue={healthLogs.length > 0 ? "android" : "quiz"} className="w-full">
+            <TabsList className="w-full">
+              <TabsTrigger value="android" className="flex-1" disabled={healthLogs.length === 0}>
+                <Smartphone className="h-3.5 w-3.5 mr-1" />
+                Android
+                {healthLogs.length > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
+                    {healthLogs.length}
+                  </Badge>
+                )}
               </TabsTrigger>
-            )}
-          </TabsList>
+              <TabsTrigger value="quiz" className="flex-1" disabled={quizzes.length === 0}>
+                <FileText className="h-3.5 w-3.5 mr-1" />
+                iOS Quiz
+                {quizzes.length > 0 && (
+                  <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-xs">
+                    {quizzes.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              {alerts.length > 0 && (
+                <TabsTrigger value="alerts" className="flex-1">
+                  <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                  Alert
+                  <Badge variant="destructive" className="ml-1.5 h-5 px-1.5 text-xs">
+                    {alerts.filter(a => a.status === "pending").length}
+                  </Badge>
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-          <TabsContent value="android" className="mt-4 space-y-4">
-            {selectedLog && (
-              <DeviceHealthSummary healthLog={selectedLog} />
-            )}
-
-            {/* Anomalies */}
-            {selectedLog?.anomalies && Object.keys(selectedLog.anomalies).length > 0 && (
-              <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
-                <div className="flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-4 w-4 text-warning" />
-                  <span className="text-sm font-medium text-warning">Anomalie Rilevate</span>
-                </div>
-                <ul className="space-y-1 text-xs text-muted-foreground">
-                  {Object.entries(selectedLog.anomalies).map(([key, value]) => (
-                    <li key={key} className="flex items-center gap-1">
-                      <span className="capitalize">{key.replace(/_/g, " ")}:</span>
-                      <span>{String(value)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* History */}
-            {healthLogs.length > 1 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground">Storico</h4>
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {healthLogs.map((log) => (
-                    <motion.button
-                      key={log.id}
-                      onClick={() => setSelectedLog(log)}
-                      className={`flex-shrink-0 p-2 rounded-lg border text-center transition-colors ${
-                        selectedLog?.id === log.id 
-                          ? "border-primary bg-primary/5" 
-                          : "border-border hover:border-primary/50"
-                      }`}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <DeviceHealthScore 
-                        score={log.health_score || 0} 
-                        size="sm" 
-                        showLabel={false}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(log.created_at), "dd/MM", { locale: it })}
-                      </p>
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="quiz" className="mt-4 space-y-4">
-            {selectedQuiz ? (
-              <div className="space-y-4">
-                {/* Detected Device Model - Mobile Optimized */}
-                {selectedQuiz.hardware_info?.model && (
-                  <div className="p-2 sm:p-3 rounded-lg bg-primary/5 border border-primary/20">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                        <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <TabsContent value="android" className="mt-4 space-y-4">
+              {selectedLog && (
+                <>
+                  {/* Device Info Card - Enhanced */}
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20">
+                    <div className="flex items-start gap-4">
+                      {/* Device Icon/Image */}
+                      <div className="h-16 w-16 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 border border-primary/20">
+                        <Smartphone className="h-8 w-8 text-primary" />
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs sm:text-sm font-medium truncate">{selectedQuiz.hardware_info.model}</p>
-                        <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                          {selectedQuiz.hardware_info.platform || 'Dispositivo'}
-                          {selectedQuiz.hardware_info.screen && ` • ${selectedQuiz.hardware_info.screen.width}x${selectedQuiz.hardware_info.screen.height}`}
-                        </p>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <h3 className="font-semibold text-base">
+                              {selectedLog.device_manufacturer || "Android"} {selectedLog.device_model_info || "Smartphone"}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              {selectedLog.os_version ? `Android ${selectedLog.os_version}` : "Android"}
+                            </p>
+                          </div>
+                          <DeviceHealthScore 
+                            score={selectedLog.health_score || 0} 
+                            size="sm" 
+                          />
+                        </div>
+                        
+                        {/* Screen & Hardware Info */}
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          {selectedLog.screen_width && selectedLog.screen_height && (
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-background/60 text-xs">
+                              <Monitor className="h-3 w-3 text-blue-400" />
+                              <span>{selectedLog.screen_width}x{selectedLog.screen_height}</span>
+                            </div>
+                          )}
+                          {selectedLog.cpu_cores && (
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-background/60 text-xs">
+                              <Cpu className="h-3 w-3 text-purple-400" />
+                              <span>{selectedLog.cpu_cores} core</span>
+                            </div>
+                          )}
+                          {selectedLog.ram_total_mb && (
+                            <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-background/60 text-xs">
+                              <MemoryStick className="h-3 w-3 text-cyan-400" />
+                              <span>{(selectedLog.ram_total_mb / 1024).toFixed(1)} GB RAM</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Save device button if not already linked */}
+                        {!selectedLog.device_id && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-3 h-7 text-xs"
+                            onClick={() => openSaveDeviceDialog(selectedLog)}
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Salva come Dispositivo Cliente
+                          </Button>
+                        )}
+                        {selectedLog.device_id && (
+                          <Badge variant="outline" className="mt-3 text-xs bg-accent/10 text-accent border-accent/20">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Dispositivo collegato
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                    {/* Hardware metrics - responsive grid */}
-                    {(selectedQuiz.hardware_info.battery?.level !== undefined || 
-                      selectedQuiz.hardware_info.storage?.usedPercent !== undefined || 
-                      selectedQuiz.hardware_info.cpu?.cores) && (
-                      <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
-                        {selectedQuiz.hardware_info.battery?.level !== undefined && (
-                          <div className="flex items-center gap-1 px-2 py-1 rounded bg-background/50 text-xs">
-                            <Battery className="h-3 w-3 text-green-500 shrink-0" />
-                            <span className="font-medium">{selectedQuiz.hardware_info.battery.level}%</span>
+                  </div>
+
+                  {/* Metrics Grid - Battery, Storage, RAM, Network */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Battery */}
+                    <div className="p-3 rounded-lg border bg-card">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                          (selectedLog.battery_level || 0) > 50 ? "bg-green-500/10" : 
+                          (selectedLog.battery_level || 0) > 20 ? "bg-yellow-500/10" : "bg-red-500/10"
+                        }`}>
+                          <Battery className={`h-4 w-4 ${
+                            (selectedLog.battery_level || 0) > 50 ? "text-green-500" : 
+                            (selectedLog.battery_level || 0) > 20 ? "text-yellow-500" : "text-red-500"
+                          }`} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Batteria</p>
+                          <p className="text-lg font-bold">{selectedLog.battery_level || 0}%</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        {selectedLog.battery_health && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Salute</span>
+                            <span className={getBatteryHealthLabel(selectedLog.battery_health).color}>
+                              {getBatteryHealthLabel(selectedLog.battery_health).label}
+                            </span>
                           </div>
                         )}
-                        {selectedQuiz.hardware_info.storage?.usedPercent !== undefined && (
-                          <div className="flex items-center gap-1 px-2 py-1 rounded bg-background/50 text-xs">
-                            <HardDrive className="h-3 w-3 text-blue-500 shrink-0" />
-                            <span className="font-medium">{Math.round(selectedQuiz.hardware_info.storage.usedPercent)}%</span>
+                        {selectedLog.is_charging !== null && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Carica</span>
+                            <span>{selectedLog.is_charging ? "⚡ In carica" : "Non in carica"}</span>
                           </div>
                         )}
-                        {selectedQuiz.hardware_info.cpu?.cores && (
-                          <div className="flex items-center gap-1 px-2 py-1 rounded bg-background/50 text-xs">
-                            <Cpu className="h-3 w-3 text-purple-500 shrink-0" />
-                            <span className="font-medium">{selectedQuiz.hardware_info.cpu.cores} core</span>
+                        {selectedLog.battery_cycles !== null && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Cicli</span>
+                            <span>{selectedLog.battery_cycles}</span>
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex items-center gap-4">
-                  <DeviceHealthScore score={selectedQuiz.health_score || 0} size="md" />
-                  <div>
-                    <p className="text-sm font-medium">Quiz Diagnostico</p>
-                    <p className="text-xs text-muted-foreground">
-                      {format(new Date(selectedQuiz.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
-                    </p>
-                    <Badge 
-                      variant={selectedQuiz.status === "analyzed" ? "default" : "secondary"}
-                      className="mt-1"
-                    >
-                      {selectedQuiz.status === "analyzed" ? "Analizzato" : "In attesa"}
-                    </Badge>
-                  </div>
-                </div>
-
-                {selectedQuiz.ai_analysis && (
-                  <div className="p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">Analisi AI</span>
                     </div>
-                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-                      {selectedQuiz.ai_analysis}
-                    </p>
-                  </div>
-                )}
 
-                {selectedQuiz.recommendations && Array.isArray(selectedQuiz.recommendations) && (
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-medium text-muted-foreground">Raccomandazioni</h4>
-                    <ul className="space-y-1">
-                      {selectedQuiz.recommendations.map((rec: any, index: number) => (
-                        <li key={index} className="flex items-start gap-2 text-xs">
-                          <CheckCircle2 className="h-3.5 w-3.5 text-accent mt-0.5 flex-shrink-0" />
-                          <span>{typeof rec === 'string' ? rec : rec.text || rec.recommendation}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                Nessun quiz completato
-              </p>
-            )}
+                    {/* Storage */}
+                    <div className="p-3 rounded-lg border bg-card">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                          (selectedLog.storage_percent_used || 0) < 80 ? "bg-blue-500/10" : "bg-orange-500/10"
+                        }`}>
+                          <HardDrive className={`h-4 w-4 ${
+                            (selectedLog.storage_percent_used || 0) < 80 ? "text-blue-500" : "text-orange-500"
+                          }`} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Storage</p>
+                          <p className="text-lg font-bold">{Math.round(selectedLog.storage_percent_used || 0)}%</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        {selectedLog.storage_available_gb !== null && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Libero</span>
+                            <span>{selectedLog.storage_available_gb.toFixed(1)} GB</span>
+                          </div>
+                        )}
+                        {selectedLog.storage_total_gb !== null && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Totale</span>
+                            <span>{selectedLog.storage_total_gb.toFixed(0)} GB</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
 
-            {/* Quiz History */}
-            {quizzes.length > 1 && (
-              <div className="space-y-2">
-                <h4 className="text-xs font-medium text-muted-foreground">Storico Quiz</h4>
-                <div className="space-y-2">
-                  {quizzes.map((quiz) => (
-                    <motion.button
-                      key={quiz.id}
-                      onClick={() => setSelectedQuiz(quiz)}
-                      className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                        selectedQuiz?.id === quiz.id 
-                          ? "border-primary bg-primary/5" 
-                          : "border-border hover:border-primary/50"
-                      }`}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.99 }}
-                    >
-                      <div className="flex items-center gap-3">
-                        <DeviceHealthScore 
-                          score={quiz.health_score || 0} 
-                          size="sm" 
-                          showLabel={false}
-                        />
-                        <div className="text-left">
-                          <p className="text-sm font-medium">Punteggio: {quiz.health_score}/100</p>
-                          <p className="text-xs text-muted-foreground">
-                            {format(new Date(quiz.created_at), "dd MMM yyyy", { locale: it })}
+                    {/* RAM */}
+                    <div className="p-3 rounded-lg border bg-card">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                          (selectedLog.ram_percent_used || 0) < 80 ? "bg-purple-500/10" : "bg-red-500/10"
+                        }`}>
+                          <MemoryStick className={`h-4 w-4 ${
+                            (selectedLog.ram_percent_used || 0) < 80 ? "text-purple-500" : "text-red-500"
+                          }`} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">RAM</p>
+                          <p className="text-lg font-bold">{Math.round(selectedLog.ram_percent_used || 0)}%</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        {selectedLog.ram_available_mb !== null && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Libera</span>
+                            <span>{(selectedLog.ram_available_mb / 1024).toFixed(1)} GB</span>
+                          </div>
+                        )}
+                        {selectedLog.ram_total_mb !== null && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Totale</span>
+                            <span>{(selectedLog.ram_total_mb / 1024).toFixed(1)} GB</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Network */}
+                    <div className="p-3 rounded-lg border bg-card">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                          selectedLog.network_connected ? "bg-green-500/10" : "bg-gray-500/10"
+                        }`}>
+                          {selectedLog.network_connected ? (
+                            <Wifi className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <WifiOff className="h-4 w-4 text-gray-500" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Rete</p>
+                          <p className="text-lg font-bold">
+                            {selectedLog.network_connected ? "Online" : "Offline"}
                           </p>
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="alerts" className="mt-4 space-y-3">
-            {alerts.map((alert) => (
-              <div 
-                key={alert.id}
-                className={`p-3 rounded-lg border ${
-                  alert.severity === "critical" 
-                    ? "bg-destructive/5 border-destructive/20" 
-                    : "bg-warning/5 border-warning/20"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-start gap-2">
-                    <AlertTriangle className={`h-4 w-4 mt-0.5 ${
-                      alert.severity === "critical" ? "text-destructive" : "text-warning"
-                    }`} />
-                    <div>
-                      <p className="text-sm font-medium">{alert.title}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{alert.message}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(alert.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
-                      </p>
+                      <div className="space-y-1">
+                        {selectedLog.network_type && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Tipo</span>
+                            <span className="uppercase">{selectedLog.network_type}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <Badge variant={alert.status === "pending" ? "secondary" : "outline"}>
-                    {alert.status === "pending" ? "In attesa" : 
-                     alert.status === "sent" ? "Inviato" : 
-                     alert.customer_response || alert.status}
-                  </Badge>
+
+                  {/* Last Sync Info */}
+                  <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Ultimo sync: {format(new Date(selectedLog.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedLog.source === "android_native" ? "App Android" : selectedLog.source}
+                    </Badge>
+                  </div>
+
+                  {/* Anomalies */}
+                  {selectedLog?.anomalies && Object.keys(selectedLog.anomalies).length > 0 && (
+                    <div className="p-3 rounded-lg bg-warning/10 border border-warning/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertTriangle className="h-4 w-4 text-warning" />
+                        <span className="text-sm font-medium text-warning">Anomalie Rilevate</span>
+                      </div>
+                      <ul className="space-y-1 text-xs text-muted-foreground">
+                        {Object.entries(selectedLog.anomalies).map(([key, value]) => (
+                          <li key={key} className="flex items-center gap-1">
+                            <span className="capitalize">{key.replace(/_/g, " ")}:</span>
+                            <span>{String(value)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* History */}
+              {healthLogs.length > 1 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-muted-foreground">Storico Letture</h4>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {healthLogs.map((log) => (
+                      <motion.button
+                        key={log.id}
+                        onClick={() => setSelectedLog(log)}
+                        className={`flex-shrink-0 p-2 rounded-lg border text-center transition-colors ${
+                          selectedLog?.id === log.id 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <DeviceHealthScore 
+                          score={log.health_score || 0} 
+                          size="sm" 
+                          showLabel={false}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(log.created_at), "dd/MM", { locale: it })}
+                        </p>
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="quiz" className="mt-4 space-y-4">
+              {selectedQuiz ? (
+                <div className="space-y-4">
+                  {/* Detected Device Model - Mobile Optimized */}
+                  {selectedQuiz.hardware_info?.model && (
+                    <div className="p-2 sm:p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Smartphone className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs sm:text-sm font-medium truncate">{selectedQuiz.hardware_info.model}</p>
+                          <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                            {selectedQuiz.hardware_info.platform || 'Dispositivo'}
+                            {selectedQuiz.hardware_info.screen && ` • ${selectedQuiz.hardware_info.screen.width}x${selectedQuiz.hardware_info.screen.height}`}
+                          </p>
+                        </div>
+                      </div>
+                      {/* Hardware metrics - responsive grid */}
+                      {(selectedQuiz.hardware_info.battery?.level !== undefined || 
+                        selectedQuiz.hardware_info.storage?.usedPercent !== undefined || 
+                        selectedQuiz.hardware_info.cpu?.cores) && (
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2 sm:mt-3">
+                          {selectedQuiz.hardware_info.battery?.level !== undefined && (
+                            <div className="flex items-center gap-1 px-2 py-1 rounded bg-background/50 text-xs">
+                              <Battery className="h-3 w-3 text-green-500 shrink-0" />
+                              <span className="font-medium">{selectedQuiz.hardware_info.battery.level}%</span>
+                            </div>
+                          )}
+                          {selectedQuiz.hardware_info.storage?.usedPercent !== undefined && (
+                            <div className="flex items-center gap-1 px-2 py-1 rounded bg-background/50 text-xs">
+                              <HardDrive className="h-3 w-3 text-blue-500 shrink-0" />
+                              <span className="font-medium">{Math.round(selectedQuiz.hardware_info.storage.usedPercent)}%</span>
+                            </div>
+                          )}
+                          {selectedQuiz.hardware_info.cpu?.cores && (
+                            <div className="flex items-center gap-1 px-2 py-1 rounded bg-background/50 text-xs">
+                              <Cpu className="h-3 w-3 text-purple-500 shrink-0" />
+                              <span className="font-medium">{selectedQuiz.hardware_info.cpu.cores} core</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-4">
+                    <DeviceHealthScore score={selectedQuiz.health_score || 0} size="md" />
+                    <div>
+                      <p className="text-sm font-medium">Quiz Diagnostico</p>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(selectedQuiz.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
+                      </p>
+                      <Badge 
+                        variant={selectedQuiz.status === "analyzed" ? "default" : "secondary"}
+                        className="mt-1"
+                      >
+                        {selectedQuiz.status === "analyzed" ? "Analizzato" : "In attesa"}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {selectedQuiz.ai_analysis && (
+                    <div className="p-3 rounded-lg bg-muted/50">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-medium">Analisi AI</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+                        {selectedQuiz.ai_analysis}
+                      </p>
+                    </div>
+                  )}
+
+                  {selectedQuiz.recommendations && Array.isArray(selectedQuiz.recommendations) && (
+                    <div className="space-y-2">
+                      <h4 className="text-xs font-medium text-muted-foreground">Raccomandazioni</h4>
+                      <ul className="space-y-1">
+                        {selectedQuiz.recommendations.map((rec: any, index: number) => (
+                          <li key={index} className="flex items-start gap-2 text-xs">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-accent mt-0.5 flex-shrink-0" />
+                            <span>{typeof rec === 'string' ? rec : rec.text || rec.recommendation}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  Nessun quiz completato
+                </p>
+              )}
+
+              {/* Quiz History */}
+              {quizzes.length > 1 && (
+                <div className="space-y-2">
+                  <h4 className="text-xs font-medium text-muted-foreground">Storico Quiz</h4>
+                  <div className="space-y-2">
+                    {quizzes.map((quiz) => (
+                      <motion.button
+                        key={quiz.id}
+                        onClick={() => setSelectedQuiz(quiz)}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                          selectedQuiz?.id === quiz.id 
+                            ? "border-primary bg-primary/5" 
+                            : "border-border hover:border-primary/50"
+                        }`}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <DeviceHealthScore 
+                            score={quiz.health_score || 0} 
+                            size="sm" 
+                            showLabel={false}
+                          />
+                          <div className="text-left">
+                            <p className="text-sm font-medium">Punteggio: {quiz.health_score}/100</p>
+                            <p className="text-xs text-muted-foreground">
+                              {format(new Date(quiz.created_at), "dd MMM yyyy", { locale: it })}
+                            </p>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="alerts" className="mt-4 space-y-3">
+              {alerts.map((alert) => (
+                <div 
+                  key={alert.id}
+                  className={`p-3 rounded-lg border ${
+                    alert.severity === "critical" 
+                      ? "bg-destructive/5 border-destructive/20" 
+                      : "bg-warning/5 border-warning/20"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className={`h-4 w-4 mt-0.5 ${
+                        alert.severity === "critical" ? "text-destructive" : "text-warning"
+                      }`} />
+                      <div>
+                        <p className="text-sm font-medium">{alert.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">{alert.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {format(new Date(alert.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant={alert.status === "pending" ? "secondary" : "outline"}>
+                      {alert.status === "pending" ? "In attesa" : 
+                       alert.status === "sent" ? "Inviato" : 
+                       alert.customer_response || alert.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Save Device Dialog */}
+      <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Salva Dispositivo</DialogTitle>
+            <DialogDescription>
+              Aggiungi questo dispositivo alla lista dispositivi del cliente per usarlo in preventivi e riparazioni.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {deviceToSave && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Marca</Label>
+                <Input 
+                  value={deviceToSave.brand} 
+                  onChange={(e) => setDeviceToSave({ ...deviceToSave, brand: e.target.value })}
+                />
               </div>
-            ))}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+              <div className="space-y-2">
+                <Label>Modello</Label>
+                <Input 
+                  value={deviceToSave.model} 
+                  onChange={(e) => setDeviceToSave({ ...deviceToSave, model: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo Dispositivo</Label>
+                <Input 
+                  value={deviceToSave.device_type} 
+                  onChange={(e) => setDeviceToSave({ ...deviceToSave, device_type: e.target.value })}
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+              Annulla
+            </Button>
+            <Button onClick={saveDeviceToCustomer} disabled={saving}>
+              {saving ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Salva Dispositivo
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
