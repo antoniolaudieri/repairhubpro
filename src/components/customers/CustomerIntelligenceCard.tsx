@@ -12,7 +12,6 @@ import {
 } from "lucide-react";
 import { format, differenceInDays, addDays, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
-import { motion, AnimatePresence } from "framer-motion";
 
 interface CustomerIntelligenceCardProps {
   customerId: string;
@@ -235,88 +234,80 @@ export function CustomerIntelligenceCard({
         )}
 
         {/* Expanded Section */}
-        <AnimatePresence>
-          {expanded && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <Separator className="my-3" />
-              
-              <div className="space-y-4">
-                {/* LTV Progress */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-xs text-muted-foreground">Lifetime Value</span>
-                    <span className="text-xs font-medium">€{totalSpent.toFixed(2)}</span>
-                  </div>
-                  <Progress value={ltv.percentage} className="h-2" />
-                  <div className="flex justify-between mt-1">
-                    <span className="text-[10px] text-muted-foreground">Bronze</span>
-                    <span className="text-[10px] text-muted-foreground">Platinum</span>
-                  </div>
+        {expanded && (
+          <div className="overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+            <Separator className="my-3" />
+            
+            <div className="space-y-4">
+              {/* LTV Progress */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs text-muted-foreground">Lifetime Value</span>
+                  <span className="text-xs font-medium">€{totalSpent.toFixed(2)}</span>
                 </div>
-
-                {/* Acquisition Source */}
-                {profile?.acquisition_source && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Fonte Acquisizione</span>
-                    <Badge variant="outline" className="text-xs">
-                      {profile.acquisition_source.replace(/_/g, " ")}
-                    </Badge>
-                  </div>
-                )}
-
-                {/* Marketing Consent */}
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Consenso Marketing</span>
-                  {profile?.marketing_consent ? (
-                    <Badge className="bg-accent/10 text-accent border-accent/20 text-xs">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Attivo
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline" className="text-xs text-muted-foreground">
-                      <XCircle className="h-3 w-3 mr-1" />
-                      Non attivo
-                    </Badge>
-                  )}
-                </div>
-
-                {/* Behavioral Tags */}
-                {profile?.behavioral_tags && profile.behavioral_tags.length > 0 && (
-                  <div>
-                    <span className="text-xs text-muted-foreground block mb-2">Tag</span>
-                    <div className="flex flex-wrap gap-1">
-                      {profile.behavioral_tags.map(tag => (
-                        <Badge key={tag} variant="secondary" className="text-[10px]">
-                          {tag.replace(/_/g, " ")}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Repair Stats */}
-                <div className="grid grid-cols-2 gap-3 pt-2">
-                  <div className="text-center p-2 rounded-lg bg-muted/30">
-                    <Target className="h-4 w-4 mx-auto mb-1 text-primary" />
-                    <p className="text-lg font-bold">{repairCount}</p>
-                    <p className="text-[10px] text-muted-foreground">Riparazioni</p>
-                  </div>
-                  <div className="text-center p-2 rounded-lg bg-muted/30">
-                    <TrendingUp className="h-4 w-4 mx-auto mb-1 text-accent" />
-                    <p className="text-lg font-bold">€{repairCount > 0 ? Math.round(totalSpent / repairCount) : 0}</p>
-                    <p className="text-[10px] text-muted-foreground">Scontrino Medio</p>
-                  </div>
+                <Progress value={ltv.percentage} className="h-2" />
+                <div className="flex justify-between mt-1">
+                  <span className="text-[10px] text-muted-foreground">Bronze</span>
+                  <span className="text-[10px] text-muted-foreground">Platinum</span>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              {/* Acquisition Source */}
+              {profile?.acquisition_source && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Fonte Acquisizione</span>
+                  <Badge variant="outline" className="text-xs">
+                    {profile.acquisition_source.replace(/_/g, " ")}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Marketing Consent */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Consenso Marketing</span>
+                {profile?.marketing_consent ? (
+                  <Badge className="bg-accent/10 text-accent border-accent/20 text-xs">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Attivo
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="text-xs text-muted-foreground">
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Non attivo
+                  </Badge>
+                )}
+              </div>
+
+              {/* Behavioral Tags */}
+              {profile?.behavioral_tags && profile.behavioral_tags.length > 0 && (
+                <div>
+                  <span className="text-xs text-muted-foreground block mb-2">Tag</span>
+                  <div className="flex flex-wrap gap-1">
+                    {profile.behavioral_tags.map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-[10px]">
+                        {tag.replace(/_/g, " ")}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Repair Stats */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <div className="text-center p-2 rounded-lg bg-muted/30">
+                  <Target className="h-4 w-4 mx-auto mb-1 text-primary" />
+                  <p className="text-lg font-bold">{repairCount}</p>
+                  <p className="text-[10px] text-muted-foreground">Riparazioni</p>
+                </div>
+                <div className="text-center p-2 rounded-lg bg-muted/30">
+                  <TrendingUp className="h-4 w-4 mx-auto mb-1 text-accent" />
+                  <p className="text-lg font-bold">€{repairCount > 0 ? Math.round(totalSpent / repairCount) : 0}</p>
+                  <p className="text-[10px] text-muted-foreground">Scontrino Medio</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
