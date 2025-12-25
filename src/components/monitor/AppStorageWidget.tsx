@@ -589,89 +589,96 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
                 <div
                   key={analysis.app.packageName + index}
                   className={cn(
-                    "flex items-start gap-3 p-3 rounded-lg border bg-background",
+                    "p-3 rounded-lg border bg-background",
                     analysis.riskLevel === 'critical' && "border-destructive/50 bg-destructive/5",
                     analysis.riskLevel === 'high' && "border-orange-500/50 bg-orange-500/5"
                   )}
                 >
-                  {/* App Icon */}
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted shrink-0 overflow-hidden">
-                    {analysis.app.iconBase64 ? (
-                      <img 
-                        src={analysis.app.iconBase64} 
-                        alt={analysis.app.appName || 'App'} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <Package className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </div>
-
-                  {/* App Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-medium truncate">
-                        {analysis.app.appName || analysis.app.packageName.split('.').pop()}
-                      </p>
-                      <Badge className={cn("text-[10px] h-4 px-1", getRiskColor(analysis.riskLevel))}>
-                        {getRiskLabel(analysis.riskLevel)}
-                      </Badge>
-                      {analysis.app.isSystemApp && (
-                        <Badge variant="outline" className="text-[10px] h-4 px-1">
-                          Sistema
-                        </Badge>
+                  {/* App header with icon and info */}
+                  <div className="flex items-start gap-3">
+                    {/* App Icon */}
+                    <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-muted shrink-0 overflow-hidden">
+                      {analysis.app.iconBase64 ? (
+                        <img 
+                          src={analysis.app.iconBase64} 
+                          alt={analysis.app.appName || 'App'} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <Package className="h-5 w-5 text-muted-foreground" />
                       )}
                     </div>
-                    
-                    {/* Issues */}
-                    {analysis.issues.length > 0 && (
-                      <div className="mt-1 space-y-0.5">
-                        {analysis.issues.slice(0, 2).map((issue, i) => (
-                          <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
-                            <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                            {issue}
-                          </p>
-                        ))}
-                      </div>
-                    )}
 
-                    {/* Size breakdown */}
-                    <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground flex-wrap">
-                      <span>App: {analysis.app.appSizeMb.toFixed(0)} MB</span>
-                      <span>Dati: {analysis.app.dataSizeMb.toFixed(0)} MB</span>
-                    </div>
-                    
-                    {/* Cache and total size */}
-                    {analysis.app.cacheSizeMb > 0 && (
-                      <p className={cn(
-                        "text-[11px] mt-0.5",
-                        analysis.app.cacheSizeMb > 50 ? 'text-amber-600 font-medium' : 'text-muted-foreground'
-                      )}>
-                        Cache: {analysis.app.cacheSizeMb.toFixed(0)} MB
-                      </p>
-                    )}
-                    
-                    {/* Usage stats */}
-                    <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatUsageTime(analysis.usageMinutes)}
-                      </span>
-                      <span>{formatLastUsed(analysis.lastUsed)}</span>
+                    {/* App Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium truncate">
+                          {analysis.app.appName || analysis.app.packageName.split('.').pop()}
+                        </p>
+                        <Badge className={cn("text-[10px] h-4 px-1", getRiskColor(analysis.riskLevel))}>
+                          {getRiskLabel(analysis.riskLevel)}
+                        </Badge>
+                        {analysis.app.isSystemApp && (
+                          <Badge variant="outline" className="text-[10px] h-4 px-1">
+                            Sistema
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      {/* Issues */}
+                      {analysis.issues.length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          {analysis.issues.slice(0, 2).map((issue, i) => (
+                            <p key={i} className="text-xs text-amber-600 flex items-start gap-1">
+                              <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                              {issue}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Size breakdown */}
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground flex-wrap">
+                        <span>App: {analysis.app.appSizeMb.toFixed(0)} MB</span>
+                        <span>Dati: {analysis.app.dataSizeMb.toFixed(0)} MB</span>
+                        <span className="font-medium text-foreground">
+                          Tot: {analysis.app.totalSizeMb >= 1024 
+                            ? `${(analysis.app.totalSizeMb / 1024).toFixed(1)} GB`
+                            : `${analysis.app.totalSizeMb.toFixed(0)} MB`
+                          }
+                        </span>
+                      </div>
+                      
+                      {/* Cache */}
+                      {analysis.app.cacheSizeMb > 0 && (
+                        <p className={cn(
+                          "text-[11px] mt-0.5",
+                          analysis.app.cacheSizeMb > 50 ? 'text-amber-600 font-medium' : 'text-muted-foreground'
+                        )}>
+                          Cache: {analysis.app.cacheSizeMb.toFixed(0)} MB
+                        </p>
+                      )}
+                      
+                      {/* Usage stats */}
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {formatUsageTime(analysis.usageMinutes)}
+                        </span>
+                        <span>{formatLastUsed(analysis.lastUsed)}</span>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Actions - Settings button */}
+                  
+                  {/* Settings button - full width below */}
                   <Button
                     variant="outline"
-                    size="icon"
-                    className="h-10 w-10 shrink-0 touch-manipulation"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openAppSettings(analysis.app.packageName);
-                    }}
+                    size="sm"
+                    className="w-full mt-3 h-10 touch-manipulation"
+                    onClick={() => openAppSettings(analysis.app.packageName)}
                   >
-                    <Settings className="h-5 w-5" />
+                    <Settings className="h-4 w-4 mr-2" />
+                    Impostazioni App
                   </Button>
                 </div>
               ))
