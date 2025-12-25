@@ -234,6 +234,62 @@ function buildAes128GcmBody(
   return concat(salt, rs, idlen, localPublicKey, ciphertext);
 }
 
+// Send FCM push notification (for Android native apps)
+async function sendFcmNotification(
+  fcmToken: string,
+  payload: PushPayload,
+  fcmServerKey: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const fcmPayload = {
+      to: fcmToken,
+      notification: {
+        title: payload.title,
+        body: payload.body,
+        icon: payload.icon || "ic_notification",
+        badge: "1",
+        sound: "default",
+        click_action: "FLUTTER_NOTIFICATION_CLICK",
+      },
+      data: {
+        ...payload.data,
+        title: payload.title,
+        body: payload.body,
+      },
+      priority: "high",
+      time_to_live: 86400,
+    };
+
+    const response = await fetch("https://fcm.googleapis.com/fcm/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `key=${fcmServerKey}`,
+      },
+      body: JSON.stringify(fcmPayload),
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success === 1) {
+        return { success: true };
+      } else if (result.results?.[0]?.error) {
+        const error = result.results[0].error;
+        if (error === "NotRegistered" || error === "InvalidRegistration") {
+          return { success: false, error: "subscription_expired" };
+        }
+        return { success: false, error };
+      }
+      return { success: true };
+    } else {
+      const errorText = await response.text();
+      return { success: false, error: `FCM ${response.status}: ${errorText}` };
+    }
+  } catch (error) {
+    return { success: false, error: String(error) };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -242,6 +298,7 @@ serve(async (req) => {
   try {
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
+    const fcmServerKey = Deno.env.get("FCM_SERVER_KEY");
 
     if (!vapidPublicKey || !vapidPrivateKey) {
       throw new Error("VAPID keys not configured");
@@ -325,10 +382,33 @@ serve(async (req) => {
       tag: payload.tag,
     });
 
-    // Send push notifications with proper encryption
+    // Send push notifications - handle both FCM (Android) and Web Push
     const results = await Promise.all(
       subscriptions.map(async (sub) => {
         try {
+          // Check if this is an FCM subscription (Android native)
+          if (sub.endpoint.startsWith("fcm://")) {
+            // Extract FCM token from endpoint
+            const fcmToken = sub.endpoint.replace("fcm://", "");
+            
+            if (!fcmServerKey) {
+              console.log(`[FCM] No FCM_SERVER_KEY configured, skipping FCM push for ${sub.user_id}`);
+              return { success: false, error: "FCM_SERVER_KEY not configured", subscription_id: sub.id, user_id: sub.user_id };
+            }
+            
+            console.log(`[FCM] Sending to token: ${fcmToken.substring(0, 20)}...`);
+            const result = await sendFcmNotification(fcmToken, payload, fcmServerKey);
+            
+            if (result.success) {
+              console.log(`[FCM] Push sent successfully to ${sub.user_id}`);
+              return { success: true, subscription_id: sub.id, user_id: sub.user_id };
+            } else {
+              console.error(`[FCM] Push failed for ${sub.user_id}: ${result.error}`);
+              return { success: false, error: result.error, subscription_id: sub.id, user_id: sub.user_id };
+            }
+          }
+          
+          // Web Push (PWA) - existing logic
           const endpoint = new URL(sub.endpoint);
           const audience = `${endpoint.protocol}//${endpoint.host}`;
 
@@ -363,11 +443,11 @@ serve(async (req) => {
           });
 
           if (response.ok || response.status === 201) {
-            console.log(`Push sent successfully to ${sub.endpoint.substring(0, 50)}...`);
+            console.log(`[WebPush] Push sent successfully to ${sub.endpoint.substring(0, 50)}...`);
             return { success: true, subscription_id: sub.id, user_id: sub.user_id };
           } else {
             const errorText = await response.text();
-            console.error(`Push failed for ${sub.endpoint.substring(0, 50)}: ${response.status} - ${errorText}`);
+            console.error(`[WebPush] Push failed for ${sub.endpoint.substring(0, 50)}: ${response.status} - ${errorText}`);
             
             if (response.status === 410 || response.status === 404) {
               return { success: false, error: "subscription_expired", subscription_id: sub.id, user_id: sub.user_id };
@@ -377,7 +457,7 @@ serve(async (req) => {
           }
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error(`Push failed for ${sub.endpoint.substring(0, 50)}:`, errorMessage);
+          console.error(`Push failed for ${sub.endpoint?.substring(0, 50) || 'unknown'}:`, errorMessage);
           return { success: false, error: errorMessage, subscription_id: sub.id, user_id: sub.user_id };
         }
       })
