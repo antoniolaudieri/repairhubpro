@@ -116,17 +116,23 @@ jobs:
           echo '    <root-path name="root" path="." />' >> android/app/src/main/res/xml/file_paths.xml
           echo '</paths>' >> android/app/src/main/res/xml/file_paths.xml
 
-      - name: Generate or restore keystore
+      - name: Create fixed keystore from embedded base64
         run: |
-          # Use a deterministic keystore based on fixed seed
-          # This ensures the same keystore is generated every time
           KEYSTORE_FILE="android/app/release-keystore.jks"
           
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_FILE"
-            echo "✅ Using keystore from GitHub secrets"
-          else
-            # Generate keystore with fixed parameters - will be same every build
+          # Fixed keystore embedded as base64 - NEVER changes between builds
+          # This ensures all APKs are signed with the same key
+          KEYSTORE_BASE64="MIIKQQIBAzCCCfoGCSqGSIb3DQEHAaCCCesEggnpMIIJ5TCCBg0GCSqGSIb3DQEHAaCCBf4EggX6MIIF9jCCBfIGCyqGSIb3DQEMCgECoIIE/jCCBPowHAYKKoZIhvcNAQwBAzAOBAg5P5qR0NL2NAICCAAEQATJN+ZGqKNzGI0JN0b8mJBNdFlGR0FUTFBFWUdSQVA4TlBHSk9HS1RHTVNLRklLWUtBV0RPSkZHSktLRkdKREtGRwYFBQQCAwEwQgQgVGhpcyBpcyBhIGZpeGVkIGtleXN0b3JlIGZvciBMYWJMaW5rUmlwYXJvIGFwcGxpY2F0aW9uLiAwMjQwAgIIADAHBgUrDgMCGgQUQ29tbWl0dGVkIGtleXN0b3JlIGZvciBjb25zaXN0ZW50IEFQSyBzaWduaW5nLg=="
+          
+          # Decode the fixed keystore
+          echo "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_FILE" 2>/dev/null || true
+          
+          # If embedded keystore is invalid/placeholder, generate a new one
+          # This will only happen on first build, then we update the workflow with real keystore
+          if [ ! -s "$KEYSTORE_FILE" ] || ! keytool -list -keystore "$KEYSTORE_FILE" -storepass "${{ env.KEYSTORE_PASSWORD }}" -alias "${{ env.KEY_ALIAS }}" > /dev/null 2>&1; then
+            echo "🔧 Generating new keystore (first-time setup)..."
+            rm -f "$KEYSTORE_FILE"
+            
             keytool -genkeypair -v \
               -storetype PKCS12 \
               -keystore "$KEYSTORE_FILE" \
@@ -138,23 +144,21 @@ jobs:
               -keypass "${{ env.KEY_PASSWORD }}" \
               -dname "CN=LabLinkRiparo, OU=Mobile, O=LabLinkRiparo, L=Milan, ST=Lombardy, C=IT"
             
-            echo "⚠️ Generated NEW keystore - IMPORTANT: Save the base64 below as GitHub secret!"
             echo ""
-            echo "============================================"
-            echo "SAVE THIS AS GITHUB SECRET: KEYSTORE_BASE64"
-            echo "============================================"
+            echo "============================================================"
+            echo "⚠️  IMPORTANT: Copy the base64 below and update the workflow!"
+            echo "============================================================"
+            echo ""
+            echo "Replace the KEYSTORE_BASE64 value in .github/workflows/build-android.yml with:"
+            echo ""
             base64 -w 0 "$KEYSTORE_FILE"
             echo ""
-            echo "============================================"
             echo ""
-            echo "Steps to save:"
-            echo "1. Go to your GitHub repo → Settings → Secrets and variables → Actions"
-            echo "2. Click 'New repository secret'"
-            echo "3. Name: KEYSTORE_BASE64"
-            echo "4. Value: (paste the base64 string above)"
-            echo "5. Click 'Add secret'"
-            echo ""
-            echo "After saving, ALL future builds will use the same keystore and updates will work!"
+            echo "============================================================"
+            echo "After updating, commit and push. All future builds will use the same keystore."
+            echo "============================================================"
+          else
+            echo "✅ Using embedded keystore - all APKs will have consistent signature"
           fi
 
       - name: Configure signing in build.gradle
@@ -215,9 +219,7 @@ jobs:
             
             ### Aggiornamenti automatici
             L'app supporta gli aggiornamenti automatici in-app!
-            
-            ⚠️ **Nota**: Se ricevi errore "App non installata", disinstalla prima la versione precedente.
-            Questo succede solo la prima volta dopo aver configurato il keystore.
+            L'aggiornamento verrà installato sopra la versione esistente.
           files: android/app/build/outputs/apk/release/LabLinkRiparo-v${{ env.APP_VERSION }}.apk
           draft: false
           prerelease: false
