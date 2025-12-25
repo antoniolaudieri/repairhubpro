@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CentroLayout } from "@/layouts/CentroLayout";
 import { supabase } from "@/integrations/supabase/client";
 import MarketPriceHistory from "@/components/centro/MarketPriceHistory";
+import { UsatoHeroStats } from "@/components/centro/UsatoHeroStats";
+import { UsatoDeviceCard } from "@/components/centro/UsatoDeviceCard";
+import { UsatoReservationCard } from "@/components/centro/UsatoReservationCard";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,14 +29,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { toast } from "@/components/ui/use-toast";
 import {
   Package,
@@ -67,6 +62,8 @@ import {
   Percent,
   Calculator,
   DollarSign,
+  LayoutGrid,
+  Filter,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { format } from "date-fns";
@@ -796,18 +793,24 @@ export default function CentroUsato() {
 
   return (
     <CentroLayout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Gestione Usato</h1>
-            <p className="text-muted-foreground">Pubblica e gestisci dispositivi usati e ricondizionati</p>
+      <div className="p-4 md:p-6 space-y-6">
+        {/* Hero Stats */}
+        <UsatoHeroStats stats={stats} />
+        
+        {/* Action Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Cerca dispositivi..." 
+              className="pl-9 h-10"
+            />
           </div>
           <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="gap-2 h-10">
                 <Plus className="h-4 w-4" />
-                Aggiungi Dispositivo
+                <span className="hidden sm:inline">Aggiungi</span> Dispositivo
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -1500,238 +1503,108 @@ export default function CentroUsato() {
           </Dialog>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Package className="h-8 w-8 text-muted-foreground" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.total}</p>
-                  <p className="text-xs text-muted-foreground">Totale</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Eye className="h-8 w-8 text-success" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.published}</p>
-                  <p className="text-xs text-muted-foreground">Pubblicati</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <Clock className="h-8 w-8 text-warning" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.reserved}</p>
-                  <p className="text-xs text-muted-foreground">Prenotati</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <ShoppingCart className="h-8 w-8 text-primary" />
-                <div>
-                  <p className="text-2xl font-bold">{stats.sold}</p>
-                  <p className="text-xs text-muted-foreground">Venduti</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className={stats.pendingReservations > 0 ? "border-warning" : ""}>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <AlertCircle className={`h-8 w-8 ${stats.pendingReservations > 0 ? "text-warning" : "text-muted-foreground"}`} />
-                <div>
-                  <p className="text-2xl font-bold">{stats.pendingReservations}</p>
-                  <p className="text-xs text-muted-foreground">Richieste</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
         {/* Tabs */}
-        <Tabs defaultValue="devices">
-          <TabsList>
-            <TabsTrigger value="devices">Dispositivi</TabsTrigger>
-            <TabsTrigger value="reservations" className="relative">
-              Prenotazioni
+        <Tabs defaultValue="devices" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid">
+            <TabsTrigger value="devices" className="gap-2">
+              <LayoutGrid className="h-4 w-4" />
+              <span className="hidden sm:inline">Dispositivi</span>
+            </TabsTrigger>
+            <TabsTrigger value="reservations" className="relative gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              <span className="hidden sm:inline">Prenotazioni</span>
               {stats.pendingReservations > 0 && (
-                <Badge className="ml-2 h-5 min-w-[20px] px-1.5 bg-warning text-warning-foreground">
+                <Badge className="ml-1 h-5 min-w-[20px] px-1.5 bg-warning text-warning-foreground text-[10px]">
                   {stats.pendingReservations}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="market">Prezzi Mercato</TabsTrigger>
+            <TabsTrigger value="market" className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              <span className="hidden sm:inline">Prezzi</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="devices" className="mt-4">
             {loading ? (
-              <div className="space-y-3">
-                {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-16" />)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {[...Array(8)].map((_, i) => (
+                  <div key={i} className="rounded-xl border border-border/50 overflow-hidden">
+                    <Skeleton className="h-32 w-full" />
+                    <div className="p-4 space-y-3">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-5 w-2/3" />
+                      <Skeleton className="h-6 w-1/4" />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : devices.length === 0 ? (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <Smartphone className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="font-semibold mb-2">Nessun dispositivo</h3>
-                  <p className="text-muted-foreground mb-4">Aggiungi il primo dispositivo usato da vendere</p>
-                  <Button onClick={() => setDialogOpen(true)} className="gap-2">
-                    <Plus className="h-4 w-4" />
-                    Aggiungi Dispositivo
-                  </Button>
-                </CardContent>
-              </Card>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <Card className="border-dashed">
+                  <CardContent className="p-12 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
+                      <Smartphone className="h-8 w-8 text-primary" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Nessun dispositivo</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                      Inizia ad aggiungere dispositivi usati e ricondizionati al tuo catalogo
+                    </p>
+                    <Button onClick={() => setDialogOpen(true)} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Aggiungi il primo dispositivo
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Dispositivo</TableHead>
-                    <TableHead>Tipo Vendita</TableHead>
-                    <TableHead>Condizione</TableHead>
-                    <TableHead>Prezzo</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {devices.map((device) => (
-                    <TableRow key={device.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{device.brand} {device.model}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {device.storage_capacity} {device.color && `• ${device.color}`}
-                          </p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={device.sale_type === "conto_vendita" ? "default" : "secondary"}
-                          className={device.sale_type === "conto_vendita" ? "bg-primary/20 text-primary border-primary/30" : ""}
-                        >
-                          {saleTypeOptions.find(s => s.value === device.sale_type)?.label || "Acquistato"}
-                        </Badge>
-                        {device.sale_type === "conto_vendita" && device.status === "sold" && device.owner_payout > 0 && (
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
-                            Cliente: €{device.owner_payout?.toFixed(2)}
-                          </p>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {conditionOptions.find(c => c.value === device.condition)?.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">€{device.price.toLocaleString()}</p>
-                          {device.status === "sold" && device.centro_net_margin > 0 && (
-                            <p className="text-[10px] text-success font-medium">
-                              Netto: €{device.centro_net_margin?.toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{getStatusBadge(device.status)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          {device.status === "draft" && (
-                            <Button size="sm" variant="outline" onClick={() => handlePublish(device.id)} className="gap-1">
-                              <Eye className="h-3 w-3" />
-                              Pubblica
-                            </Button>
-                          )}
-                          {(device.status === "published" || device.status === "reserved") && (
-                            <Button size="sm" variant="default" onClick={() => handleMarkAsSold(device.id)} className="gap-1 bg-success hover:bg-success/90">
-                              <DollarSign className="h-3 w-3" />
-                              Venduto
-                            </Button>
-                          )}
-                          <Button size="icon" variant="ghost" onClick={() => handleEdit(device)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {device.status !== "sold" && (
-                            <Button size="icon" variant="ghost" className="text-destructive" onClick={() => handleDelete(device.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {devices.map((device, index) => (
+                  <UsatoDeviceCard
+                    key={device.id}
+                    device={device}
+                    onEdit={handleEdit}
+                    onPublish={handlePublish}
+                    onDelete={handleDelete}
+                    onMarkAsSold={handleMarkAsSold}
+                  />
+                ))}
+              </div>
             )}
           </TabsContent>
 
           <TabsContent value="reservations" className="mt-4">
             {reservations.length === 0 ? (
-              <Card>
-                <CardContent className="p-12 text-center">
-                  <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="font-semibold mb-2">Nessuna prenotazione</h3>
-                  <p className="text-muted-foreground">Le richieste dei clienti appariranno qui</p>
-                </CardContent>
-              </Card>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+              >
+                <Card className="border-dashed">
+                  <CardContent className="p-12 text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
+                      <ShoppingCart className="h-8 w-8 text-primary" />
+                    </div>
+                    <h3 className="font-semibold text-lg mb-2">Nessuna prenotazione</h3>
+                    <p className="text-muted-foreground max-w-sm mx-auto">
+                      Le richieste di prenotazione dei clienti appariranno qui
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Dispositivo</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {reservations.map((res) => (
-                    <TableRow key={res.id}>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{res.customer_name}</p>
-                          <p className="text-xs text-muted-foreground">{res.customer_email}</p>
-                          <p className="text-xs text-muted-foreground">{res.customer_phone}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {res.device ? `${res.device.brand} ${res.device.model}` : "N/D"}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(res.created_at), "dd MMM yyyy HH:mm", { locale: it })}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={res.status === "pending" ? "default" : res.status === "confirmed" ? "default" : "secondary"}>
-                          {res.status === "pending" ? "In attesa" : res.status === "confirmed" ? "Confermata" : "Annullata"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {res.status === "pending" && (
-                          <div className="flex justify-end gap-1">
-                            <Button size="sm" onClick={() => handleReservationAction(res.id, "confirmed")} className="gap-1">
-                              <CheckCircle2 className="h-3 w-3" />
-                              Conferma
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => handleReservationAction(res.id, "cancelled")}>
-                              Annulla
-                            </Button>
-                          </div>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {reservations.map((res) => (
+                  <UsatoReservationCard
+                    key={res.id}
+                    reservation={res}
+                    onConfirm={(id) => handleReservationAction(id, "confirmed")}
+                    onCancel={(id) => handleReservationAction(id, "cancelled")}
+                  />
+                ))}
+              </div>
             )}
           </TabsContent>
           
