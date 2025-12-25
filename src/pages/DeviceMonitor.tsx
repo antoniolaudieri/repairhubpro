@@ -318,107 +318,93 @@ const DeviceMonitor = () => {
   }
 
   return (
-    <div className="min-h-screen bg-monitor">
-      {/* Header with Centro branding - modern glass effect */}
-      <header className="relative overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-r from-primary via-primary to-primary/90" />
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAwIDEwIEwgNDAgMTAgTSAxMCAwIEwgMTAgNDAgTSAwIDIwIEwgNDAgMjAgTSAyMCAwIEwgMjAgNDAgTSAwIDMwIEwgNDAgMzAgTSAzMCAwIEwgMzAgNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-50" />
-        
-        <div className="relative p-4 pb-5">
-          <div className="flex items-center gap-4">
-            {centro?.logo_url ? (
-              <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-white/20 blur-md scale-110" />
-                <img 
-                  src={centro.logo_url} 
-                  alt={centro.business_name}
-                  className="relative h-14 w-14 rounded-full object-cover border-2 border-white/30 shadow-lg"
-                />
-              </div>
-            ) : (
-              <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-white/20 blur-md scale-110" />
-                <div className="relative h-14 w-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center border border-white/30">
-                  <Settings className="h-7 w-7 text-white" />
-                </div>
-              </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-white truncate drop-shadow-sm">
-                {centro?.business_name || 'Device Monitor'}
-              </h1>
-              <p className="text-sm text-white/70 flex items-center gap-1.5">
-                <Activity className="h-3.5 w-3.5" />
-                Monitoraggio Dispositivo
-              </p>
-            </div>
-            <div className="flex items-center">
-              <div className={cn(
-                'p-2 rounded-full backdrop-blur transition-all',
-                pushEnabled ? 'bg-white/20 text-white' : 'bg-white/10 text-white/50'
-              )}>
-                <Bell className="h-5 w-5" />
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Wave separator */}
-        <div className="absolute bottom-0 left-0 right-0 h-4 overflow-hidden">
-          <svg className="absolute bottom-0 w-full" viewBox="0 0 1200 24" preserveAspectRatio="none">
-            <path 
-              d="M0,24 L0,12 Q300,0 600,12 T1200,12 L1200,24 Z" 
-              fill="hsl(var(--background))"
+    <div className="min-h-screen bg-monitor flex flex-col">
+      {/* Compact Header */}
+      <header className="shrink-0 bg-gradient-to-r from-primary to-primary/90 px-4 py-3">
+        <div className="flex items-center gap-3">
+          {centro?.logo_url ? (
+            <img 
+              src={centro.logo_url} 
+              alt={centro.business_name}
+              className="h-10 w-10 rounded-full object-cover border-2 border-white/30"
             />
-          </svg>
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-white/20 flex items-center justify-center">
+              <Settings className="h-5 w-5 text-white" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <h1 className="text-base font-bold text-white truncate">
+              {centro?.business_name || 'Device Health Pro'}
+            </h1>
+            <p className="text-xs text-white/70">{user?.email}</p>
+          </div>
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            onClick={handleRefresh}
+            disabled={deviceInfo.isLoading}
+            className="text-white hover:bg-white/20 h-9 w-9"
+          >
+            <RefreshCw className={cn('h-4 w-4', deviceInfo.isLoading && 'animate-spin')} />
+          </Button>
+          <Button 
+            size="icon" 
+            variant="ghost" 
+            onClick={() => navigate('/auth')}
+            className="text-white hover:bg-white/20 h-9 w-9"
+          >
+            <LogIn className="h-4 w-4" />
+          </Button>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="p-4 space-y-4 pb-28">
-        {/* Health Score - Featured */}
-        <div className="animate-fade-in">
+      {/* Main content - scrollable */}
+      <main className="flex-1 overflow-y-auto p-3 pb-24 space-y-3">
+        {/* Device Info + Health Score Row */}
+        <div className="grid grid-cols-2 gap-3">
+          <DeviceInfoWidget 
+            model={deviceInfo.deviceModel}
+            manufacturer={deviceInfo.deviceManufacturer}
+            osVersion={deviceInfo.osVersion}
+            platform={deviceInfo.platform}
+            appVersion={deviceInfo.appVersion}
+          />
           <HealthScoreWidget 
             score={deviceInfo.healthScore} 
             lastSyncAt={deviceInfo.lastSyncAt}
           />
         </div>
 
-        {/* Status Card */}
-        <Card className="card-glass border-0 animate-fade-in" style={{ animationDelay: '0.1s' }}>
-          <CardContent className="p-4">
+        {/* Sync Status - Compact */}
+        <Card className="border-0 bg-card/50">
+          <CardContent className="p-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div className={cn(
-                  'p-2 rounded-xl transition-all',
+                  'p-1.5 rounded-lg',
                   deviceInfo.lastSyncAt 
                     ? 'bg-green-500/15 text-green-600' 
                     : 'bg-amber-500/15 text-amber-600'
                 )}>
                   {deviceInfo.lastSyncAt ? (
-                    <Cloud className="h-5 w-5" />
+                    <Cloud className="h-4 w-4" />
                   ) : (
-                    <CloudOff className="h-5 w-5" />
+                    <CloudOff className="h-4 w-4" />
                   )}
                 </div>
-                <div>
-                  <span className="text-sm font-medium text-foreground">
-                    {deviceInfo.lastSyncAt ? 'Connesso al centro' : 'Non sincronizzato'}
-                  </span>
-                  <p className="text-xs text-muted-foreground">
-                    {deviceInfo.lastSyncAt ? 'Dati aggiornati' : 'Sincronizza per salvare i dati'}
-                  </p>
-                </div>
+                <span className="text-xs font-medium">
+                  {deviceInfo.lastSyncAt ? 'Sincronizzato' : 'Non sincronizzato'}
+                </span>
               </div>
               <Button 
                 size="sm" 
-                variant="outline"
+                variant="ghost"
                 onClick={handleRefresh}
                 disabled={deviceInfo.isLoading}
-                className="rounded-xl"
+                className="h-7 text-xs"
               >
-                <RefreshCw className={cn('h-4 w-4 mr-2', deviceInfo.isLoading && 'animate-spin')} />
+                <RefreshCw className={cn('h-3 w-3 mr-1', deviceInfo.isLoading && 'animate-spin')} />
                 Aggiorna
               </Button>
             </div>
@@ -426,7 +412,7 @@ const DeviceMonitor = () => {
         </Card>
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <BatteryWidget 
             level={deviceInfo.batteryLevel}
             health={deviceInfo.batteryHealth}
@@ -476,14 +462,6 @@ const DeviceMonitor = () => {
             language={deviceInfo.language}
             latitude={deviceInfo.latitude}
             longitude={deviceInfo.longitude}
-          />
-          
-          <DeviceInfoWidget 
-            model={deviceInfo.deviceModel}
-            manufacturer={deviceInfo.deviceManufacturer}
-            osVersion={deviceInfo.osVersion}
-            platform={deviceInfo.platform}
-            appVersion={deviceInfo.appVersion}
           />
         </div>
 
