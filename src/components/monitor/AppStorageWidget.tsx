@@ -635,19 +635,24 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
                       </div>
                     )}
 
-                    {/* Size breakdown + Usage */}
-                    <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground flex-wrap">
+                    {/* Size breakdown */}
+                    <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground flex-wrap">
                       <span>App: {analysis.app.appSizeMb.toFixed(0)} MB</span>
                       <span>Dati: {analysis.app.dataSizeMb.toFixed(0)} MB</span>
-                      {analysis.app.cacheSizeMb > 0 && (
-                        <span className={analysis.app.cacheSizeMb > 50 ? 'text-amber-600' : ''}>
-                          Cache: {analysis.app.cacheSizeMb.toFixed(0)} MB
-                        </span>
-                      )}
                     </div>
                     
+                    {/* Cache and total size */}
+                    {analysis.app.cacheSizeMb > 0 && (
+                      <p className={cn(
+                        "text-[11px] mt-0.5",
+                        analysis.app.cacheSizeMb > 50 ? 'text-amber-600 font-medium' : 'text-muted-foreground'
+                      )}>
+                        Cache: {analysis.app.cacheSizeMb.toFixed(0)} MB
+                      </p>
+                    )}
+                    
                     {/* Usage stats */}
-                    <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+                    <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
                         {formatUsageTime(analysis.usageMinutes)}
@@ -656,31 +661,18 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
                     </div>
                   </div>
 
-                  {/* Actions + Size */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <p className={cn(
-                      "text-xs font-bold whitespace-nowrap",
-                      getStorageImpactColor(analysis.storageImpact)
-                    )}>
-                      {analysis.app.totalSizeMb >= 1024 
-                        ? `${(analysis.app.totalSizeMb / 1024).toFixed(1)} GB`
-                        : `${analysis.app.totalSizeMb.toFixed(0)} MB`
-                      }
-                    </p>
-                    
-                    {/* Open Settings button */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openAppSettings(analysis.app.packageName);
-                      }}
-                    >
-                      <Settings className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+                  {/* Actions - Settings button */}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10 shrink-0 touch-manipulation"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openAppSettings(analysis.app.packageName);
+                    }}
+                  >
+                    <Settings className="h-5 w-5" />
+                  </Button>
                 </div>
               ))
             )}
