@@ -657,9 +657,9 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
                   </div>
 
                   {/* Actions + Size */}
-                  <div className="flex flex-col items-end gap-1 shrink-0 min-w-[60px]">
+                  <div className="flex items-center gap-2 shrink-0">
                     <p className={cn(
-                      "text-sm font-bold whitespace-nowrap",
+                      "text-xs font-bold whitespace-nowrap",
                       getStorageImpactColor(analysis.storageImpact)
                     )}>
                       {analysis.app.totalSizeMb >= 1024 
@@ -672,13 +672,13 @@ export const AppStorageWidget = ({ onRefresh }: AppStorageWidgetProps) => {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-7 w-7 shrink-0"
                       onClick={(e) => {
                         e.stopPropagation();
                         openAppSettings(analysis.app.packageName);
                       }}
                     >
-                      <Settings className="h-4 w-4" />
+                      <Settings className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
