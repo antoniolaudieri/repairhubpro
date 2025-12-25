@@ -114,6 +114,8 @@ export default function CentroNuovoRitiro() {
     phone: "",
     address: "",
     notes: "",
+    birth_date: "",
+    marketing_consent: true, // Default to enabled
   });
 
   const [deviceData, setDeviceData] = useState({
@@ -554,6 +556,8 @@ export default function CentroNuovoRitiro() {
         phone: customer.phone,
         address: customer.address || "",
         notes: "",
+        birth_date: "",
+        marketing_consent: true,
       });
       setIsNewCustomer(false);
     }
@@ -561,7 +565,7 @@ export default function CentroNuovoRitiro() {
 
   const handleCreateNewCustomer = () => {
     setExistingCustomerId(null);
-    setCustomerData({ name: "", email: "", phone: "", address: "", notes: "" });
+    setCustomerData({ name: "", email: "", phone: "", address: "", notes: "", birth_date: "", marketing_consent: true });
     setIsNewCustomer(true);
   };
 
@@ -688,11 +692,12 @@ export default function CentroNuovoRitiro() {
             }
           }
 
-          // Create customer record linked to centro
+          // Create customer record linked to centro (exclude profile-specific fields)
+          const { birth_date, marketing_consent, ...customerInsertData } = customerData;
           const { data: customer, error: customerError } = await supabase
             .from("customers")
             .insert({
-              ...customerData,
+              ...customerInsertData,
               centro_id: centroId,
             })
             .select()
@@ -700,6 +705,19 @@ export default function CentroNuovoRitiro() {
 
           if (customerError) throw customerError;
           customerId = customer.id;
+
+          // Create customer profile with marketing consent and birth date
+          if (customerId && centroId) {
+            await supabase
+              .from("customer_profiles")
+              .upsert({
+                customer_id: customerId,
+                centro_id: centroId,
+                marketing_consent: marketing_consent ?? true,
+                email_consent: marketing_consent ?? true,
+                birth_date: birth_date || null,
+              }, { onConflict: 'customer_id' });
+          }
         }
       }
 
