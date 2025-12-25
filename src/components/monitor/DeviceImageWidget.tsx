@@ -76,30 +76,17 @@ export const DeviceImageWidget = ({
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Smartphone className="h-4 w-4 text-primary" />
-            Il Tuo Dispositivo
-          </CardTitle>
-          {platform && (
-            <Badge variant="outline" className="capitalize">
-              {platform}
-            </Badge>
-          )}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="flex flex-col items-center">
-          {/* Device Image */}
-          <div className="relative w-32 h-32 mb-4 bg-gradient-to-br from-muted/50 to-muted rounded-2xl flex items-center justify-center overflow-hidden">
+      <CardContent className="p-3">
+        <div className="flex items-center gap-3">
+          {/* Device Image - Compact */}
+          <div className="relative w-14 h-14 bg-gradient-to-br from-muted/50 to-muted rounded-xl flex items-center justify-center overflow-hidden shrink-0">
             {loading ? (
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             ) : imageUrl && !error ? (
               <img
                 src={imageUrl}
                 alt={`${manufacturer} ${model}`}
-                className="w-full h-full object-contain p-2"
+                className="w-full h-full object-contain p-1"
                 onError={() => setError(true)}
               />
             ) : (
@@ -107,34 +94,32 @@ export const DeviceImageWidget = ({
             )}
           </div>
 
-          {/* Device Info */}
-          <div className="text-center space-y-1">
-            {manufacturer && (
-              <p className="text-lg font-semibold text-foreground">
-                {manufacturer}
-              </p>
-            )}
+          {/* Device Info - Compact inline */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-1.5 mb-0.5">
+              <span className="text-sm font-semibold truncate">
+                {manufacturer || 'Dispositivo'}
+              </span>
+              {platform && (
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    "text-[10px] px-1.5 py-0 h-4",
+                    platform === 'android' && "bg-green-500/15 text-green-600 border-0",
+                    platform === 'ios' && "bg-gray-500/15 text-gray-600 border-0"
+                  )}
+                >
+                  {platform === 'android' ? 'Android' : platform === 'ios' ? 'iOS' : 'Web'}
+                </Badge>
+              )}
+            </div>
             {model && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate">
                 {model}
               </p>
             )}
-            {!manufacturer && !model && (
-              <p className="text-sm text-muted-foreground">
-                Dispositivo sconosciuto
-              </p>
-            )}
-          </div>
-
-          {/* Quick Stats */}
-          <div className="mt-4 grid grid-cols-2 gap-2 w-full">
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-xs text-muted-foreground">Tipo</p>
-              <p className="text-sm font-medium capitalize">{getDeviceType()}</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-2 text-center">
-              <p className="text-xs text-muted-foreground">OS</p>
-              <p className="text-sm font-medium capitalize">{platform || 'N/D'}</p>
+            <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground/70">
+              <span className="capitalize">{getDeviceType()}</span>
             </div>
           </div>
         </div>
