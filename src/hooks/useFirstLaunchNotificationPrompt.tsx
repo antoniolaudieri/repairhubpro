@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useUnifiedPushNotifications } from "@/hooks/useUnifiedPushNotifications";
 import { toast } from "sonner";
+import { safeGetItem, safeSetItem, safeRemoveItem } from "@/utils/safeStorage";
 
 const FIRST_LAUNCH_KEY = "repairhubpro_notification_prompted";
 
@@ -15,9 +16,10 @@ export function useFirstLaunchNotificationPrompt() {
   
   // Permission is considered denied if not granted and not loading
   const permissionDenied = !isGranted && !isLoading && isSupported;
+
   useEffect(() => {
-    // Check if this is the first launch
-    const hasBeenPrompted = localStorage.getItem(FIRST_LAUNCH_KEY);
+    // Check if this is the first launch - use safe storage access
+    const hasBeenPrompted = safeGetItem(FIRST_LAUNCH_KEY);
     if (!hasBeenPrompted) {
       setIsFirstLaunch(true);
     }
@@ -55,7 +57,7 @@ export function useFirstLaunchNotificationPrompt() {
                 description: "Riceverai aggiornamenti anche quando l'app è chiusa",
               });
               // Mark as prompted permanently
-              localStorage.setItem(FIRST_LAUNCH_KEY, "true");
+              safeSetItem(FIRST_LAUNCH_KEY, "true");
             } else {
               if (permissionDenied) {
                 toast.error("Notifiche bloccate", {
@@ -82,13 +84,13 @@ export function useFirstLaunchNotificationPrompt() {
 
   // Function to mark as prompted (call after successful subscription from settings)
   const markAsPrompted = () => {
-    localStorage.setItem(FIRST_LAUNCH_KEY, "true");
+    safeSetItem(FIRST_LAUNCH_KEY, "true");
     setIsFirstLaunch(false);
   };
 
   // Function to reset (for testing)
   const resetPrompt = () => {
-    localStorage.removeItem(FIRST_LAUNCH_KEY);
+    safeRemoveItem(FIRST_LAUNCH_KEY);
     setIsFirstLaunch(true);
     hasPrompted.current = false;
   };
