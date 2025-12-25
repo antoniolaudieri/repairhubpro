@@ -1,13 +1,15 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { RefreshCw, Bell, Cloud, CloudOff, Settings, LogIn, CreditCard, Activity, AlertTriangle } from 'lucide-react';
+import { RefreshCw, Bell, Cloud, CloudOff, Settings, LogIn, CreditCard, Activity, AlertTriangle, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNativeDeviceInfo } from '@/hooks/useNativeDeviceInfo';
 import { useSmartMaintenanceReminders } from '@/hooks/useSmartMaintenanceReminders';
+import { useUnifiedPushNotifications } from '@/hooks/useUnifiedPushNotifications';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -71,6 +73,9 @@ const DeviceMonitor = () => {
     }
   });
 
+  // Unified push notifications (web + native)
+  const pushNotifications = useUnifiedPushNotifications();
+
   // Check if running in native environment and setup Capacitor
   useEffect(() => {
     let mounted = true;
@@ -83,36 +88,11 @@ const DeviceMonitor = () => {
         setIsNative(nativePlatform);
         
         if (nativePlatform) {
-          // Setup push notifications
-          try {
-            const { PushNotifications } = await import('@capacitor/push-notifications');
-            
-            const result = await PushNotifications.checkPermissions();
-            
-            if (result.receive === 'prompt') {
-              const requestResult = await PushNotifications.requestPermissions();
-              if (mounted) setPushEnabled(requestResult.receive === 'granted');
-            } else {
-              if (mounted) setPushEnabled(result.receive === 'granted');
-            }
-
-            if (result.receive === 'granted') {
-              await PushNotifications.register();
-              
-              PushNotifications.addListener('pushNotificationReceived', notification => {
-                toast({
-                  title: notification.title || 'Notifica',
-                  description: notification.body || ''
-                });
-              });
-              
-              PushNotifications.addListener('pushNotificationActionPerformed', action => {
-                console.log('Push action performed:', action);
-              });
-            }
-          } catch (e) {
-            console.log('Push notifications not available:', e);
+          // Auto-register for push notifications on native
+          if (pushNotifications.isSupported && !pushNotifications.isSubscribed) {
+            await pushNotifications.subscribe();
           }
+          setPushEnabled(pushNotifications.isGranted);
 
           // Setup app lifecycle
           try {
@@ -139,7 +119,7 @@ const DeviceMonitor = () => {
     return () => {
       mounted = false;
     };
-  }, [toast, deviceInfo]);
+  }, [pushNotifications.isSupported, pushNotifications.isSubscribed, pushNotifications.isGranted, deviceInfo]);
 
   // Fetch loyalty card and centro info for logged-in user
   useEffect(() => {
@@ -457,6 +437,59 @@ const DeviceMonitor = () => {
                   </Button>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Push Notifications Status */}
+        {pushNotifications.isSupported && (
+          <Card className={cn(
+            "border-0",
+            pushNotifications.isGranted 
+              ? "bg-green-500/10" 
+              : "bg-gradient-to-r from-primary/10 to-blue-500/10"
+          )}>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    'p-1.5 rounded-lg',
+                    pushNotifications.isGranted
+                      ? 'bg-green-500/20 text-green-600'
+                      : 'bg-primary/20 text-primary'
+                  )}>
+                    <BellRing className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium">
+                      {pushNotifications.isGranted ? 'Notifiche attive' : 'Attiva notifiche'}
+                    </span>
+                    {pushNotifications.isGranted && (
+                      <Badge variant="outline" className="ml-2 text-[10px] py-0 h-4">
+                        {pushNotifications.platform === 'android' ? 'Android' : 
+                         pushNotifications.platform === 'ios' ? 'iOS' : 'Web'}
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                {!pushNotifications.isGranted && (
+                  <Button 
+                    size="sm" 
+                    variant="default"
+                    onClick={() => pushNotifications.subscribe()}
+                    disabled={pushNotifications.isLoading}
+                    className="h-7 text-xs"
+                  >
+                    <Bell className="h-3 w-3 mr-1" />
+                    Attiva
+                  </Button>
+                )}
+              </div>
+              {!pushNotifications.isGranted && (
+                <p className="text-[10px] text-muted-foreground mt-1.5">
+                  Ricevi promemoria manutenzione e aggiornamenti sulle tue riparazioni
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
