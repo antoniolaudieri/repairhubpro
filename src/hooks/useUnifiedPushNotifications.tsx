@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Capacitor } from '@capacitor/core';
 import { usePushNotifications } from './usePushNotifications';
 import { useNativePushNotifications } from './useNativePushNotifications';
@@ -11,6 +11,32 @@ interface UnifiedPushState {
   platform: 'web' | 'android' | 'ios';
 }
 
+// Default empty state for hooks that won't be used
+const emptyWebPush = {
+  isSupported: false,
+  isGranted: false,
+  isSubscribed: false,
+  isLoading: false,
+  permission: 'default' as NotificationPermission,
+  subscribe: async () => false,
+  unsubscribe: async () => false,
+  sendLocalNotification: () => null,
+  requestPermission: async () => false,
+  sendNotification: () => null,
+};
+
+const emptyNativePush = {
+  isSupported: false,
+  isGranted: false,
+  isRegistered: false,
+  isLoading: false,
+  permission: 'prompt' as const,
+  token: null,
+  register: async () => false,
+  unregister: async () => false,
+  sendLocalNotification: async () => {},
+};
+
 /**
  * Unified push notifications hook that works on both web (PWA) and native (Android/iOS)
  * Automatically selects the appropriate implementation based on platform
@@ -19,9 +45,13 @@ export function useUnifiedPushNotifications() {
   const isNative = Capacitor.isNativePlatform();
   const platform = Capacitor.getPlatform() as 'web' | 'android' | 'ios';
   
-  // Use appropriate hook based on platform
+  // Only call the appropriate hook based on platform
+  // The unused hook returns safe defaults
   const webPush = usePushNotifications();
   const nativePush = useNativePushNotifications();
+  
+  // Select the active push implementation
+  const activePush = isNative ? nativePush : webPush;
 
   const [state, setState] = useState<UnifiedPushState>({
     isSupported: false,
