@@ -35,3 +35,8 @@ export const safeLocalStorage = {
     }
   }
 };
+
+// Convenience exports for direct usage
+export const safeGetItem = safeLocalStorage.getItem;
+export const safeSetItem = safeLocalStorage.setItem;
+export const safeRemoveItem = safeLocalStorage.removeItem;

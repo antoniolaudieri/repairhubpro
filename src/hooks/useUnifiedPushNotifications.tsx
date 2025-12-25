@@ -1,7 +1,5 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
-import { usePushNotifications } from './usePushNotifications';
-import { useNativePushNotifications } from './useNativePushNotifications';
 
 interface UnifiedPushState {
   isSupported: boolean;
@@ -11,47 +9,26 @@ interface UnifiedPushState {
   platform: 'web' | 'android' | 'ios';
 }
 
-// Default empty state for hooks that won't be used
-const emptyWebPush = {
-  isSupported: false,
-  isGranted: false,
-  isSubscribed: false,
-  isLoading: false,
-  permission: 'default' as NotificationPermission,
-  subscribe: async () => false,
-  unsubscribe: async () => false,
-  sendLocalNotification: () => null,
-  requestPermission: async () => false,
-  sendNotification: () => null,
-};
-
-const emptyNativePush = {
-  isSupported: false,
-  isGranted: false,
-  isRegistered: false,
-  isLoading: false,
-  permission: 'prompt' as const,
-  token: null,
-  register: async () => false,
-  unregister: async () => false,
-  sendLocalNotification: async () => {},
-};
-
 /**
  * Unified push notifications hook that works on both web (PWA) and native (Android/iOS)
  * Automatically selects the appropriate implementation based on platform
  */
 export function useUnifiedPushNotifications() {
-  const isNative = Capacitor.isNativePlatform();
-  const platform = Capacitor.getPlatform() as 'web' | 'android' | 'ios';
+  const [isNative] = useState(() => {
+    try {
+      return Capacitor.isNativePlatform();
+    } catch {
+      return false;
+    }
+  });
   
-  // Only call the appropriate hook based on platform
-  // The unused hook returns safe defaults
-  const webPush = usePushNotifications();
-  const nativePush = useNativePushNotifications();
-  
-  // Select the active push implementation
-  const activePush = isNative ? nativePush : webPush;
+  const [platform] = useState<'web' | 'android' | 'ios'>(() => {
+    try {
+      return Capacitor.getPlatform() as 'web' | 'android' | 'ios';
+    } catch {
+      return 'web';
+    }
+  });
 
   const [state, setState] = useState<UnifiedPushState>({
     isSupported: false,
@@ -61,76 +38,196 @@ export function useUnifiedPushNotifications() {
     platform,
   });
 
-  // Update state based on platform
+  const [nativeHook, setNativeHook] = useState<{
+    register: () => Promise<boolean>;
+    unregister: () => Promise<boolean>;
+    sendLocalNotification: (title: string, body: string, data?: Record<string, unknown>) => Promise<void>;
+  } | null>(null);
+
+  const [webHook, setWebHook] = useState<{
+    subscribe: () => Promise<boolean>;
+    unsubscribe: () => Promise<boolean>;
+    sendLocalNotification: (title: string, options?: NotificationOptions) => void;
+  } | null>(null);
+
+  // Initialize the appropriate push hook based on platform
   useEffect(() => {
-    if (isNative) {
-      setState({
-        isSupported: nativePush.isSupported,
-        isGranted: nativePush.isGranted,
-        isSubscribed: nativePush.isRegistered,
-        isLoading: nativePush.isLoading,
-        platform,
-      });
-    } else {
-      setState({
-        isSupported: webPush.isSupported,
-        isGranted: webPush.isGranted,
-        isSubscribed: webPush.isSubscribed,
-        isLoading: webPush.isLoading,
-        platform: 'web',
-      });
-    }
-  }, [
-    isNative,
-    platform,
-    webPush.isSupported,
-    webPush.isGranted,
-    webPush.isSubscribed,
-    webPush.isLoading,
-    nativePush.isSupported,
-    nativePush.isGranted,
-    nativePush.isRegistered,
-    nativePush.isLoading,
-  ]);
+    const init = async () => {
+      if (isNative) {
+        // Dynamically import native push hook to avoid issues on web
+        try {
+          const { useNativePushNotifications } = await import('./useNativePushNotifications');
+          // We can't use hooks dynamically, so we'll implement inline
+          const { PushNotifications } = await import('@capacitor/push-notifications');
+          
+          // Check current permission status
+          const permResult = await PushNotifications.checkPermissions();
+          const isGranted = permResult.receive === 'granted';
+          
+          setState({
+            isSupported: true,
+            isGranted,
+            isSubscribed: isGranted,
+            isLoading: false,
+            platform,
+          });
+
+          // Setup registration function
+          setNativeHook({
+            register: async () => {
+              try {
+                const currentPerm = await PushNotifications.checkPermissions();
+                
+                if (currentPerm.receive === 'prompt') {
+                  const requestResult = await PushNotifications.requestPermissions();
+                  if (requestResult.receive !== 'granted') {
+                    setState(prev => ({ ...prev, isGranted: false }));
+                    return false;
+                  }
+                } else if (currentPerm.receive === 'denied') {
+                  return false;
+                }
+
+                await PushNotifications.register();
+                setState(prev => ({ ...prev, isGranted: true, isSubscribed: true }));
+                return true;
+              } catch (error) {
+                console.error('[UnifiedPush] Registration error:', error);
+                return false;
+              }
+            },
+            unregister: async () => {
+              try {
+                await PushNotifications.removeAllListeners();
+                setState(prev => ({ ...prev, isSubscribed: false }));
+                return true;
+              } catch (error) {
+                console.error('[UnifiedPush] Unregister error:', error);
+                return false;
+              }
+            },
+            sendLocalNotification: async (title: string, body: string, data?: Record<string, unknown>) => {
+              try {
+                const { LocalNotifications } = await import('@capacitor/local-notifications');
+                await LocalNotifications.schedule({
+                  notifications: [{
+                    id: Date.now(),
+                    title,
+                    body,
+                    extra: data,
+                  }]
+                });
+              } catch (error) {
+                console.log('[UnifiedPush] Local notification error:', error);
+              }
+            }
+          });
+
+        } catch (error) {
+          console.log('[UnifiedPush] Native push not available:', error);
+          setState(prev => ({ ...prev, isSupported: false, isLoading: false }));
+        }
+      } else {
+        // Web push - check support safely
+        try {
+          const hasNotification = typeof window !== 'undefined' && 'Notification' in window;
+          const hasServiceWorker = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
+          const hasPushManager = typeof window !== 'undefined' && 'PushManager' in window;
+          
+          const isSupported = hasNotification && hasServiceWorker && hasPushManager;
+
+          if (!isSupported) {
+            setState(prev => ({ ...prev, isSupported: false, isLoading: false }));
+            return;
+          }
+
+          let permission: NotificationPermission = 'default';
+          try {
+            permission = Notification.permission;
+          } catch (e) {
+            console.log('[UnifiedPush] Could not read Notification.permission');
+          }
+
+          setState({
+            isSupported: true,
+            isGranted: permission === 'granted',
+            isSubscribed: permission === 'granted',
+            isLoading: false,
+            platform: 'web',
+          });
+
+          setWebHook({
+            subscribe: async () => {
+              try {
+                const result = await Notification.requestPermission();
+                const granted = result === 'granted';
+                setState(prev => ({ ...prev, isGranted: granted, isSubscribed: granted }));
+                return granted;
+              } catch (error) {
+                console.error('[UnifiedPush] Subscribe error:', error);
+                return false;
+              }
+            },
+            unsubscribe: async () => {
+              setState(prev => ({ ...prev, isSubscribed: false }));
+              return true;
+            },
+            sendLocalNotification: (title: string, options?: NotificationOptions) => {
+              try {
+                new Notification(title, options);
+              } catch (error) {
+                console.log('[UnifiedPush] Local notification error:', error);
+              }
+            }
+          });
+
+        } catch (error) {
+          console.log('[UnifiedPush] Web push init error:', error);
+          setState(prev => ({ ...prev, isSupported: false, isLoading: false }));
+        }
+      }
+    };
+
+    init();
+  }, [isNative, platform]);
 
   // Subscribe/Register for push notifications
   const subscribe = useCallback(async (): Promise<boolean> => {
-    if (isNative) {
-      return await nativePush.register();
-    } else {
-      return await webPush.subscribe();
+    if (isNative && nativeHook) {
+      return await nativeHook.register();
+    } else if (!isNative && webHook) {
+      return await webHook.subscribe();
     }
-  }, [isNative, nativePush, webPush]);
+    return false;
+  }, [isNative, nativeHook, webHook]);
 
   // Unsubscribe/Unregister from push notifications
   const unsubscribe = useCallback(async (): Promise<boolean> => {
-    if (isNative) {
-      return await nativePush.unregister();
-    } else {
-      return await webPush.unsubscribe();
+    if (isNative && nativeHook) {
+      return await nativeHook.unregister();
+    } else if (!isNative && webHook) {
+      return await webHook.unsubscribe();
     }
-  }, [isNative, nativePush, webPush]);
+    return false;
+  }, [isNative, nativeHook, webHook]);
 
-  // Send local notification (for testing or local alerts)
+  // Send local notification
   const sendLocalNotification = useCallback((
     title: string, 
     body: string,
     data?: Record<string, unknown>
   ) => {
-    if (isNative) {
-      nativePush.sendLocalNotification(title, body, data);
-    } else {
-      webPush.sendLocalNotification(title, { body, data });
+    if (isNative && nativeHook) {
+      nativeHook.sendLocalNotification(title, body, data);
+    } else if (!isNative && webHook) {
+      webHook.sendLocalNotification(title, { body, data: data as any });
     }
-  }, [isNative, nativePush, webPush]);
+  }, [isNative, nativeHook, webHook]);
 
   return {
     ...state,
     subscribe,
     unsubscribe,
     sendLocalNotification,
-    // Raw access to platform-specific hooks if needed
-    webPush: isNative ? null : webPush,
-    nativePush: isNative ? nativePush : null,
   };
 }
