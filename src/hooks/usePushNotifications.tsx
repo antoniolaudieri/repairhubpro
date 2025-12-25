@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { Capacitor } from "@capacitor/core";
 import { supabase } from "@/integrations/supabase/client";
 import { VAPID_PUBLIC_KEY, urlBase64ToUint8Array } from "@/config/vapid";
 
@@ -20,17 +21,31 @@ export function usePushNotifications() {
   // Check if Push is supported and get current state
   useEffect(() => {
     const checkSupport = async () => {
-      const isSupported = 
-        "Notification" in window && 
-        "serviceWorker" in navigator && 
-        "PushManager" in window;
+      // Skip entirely on native platforms - use native push instead
+      if (Capacitor.isNativePlatform()) {
+        setState(prev => ({ ...prev, isSupported: false, isLoading: false }));
+        return;
+      }
+
+      // Safe check for web push support
+      const hasNotification = typeof window !== 'undefined' && 'Notification' in window;
+      const hasServiceWorker = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
+      const hasPushManager = typeof window !== 'undefined' && 'PushManager' in window;
+      
+      const isSupported = hasNotification && hasServiceWorker && hasPushManager;
 
       if (!isSupported) {
         setState(prev => ({ ...prev, isSupported: false, isLoading: false }));
         return;
       }
 
-      const permission = Notification.permission;
+      // Safe access to Notification.permission
+      let permission: NotificationPermission = "default";
+      try {
+        permission = Notification.permission;
+      } catch (e) {
+        console.log("Could not read Notification.permission:", e);
+      }
       
       // Check if already subscribed
       let isSubscribed = false;
