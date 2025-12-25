@@ -51,6 +51,8 @@ const NewRepair = () => {
     phone: "",
     address: "",
     notes: "",
+    birth_date: "",
+    marketing_consent: true,
   });
 
   const [deviceData, setDeviceData] = useState({
@@ -354,6 +356,8 @@ const NewRepair = () => {
         phone: customer.phone,
         address: customer.address || "",
         notes: "",
+        birth_date: "",
+        marketing_consent: true,
       });
       setIsNewCustomer(false);
     }
@@ -367,6 +371,8 @@ const NewRepair = () => {
       phone: "",
       address: "",
       notes: "",
+      birth_date: "",
+      marketing_consent: true,
     });
     setIsNewCustomer(true);
   };

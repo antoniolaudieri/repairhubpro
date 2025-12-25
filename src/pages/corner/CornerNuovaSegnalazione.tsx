@@ -76,6 +76,8 @@ export default function CornerNuovaSegnalazione() {
     phone: "",
     address: "",
     notes: "",
+    birth_date: "",
+    marketing_consent: true,
   });
 
   const [deviceData, setDeviceData] = useState({
@@ -355,6 +357,8 @@ export default function CornerNuovaSegnalazione() {
         phone: customer.phone,
         address: customer.address || "",
         notes: "",
+        birth_date: "",
+        marketing_consent: true,
       });
       setIsNewCustomer(false);
     }
@@ -362,7 +366,7 @@ export default function CornerNuovaSegnalazione() {
 
   const handleCreateNewCustomer = () => {
     setExistingCustomerId(null);
-    setCustomerData({ name: "", email: "", phone: "", address: "", notes: "" });
+    setCustomerData({ name: "", email: "", phone: "", address: "", notes: "", birth_date: "", marketing_consent: true });
     setIsNewCustomer(true);
   };
 
