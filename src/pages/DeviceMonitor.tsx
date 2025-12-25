@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { RefreshCw, Bell, Cloud, CloudOff, Settings, LogIn, CreditCard, Activity } from 'lucide-react';
+import { RefreshCw, Bell, Cloud, CloudOff, Settings, LogIn, CreditCard, Activity, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useNativeDeviceInfo } from '@/hooks/useNativeDeviceInfo';
+import { useSmartMaintenanceReminders } from '@/hooks/useSmartMaintenanceReminders';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { 
@@ -47,12 +48,28 @@ const DeviceMonitor = () => {
   const [pushEnabled, setPushEnabled] = useState(false);
   const [isNative, setIsNative] = useState(false);
   const [noLoyaltyCard, setNoLoyaltyCard] = useState(false);
+  const [pendingAlerts, setPendingAlerts] = useState<any[]>([]);
   
   // Use centroId from URL or from loyalty card
   const centroId = urlCentroId || loyaltyCard?.centro_id;
   const customerId = loyaltyCard?.customer_id || undefined;
   
   const deviceInfo = useNativeDeviceInfo(centroId, customerId, loyaltyCard?.id);
+  
+  // Smart maintenance reminders hook
+  const { 
+    analyzeHealthAndNotify, 
+    getPendingAlerts, 
+    markAlertViewed,
+    respondToAlert 
+  } = useSmartMaintenanceReminders({
+    centroId,
+    customerId,
+    enabled: true,
+    onAlertReceived: (alerts) => {
+      setPendingAlerts(prev => [...alerts, ...prev].slice(0, 10));
+    }
+  });
 
   // Check if running in native environment and setup Capacitor
   useEffect(() => {
@@ -228,6 +245,17 @@ const DeviceMonitor = () => {
     fetchUserData();
   }, [user, authLoading, urlCentroId, toast]);
 
+  // Load pending alerts on mount
+  useEffect(() => {
+    const loadAlerts = async () => {
+      if (centroId && customerId) {
+        const alerts = await getPendingAlerts();
+        setPendingAlerts(alerts);
+      }
+    };
+    loadAlerts();
+  }, [centroId, customerId, getPendingAlerts]);
+
   const handleSync = async () => {
     setSyncing(true);
     try {
@@ -237,6 +265,9 @@ const DeviceMonitor = () => {
           title: 'Sincronizzato',
           description: 'Dati del dispositivo inviati al centro'
         });
+        
+        // Trigger smart maintenance analysis after sync
+        await analyzeHealthAndNotify();
       } else {
         throw new Error('Sync failed');
       }
@@ -375,6 +406,60 @@ const DeviceMonitor = () => {
             lastSyncAt={deviceInfo.lastSyncAt}
           />
         </div>
+
+        {/* Maintenance Alerts Banner */}
+        {pendingAlerts.length > 0 && (
+          <Card className="border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-orange-500/10">
+            <CardContent className="p-3">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-amber-500/20">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm text-amber-800 dark:text-amber-200">
+                    {pendingAlerts.length} Promemoria Manutenzione
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {pendingAlerts[0]?.title}
+                  </p>
+                  {pendingAlerts[0]?.discount_offered && (
+                    <span className="inline-flex items-center mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium bg-green-500/20 text-green-700 dark:text-green-300">
+                      🎁 Sconto {pendingAlerts[0].discount_offered}%
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      if (pendingAlerts[0]) {
+                        respondToAlert(pendingAlerts[0].id, 'book');
+                        setPendingAlerts(prev => prev.slice(1));
+                      }
+                    }}
+                  >
+                    Prenota
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    className="h-7 text-xs text-muted-foreground"
+                    onClick={() => {
+                      if (pendingAlerts[0]) {
+                        respondToAlert(pendingAlerts[0].id, 'dismiss');
+                        setPendingAlerts(prev => prev.slice(1));
+                      }
+                    }}
+                  >
+                    Ignora
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Sync Status - Compact */}
         <Card className="border-0 bg-card/50">
