@@ -116,3 +116,12 @@ verify_jwt = false
 
 [functions.unsubscribe-email]
 verify_jwt = false
+
+[functions.analyze-device-health-alerts]
+verify_jwt = false
+
+[functions.create-topup-checkout]
+verify_jwt = false
+
+[functions.confirm-topup-payment]
+verify_jwt = false
