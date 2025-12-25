@@ -4,12 +4,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import NativeLogin from "@/pages/NativeLogin";
 import NativeMonitor from "@/pages/NativeMonitor";
+import NativeSettings from "@/pages/NativeSettings";
 import { useAppUpdate } from "@/hooks/useAppUpdate";
 import { UpdateAvailableDialog } from "@/components/native/UpdateAvailableDialog";
+import { useFirstLaunchNotificationPrompt } from "@/hooks/useFirstLaunchNotificationPrompt";
+
+type AppView = "monitor" | "settings";
 
 const NativeApp = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState<AppView>("monitor");
 
   const {
     showUpdateDialog,
@@ -20,6 +25,9 @@ const NativeApp = () => {
     releaseDate,
     dismissUpdate,
   } = useAppUpdate();
+
+  // Prompt for notifications on first launch
+  useFirstLaunchNotificationPrompt();
 
   useEffect(() => {
     // Check current session
@@ -47,10 +55,24 @@ const NativeApp = () => {
     );
   }
 
+  const renderContent = () => {
+    if (!user) {
+      return <NativeLogin />;
+    }
+
+    switch (currentView) {
+      case "settings":
+        return <NativeSettings user={user} onBack={() => setCurrentView("monitor")} />;
+      case "monitor":
+      default:
+        return <NativeMonitor user={user} onOpenSettings={() => setCurrentView("settings")} />;
+    }
+  };
+
   return (
     <>
       <Toaster />
-      {user ? <NativeMonitor user={user} /> : <NativeLogin />}
+      {renderContent()}
       <UpdateAvailableDialog
         open={showUpdateDialog}
         onDismiss={() => dismissUpdate(latestVersion)}
