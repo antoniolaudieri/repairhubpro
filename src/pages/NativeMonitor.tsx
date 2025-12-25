@@ -122,6 +122,7 @@ interface LoyaltyProgramSettings {
 
 interface NativeMonitorProps {
   user: User;
+  onOpenSettings?: () => void;
 }
 
 interface DiagnosticIssue {
@@ -140,7 +141,7 @@ interface HealthTip {
   icon: React.ReactNode;
 }
 
-const NativeMonitor = ({ user }: NativeMonitorProps) => {
+const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
   const [loyaltyCard, setLoyaltyCard] = useState<LoyaltyCard | null>(null);
   const [programSettings, setProgramSettings] = useState<LoyaltyProgramSettings | null>(null);
   const [loading, setLoading] = useState(true);
@@ -978,6 +979,16 @@ const NativeMonitor = ({ user }: NativeMonitorProps) => {
               >
                 <RefreshCw className={`h-5 w-5 ${deviceData.isLoading ? 'animate-spin' : ''}`} />
               </Button>
+              {onOpenSettings && (
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={onOpenSettings}
+                  className="text-primary-foreground hover:bg-white/10 rounded-full"
+                >
+                  <Settings className="h-5 w-5" />
+                </Button>
+              )}
               <Button 
                 variant="ghost" 
                 size="icon" 
