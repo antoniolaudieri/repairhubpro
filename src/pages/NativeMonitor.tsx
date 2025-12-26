@@ -50,7 +50,8 @@ import {
   Compass,
   Bell,
   BellRing,
-  Calendar
+  Calendar,
+  Trophy
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNativeDeviceInfo } from "@/hooks/useNativeDeviceInfo";
@@ -65,6 +66,9 @@ import { SecurityWidget } from "@/components/monitor/SecurityWidget";
 import { DangerousPermissionsWidget } from "@/components/monitor/DangerousPermissionsWidget";
 import { UptimeWidget } from "@/components/monitor/UptimeWidget";
 import { SystemIntegrityWidget } from "@/components/monitor/SystemIntegrityWidget";
+import { CustomerGamificationWidget } from "@/components/native/CustomerGamificationWidget";
+import { HealthQuickGlance } from "@/components/native/HealthQuickGlance";
+import { SmartRemindersWidget } from "@/components/native/SmartRemindersWidget";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { ShieldCheck } from "lucide-react";
@@ -1273,6 +1277,39 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
                   )}
                 </CardContent>
               </Card>
+            )}
+
+            {/* Health Quick Glance Widget */}
+            <HealthQuickGlance
+              healthScore={deviceData.healthScore}
+              batteryLevel={deviceData.batteryLevel}
+              storagePercentUsed={deviceData.storagePercentUsed}
+              ramPercentUsed={deviceData.ramPercentUsed}
+              isOnline={deviceData.networkConnected}
+              isLoading={deviceData.isLoading}
+            />
+
+            {/* Gamification Widget */}
+            {loyaltyCard && (
+              <CustomerGamificationWidget
+                customerId={loyaltyCard.customer_id}
+                centroId={loyaltyCard.centro_id}
+              />
+            )}
+
+            {/* Smart Reminders Widget */}
+            {loyaltyCard && (
+              <SmartRemindersWidget
+                customerId={loyaltyCard.customer_id}
+                centroId={loyaltyCard.centro_id}
+                healthData={{
+                  healthScore: deviceData.healthScore,
+                  batteryLevel: deviceData.batteryLevel,
+                  batteryHealth: deviceData.batteryHealth,
+                  storagePercentUsed: deviceData.storagePercentUsed,
+                  ramPercentUsed: deviceData.ramPercentUsed,
+                }}
+              />
             )}
 
             {/* Book Checkup Widget */}
