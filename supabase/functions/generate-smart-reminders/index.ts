@@ -33,6 +33,30 @@ serve(async (req) => {
 
     console.log('[SmartReminders] Generating reminders for customer:', customer_id);
 
+    // GRACE PERIOD CHECK: Get the first health log to determine installation date
+    const { data: firstLog } = await supabase
+      .from('device_health_logs')
+      .select('created_at, first_sync_at')
+      .eq('customer_id', customer_id)
+      .eq('centro_id', centro_id)
+      .order('created_at', { ascending: true })
+      .limit(1);
+
+    const firstSyncDate = firstLog?.[0]?.first_sync_at 
+      ? new Date(firstLog[0].first_sync_at) 
+      : firstLog?.[0]?.created_at 
+        ? new Date(firstLog[0].created_at) 
+        : new Date();
+    
+    const daysSinceFirstSync = Math.floor((Date.now() - firstSyncDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    console.log('[SmartReminders] Days since first sync:', daysSinceFirstSync);
+
+    // If device registered less than 7 days ago, only allow critical reminders
+    const isNewInstallation = daysSinceFirstSync < 7;
+    // If device registered less than 30 days, skip periodic checkup reminders
+    const skipPeriodicCheckup = daysSinceFirstSync < 30;
+
     const reminders: ReminderConfig[] = [];
 
     // 1. Check battery health
@@ -144,34 +168,48 @@ serve(async (req) => {
       }
     }
 
-    // 5. Periodic checkup (every 90 days)
-    const { data: existingReminder } = await supabase
-      .from('smart_reminders')
-      .select('created_at')
-      .eq('customer_id', customer_id)
-      .eq('reminder_type', 'periodic_checkup')
-      .order('created_at', { ascending: false })
-      .limit(1);
+    // 5. Periodic checkup (every 90 days) - SKIP if new installation
+    if (!skipPeriodicCheckup) {
+      const { data: existingReminder } = await supabase
+        .from('smart_reminders')
+        .select('created_at')
+        .eq('customer_id', customer_id)
+        .eq('reminder_type', 'periodic_checkup')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-    let shouldSuggestCheckup = true;
-    if (existingReminder && existingReminder.length > 0) {
-      const lastCheckupReminder = new Date(existingReminder[0].created_at);
-      const ninetyDaysAgo = new Date();
-      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-      shouldSuggestCheckup = lastCheckupReminder < ninetyDaysAgo;
+      // Also check for actual checkups/visits in the last 90 days
+      const { data: recentVisits } = await supabase
+        .from('customer_visits')
+        .select('check_in_at')
+        .eq('customer_id', customer_id)
+        .gte('check_in_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+        .limit(1);
+
+      const hadRecentVisit = recentVisits && recentVisits.length > 0;
+
+      let shouldSuggestCheckup = !hadRecentVisit;
+      if (existingReminder && existingReminder.length > 0) {
+        const lastCheckupReminder = new Date(existingReminder[0].created_at);
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        shouldSuggestCheckup = shouldSuggestCheckup && lastCheckupReminder < ninetyDaysAgo;
+      }
+
+      if (shouldSuggestCheckup) {
+        reminders.push({
+          type: 'periodic_checkup',
+          title: '📅 Check-up periodico',
+          message: 'È ora del controllo trimestrale del tuo dispositivo!',
+          severity: 'info',
+          icon: 'calendar-check'
+        });
+      }
+    } else {
+      console.log('[SmartReminders] Skipping periodic checkup - new installation (<30 days)');
     }
 
-    if (shouldSuggestCheckup) {
-      reminders.push({
-        type: 'periodic_checkup',
-        title: '📅 Check-up periodico',
-        message: 'È ora del controllo trimestrale del tuo dispositivo!',
-        severity: 'info',
-        icon: 'calendar-check'
-      });
-    }
-
-    // 6. Low health score
+    // 6. Low health score (critical - always show)
     if (health_data?.health_score && health_data.health_score < 60) {
       reminders.push({
         type: 'low_health_score',
@@ -182,8 +220,8 @@ serve(async (req) => {
       });
     }
 
-    // 7. RAM issues
-    if (health_data?.ram_percent_used && health_data.ram_percent_used > 90) {
+    // 7. RAM issues (warning - skip if new installation)
+    if (!isNewInstallation && health_data?.ram_percent_used && health_data.ram_percent_used > 90) {
       reminders.push({
         type: 'ram_warning',
         title: '🧠 RAM in esaurimento',
@@ -193,11 +231,18 @@ serve(async (req) => {
       });
     }
 
-    console.log('[SmartReminders] Generated reminders:', reminders.length);
+    // Filter out non-critical reminders for new installations
+    const filteredReminders = isNewInstallation 
+      ? reminders.filter(r => r.severity === 'critical')
+      : reminders;
+
+    console.log(`[SmartReminders] After filtering: ${filteredReminders.length} reminders (isNewInstallation: ${isNewInstallation})`);
+
+    console.log('[SmartReminders] Generated reminders:', filteredReminders.length);
 
     // Save reminders to database
-    if (reminders.length > 0) {
-      const reminderInserts = reminders.map(reminder => ({
+    if (filteredReminders.length > 0) {
+      const reminderInserts = filteredReminders.map(reminder => ({
         customer_id,
         centro_id,
         reminder_type: reminder.type,
@@ -228,7 +273,7 @@ serve(async (req) => {
       }
 
       // Also create customer notifications for push
-      for (const reminder of reminders) {
+      for (const reminder of filteredReminders) {
         // Get customer email
         const { data: customer } = await supabase
           .from('customers')
@@ -251,8 +296,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        reminders_generated: reminders.length,
-        reminders 
+        reminders_generated: filteredReminders.length,
+        reminders: filteredReminders,
+        days_since_first_sync: daysSinceFirstSync,
+        is_new_installation: isNewInstallation
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

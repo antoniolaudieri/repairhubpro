@@ -322,10 +322,12 @@ serve(async (req) => {
       });
     }
 
-    // Insert alerts into database
+    // Insert alerts into database with pending_centro_review status
+    // Centro must review and confirm before customer sees the alert
     const alertsToInsert = uniqueAlerts.map(alert => ({
       ...alert,
-      status: 'pending',
+      status: 'pending_centro_review', // Changed from 'pending' - Centro must confirm first
+      centro_reviewed: false,
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days expiry
     }));
 
@@ -341,60 +343,10 @@ serve(async (req) => {
 
     console.log(`[AnalyzeHealth] Inserted ${insertedAlerts?.length || 0} alert(s)`);
 
-    // Send push notifications if enabled
-    if (send_notifications && insertedAlerts && insertedAlerts.length > 0) {
-      for (const alert of insertedAlerts) {
-        try {
-          // Get customer's user_id from push_subscriptions via email
-          const { data: customer } = await supabase
-            .from('customers')
-            .select('email')
-            .eq('id', alert.customer_id)
-            .single();
-
-          if (customer?.email) {
-            // Find user_id from auth.users by email
-            const { data: subscription } = await supabase
-              .from('push_subscriptions')
-              .select('user_id')
-              .not('user_id', 'is', null)
-              .limit(100);
-
-            // We'll try to send to subscribed users who might match
-            // In a real scenario, we'd have a proper user<->customer mapping
-            
-            if (subscription && subscription.length > 0) {
-              // For now, we'll create an in-app notification that will trigger push
-              await supabase.from('customer_notifications').insert({
-                customer_email: customer.email,
-                title: alert.title,
-                message: alert.message,
-                type: `maintenance_${alert.severity}`,
-                data: {
-                  alert_id: alert.id,
-                  alert_type: alert.alert_type,
-                  recommended_action: alert.recommended_action,
-                  discount_offered: alert.discount_offered
-                }
-              });
-
-              // Update alert status to sent
-              await supabase
-                .from('device_health_alerts')
-                .update({ 
-                  status: 'sent',
-                  push_sent_at: new Date().toISOString()
-                })
-                .eq('id', alert.id);
-
-              console.log(`[AnalyzeHealth] Notification created for customer: ${customer.email}`);
-            }
-          }
-        } catch (notifError) {
-          console.error('[AnalyzeHealth] Error sending notification:', notifError);
-        }
-      }
-    }
+    // NOTE: We no longer send notifications directly to customers here.
+    // Centro must first review and confirm alerts via the confirm-health-alert function.
+    // This prevents spam and ensures only verified issues reach customers.
+    console.log(`[AnalyzeHealth] Alerts created in pending_centro_review status - Centro must confirm before customer notification`);
 
     return new Response(JSON.stringify({ 
       success: true, 

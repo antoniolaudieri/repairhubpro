@@ -1278,7 +1278,11 @@ export type Database = {
       device_health_alerts: {
         Row: {
           alert_type: string
+          centro_action: string | null
           centro_id: string
+          centro_notes: string | null
+          centro_reviewed: boolean
+          centro_reviewed_at: string | null
           created_at: string
           customer_id: string
           customer_response: string | null
@@ -1302,7 +1306,11 @@ export type Database = {
         }
         Insert: {
           alert_type: string
+          centro_action?: string | null
           centro_id: string
+          centro_notes?: string | null
+          centro_reviewed?: boolean
+          centro_reviewed_at?: string | null
           created_at?: string
           customer_id: string
           customer_response?: string | null
@@ -1326,7 +1334,11 @@ export type Database = {
         }
         Update: {
           alert_type?: string
+          centro_action?: string | null
           centro_id?: string
+          centro_notes?: string | null
+          centro_reviewed?: boolean
+          centro_reviewed_at?: string | null
           created_at?: string
           customer_id?: string
           customer_response?: string | null
@@ -1407,6 +1419,7 @@ export type Database = {
           device_manufacturer: string | null
           device_memory_gb: number | null
           device_model_info: string | null
+          first_sync_at: string | null
           hardware_concurrency: number | null
           health_score: number | null
           id: string
@@ -1456,6 +1469,7 @@ export type Database = {
           device_manufacturer?: string | null
           device_memory_gb?: number | null
           device_model_info?: string | null
+          first_sync_at?: string | null
           hardware_concurrency?: number | null
           health_score?: number | null
           id?: string
@@ -1505,6 +1519,7 @@ export type Database = {
           device_manufacturer?: string | null
           device_memory_gb?: number | null
           device_model_info?: string | null
+          first_sync_at?: string | null
           hardware_concurrency?: number | null
           health_score?: number | null
           id?: string

@@ -10,9 +10,10 @@ import {
   Activity, Battery, HardDrive, Cpu, Clock, AlertTriangle, 
   CheckCircle2, Sparkles, ChevronRight, RefreshCw, Loader2,
   Smartphone, FileText, Wifi, WifiOff, MemoryStick, Monitor,
-  Plus, Save, Image, Package
+  Plus, Save, Image, Package, XCircle, Send, MessageSquare
 } from "lucide-react";
 import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
@@ -103,6 +104,12 @@ interface HealthAlert {
   alert_type: string;
   created_at: string;
   customer_response: string | null;
+  recommended_action: string | null;
+  discount_offered: number | null;
+  centro_reviewed: boolean;
+  centro_reviewed_at: string | null;
+  centro_action: string | null;
+  centro_notes: string | null;
 }
 
 export function CustomerDeviceHealth({ customerId, centroId, onDeviceCreated }: CustomerDeviceHealthProps) {
@@ -114,6 +121,8 @@ export function CustomerDeviceHealth({ customerId, centroId, onDeviceCreated }: 
   const [selectedQuiz, setSelectedQuiz] = useState<DiagnosticQuiz | null>(null);
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [processingAlertId, setProcessingAlertId] = useState<string | null>(null);
+  const [alertNotes, setAlertNotes] = useState<string>("");
   const [deviceToSave, setDeviceToSave] = useState<{
     brand: string;
     model: string;
@@ -236,6 +245,45 @@ export function CustomerDeviceHealth({ customerId, centroId, onDeviceCreated }: 
     }
   };
 
+  // Handle Centro alert confirmation/dismissal
+  const handleAlertAction = async (alertId: string, action: 'confirm' | 'dismiss') => {
+    setProcessingAlertId(alertId);
+    try {
+      const { data, error } = await supabase.functions.invoke('confirm-health-alert', {
+        body: {
+          alert_id: alertId,
+          action,
+          notes: alertNotes || undefined
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success(
+        action === 'confirm' 
+          ? "Alert confermato e inviato al cliente!" 
+          : "Alert ignorato",
+        {
+          description: action === 'confirm' 
+            ? "Il cliente riceverà una notifica" 
+            : "L'alert non verrà mostrato al cliente"
+        }
+      );
+      
+      setAlertNotes("");
+      fetchData();
+    } catch (error: any) {
+      toast.error("Errore nell'elaborazione dell'alert", { description: error.message });
+    } finally {
+      setProcessingAlertId(null);
+    }
+  };
+
+  // Separate alerts by review status
+  const pendingReviewAlerts = alerts.filter(a => !a.centro_reviewed && a.status === 'pending_centro_review');
+  const confirmedAlerts = alerts.filter(a => a.centro_action === 'confirm');
+  const dismissedAlerts = alerts.filter(a => a.centro_action === 'dismiss');
+
   const getBatteryHealthLabel = (health: string | null) => {
     if (!health) return { label: "Sconosciuto", color: "text-muted-foreground" };
     const healthMap: Record<string, { label: string; color: string }> = {
@@ -320,13 +368,15 @@ export function CustomerDeviceHealth({ customerId, centroId, onDeviceCreated }: 
                   </Badge>
                 )}
               </TabsTrigger>
-              {alerts.length > 0 && (
+              {(pendingReviewAlerts.length > 0 || confirmedAlerts.length > 0 || dismissedAlerts.length > 0) && (
                 <TabsTrigger value="alerts" className="flex-1">
                   <AlertTriangle className="h-3.5 w-3.5 mr-1" />
                   Alert
-                  <Badge variant="destructive" className="ml-1.5 h-5 px-1.5 text-xs">
-                    {alerts.filter(a => a.status === "pending").length}
-                  </Badge>
+                  {pendingReviewAlerts.length > 0 && (
+                    <Badge variant="destructive" className="ml-1.5 h-5 px-1.5 text-xs animate-pulse">
+                      {pendingReviewAlerts.length}
+                    </Badge>
+                  )}
                 </TabsTrigger>
               )}
             </TabsList>
@@ -798,37 +848,173 @@ export function CustomerDeviceHealth({ customerId, centroId, onDeviceCreated }: 
               )}
             </TabsContent>
 
-            <TabsContent value="alerts" className="mt-4 space-y-3">
-              {alerts.map((alert) => (
-                <div 
-                  key={alert.id}
-                  className={`p-3 rounded-lg border ${
-                    alert.severity === "critical" 
-                      ? "bg-destructive/5 border-destructive/20" 
-                      : "bg-warning/5 border-warning/20"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className={`h-4 w-4 mt-0.5 ${
-                        alert.severity === "critical" ? "text-destructive" : "text-warning"
-                      }`} />
-                      <div>
-                        <p className="text-sm font-medium">{alert.title}</p>
-                        <p className="text-xs text-muted-foreground mt-0.5">{alert.message}</p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(alert.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
-                        </p>
+            <TabsContent value="alerts" className="mt-4 space-y-4">
+              {/* Pending Review Section - Priority */}
+              {pendingReviewAlerts.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-warning" />
+                    <h4 className="text-sm font-medium">Da Verificare ({pendingReviewAlerts.length})</h4>
+                  </div>
+                  {pendingReviewAlerts.map((alert) => (
+                    <div 
+                      key={alert.id}
+                      className={`p-4 rounded-lg border-2 ${
+                        alert.severity === "critical" 
+                          ? "bg-destructive/5 border-destructive/30" 
+                          : "bg-warning/5 border-warning/30"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className={`h-5 w-5 mt-0.5 flex-shrink-0 ${
+                          alert.severity === "critical" ? "text-destructive" : "text-warning"
+                        }`} />
+                        <div className="flex-1 space-y-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-semibold">{alert.title}</p>
+                              <Badge variant={alert.severity === "critical" ? "destructive" : "secondary"} className="text-xs">
+                                {alert.severity === "critical" ? "Critico" : "Avviso"}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">{alert.message}</p>
+                            {alert.recommended_action && (
+                              <p className="text-xs text-primary mt-2 font-medium">
+                                💡 Azione consigliata: {alert.recommended_action}
+                              </p>
+                            )}
+                            {alert.discount_offered && alert.discount_offered > 0 && (
+                              <p className="text-xs text-green-600 mt-1">
+                                🎁 Sconto proposto: {alert.discount_offered}%
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-2">
+                              Rilevato: {format(new Date(alert.created_at), "dd MMM yyyy, HH:mm", { locale: it })}
+                            </p>
+                          </div>
+                          
+                          {/* Notes input */}
+                          <Textarea
+                            placeholder="Note interne (opzionale)..."
+                            value={processingAlertId === alert.id ? alertNotes : ""}
+                            onChange={(e) => {
+                              if (processingAlertId === null || processingAlertId === alert.id) {
+                                setAlertNotes(e.target.value);
+                              }
+                            }}
+                            onFocus={() => setProcessingAlertId(null)}
+                            className="text-xs h-16 resize-none"
+                          />
+                          
+                          {/* Action buttons */}
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => handleAlertAction(alert.id, 'confirm')}
+                              disabled={processingAlertId !== null}
+                              className="flex-1"
+                            >
+                              {processingAlertId === alert.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+                              ) : (
+                                <Send className="h-3.5 w-3.5 mr-1" />
+                              )}
+                              Conferma e Notifica Cliente
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleAlertAction(alert.id, 'dismiss')}
+                              disabled={processingAlertId !== null}
+                            >
+                              <XCircle className="h-3.5 w-3.5 mr-1" />
+                              Ignora
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <Badge variant={alert.status === "pending" ? "secondary" : "outline"}>
-                      {alert.status === "pending" ? "In attesa" : 
-                       alert.status === "sent" ? "Inviato" : 
-                       alert.customer_response || alert.status}
-                    </Badge>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              )}
+
+              {/* Confirmed Alerts */}
+              {confirmedAlerts.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <h4 className="text-xs font-medium text-muted-foreground">Confermati e Inviati</h4>
+                  </div>
+                  {confirmedAlerts.map((alert) => (
+                    <div 
+                      key={alert.id}
+                      className="p-3 rounded-lg border bg-green-500/5 border-green-500/20"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                          <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500" />
+                          <div>
+                            <p className="text-sm font-medium">{alert.title}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{alert.message}</p>
+                            {alert.centro_notes && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">
+                                <MessageSquare className="h-3 w-3 inline mr-1" />
+                                {alert.centro_notes}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Confermato: {alert.centro_reviewed_at && format(new Date(alert.centro_reviewed_at), "dd MMM, HH:mm", { locale: it })}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-green-600 border-green-300">
+                          Inviato
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Dismissed Alerts */}
+              {dismissedAlerts.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-muted-foreground" />
+                    <h4 className="text-xs font-medium text-muted-foreground">Ignorati</h4>
+                  </div>
+                  {dismissedAlerts.slice(0, 3).map((alert) => (
+                    <div 
+                      key={alert.id}
+                      className="p-2 rounded-lg border bg-muted/30 opacity-60"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          <p className="text-xs">{alert.title}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {alert.centro_reviewed_at && format(new Date(alert.centro_reviewed_at), "dd/MM", { locale: it })}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  {dismissedAlerts.length > 3 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      +{dismissedAlerts.length - 3} altri ignorati
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Empty state */}
+              {pendingReviewAlerts.length === 0 && confirmedAlerts.length === 0 && dismissedAlerts.length === 0 && (
+                <div className="text-center py-6 text-muted-foreground">
+                  <CheckCircle2 className="h-10 w-10 mx-auto mb-3 opacity-50 text-green-500" />
+                  <p className="text-sm">Nessun alert da verificare</p>
+                  <p className="text-xs mt-1">Il dispositivo del cliente è in buone condizioni</p>
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
