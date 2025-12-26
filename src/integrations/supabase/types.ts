@@ -807,6 +807,72 @@ export type Database = {
           },
         ]
       }
+      customer_achievements: {
+        Row: {
+          achievement_description: string | null
+          achievement_icon: string | null
+          achievement_name: string
+          achievement_type: string
+          centro_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          is_unlocked: boolean
+          progress: number
+          target: number
+          unlocked_at: string | null
+          updated_at: string
+          xp_reward: number
+        }
+        Insert: {
+          achievement_description?: string | null
+          achievement_icon?: string | null
+          achievement_name: string
+          achievement_type: string
+          centro_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_unlocked?: boolean
+          progress?: number
+          target?: number
+          unlocked_at?: string | null
+          updated_at?: string
+          xp_reward?: number
+        }
+        Update: {
+          achievement_description?: string | null
+          achievement_icon?: string | null
+          achievement_name?: string
+          achievement_type?: string
+          centro_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_unlocked?: boolean
+          progress?: number
+          target?: number
+          unlocked_at?: string | null
+          updated_at?: string
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_achievements_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_achievements_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_communications: {
         Row: {
           centro_id: string
@@ -857,6 +923,63 @@ export type Database = {
           },
           {
             foreignKeyName: "customer_communications_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_gamification_stats: {
+        Row: {
+          centro_id: string
+          created_at: string
+          current_streak: number
+          customer_id: string
+          id: string
+          last_sync_date: string | null
+          level: number
+          longest_streak: number
+          total_syncs: number
+          total_xp: number
+          updated_at: string
+        }
+        Insert: {
+          centro_id: string
+          created_at?: string
+          current_streak?: number
+          customer_id: string
+          id?: string
+          last_sync_date?: string | null
+          level?: number
+          longest_streak?: number
+          total_syncs?: number
+          total_xp?: number
+          updated_at?: string
+        }
+        Update: {
+          centro_id?: string
+          created_at?: string
+          current_streak?: number
+          customer_id?: string
+          id?: string
+          last_sync_date?: string | null
+          level?: number
+          longest_streak?: number
+          total_syncs?: number
+          total_xp?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_gamification_stats_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_gamification_stats_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
@@ -3567,6 +3690,66 @@ export type Database = {
             columns: ["centro_id"]
             isOneToOne: false
             referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      smart_reminders: {
+        Row: {
+          centro_id: string
+          created_at: string
+          customer_id: string
+          expires_at: string | null
+          id: string
+          is_dismissed: boolean
+          is_read: boolean
+          message: string
+          reminder_type: string
+          severity: string
+          title: string
+          trigger_data: Json | null
+        }
+        Insert: {
+          centro_id: string
+          created_at?: string
+          customer_id: string
+          expires_at?: string | null
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          message: string
+          reminder_type: string
+          severity?: string
+          title: string
+          trigger_data?: Json | null
+        }
+        Update: {
+          centro_id?: string
+          created_at?: string
+          customer_id?: string
+          expires_at?: string | null
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          message?: string
+          reminder_type?: string
+          severity?: string
+          title?: string
+          trigger_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "smart_reminders_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "smart_reminders_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
