@@ -30,6 +30,7 @@ import { LoyaltyCardDetail } from "@/components/loyalty/LoyaltyCardDetail";
 import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
 import { CustomerIntelligenceCard } from "@/components/customers/CustomerIntelligenceCard";
 import { CustomerDeviceHealth } from "@/components/centro/CustomerDeviceHealth";
+import { CustomerGamificationBadge } from "@/components/centro/CustomerGamificationBadge";
 import { CustomerVisitTracker } from "@/components/customers/CustomerVisitTracker";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
@@ -514,6 +515,17 @@ export default function CentroClienteDetail() {
                   customerName={customer.name}
                 />
               </div>
+            </motion.div>
+          )}
+
+          {/* Gamification Stats */}
+          {centroId && (
+            <motion.div variants={itemVariants}>
+              <CustomerGamificationBadge 
+                customerId={id!} 
+                centroId={centroId}
+                showCard
+              />
             </motion.div>
           )}
 

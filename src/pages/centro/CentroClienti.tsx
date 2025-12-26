@@ -33,6 +33,7 @@ import { CustomerScoreBadge } from "@/components/centro/CustomerScoreBadge";
 import { CustomerReturnPrediction } from "@/components/centro/CustomerReturnPrediction";
 import { useCustomerAnalytics, type CustomerAnalytics } from "@/hooks/useCustomerAnalytics";
 import { CustomerHealthBadge } from "@/components/centro/CustomerHealthBadge";
+import { CustomerGamificationBadge } from "@/components/centro/CustomerGamificationBadge";
 import { CustomerImportDialog } from "@/components/customers/CustomerImportDialog";
 
 interface Customer {
@@ -585,6 +586,14 @@ export default function CentroClienti() {
 
                           {/* Stats Pills */}
                           <div className="flex items-center gap-2 mb-5 flex-wrap">
+                            {/* Gamification Badge */}
+                            {centroId && (
+                              <CustomerGamificationBadge 
+                                customerId={customer.id} 
+                                centroId={centroId}
+                                compact
+                              />
+                            )}
                             {/* Health Status Badge - Real-time */}
                             {centroId && (
                               <CustomerHealthBadge 
