@@ -33,10 +33,19 @@ interface SmartReminder {
   expires_at: string | null;
 }
 
+interface HealthData {
+  healthScore?: number;
+  batteryLevel?: number | null;
+  batteryHealth?: string | null;
+  storagePercentUsed?: number | null;
+  ramPercentUsed?: number | null;
+}
+
 interface SmartRemindersWidgetProps {
   customerId?: string;
   centroId?: string;
   compact?: boolean;
+  healthData?: HealthData;
   onReminderAction?: (reminder: SmartReminder, action: 'book' | 'dismiss') => void;
 }
 
@@ -44,6 +53,7 @@ export const SmartRemindersWidget = ({
   customerId,
   centroId,
   compact = false,
+  healthData,
   onReminderAction
 }: SmartRemindersWidgetProps) => {
   const [reminders, setReminders] = useState<SmartReminder[]>([]);
@@ -74,9 +84,41 @@ export const SmartRemindersWidget = ({
     }
   }, [customerId, centroId]);
 
+  // Generate smart reminders based on health data
+  const generateReminders = useCallback(async () => {
+    if (!customerId || !centroId || !healthData) return;
+
+    try {
+      await supabase.functions.invoke('generate-smart-reminders', {
+        body: {
+          customer_id: customerId,
+          centro_id: centroId,
+          health_data: {
+            health_score: healthData.healthScore,
+            battery_level: healthData.batteryLevel,
+            battery_health: healthData.batteryHealth,
+            storage_percent_used: healthData.storagePercentUsed,
+            ram_percent_used: healthData.ramPercentUsed,
+          }
+        }
+      });
+      // Fetch updated reminders after generation
+      fetchReminders();
+    } catch (error) {
+      console.error('[SmartReminders] Error generating:', error);
+    }
+  }, [customerId, centroId, healthData, fetchReminders]);
+
   useEffect(() => {
     fetchReminders();
   }, [fetchReminders]);
+
+  // Generate reminders when health data changes significantly
+  useEffect(() => {
+    if (healthData?.healthScore !== undefined) {
+      generateReminders();
+    }
+  }, [healthData?.healthScore]);
 
   // Subscribe to realtime updates
   useEffect(() => {
