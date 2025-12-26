@@ -66,6 +66,7 @@ import { SecurityWidget } from "@/components/monitor/SecurityWidget";
 import { DangerousPermissionsWidget } from "@/components/monitor/DangerousPermissionsWidget";
 import { UptimeWidget } from "@/components/monitor/UptimeWidget";
 import { SystemIntegrityWidget } from "@/components/monitor/SystemIntegrityWidget";
+import MalwareScannerWidget from "@/components/monitor/MalwareScannerWidget";
 import { CustomerGamificationWidget } from "@/components/native/CustomerGamificationWidget";
 import { HealthQuickGlance } from "@/components/native/HealthQuickGlance";
 import { SmartRemindersWidget } from "@/components/native/SmartRemindersWidget";
@@ -2146,6 +2147,7 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
 
           {/* Security Tab */}
           <TabsContent value="security" className="space-y-3 m-0">
+            <MalwareScannerWidget />
             <SecurityWidget />
             <UptimeWidget />
             <SystemIntegrityWidget />

@@ -125,3 +125,9 @@ verify_jwt = false
 
 [functions.confirm-topup-payment]
 verify_jwt = false
+
+[functions.generate-smart-reminders]
+verify_jwt = false
+
+[functions.malware-definitions]
+verify_jwt = false
