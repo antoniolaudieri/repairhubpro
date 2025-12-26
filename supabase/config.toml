@@ -131,3 +131,6 @@ verify_jwt = false
 
 [functions.malware-definitions]
 verify_jwt = false
+
+[functions.confirm-health-alert]
+verify_jwt = false
