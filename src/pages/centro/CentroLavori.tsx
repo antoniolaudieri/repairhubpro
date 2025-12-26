@@ -401,6 +401,7 @@ export default function CentroLavori() {
                                 <DeviceImage 
                                   photoUrl={repair.device.photo_url} 
                                   brand={repair.device.brand}
+                                  model={repair.device.model}
                                   deviceType={repair.device.device_type} 
                                 />
                                 <div className="space-y-1.5">

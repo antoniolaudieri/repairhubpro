@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DeviceImage } from "@/components/common/DeviceImage";
 import { 
   ArrowLeft, 
   Lightbulb, 
@@ -19,7 +20,6 @@ import {
   CheckCircle,
   Trash2,
   User,
-  Smartphone,
   Phone,
   Mail,
   MapPin,
@@ -890,20 +890,14 @@ export default function RepairDetail() {
             <div className="flex items-start gap-4">
               {/* Device Image or Icon */}
               <div className="relative flex-shrink-0">
-                <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-2xl overflow-hidden border-2 border-border shadow-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                  {repair.device.photo_url ? (
-                    <img
-                      src={repair.device.photo_url}
-                      alt="Device"
-                      className="h-full w-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none';
-                        e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
-                      }}
-                    />
-                  ) : null}
-                  <Smartphone className={`fallback-icon h-10 w-10 text-primary ${repair.device.photo_url ? 'hidden' : ''}`} />
-                </div>
+                <DeviceImage
+                  photoUrl={repair.device.photo_url}
+                  brand={repair.device.brand}
+                  model={repair.device.model}
+                  deviceType={repair.device.device_type}
+                  size="lg"
+                  className="h-20 w-20 sm:h-24 sm:w-24"
+                />
                 <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full ${status.color} flex items-center justify-center ring-2 ring-background`}>
                   <StatusIcon className="h-3.5 w-3.5 text-white" />
                 </div>
@@ -1709,7 +1703,7 @@ export default function RepairDetail() {
                 <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/5 px-5 py-4 border-b border-violet-200/30">
                   <h3 className="font-semibold flex items-center gap-2">
                     <div className="h-7 w-7 rounded-lg bg-violet-500/20 flex items-center justify-center">
-                      <Smartphone className="h-3.5 w-3.5 text-violet-600" />
+                      <Wrench className="h-3.5 w-3.5 text-violet-600" />
                     </div>
                     Dispositivo
                   </h3>
