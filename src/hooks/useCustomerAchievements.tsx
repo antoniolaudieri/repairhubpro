@@ -295,71 +295,110 @@ export const useCustomerAchievements = ({
       let currentStats = stats;
       
       if (!currentStats) {
-        const { data: newStats } = await supabase
+        // Try to fetch first
+        const { data: existingStats } = await supabase
           .from('customer_gamification_stats')
-          .insert({
-            customer_id: customerId,
-            centro_id: centroId,
-            total_xp: 0,
-            level: 1,
-            current_streak: 0,
-            longest_streak: 0,
-            total_syncs: 0
-          })
-          .select()
-          .single();
+          .select('*')
+          .eq('customer_id', customerId)
+          .eq('centro_id', centroId)
+          .maybeSingle();
         
-        currentStats = newStats;
+        if (existingStats) {
+          currentStats = existingStats;
+        } else {
+          const { data: newStats } = await supabase
+            .from('customer_gamification_stats')
+            .insert({
+              customer_id: customerId,
+              centro_id: centroId,
+              total_xp: 0,
+              level: 1,
+              current_streak: 0,
+              longest_streak: 0,
+              total_syncs: 0
+            })
+            .select()
+            .single();
+          
+          currentStats = newStats;
+        }
       }
 
-      if (!currentStats) return;
+      if (!currentStats) {
+        console.error('[Achievements] Could not get/create stats');
+        return;
+      }
 
       const today = new Date().toISOString().split('T')[0];
       const lastSync = currentStats.last_sync_date;
       
       let newStreak = currentStats.current_streak;
+      let isNewDay = true;
       
       if (lastSync) {
         const lastDate = new Date(lastSync);
         const todayDate = new Date(today);
         const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
         
-        if (diffDays === 1) {
+        if (diffDays === 0) {
+          // Same day, don't change streak but still count sync
+          isNewDay = false;
+        } else if (diffDays === 1) {
           newStreak += 1;
         } else if (diffDays > 1) {
           newStreak = 1;
         }
-        // If same day, don't change streak
       } else {
         newStreak = 1;
       }
 
       const newLongestStreak = Math.max(newStreak, currentStats.longest_streak);
       const newTotalSyncs = currentStats.total_syncs + 1;
+      
+      // Add XP for sync (10 XP per sync + bonus for streak)
+      const syncXp = 10 + (newStreak > 1 ? Math.min(newStreak * 2, 20) : 0);
+      const newXp = currentStats.total_xp + syncXp;
+      const newLevel = getLevelInfo(newXp).level;
 
-      await supabase
+      const { error: updateError } = await supabase
         .from('customer_gamification_stats')
         .update({
           current_streak: newStreak,
           longest_streak: newLongestStreak,
           last_sync_date: today,
-          total_syncs: newTotalSyncs
+          total_syncs: newTotalSyncs,
+          total_xp: newXp,
+          level: newLevel
         })
         .eq('id', currentStats.id);
 
+      if (updateError) {
+        console.error('[Achievements] Error updating stats:', updateError);
+        return;
+      }
+
+      console.log(`[Achievements] Sync recorded: +${syncXp} XP, streak: ${newStreak}, total syncs: ${newTotalSyncs}`);
+
       // Update achievements based on new stats
-      await updateProgress('first_sync', 1);
-      await updateProgress('sync_streak_3', newStreak);
-      await updateProgress('sync_streak_7', newStreak);
-      await updateProgress('sync_streak_30', newStreak);
-      await updateProgress('total_syncs_10', newTotalSyncs);
-      await updateProgress('total_syncs_50', newTotalSyncs);
+      // First sync
+      if (newTotalSyncs === 1) {
+        await updateProgress('first_sync', 1);
+      }
+      
+      // Streak achievements
+      if (newStreak >= 3) await updateProgress('sync_streak_3', newStreak);
+      if (newStreak >= 7) await updateProgress('sync_streak_7', newStreak);
+      if (newStreak >= 30) await updateProgress('sync_streak_30', newStreak);
+      
+      // Total syncs achievements
+      if (newTotalSyncs >= 10) await updateProgress('total_syncs_10', newTotalSyncs);
+      if (newTotalSyncs >= 50) await updateProgress('total_syncs_50', newTotalSyncs);
 
       await fetchAchievements();
     } catch (error) {
       console.error('[Achievements] Error recording sync:', error);
     }
-  }, [customerId, centroId, stats, updateProgress, fetchAchievements]);
+  }, [customerId, centroId, stats, updateProgress, fetchAchievements, getLevelInfo]);
 
   useEffect(() => {
     fetchAchievements();

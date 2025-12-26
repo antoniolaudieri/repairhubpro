@@ -57,6 +57,7 @@ import { toast } from "sonner";
 import { useNativeDeviceInfo } from "@/hooks/useNativeDeviceInfo";
 import { useDevicePermissions } from "@/hooks/useDevicePermissions";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useCustomerAchievements } from "@/hooks/useCustomerAchievements";
 import { SensorWidget } from "@/components/monitor/SensorWidget";
 import { BatteryAdvancedWidget } from "@/components/monitor/BatteryAdvancedWidget";
 import { BookCheckupWidget } from "@/components/monitor/BookCheckupWidget";
@@ -159,6 +160,17 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
   const deviceData = useNativeDeviceInfo();
   const { requestAllPermissions, hasRequested } = useDevicePermissions();
   const pushNotifications = usePushNotifications();
+  
+  // Gamification hook - gets customer_id and centro_id from loyaltyCard
+  const {
+    recordSync,
+    updateProgress,
+    stats: gamificationStats
+  } = useCustomerAchievements({
+    customerId: loyaltyCard?.customer_id,
+    centroId: loyaltyCard?.centro_id,
+    enabled: !!loyaltyCard
+  });
 
   // Request permissions on mount
   useEffect(() => {
@@ -844,7 +856,23 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
         });
 
       if (insertError) throw insertError;
-      toast.success("Dati sincronizzati con successo!");
+      
+      // Record sync for gamification achievements
+      await recordSync();
+      
+      // Update health-related achievements
+      if (deviceData.healthScore && deviceData.healthScore >= 80) {
+        await updateProgress('health_master', (gamificationStats?.total_syncs || 0) + 1);
+      }
+      if (deviceData.batteryLevel && deviceData.batteryLevel >= 20) {
+        await updateProgress('battery_champion', (gamificationStats?.total_syncs || 0) + 1);
+      }
+      
+      toast.success("Dati sincronizzati con successo! 🎮", {
+        description: gamificationStats?.current_streak 
+          ? `Streak: ${gamificationStats.current_streak + 1} giorni!` 
+          : "Inizia la tua streak quotidiana!"
+      });
     } catch (err) {
       console.error("Sync error:", err);
       toast.error("Errore durante la sincronizzazione");
