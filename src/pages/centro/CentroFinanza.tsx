@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Wallet, Plus, TrendingUp, TrendingDown, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Wallet, Plus, TrendingUp, TrendingDown } from "lucide-react";
 import { motion } from "framer-motion";
 import { CentroLayout } from "@/layouts/CentroLayout";
 import { PageTransition } from "@/components/PageTransition";
@@ -85,31 +85,28 @@ export default function CentroFinanza() {
 
   const statCards = [
     {
-      title: "Entrate Mese",
+      title: "Entrate",
       value: stats.income,
       icon: TrendingUp,
-      gradient: "from-emerald-500 to-green-500",
       bgLight: "bg-gradient-to-br from-emerald-500/15 to-green-500/10",
       iconBg: "bg-gradient-to-br from-emerald-500 to-green-500",
-      arrow: ArrowUpRight,
+      textColor: "text-emerald-600",
     },
     {
-      title: "Uscite Mese",
+      title: "Uscite",
       value: stats.expense,
       icon: TrendingDown,
-      gradient: "from-red-500 to-rose-500",
       bgLight: "bg-gradient-to-br from-red-500/15 to-rose-500/10",
       iconBg: "bg-gradient-to-br from-red-500 to-rose-500",
-      arrow: ArrowDownRight,
+      textColor: "text-red-600",
     },
     {
       title: "Bilancio",
       value: stats.balance,
       icon: Wallet,
-      gradient: stats.balance >= 0 ? "from-blue-500 to-cyan-500" : "from-orange-500 to-red-500",
       bgLight: stats.balance >= 0 ? "bg-gradient-to-br from-blue-500/15 to-cyan-500/10" : "bg-gradient-to-br from-orange-500/15 to-red-500/10",
       iconBg: stats.balance >= 0 ? "bg-gradient-to-br from-blue-500 to-cyan-500" : "bg-gradient-to-br from-orange-500 to-red-500",
-      arrow: stats.balance >= 0 ? ArrowUpRight : ArrowDownRight,
+      textColor: stats.balance >= 0 ? "text-blue-600" : "text-orange-600",
     },
   ];
 
@@ -146,29 +143,23 @@ export default function CentroFinanza() {
             </Button>
           </motion.div>
 
-          {/* Quick Stats Cards - Dashboard style - responsive */}
-          <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Quick Stats Cards - Compact for all screens */}
+          <motion.div variants={itemVariants} className="grid grid-cols-3 gap-2">
             {statCards.map((card, index) => {
               const IconComponent = card.icon;
-              const ArrowIcon = card.arrow;
               return (
                 <Card
                   key={index}
-                  className={`relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all ${card.bgLight}`}
+                  className={`relative overflow-hidden border-0 shadow-sm ${card.bgLight}`}
                 >
-                  <div className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2.5 rounded-xl ${card.iconBg} shadow-sm shrink-0`}>
-                        <IconComponent className="h-5 w-5 text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">{card.title}</p>
-                        <p className="text-xl font-bold text-foreground truncate">
-                          €{Math.abs(card.value).toLocaleString("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                        </p>
-                      </div>
-                      <ArrowIcon className={`h-5 w-5 shrink-0 ${card.value >= 0 ? "text-emerald-500" : "text-red-500"}`} />
+                  <div className="p-2.5 sm:p-3">
+                    <div className={`p-1.5 sm:p-2 rounded-lg ${card.iconBg} shadow-sm w-fit mb-1.5`}>
+                      <IconComponent className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
                     </div>
+                    <p className={`text-sm sm:text-lg font-bold ${card.textColor} truncate`}>
+                      €{Math.abs(card.value).toLocaleString("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </p>
+                    <p className="text-[9px] sm:text-xs text-muted-foreground truncate">{card.title}</p>
                   </div>
                 </Card>
               );

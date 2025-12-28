@@ -170,56 +170,44 @@ export function FinancialBalance({ centroId }: FinancialBalanceProps) {
         </CardContent>
       </Card>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Summary Cards - Compact grid */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}>
-          <Card className="shadow-sm border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-accent/20 to-accent/10">
-                  <TrendingUp className="h-6 w-6 text-accent" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Entrate Totali</p>
-                  <p className="text-2xl font-bold text-accent">€{stats.income.toFixed(2)}</p>
-                </div>
+          <Card className="shadow-sm border-border/50 h-full">
+            <CardContent className="p-3 sm:p-4">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-accent/20 to-accent/10 w-fit mb-2">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-accent" />
               </div>
+              <p className="text-xs text-muted-foreground mb-0.5">Entrate</p>
+              <p className="text-sm sm:text-lg font-bold text-accent truncate">€{stats.income.toFixed(0)}</p>
             </CardContent>
           </Card>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
-          <Card className="shadow-sm border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10">
-                  <TrendingDown className="h-6 w-6 text-destructive" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Uscite Totali</p>
-                  <p className="text-2xl font-bold text-destructive">€{stats.expense.toFixed(2)}</p>
-                </div>
+          <Card className="shadow-sm border-border/50 h-full">
+            <CardContent className="p-3 sm:p-4">
+              <div className="p-2 rounded-lg bg-gradient-to-br from-destructive/20 to-destructive/10 w-fit mb-2">
+                <TrendingDown className="h-4 w-4 sm:h-5 sm:w-5 text-destructive" />
               </div>
+              <p className="text-xs text-muted-foreground mb-0.5">Uscite</p>
+              <p className="text-sm sm:text-lg font-bold text-destructive truncate">€{stats.expense.toFixed(0)}</p>
             </CardContent>
           </Card>
         </motion.div>
 
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
-          <Card className="shadow-sm border-border/50">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-xl ${stats.balance >= 0 
-                  ? "bg-gradient-to-br from-primary/20 to-primary/10" 
-                  : "bg-gradient-to-br from-warning/20 to-warning/10"}`}>
-                  <Wallet className={`h-6 w-6 ${stats.balance >= 0 ? "text-primary" : "text-warning"}`} />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Bilancio Netto</p>
-                  <p className={`text-2xl font-bold ${stats.balance >= 0 ? "text-primary" : "text-warning"}`}>
-                    €{stats.balance.toFixed(2)}
-                  </p>
-                </div>
+          <Card className="shadow-sm border-border/50 h-full">
+            <CardContent className="p-3 sm:p-4">
+              <div className={`p-2 rounded-lg w-fit mb-2 ${stats.balance >= 0 
+                ? "bg-gradient-to-br from-primary/20 to-primary/10" 
+                : "bg-gradient-to-br from-warning/20 to-warning/10"}`}>
+                <Wallet className={`h-4 w-4 sm:h-5 sm:w-5 ${stats.balance >= 0 ? "text-primary" : "text-warning"}`} />
               </div>
+              <p className="text-xs text-muted-foreground mb-0.5">Bilancio</p>
+              <p className={`text-sm sm:text-lg font-bold truncate ${stats.balance >= 0 ? "text-primary" : "text-warning"}`}>
+                €{stats.balance.toFixed(0)}
+              </p>
             </CardContent>
           </Card>
         </motion.div>
