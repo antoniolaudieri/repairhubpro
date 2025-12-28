@@ -146,27 +146,29 @@ export default function CentroFinanza() {
             </Button>
           </motion.div>
 
-          {/* Quick Stats Cards - Dashboard style */}
-          <motion.div variants={itemVariants} className="grid grid-cols-3 gap-3">
+          {/* Quick Stats Cards - Dashboard style - responsive */}
+          <motion.div variants={itemVariants} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {statCards.map((card, index) => {
               const IconComponent = card.icon;
               const ArrowIcon = card.arrow;
               return (
                 <Card
                   key={index}
-                  className={`relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all cursor-pointer ${card.bgLight}`}
+                  className={`relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all ${card.bgLight}`}
                 >
-                  <div className="p-3 md:p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className={`p-1.5 md:p-2 rounded-lg ${card.iconBg} shadow-sm`}>
-                        <IconComponent className="h-3.5 w-3.5 md:h-4 md:w-4 text-white" />
+                  <div className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-xl ${card.iconBg} shadow-sm shrink-0`}>
+                        <IconComponent className="h-5 w-5 text-white" />
                       </div>
-                      <ArrowIcon className={`h-4 w-4 ${card.value >= 0 ? "text-emerald-500" : "text-red-500"}`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">{card.title}</p>
+                        <p className="text-xl font-bold text-foreground truncate">
+                          €{Math.abs(card.value).toLocaleString("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </p>
+                      </div>
+                      <ArrowIcon className={`h-5 w-5 shrink-0 ${card.value >= 0 ? "text-emerald-500" : "text-red-500"}`} />
                     </div>
-                    <p className="text-lg md:text-2xl font-bold text-foreground">
-                      €{Math.abs(card.value).toLocaleString("it-IT", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                    </p>
-                    <p className="text-[10px] md:text-xs text-muted-foreground mt-0.5">{card.title}</p>
                   </div>
                 </Card>
               );
