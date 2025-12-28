@@ -45,6 +45,8 @@ import { Search } from "lucide-react";
 
 import { ClipboardCheck } from "lucide-react";
 
+import { Wallet } from "lucide-react";
+
 const menuItems = [
   { title: "Dashboard", url: "/centro", icon: LayoutDashboard },
   { title: "Nuovo Ritiro", url: "/centro/nuovo-ritiro", icon: PlusCircle },
@@ -63,6 +65,7 @@ const menuItems = [
   { title: "Accessi Condivisi", url: "/centro/accessi", icon: Share2 },
   { title: "Usato", url: "/centro/usato", icon: Smartphone },
   { title: "Marketing", url: "/centro/marketing", icon: Megaphone },
+  { title: "Finanza", url: "/centro/finanza", icon: Wallet },
   { title: "Commissioni", url: "/centro/commissioni", icon: DollarSign },
   { title: "Impostazioni", url: "/centro/impostazioni", icon: Settings },
 ];

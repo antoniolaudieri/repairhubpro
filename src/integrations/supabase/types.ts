@@ -329,6 +329,124 @@ export type Database = {
           },
         ]
       }
+      centro_financial_categories: {
+        Row: {
+          centro_id: string
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          is_default: boolean | null
+          name: string
+          sort_order: number | null
+          type: Database["public"]["Enums"]["financial_movement_type"]
+        }
+        Insert: {
+          centro_id: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_default?: boolean | null
+          name: string
+          sort_order?: number | null
+          type: Database["public"]["Enums"]["financial_movement_type"]
+        }
+        Update: {
+          centro_id?: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          sort_order?: number | null
+          type?: Database["public"]["Enums"]["financial_movement_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_financial_categories_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      centro_financial_movements: {
+        Row: {
+          amount: number
+          category: string
+          centro_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_recurring: boolean | null
+          movement_date: string
+          notes: string | null
+          payment_method: string | null
+          receipt_url: string | null
+          recurring_frequency: string | null
+          reference_id: string | null
+          reference_type: string | null
+          subcategory: string | null
+          tags: string[] | null
+          type: Database["public"]["Enums"]["financial_movement_type"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category: string
+          centro_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          movement_date?: string
+          notes?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          recurring_frequency?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          subcategory?: string | null
+          tags?: string[] | null
+          type: Database["public"]["Enums"]["financial_movement_type"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: string
+          centro_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_recurring?: boolean | null
+          movement_date?: string
+          notes?: string | null
+          payment_method?: string | null
+          receipt_url?: string | null
+          recurring_frequency?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          subcategory?: string | null
+          tags?: string[] | null
+          type?: Database["public"]["Enums"]["financial_movement_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "centro_financial_movements_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       centro_goals: {
         Row: {
           achieved_at: string | null
@@ -4168,6 +4286,7 @@ export type Database = {
         | "permuta"
         | "acquisto"
         | "ricondizionato"
+      financial_movement_type: "income" | "expense"
       used_device_sale_type: "alienato" | "conto_vendita" | "acquistato"
     }
     CompositeTypes: {
@@ -4319,6 +4438,7 @@ export const Constants = {
         "acquisto",
         "ricondizionato",
       ],
+      financial_movement_type: ["income", "expense"],
       used_device_sale_type: ["alienato", "conto_vendita", "acquistato"],
     },
   },
