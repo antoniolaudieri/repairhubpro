@@ -256,42 +256,42 @@ export function AddMovementDialog({ centroId, open, onOpenChange, onSuccess }: A
         )}
       </AnimatePresence>
 
-      {/* Date and Payment - Compact row */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Data</Label>
-          <div className="relative">
-            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="date"
-              value={movementDate}
-              onChange={(e) => setMovementDate(e.target.value)}
-              className="pl-9 h-10 text-sm bg-card"
-            />
-          </div>
+      {/* Date */}
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">Data</Label>
+        <div className="relative">
+          <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="date"
+            value={movementDate}
+            onChange={(e) => setMovementDate(e.target.value)}
+            className="pl-9 h-10 text-sm bg-card"
+          />
         </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs text-muted-foreground">Pagamento</Label>
-          <div className="grid grid-cols-3 gap-1">
-            {paymentMethods.slice(0, 3).map((method) => {
-              const IconComp = method.icon;
-              return (
-                <button
-                  key={method.value}
-                  type="button"
-                  onClick={() => setPaymentMethod(method.value)}
-                  className={`flex flex-col items-center py-2 rounded-lg text-[10px] transition-all ${
-                    paymentMethod === method.value 
-                      ? "bg-primary text-primary-foreground" 
-                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                  }`}
-                >
-                  <IconComp className="h-3.5 w-3.5 mb-0.5" />
-                  {method.label}
-                </button>
-              );
-            })}
-          </div>
+      </div>
+
+      {/* Payment Methods - Full width */}
+      <div className="space-y-1.5">
+        <Label className="text-xs text-muted-foreground">Metodo Pagamento</Label>
+        <div className="grid grid-cols-6 gap-1.5">
+          {paymentMethods.map((method) => {
+            const IconComp = method.icon;
+            return (
+              <button
+                key={method.value}
+                type="button"
+                onClick={() => setPaymentMethod(method.value)}
+                className={`flex flex-col items-center py-2 px-1 rounded-lg text-[10px] transition-all ${
+                  paymentMethod === method.value 
+                    ? "bg-primary text-primary-foreground shadow-sm" 
+                    : "bg-muted text-muted-foreground hover:bg-muted/80"
+                }`}
+              >
+                <IconComp className="h-4 w-4 mb-0.5" />
+                <span className="truncate w-full text-center">{method.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
