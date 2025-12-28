@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { it } from "date-fns/locale";
-import { FileText, Download, Printer, Calendar, TrendingUp, TrendingDown } from "lucide-react";
-import { motion } from "framer-motion";
+import { FileText, Download, Calendar, TrendingUp, TrendingDown, Wallet, BarChart3 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -166,7 +165,7 @@ export function FinancialReport({ centroId }: FinancialReportProps) {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="shadow-sm border-border/50">
         <CardContent className="p-8 flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </CardContent>
@@ -177,13 +176,13 @@ export function FinancialReport({ centroId }: FinancialReportProps) {
   return (
     <div className="space-y-4">
       {/* Period & Actions */}
-      <Card>
+      <Card className="shadow-sm border-border/50">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <Calendar className="h-5 w-5 text-muted-foreground" />
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-[200px]">
+                <SelectTrigger className="w-[200px] bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -207,59 +206,68 @@ export function FinancialReport({ centroId }: FinancialReportProps) {
 
       {/* Report Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
               Riepilogo Mensile
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center p-3 rounded-lg bg-emerald-500/10">
+          <CardContent className="space-y-3">
+            <div className="flex justify-between items-center p-3 rounded-lg bg-accent/10">
               <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
-                <span>Entrate Totali</span>
+                <TrendingUp className="h-4 w-4 text-accent" />
+                <span className="text-foreground">Entrate Totali</span>
               </div>
-              <span className="font-bold text-emerald-500">€{stats.income.toFixed(2)}</span>
+              <span className="font-bold text-accent">€{stats.income.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between items-center p-3 rounded-lg bg-red-500/10">
+            <div className="flex justify-between items-center p-3 rounded-lg bg-destructive/10">
               <div className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-red-500" />
-                <span>Uscite Totali</span>
+                <TrendingDown className="h-4 w-4 text-destructive" />
+                <span className="text-foreground">Uscite Totali</span>
               </div>
-              <span className="font-bold text-red-500">€{stats.expense.toFixed(2)}</span>
+              <span className="font-bold text-destructive">€{stats.expense.toFixed(2)}</span>
             </div>
-            <div className={`flex justify-between items-center p-3 rounded-lg ${stats.balance >= 0 ? "bg-primary/10" : "bg-orange-500/10"}`}>
-              <span className="font-medium">Bilancio Netto</span>
-              <span className={`font-bold ${stats.balance >= 0 ? "text-primary" : "text-orange-500"}`}>
+            <div className={`flex justify-between items-center p-3 rounded-lg ${stats.balance >= 0 ? "bg-primary/10" : "bg-warning/10"}`}>
+              <div className="flex items-center gap-2">
+                <Wallet className={`h-4 w-4 ${stats.balance >= 0 ? "text-primary" : "text-warning"}`} />
+                <span className="font-medium text-foreground">Bilancio Netto</span>
+              </div>
+              <span className={`font-bold ${stats.balance >= 0 ? "text-primary" : "text-warning"}`}>
                 €{stats.balance.toFixed(2)}
               </span>
             </div>
             <div className="flex justify-between items-center p-3 rounded-lg bg-muted">
-              <span>Numero Movimenti</span>
+              <span className="text-foreground">Numero Movimenti</span>
               <Badge variant="secondary">{movements.length}</Badge>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Per Categoria</CardTitle>
+        <Card className="shadow-sm border-border/50">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Per Categoria
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {Object.keys(stats.byCategory).length === 0 ? (
-              <p className="text-muted-foreground text-center py-4">Nessun movimento</p>
+              <div className="text-center py-8 text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nessun movimento</p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {Object.entries(stats.byCategory).map(([category, data]) => (
-                  <div key={category} className="flex justify-between items-center p-2 rounded-lg bg-muted/50">
-                    <span className="text-sm font-medium">{category}</span>
+                  <div key={category} className="flex justify-between items-center p-2.5 rounded-lg bg-muted/50">
+                    <span className="text-sm font-medium text-foreground">{category}</span>
                     <div className="flex gap-3 text-sm">
                       {data.income > 0 && (
-                        <span className="text-emerald-500">+€{data.income.toFixed(2)}</span>
+                        <span className="text-accent font-medium">+€{data.income.toFixed(2)}</span>
                       )}
                       {data.expense > 0 && (
-                        <span className="text-red-500">-€{data.expense.toFixed(2)}</span>
+                        <span className="text-destructive font-medium">-€{data.expense.toFixed(2)}</span>
                       )}
                     </div>
                   </div>
@@ -271,13 +279,16 @@ export function FinancialReport({ centroId }: FinancialReportProps) {
       </div>
 
       {/* Detailed Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Dettaglio Movimenti</CardTitle>
+      <Card className="shadow-sm border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold">Dettaglio Movimenti</CardTitle>
         </CardHeader>
         <CardContent>
           {movements.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">Nessun movimento per il mese selezionato</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>Nessun movimento per il mese selezionato</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
@@ -303,7 +314,7 @@ export function FinancialReport({ centroId }: FinancialReportProps) {
                         {m.description || "-"}
                       </TableCell>
                       <TableCell className="capitalize">{m.payment_method}</TableCell>
-                      <TableCell className={`text-right font-medium ${m.type === "income" ? "text-emerald-500" : "text-red-500"}`}>
+                      <TableCell className={`text-right font-medium ${m.type === "income" ? "text-accent" : "text-destructive"}`}>
                         {m.type === "income" ? "+" : "-"}€{Number(m.amount).toFixed(2)}
                       </TableCell>
                     </TableRow>

@@ -117,16 +117,22 @@ export function AddMovementDialog({ centroId, open, onOpenChange, onSuccess }: A
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Nuovo Movimento</DialogTitle>
+          <DialogTitle className="text-foreground">Nuovo Movimento</DialogTitle>
         </DialogHeader>
 
         <Tabs value={type} onValueChange={(v) => { setType(v as "income" | "expense"); setCategory(""); }}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="income" className="gap-2">
+          <TabsList className="grid w-full grid-cols-2 bg-muted p-1">
+            <TabsTrigger 
+              value="income" 
+              className="gap-2 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+            >
               <TrendingUp className="h-4 w-4" />
               Entrata
             </TabsTrigger>
-            <TabsTrigger value="expense" className="gap-2">
+            <TabsTrigger 
+              value="expense" 
+              className="gap-2 data-[state=active]:bg-destructive data-[state=active]:text-destructive-foreground"
+            >
               <TrendingDown className="h-4 w-4" />
               Uscita
             </TabsTrigger>
@@ -135,7 +141,7 @@ export function AddMovementDialog({ centroId, open, onOpenChange, onSuccess }: A
           <TabsContent value={type} className="space-y-4 mt-4">
             {/* Amount */}
             <div className="space-y-2">
-              <Label htmlFor="amount">Importo (€) *</Label>
+              <Label htmlFor="amount" className="text-foreground">Importo (€) *</Label>
               <Input
                 id="amount"
                 type="number"
@@ -144,15 +150,15 @@ export function AddMovementDialog({ centroId, open, onOpenChange, onSuccess }: A
                 placeholder="0.00"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="text-lg"
+                className="text-lg bg-background"
               />
             </div>
 
             {/* Category */}
             <div className="space-y-2">
-              <Label>Categoria *</Label>
+              <Label className="text-foreground">Categoria *</Label>
               <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Seleziona categoria" />
                 </SelectTrigger>
                 <SelectContent>
@@ -165,18 +171,19 @@ export function AddMovementDialog({ centroId, open, onOpenChange, onSuccess }: A
 
             {/* Subcategory */}
             <div className="space-y-2">
-              <Label htmlFor="subcategory">Sottocategoria</Label>
+              <Label htmlFor="subcategory" className="text-foreground">Sottocategoria</Label>
               <Input
                 id="subcategory"
                 placeholder="es. Schermo iPhone 15"
                 value={subcategory}
                 onChange={(e) => setSubcategory(e.target.value)}
+                className="bg-background"
               />
             </div>
 
             {/* Date */}
             <div className="space-y-2">
-              <Label htmlFor="date">Data</Label>
+              <Label htmlFor="date" className="text-foreground">Data</Label>
               <div className="relative">
                 <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -184,16 +191,16 @@ export function AddMovementDialog({ centroId, open, onOpenChange, onSuccess }: A
                   type="date"
                   value={movementDate}
                   onChange={(e) => setMovementDate(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 bg-background"
                 />
               </div>
             </div>
 
             {/* Payment Method */}
             <div className="space-y-2">
-              <Label>Metodo di Pagamento</Label>
+              <Label className="text-foreground">Metodo di Pagamento</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -208,13 +215,14 @@ export function AddMovementDialog({ centroId, open, onOpenChange, onSuccess }: A
 
             {/* Description */}
             <div className="space-y-2">
-              <Label htmlFor="description">Note</Label>
+              <Label htmlFor="description" className="text-foreground">Note</Label>
               <Textarea
                 id="description"
                 placeholder="Descrizione opzionale..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={2}
+                className="bg-background"
               />
             </div>
 
@@ -222,7 +230,9 @@ export function AddMovementDialog({ centroId, open, onOpenChange, onSuccess }: A
             <Button
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className={`w-full gap-2 ${type === "income" ? "bg-emerald-500 hover:bg-emerald-600" : "bg-red-500 hover:bg-red-600"}`}
+              className={`w-full gap-2 ${type === "income" 
+                ? "bg-accent hover:bg-accent/90 text-accent-foreground" 
+                : "bg-destructive hover:bg-destructive/90 text-destructive-foreground"}`}
             >
               <Save className="h-4 w-4" />
               {isSubmitting ? "Salvataggio..." : `Registra ${type === "income" ? "Entrata" : "Uscita"}`}
