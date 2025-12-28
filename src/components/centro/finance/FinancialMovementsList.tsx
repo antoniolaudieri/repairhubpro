@@ -1,9 +1,14 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { TrendingUp, TrendingDown, Search, Trash2, MoreHorizontal, Wallet, ExternalLink, RefreshCw } from "lucide-react";
+import { 
+  TrendingUp, TrendingDown, Search, Trash2, MoreHorizontal, 
+  ExternalLink, RefreshCw, Filter, ChevronRight,
+  Building2, Zap, Users, FileText, Briefcase, Wrench, ShoppingBag, 
+  CreditCard, Truck, Package, Shield, Landmark, FolderOpen, Wallet, Receipt
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,68 +38,37 @@ interface FinancialMovementsListProps {
   onRefresh: () => void;
 }
 
-const categoryIcons: Record<string, string> = {
-  // Income
-  "Riparazione": "🔧",
-  "Riparazioni": "🔧",
-  "Vendita Usato": "📱",
-  "Vendite Usato": "📱",
-  "Tessera Fedeltà": "💳",
-  "Programma Fedeltà": "💳",
-  "Vendita Accessori": "🎧",
-  "Consulenza": "💡",
-  "Altro Incasso": "💰",
-  "Acconti": "💵",
-  
-  // Expense - Locali
-  "Affitto Locale": "🏢",
-  "Affitto": "🏢",
-  "Utenze": "💡",
-  "Manutenzione Locale": "🔨",
-  "Manutenzione": "🔨",
-  
-  // Expense - Personale
-  "Stipendi": "👥",
-  "Contributi INPS": "🏛️",
-  "INAIL": "🛡️",
-  
-  // Expense - Tasse
-  "F24": "📋",
-  "Tasse": "📋",
-  "Tasse Locali": "🏛️",
-  "Imposte Varie": "📑",
-  
-  // Expense - Professionisti
-  "Commercialista": "📊",
-  "Consulenti": "👔",
-  
-  // Expense - Operatività
-  "Ricambi": "🔩",
-  "Attrezzatura": "🛠️",
-  "Software/Abbonamenti": "💻",
-  "Marketing": "📢",
-  
-  // Expense - Trasporti
-  "Trasporti": "🚗",
-  "Spedizioni": "📦",
-  
-  // Expense - Altri
-  "Assicurazione": "🛡️",
-  "Banca": "🏦",
-  "Varie": "📝",
-  "Commissioni": "💸",
-  "Conto Vendita": "💸",
-  "Pagamenti": "💸",
+// Icon mapping for categories
+const getCategoryIcon = (category: string): React.ElementType => {
+  const iconMap: Record<string, React.ElementType> = {
+    "Riparazione": Wrench, "Riparazioni": Wrench,
+    "Vendita Usato": ShoppingBag, "Vendite Usato": ShoppingBag,
+    "Tessera Fedeltà": CreditCard, "Programma Fedeltà": CreditCard,
+    "Vendita Accessori": Package, "Consulenza": Briefcase,
+    "Altro Incasso": Wallet, "Acconti": Receipt,
+    "Affitto Locale": Building2, "Affitto": Building2,
+    "Utenze": Zap, "Manutenzione Locale": Wrench, "Manutenzione": Wrench,
+    "Stipendi": Users, "Contributi INPS": Landmark, "INAIL": Shield,
+    "F24": FileText, "Tasse": FileText, "Tasse Locali": Landmark, "Imposte Varie": Receipt,
+    "Commercialista": Briefcase, "Consulenti": Users,
+    "Ricambi": Package, "Attrezzatura": Wrench, "Software/Abbonamenti": FolderOpen,
+    "Marketing": TrendingUp, "Trasporti": Truck, "Spedizioni": Package,
+    "Assicurazione": Shield, "Banca": Landmark, "Varie": FolderOpen,
+    "Commissioni": Receipt, "Conto Vendita": Receipt, "Pagamenti": Receipt,
+  };
+  return iconMap[category] || FolderOpen;
 };
 
 const referenceTypeLabels: Record<string, string> = {
   "repair": "Riparazione",
   "commission": "Commissione",
   "used_sale": "Vendita Usato",
-  "used_payout": "Pagamento Proprietario",
-  "used_commission": "Commissione Usato",
-  "loyalty_card": "Tessera Fedeltà",
-  "corner_referral": "Segnalazione Corner",
+  "used_payout": "Payout",
+  "used_commission": "Comm. Usato",
+  "used_device": "Usato",
+  "loyalty_card": "Tessera",
+  "quote": "Preventivo",
+  "corner_referral": "Corner",
   "manual": "Manuale",
 };
 
@@ -104,8 +78,7 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
-  const [filterCategory, setFilterCategory] = useState<string>("all");
-  const [filterSource, setFilterSource] = useState<string>("all");
+  const [showFilters, setShowFilters] = useState(false);
 
   const loadMovements = async () => {
     setIsLoading(true);
@@ -115,20 +88,11 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
         .select("*")
         .eq("centro_id", centroId)
         .order("movement_date", { ascending: false })
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(100);
 
       if (filterType === "income" || filterType === "expense") {
         query = query.eq("type", filterType);
-      }
-      if (filterCategory !== "all") {
-        query = query.eq("category", filterCategory);
-      }
-      if (filterSource !== "all") {
-        if (filterSource === "manual") {
-          query = query.or("reference_type.eq.manual,reference_type.is.null");
-        } else {
-          query = query.eq("reference_type", filterSource);
-        }
       }
 
       const { data, error } = await query;
@@ -136,7 +100,7 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
       setMovements(data || []);
     } catch (error) {
       console.error("Error loading movements:", error);
-      toast.error("Errore nel caricamento dei movimenti");
+      toast.error("Errore nel caricamento");
     } finally {
       setIsLoading(false);
     }
@@ -144,10 +108,9 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
 
   useEffect(() => {
     loadMovements();
-  }, [centroId, filterType, filterCategory, filterSource]);
+  }, [centroId, filterType]);
 
   const handleDelete = async (id: string, referenceType: string | null) => {
-    // Don't allow deletion of automatic movements
     if (referenceType && referenceType !== "manual") {
       toast.error("Non puoi eliminare movimenti automatici");
       return;
@@ -163,7 +126,6 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
       loadMovements();
       onRefresh();
     } catch (error) {
-      console.error("Error deleting movement:", error);
       toast.error("Errore nell'eliminazione");
     }
   };
@@ -178,6 +140,7 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
       case "used_sale":
       case "used_payout":
       case "used_commission":
+      case "used_device":
         navigate(`/centro/usato`);
         break;
       case "loyalty_card":
@@ -198,247 +161,188 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
     );
   });
 
-  const totalIncome = filteredMovements
-    .filter((m) => m.type === "income")
-    .reduce((sum, m) => sum + Number(m.amount), 0);
-
-  const totalExpense = filteredMovements
-    .filter((m) => m.type === "expense")
-    .reduce((sum, m) => sum + Number(m.amount), 0);
-
-  const categories = [...new Set(movements.map((m) => m.category))];
-  const sources = [...new Set(movements.map((m) => m.reference_type).filter(Boolean))];
+  // Group by date
+  const groupedMovements = filteredMovements.reduce((acc, movement) => {
+    const date = movement.movement_date;
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(movement);
+    return acc;
+  }, {} as Record<string, Movement[]>);
 
   if (isLoading) {
     return (
-      <Card className="shadow-sm border-border/50">
-        <CardContent className="p-8 flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </CardContent>
-      </Card>
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="shadow-sm border-border/50 overflow-hidden">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-accent/20 to-accent/10">
-                <TrendingUp className="h-5 w-5 text-accent" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Entrate</p>
-                <p className="text-xl font-bold text-accent">€{totalIncome.toFixed(2)}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <Card className="shadow-sm border-border/50 overflow-hidden">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10">
-                <TrendingDown className="h-5 w-5 text-destructive" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Uscite</p>
-                <p className="text-xl font-bold text-destructive">€{totalExpense.toFixed(2)}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Card className="shadow-sm border-border/50 overflow-hidden">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className={`p-2.5 rounded-xl ${totalIncome - totalExpense >= 0 
-                ? "bg-gradient-to-br from-primary/20 to-primary/10" 
-                : "bg-gradient-to-br from-warning/20 to-warning/10"}`}>
-                <Wallet className={`h-5 w-5 ${totalIncome - totalExpense >= 0 ? "text-primary" : "text-warning"}`} />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Saldo</p>
-                <p className={`text-xl font-bold ${totalIncome - totalExpense >= 0 ? "text-primary" : "text-warning"}`}>
-                  €{(totalIncome - totalExpense).toFixed(2)}
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+    <div className="space-y-3">
+      {/* Search and Filters */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-10 bg-card"
+          />
+        </div>
+        <Select value={filterType} onValueChange={setFilterType}>
+          <SelectTrigger className="w-28 h-10 bg-card">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti</SelectItem>
+            <SelectItem value="income">Entrate</SelectItem>
+            <SelectItem value="expense">Uscite</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button variant="outline" size="icon" className="h-10 w-10" onClick={loadMovements}>
+          <RefreshCw className="h-4 w-4" />
+        </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="shadow-sm border-border/50">
-        <CardContent className="p-4">
-          <div className="flex flex-col lg:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Cerca movimenti..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 bg-background"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="w-[130px] bg-background">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti</SelectItem>
-                  <SelectItem value="income">Entrate</SelectItem>
-                  <SelectItem value="expense">Uscite</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger className="w-[150px] bg-background">
-                  <SelectValue placeholder="Categoria" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutte</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={filterSource} onValueChange={setFilterSource}>
-                <SelectTrigger className="w-[150px] bg-background">
-                  <SelectValue placeholder="Origine" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutte</SelectItem>
-                  <SelectItem value="manual">Manuale</SelectItem>
-                  <SelectItem value="repair">Riparazioni</SelectItem>
-                  <SelectItem value="used_sale">Vendite Usato</SelectItem>
-                  <SelectItem value="loyalty_card">Tessere</SelectItem>
-                  <SelectItem value="commission">Commissioni</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="icon" onClick={loadMovements} title="Aggiorna">
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Movements List */}
-      <Card className="shadow-sm border-border/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Registro Movimenti</CardTitle>
-            <Badge variant="secondary">{filteredMovements.length} movimenti</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {filteredMovements.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Wallet className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">Nessun movimento registrato</p>
-              <p className="text-sm mt-1">I movimenti appariranno automaticamente quando completi riparazioni, vendi usato, attivi tessere, ecc.</p>
-            </div>
-          ) : (
-            <ScrollArea className="h-[500px] pr-4">
-              <div className="space-y-2">
-                <AnimatePresence>
-                  {filteredMovements.map((movement, index) => (
-                    <motion.div
-                      key={movement.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: 20 }}
-                      transition={{ delay: index * 0.02 }}
-                      className={`p-3 rounded-lg border transition-colors ${
-                        movement.type === "income"
-                          ? "bg-accent/5 border-accent/20 hover:bg-accent/10"
-                          : "bg-destructive/5 border-destructive/20 hover:bg-destructive/10"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-start gap-3 min-w-0 flex-1">
-                          <span className="text-2xl mt-0.5">{categoryIcons[movement.category] || "📋"}</span>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-medium text-foreground">{movement.category}</span>
-                              {movement.subcategory && (
-                                <Badge variant="outline" className="text-xs">{movement.subcategory}</Badge>
-                              )}
-                              {movement.reference_type && movement.reference_type !== "manual" && (
-                                <Badge variant="secondary" className="text-xs gap-1">
-                                  {referenceTypeLabels[movement.reference_type] || movement.reference_type}
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">
-                              {movement.description || format(new Date(movement.movement_date), "d MMMM yyyy", { locale: it })}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {format(new Date(movement.movement_date), "d MMM yyyy", { locale: it })}
-                              {movement.payment_method && ` • ${movement.payment_method}`}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="text-right">
-                            <span className={`font-bold whitespace-nowrap ${
-                              movement.type === "income" ? "text-accent" : "text-destructive"
-                            }`}>
-                              {movement.type === "income" ? "+" : "-"}€{Number(movement.amount).toFixed(2)}
-                            </span>
-                          </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {movement.reference_type && movement.reference_id && movement.reference_type !== "manual" && (
-                                <DropdownMenuItem 
-                                  onClick={() => navigateToReference(movement.reference_type, movement.reference_id)}
-                                >
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Vai al dettaglio
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem 
-                                onClick={() => handleDelete(movement.id, movement.reference_type)}
-                                className="text-destructive focus:text-destructive"
-                                disabled={movement.reference_type !== null && movement.reference_type !== "manual"}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                {movement.reference_type && movement.reference_type !== "manual" 
-                                  ? "Non eliminabile" 
-                                  : "Elimina"}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
+      {filteredMovements.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <Wallet className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <p className="font-medium text-muted-foreground">Nessun movimento</p>
+            <p className="text-sm text-muted-foreground/70 mt-1">
+              I movimenti appariranno qui
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <ScrollArea className="h-[calc(100vh-380px)] md:h-[500px]">
+          <div className="space-y-4 pr-2">
+            {Object.entries(groupedMovements).map(([date, dayMovements]) => (
+              <div key={date}>
+                {/* Date Header */}
+                <div className="sticky top-0 bg-background/95 backdrop-blur-sm py-2 z-10">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    {format(new Date(date), "EEEE d MMMM", { locale: it })}
+                  </p>
+                </div>
+                
+                {/* Day Movements */}
+                <div className="space-y-2">
+                  <AnimatePresence>
+                    {dayMovements.map((movement, index) => {
+                      const IconComponent = getCategoryIcon(movement.category);
+                      const isIncome = movement.type === "income";
+                      const isAutomatic = movement.reference_type && movement.reference_type !== "manual";
+                      
+                      return (
+                        <motion.div
+                          key={movement.id}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, x: -20 }}
+                          transition={{ delay: index * 0.02 }}
+                        >
+                          <Card className={`overflow-hidden transition-all hover:shadow-md ${
+                            isIncome 
+                              ? "border-l-4 border-l-emerald-500" 
+                              : "border-l-4 border-l-red-500"
+                          }`}>
+                            <CardContent className="p-3">
+                              <div className="flex items-center gap-3">
+                                {/* Icon */}
+                                <div className={`p-2 rounded-lg shrink-0 ${
+                                  isIncome 
+                                    ? "bg-gradient-to-br from-emerald-500/20 to-green-500/10" 
+                                    : "bg-gradient-to-br from-red-500/20 to-rose-500/10"
+                                }`}>
+                                  <IconComponent className={`h-4 w-4 ${isIncome ? "text-emerald-600" : "text-red-600"}`} />
+                                </div>
+                                
+                                {/* Content */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-medium text-sm text-foreground truncate">
+                                      {movement.category}
+                                    </span>
+                                    {movement.subcategory && (
+                                      <span className="text-xs text-muted-foreground">
+                                        • {movement.subcategory}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-0.5">
+                                    {isAutomatic && (
+                                      <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+                                        {referenceTypeLabels[movement.reference_type!] || "Auto"}
+                                      </Badge>
+                                    )}
+                                    {movement.description && (
+                                      <span className="text-xs text-muted-foreground truncate">
+                                        {movement.description.slice(0, 30)}{movement.description.length > 30 ? "..." : ""}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                                
+                                {/* Amount */}
+                                <div className="text-right shrink-0">
+                                  <span className={`font-bold text-sm ${
+                                    isIncome ? "text-emerald-600" : "text-red-600"
+                                  }`}>
+                                    {isIncome ? "+" : "-"}€{Number(movement.amount).toFixed(2)}
+                                  </span>
+                                </div>
+                                
+                                {/* Actions */}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {isAutomatic && movement.reference_id && (
+                                      <DropdownMenuItem 
+                                        onClick={() => navigateToReference(movement.reference_type, movement.reference_id)}
+                                      >
+                                        <ExternalLink className="h-4 w-4 mr-2" />
+                                        Vedi dettaglio
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem 
+                                      onClick={() => handleDelete(movement.id, movement.reference_type)}
+                                      className="text-destructive focus:text-destructive"
+                                      disabled={isAutomatic}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      {isAutomatic ? "Non eliminabile" : "Elimina"}
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
               </div>
-            </ScrollArea>
-          )}
-        </CardContent>
-      </Card>
+            ))}
+          </div>
+        </ScrollArea>
+      )}
+      
+      {/* Count badge */}
+      {filteredMovements.length > 0 && (
+        <div className="text-center">
+          <Badge variant="outline" className="text-xs">
+            {filteredMovements.length} movimenti
+          </Badge>
+        </div>
+      )}
     </div>
   );
 }
