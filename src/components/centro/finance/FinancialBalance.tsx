@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, startOfYear, endOfYear, subMonths, eachDayOfInterval, eachMonthOfInterval } from "date-fns";
+import { format, startOfMonth, startOfWeek, startOfYear, subMonths } from "date-fns";
 import { it } from "date-fns/locale";
-import { TrendingUp, TrendingDown, Calendar, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, Calendar, BarChart3, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -137,7 +137,7 @@ export function FinancialBalance({ centroId }: FinancialBalanceProps) {
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="shadow-sm border-border/50">
         <CardContent className="p-8 flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </CardContent>
@@ -148,15 +148,15 @@ export function FinancialBalance({ centroId }: FinancialBalanceProps) {
   return (
     <div className="space-y-4">
       {/* Period Selector */}
-      <Card>
+      <Card className="shadow-sm border-border/50">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Calendar className="h-5 w-5 text-muted-foreground" />
-              <span className="font-medium">{periodLabels[period]}</span>
+              <span className="font-medium text-foreground">{periodLabels[period]}</span>
             </div>
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodType)}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] bg-background">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -173,15 +173,15 @@ export function FinancialBalance({ centroId }: FinancialBalanceProps) {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}>
-          <Card className="bg-emerald-500/10 border-emerald-500/20">
+          <Card className="shadow-sm border-border/50">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-emerald-500/20">
-                  <TrendingUp className="h-6 w-6 text-emerald-500" />
+                <div className="p-3 rounded-xl bg-gradient-to-br from-accent/20 to-accent/10">
+                  <TrendingUp className="h-6 w-6 text-accent" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Entrate Totali</p>
-                  <p className="text-2xl font-bold text-emerald-500">€{stats.income.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-accent">€{stats.income.toFixed(2)}</p>
                 </div>
               </div>
             </CardContent>
@@ -189,15 +189,15 @@ export function FinancialBalance({ centroId }: FinancialBalanceProps) {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}>
-          <Card className="bg-red-500/10 border-red-500/20">
+          <Card className="shadow-sm border-border/50">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl bg-red-500/20">
-                  <TrendingDown className="h-6 w-6 text-red-500" />
+                <div className="p-3 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10">
+                  <TrendingDown className="h-6 w-6 text-destructive" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Uscite Totali</p>
-                  <p className="text-2xl font-bold text-red-500">€{stats.expense.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-destructive">€{stats.expense.toFixed(2)}</p>
                 </div>
               </div>
             </CardContent>
@@ -205,15 +205,17 @@ export function FinancialBalance({ centroId }: FinancialBalanceProps) {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.3 }}>
-          <Card className={stats.balance >= 0 ? "bg-primary/10 border-primary/20" : "bg-orange-500/10 border-orange-500/20"}>
+          <Card className="shadow-sm border-border/50">
             <CardContent className="p-6">
               <div className="flex items-center gap-3">
-                <div className={`p-3 rounded-xl ${stats.balance >= 0 ? "bg-primary/20" : "bg-orange-500/20"}`}>
-                  <BarChart3 className={`h-6 w-6 ${stats.balance >= 0 ? "text-primary" : "text-orange-500"}`} />
+                <div className={`p-3 rounded-xl ${stats.balance >= 0 
+                  ? "bg-gradient-to-br from-primary/20 to-primary/10" 
+                  : "bg-gradient-to-br from-warning/20 to-warning/10"}`}>
+                  <Wallet className={`h-6 w-6 ${stats.balance >= 0 ? "text-primary" : "text-warning"}`} />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Bilancio Netto</p>
-                  <p className={`text-2xl font-bold ${stats.balance >= 0 ? "text-primary" : "text-orange-500"}`}>
+                  <p className={`text-2xl font-bold ${stats.balance >= 0 ? "text-primary" : "text-warning"}`}>
                     €{stats.balance.toFixed(2)}
                   </p>
                 </div>
@@ -224,48 +226,59 @@ export function FinancialBalance({ centroId }: FinancialBalanceProps) {
       </div>
 
       {/* Trend Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
+      <Card className="shadow-sm border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-primary" />
             Andamento Entrate vs Uscite
           </CardTitle>
         </CardHeader>
         <CardContent>
           {chartData.length === 0 ? (
-            <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-              Nessun dato per il periodo selezionato
+            <div className="h-[300px] flex flex-col items-center justify-center text-muted-foreground">
+              <BarChart3 className="h-12 w-12 mb-4 opacity-50" />
+              <p>Nessun dato per il periodo selezionato</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis dataKey="date" className="text-xs" />
-                <YAxis className="text-xs" tickFormatter={(v) => `€${v}`} />
+                <defs>
+                  <linearGradient id="colorEntrate" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0}/>
+                  </linearGradient>
+                  <linearGradient id="colorUscite" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+                <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `€${v}`} />
                 <Tooltip
                   formatter={(value: number) => [`€${value.toFixed(2)}`, ""]}
                   contentStyle={{ 
                     backgroundColor: "hsl(var(--card))", 
                     border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px" 
+                    borderRadius: "8px",
+                    boxShadow: "var(--shadow-md)"
                   }}
+                  labelStyle={{ color: "hsl(var(--foreground))" }}
                 />
                 <Area
                   type="monotone"
                   dataKey="entrate"
-                  stackId="1"
-                  stroke="hsl(142, 76%, 36%)"
-                  fill="hsl(142, 76%, 36%)"
-                  fillOpacity={0.3}
+                  stroke="hsl(var(--accent))"
+                  strokeWidth={2}
+                  fill="url(#colorEntrate)"
                   name="Entrate"
                 />
                 <Area
                   type="monotone"
                   dataKey="uscite"
-                  stackId="2"
-                  stroke="hsl(0, 84%, 60%)"
-                  fill="hsl(0, 84%, 60%)"
-                  fillOpacity={0.3}
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={2}
+                  fill="url(#colorUscite)"
                   name="Uscite"
                 />
               </AreaChart>
@@ -275,35 +288,38 @@ export function FinancialBalance({ centroId }: FinancialBalanceProps) {
       </Card>
 
       {/* Category Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <BarChart3 className="h-5 w-5" />
+      <Card className="shadow-sm border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-primary" />
             Ripartizione per Categoria
           </CardTitle>
         </CardHeader>
         <CardContent>
           {categoryData.length === 0 ? (
-            <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-              Nessun dato per il periodo selezionato
+            <div className="h-[250px] flex flex-col items-center justify-center text-muted-foreground">
+              <BarChart3 className="h-12 w-12 mb-4 opacity-50" />
+              <p>Nessun dato per il periodo selezionato</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={categoryData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                <XAxis type="number" tickFormatter={(v) => `€${v}`} className="text-xs" />
-                <YAxis type="category" dataKey="category" className="text-xs" width={100} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis type="number" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" tickFormatter={(v) => `€${v}`} />
+                <YAxis type="category" dataKey="category" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" width={100} />
                 <Tooltip
                   formatter={(value: number) => [`€${value.toFixed(2)}`, ""]}
                   contentStyle={{ 
                     backgroundColor: "hsl(var(--card))", 
                     border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px" 
+                    borderRadius: "8px",
+                    boxShadow: "var(--shadow-md)"
                   }}
+                  labelStyle={{ color: "hsl(var(--foreground))" }}
                 />
                 <Legend />
-                <Bar dataKey="entrate" fill="hsl(142, 76%, 36%)" name="Entrate" radius={[0, 4, 4, 0]} />
-                <Bar dataKey="uscite" fill="hsl(0, 84%, 60%)" name="Uscite" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="entrate" fill="hsl(var(--accent))" name="Entrate" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="uscite" fill="hsl(var(--destructive))" name="Uscite" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

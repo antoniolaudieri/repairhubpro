@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { TrendingUp, TrendingDown, Search, Filter, Trash2, Edit, MoreHorizontal } from "lucide-react";
+import { TrendingUp, TrendingDown, Search, Trash2, MoreHorizontal, Wallet } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -91,6 +91,7 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
       if (error) throw error;
       toast.success("Movimento eliminato");
       loadMovements();
+      onRefresh();
     } catch (error) {
       console.error("Error deleting movement:", error);
       toast.error("Errore nell'eliminazione");
@@ -119,7 +120,7 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className="shadow-sm border-border/50">
         <CardContent className="p-8 flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </CardContent>
@@ -136,14 +137,14 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="bg-emerald-500/10 border-emerald-500/20">
+          <Card className="shadow-sm border-border/50 overflow-hidden">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/20">
-                <TrendingUp className="h-5 w-5 text-emerald-500" />
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-accent/20 to-accent/10">
+                <TrendingUp className="h-5 w-5 text-accent" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Entrate</p>
-                <p className="text-xl font-bold text-emerald-500">€{totalIncome.toFixed(2)}</p>
+                <p className="text-xl font-bold text-accent">€{totalIncome.toFixed(2)}</p>
               </div>
             </CardContent>
           </Card>
@@ -154,14 +155,14 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="bg-red-500/10 border-red-500/20">
+          <Card className="shadow-sm border-border/50 overflow-hidden">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-red-500/20">
-                <TrendingDown className="h-5 w-5 text-red-500" />
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-destructive/20 to-destructive/10">
+                <TrendingDown className="h-5 w-5 text-destructive" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Uscite</p>
-                <p className="text-xl font-bold text-red-500">€{totalExpense.toFixed(2)}</p>
+                <p className="text-xl font-bold text-destructive">€{totalExpense.toFixed(2)}</p>
               </div>
             </CardContent>
           </Card>
@@ -172,14 +173,16 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <Card className={totalIncome - totalExpense >= 0 ? "bg-primary/10 border-primary/20" : "bg-orange-500/10 border-orange-500/20"}>
+          <Card className="shadow-sm border-border/50 overflow-hidden">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${totalIncome - totalExpense >= 0 ? "bg-primary/20" : "bg-orange-500/20"}`}>
-                <TrendingUp className={`h-5 w-5 ${totalIncome - totalExpense >= 0 ? "text-primary" : "text-orange-500"}`} />
+              <div className={`p-2.5 rounded-xl ${totalIncome - totalExpense >= 0 
+                ? "bg-gradient-to-br from-primary/20 to-primary/10" 
+                : "bg-gradient-to-br from-warning/20 to-warning/10"}`}>
+                <Wallet className={`h-5 w-5 ${totalIncome - totalExpense >= 0 ? "text-primary" : "text-warning"}`} />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Saldo</p>
-                <p className={`text-xl font-bold ${totalIncome - totalExpense >= 0 ? "text-primary" : "text-orange-500"}`}>
+                <p className={`text-xl font-bold ${totalIncome - totalExpense >= 0 ? "text-primary" : "text-warning"}`}>
                   €{(totalIncome - totalExpense).toFixed(2)}
                 </p>
               </div>
@@ -189,7 +192,7 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="shadow-sm border-border/50">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
@@ -198,11 +201,11 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
                 placeholder="Cerca movimenti..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 bg-background"
               />
             </div>
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-[150px]">
+              <SelectTrigger className="w-full sm:w-[150px] bg-background">
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -212,7 +215,7 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
               </SelectContent>
             </Select>
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] bg-background">
                 <SelectValue placeholder="Categoria" />
               </SelectTrigger>
               <SelectContent>
@@ -227,18 +230,19 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
       </Card>
 
       {/* Movements List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Registro Movimenti</CardTitle>
+      <Card className="shadow-sm border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold">Registro Movimenti</CardTitle>
         </CardHeader>
         <CardContent>
           {filteredMovements.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              <p>Nessun movimento registrato</p>
+              <Wallet className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="font-medium">Nessun movimento registrato</p>
               <p className="text-sm mt-1">Aggiungi il primo movimento cliccando "Nuovo Movimento"</p>
             </div>
           ) : (
-            <ScrollArea className="h-[400px]">
+            <ScrollArea className="h-[400px] pr-4">
               <div className="space-y-2">
                 <AnimatePresence>
                   {filteredMovements.map((movement, index) => (
@@ -248,10 +252,10 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: 20 }}
                       transition={{ delay: index * 0.03 }}
-                      className={`p-3 rounded-lg border ${
+                      className={`p-3 rounded-lg border transition-colors ${
                         movement.type === "income"
-                          ? "bg-emerald-500/5 border-emerald-500/20"
-                          : "bg-red-500/5 border-red-500/20"
+                          ? "bg-accent/5 border-accent/20 hover:bg-accent/10"
+                          : "bg-destructive/5 border-destructive/20 hover:bg-destructive/10"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -259,7 +263,7 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
                           <span className="text-2xl">{categoryIcons[movement.category] || "📋"}</span>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium truncate">{movement.category}</span>
+                              <span className="font-medium truncate text-foreground">{movement.category}</span>
                               {movement.subcategory && (
                                 <Badge variant="outline" className="text-xs">{movement.subcategory}</Badge>
                               )}
@@ -271,7 +275,7 @@ export function FinancialMovementsList({ centroId, onRefresh }: FinancialMovemen
                         </div>
                         <div className="flex items-center gap-3">
                           <span className={`font-bold whitespace-nowrap ${
-                            movement.type === "income" ? "text-emerald-500" : "text-red-500"
+                            movement.type === "income" ? "text-accent" : "text-destructive"
                           }`}>
                             {movement.type === "income" ? "+" : "-"}€{Number(movement.amount).toFixed(2)}
                           </span>
