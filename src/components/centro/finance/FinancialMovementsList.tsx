@@ -34,24 +34,56 @@ interface FinancialMovementsListProps {
 }
 
 const categoryIcons: Record<string, string> = {
+  // Income
   "Riparazione": "🔧",
+  "Riparazioni": "🔧",
   "Vendita Usato": "📱",
+  "Vendite Usato": "📱",
   "Tessera Fedeltà": "💳",
+  "Programma Fedeltà": "💳",
   "Vendita Accessori": "🎧",
-  "Consulenza": "💬",
+  "Consulenza": "💡",
   "Altro Incasso": "💰",
-  "Ricambi": "🔩",
-  "Affitto": "🏠",
+  "Acconti": "💵",
+  
+  // Expense - Locali
+  "Affitto Locale": "🏢",
+  "Affitto": "🏢",
   "Utenze": "💡",
-  "Stipendi": "👤",
-  "Marketing": "📢",
+  "Manutenzione Locale": "🔨",
+  "Manutenzione": "🔨",
+  
+  // Expense - Personale
+  "Stipendi": "👥",
+  "Contributi INPS": "🏛️",
+  "INAIL": "🛡️",
+  
+  // Expense - Tasse
+  "F24": "📋",
+  "Tasse": "📋",
+  "Tasse Locali": "🏛️",
+  "Imposte Varie": "📑",
+  
+  // Expense - Professionisti
+  "Commercialista": "📊",
+  "Consulenti": "👔",
+  
+  // Expense - Operatività
+  "Ricambi": "🔩",
   "Attrezzatura": "🛠️",
   "Software/Abbonamenti": "💻",
-  "Tasse": "📋",
+  "Marketing": "📢",
+  
+  // Expense - Trasporti
+  "Trasporti": "🚗",
+  "Spedizioni": "📦",
+  
+  // Expense - Altri
   "Assicurazione": "🛡️",
-  "Manutenzione": "⚙️",
-  "Altra Spesa": "📝",
-  "Commissioni": "🏛️",
+  "Banca": "🏦",
+  "Varie": "📝",
+  "Commissioni": "💸",
+  "Conto Vendita": "💸",
   "Pagamenti": "💸",
 };
 
