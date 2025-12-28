@@ -1,20 +1,40 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import NativeLogin from "@/pages/NativeLogin";
-import NativeMonitor from "@/pages/NativeMonitor";
-import NativeSettings from "@/pages/NativeSettings";
+import { NativeHome } from "@/pages/NativeHome";
+import { NativeProgress } from "@/pages/NativeProgress";
+import { NativeDiagnostics } from "@/pages/NativeDiagnostics";
+import { NativeProfile } from "@/pages/NativeProfile";
+import { BottomNavBar, NativeView } from "@/components/native/BottomNavBar";
 import { useAppUpdate } from "@/hooks/useAppUpdate";
 import { UpdateAvailableDialog } from "@/components/native/UpdateAvailableDialog";
 import { useFirstLaunchNotificationPrompt } from "@/hooks/useFirstLaunchNotificationPrompt";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { CreditCard, LogOut } from "lucide-react";
 
-type AppView = "monitor" | "settings";
+interface LoyaltyCard {
+  id: string;
+  centro_id: string;
+  status: string;
+  customer_id: string;
+  card_number?: string;
+  activated_at?: string;
+  expires_at?: string;
+  centro?: {
+    business_name: string;
+    logo_url?: string;
+  };
+}
 
 const NativeApp = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<AppView>("monitor");
+  const [currentView, setCurrentView] = useState<NativeView>("home");
+  const [loyaltyCard, setLoyaltyCard] = useState<LoyaltyCard | null>(null);
+  const [cardLoading, setCardLoading] = useState(true);
 
   const {
     showUpdateDialog,
@@ -26,17 +46,15 @@ const NativeApp = () => {
     dismissUpdate,
   } = useAppUpdate();
 
-  // Prompt for notifications on first launch
   useFirstLaunchNotificationPrompt();
 
+  // Auth state
   useEffect(() => {
-    // Check current session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
@@ -47,7 +65,69 @@ const NativeApp = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) {
+  // Fetch loyalty card
+  const fetchLoyaltyCard = useCallback(async () => {
+    if (!user?.email) {
+      setLoyaltyCard(null);
+      setCardLoading(false);
+      return;
+    }
+
+    try {
+      const { data: customers } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("email", user.email);
+
+      if (!customers || customers.length === 0) {
+        setLoyaltyCard(null);
+        setCardLoading(false);
+        return;
+      }
+
+      const customerIds = customers.map(c => c.id);
+
+      const { data } = await supabase
+        .from("loyalty_cards")
+        .select(`
+          id, centro_id, status, customer_id, card_number, activated_at, expires_at,
+          centro:centri_assistenza(business_name, logo_url)
+        `)
+        .in("customer_id", customerIds)
+        .eq("status", "active")
+        .not("expires_at", "is", null)
+        .gte("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setLoyaltyCard({
+          ...data,
+          centro: Array.isArray(data.centro) ? data.centro[0] : data.centro
+        } as LoyaltyCard);
+      } else {
+        setLoyaltyCard(null);
+      }
+    } catch (err) {
+      console.error("Error fetching loyalty card:", err);
+      setLoyaltyCard(null);
+    } finally {
+      setCardLoading(false);
+    }
+  }, [user?.email]);
+
+  useEffect(() => {
+    if (user) {
+      fetchLoyaltyCard();
+    }
+  }, [user, fetchLoyaltyCard]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (loading || cardLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -55,24 +135,76 @@ const NativeApp = () => {
     );
   }
 
-  const renderContent = () => {
-    if (!user) {
-      return <NativeLogin />;
-    }
+  if (!user) {
+    return (
+      <>
+        <Toaster />
+        <NativeLogin />
+      </>
+    );
+  }
 
+  if (!loyaltyCard) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <Toaster />
+        <div className="max-w-md mx-auto">
+          <Card className="border-destructive/50">
+            <CardHeader className="text-center">
+              <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                <CreditCard className="h-8 w-8 text-destructive" />
+              </div>
+              <CardTitle className="text-xl">Tessera Non Attiva</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <p className="text-muted-foreground">
+                Non hai una tessera fedeltà attiva associata a questo account.
+              </p>
+              <p className="text-sm text-muted-foreground">Email: {user.email}</p>
+              <Button variant="outline" onClick={handleLogout} className="w-full">
+                <LogOut className="mr-2 h-4 w-4" />
+                Esci
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  const renderContent = () => {
     switch (currentView) {
-      case "settings":
-        return <NativeSettings user={user} onBack={() => setCurrentView("monitor")} />;
-      case "monitor":
+      case "progress":
+        return (
+          <NativeProgress
+            user={user}
+            customerId={loyaltyCard.customer_id}
+            centroId={loyaltyCard.centro_id}
+          />
+        );
+      case "diagnostics":
+        return <NativeDiagnostics user={user} />;
+      case "profile":
+        return <NativeProfile user={user} loyaltyCard={loyaltyCard} />;
+      case "home":
       default:
-        return <NativeMonitor user={user} onOpenSettings={() => setCurrentView("settings")} />;
+        return (
+          <NativeHome
+            user={user}
+            loyaltyCard={loyaltyCard}
+            onNavigateProgress={() => setCurrentView("progress")}
+          />
+        );
     }
   };
 
   return (
-    <>
+    <div className="min-h-screen bg-background">
       <Toaster />
-      {renderContent()}
+      <div className="h-screen pb-16">
+        {renderContent()}
+      </div>
+      <BottomNavBar currentView={currentView} onNavigate={setCurrentView} />
       <UpdateAvailableDialog
         open={showUpdateDialog}
         onDismiss={() => dismissUpdate(latestVersion)}
@@ -82,7 +214,7 @@ const NativeApp = () => {
         downloadUrl={downloadUrl}
         releaseDate={releaseDate}
       />
-    </>
+    </div>
   );
 };
 
