@@ -48,41 +48,50 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
   customer_welcome: {
     id: "customer_welcome",
     name: "Benvenuto Cliente (con Tessera)",
-    description: "Email inviata ai nuovi clienti che hanno già la tessera fedeltà",
-    subject: "Benvenuto su {{shop_name}} - I tuoi dati di accesso",
+    description: "Email inviata ai nuovi clienti che hanno la tessera e la nostra app antivirus",
+    subject: "Benvenuto su {{shop_name}} - Proteggi il tuo smartphone!",
     html: `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 12px;">
-    {{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height: 60px;">{{/if}}
-    <h1 style="color: white; margin: 10px 0;">{{shop_name}}</h1>
-  </div>
-  
-  <h2 style="color: #333; margin-top: 24px;">Benvenuto {{customer_name}}!</h2>
-  
-  <p>È stato creato un account per te su <strong>{{shop_name}}</strong>.</p>
-  
-  <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-    <h3 style="color: #0369a1; margin: 0 0 12px 0;">🔐 I tuoi dati di accesso</h3>
-    <p><strong>Email:</strong> {{customer_email}}</p>
-    <p><strong>Password:</strong> {{password}}</p>
-  </div>
-  
-  <p style="background: #fef3c7; padding: 12px; border-radius: 6px;">
-    ⚠️ Ti consigliamo di cambiare la password al primo accesso.
-  </p>
-  
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="{{login_url}}" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-      Accedi al tuo account
-    </a>
-  </div>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-  <p style="color: #666; font-size: 12px; text-align: center;">
-    {{shop_name}} {{#if shop_address}}- {{shop_address}}{{/if}}
-  </p>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background-color:#f8fafc;">
+<div style="text-align:center;padding:24px;background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;">
+{{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height:60px;margin-bottom:12px;">{{/if}}
+<h1 style="color:white;margin:0;font-size:24px;">Benvenuto in {{shop_name}}</h1>
+<p style="color:#d1fae5;margin:8px 0 0 0;font-size:14px;">La tua sicurezza mobile inizia qui</p>
+</div>
+
+<div style="background:white;padding:24px;border-radius:12px;margin-top:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+<h2 style="color:#1f2937;margin:0 0 16px 0;font-size:20px;">Ciao {{customer_name}}!</h2>
+
+<p style="color:#4b5563;line-height:1.6;margin:0 0 20px 0;">Grazie per aver scelto <strong>{{shop_name}}</strong>! Hai fatto la scelta giusta per proteggere il tuo smartphone.</p>
+
+<div style="background:linear-gradient(135deg,#10b981,#059669);padding:20px;border-radius:12px;margin:20px 0;color:white;">
+<h3 style="margin:0 0 12px 0;font-size:18px;">La Nostra App Antivirus Nativa</h3>
+<p style="margin:0 0 12px 0;font-size:14px;line-height:1.5;">Scarica la nostra app GRATUITA per proteggere il tuo dispositivo:</p>
+<ul style="margin:0 0 16px 0;padding-left:20px;font-size:14px;">
+<li style="margin-bottom:6px;">Scansione antivirus e antimalware in tempo reale</li>
+<li style="margin-bottom:6px;">Monitoraggio salute batteria e memoria</li>
+<li style="margin-bottom:6px;">Notifiche intelligenti per la manutenzione</li>
+<li style="margin-bottom:6px;">Protezione contro app dannose</li>
+</ul>
+</div>
+
+<div style="background:#f0f9ff;border:1px solid #bae6fd;padding:16px;border-radius:8px;margin:20px 0;">
+<h3 style="color:#0369a1;margin:0 0 12px 0;font-size:16px;">I tuoi dati di accesso</h3>
+<p style="margin:0 0 8px 0;color:#1f2937;"><strong>Email:</strong> {{customer_email}}</p>
+<p style="margin:0;color:#1f2937;"><strong>Password:</strong> {{password}}</p>
+</div>
+
+<p style="background:#fef3c7;padding:12px;border-radius:6px;color:#92400e;font-size:13px;margin:0 0 20px 0;">Ti consigliamo di cambiare la password al primo accesso.</p>
+
+<div style="text-align:center;margin:24px 0;">
+<a href="{{login_url}}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Accedi e Scarica l'App</a>
+</div>
+</div>
+
+<div style="text-align:center;padding:20px;color:#6b7280;font-size:12px;">
+<p style="margin:0;">{{shop_name}} {{#if shop_address}}- {{shop_address}}{{/if}}</p>
+</div>
 </body>
 </html>`,
     variables: ["shop_name", "logo_url", "customer_name", "customer_email", "password", "login_url", "shop_address", "shop_phone", "shop_email"]
@@ -90,103 +99,115 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
   customer_welcome_no_loyalty: {
     id: "customer_welcome_no_loyalty",
     name: "Benvenuto Cliente (senza Tessera)",
-    description: "Email inviata ai nuovi clienti senza tessera fedeltà - include promozione tessera con link acquisto",
-    subject: "Benvenuto su {{shop_name}} - Scopri i vantaggi esclusivi!",
+    description: "Email promozionale per nuovi clienti - promuove app antivirus e tessera fedelta",
+    subject: "Proteggi il tuo smartphone GRATIS con {{shop_name}}!",
     html: `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 12px;">
-    {{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height: 60px;">{{/if}}
-    <h1 style="color: white; margin: 10px 0;">{{shop_name}}</h1>
-  </div>
-  
-  <h2 style="color: #333; margin-top: 24px;">Benvenuto {{customer_name}}!</h2>
-  
-  <p>È stato creato un account per te su <strong>{{shop_name}}</strong>.</p>
-  
-  <div style="background: #f0f9ff; border: 1px solid #bae6fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-    <h3 style="color: #0369a1; margin: 0 0 12px 0;">🔐 I tuoi dati di accesso</h3>
-    <p><strong>Email:</strong> {{customer_email}}</p>
-    <p><strong>Password:</strong> {{password}}</p>
-  </div>
-  
-  <!-- LOYALTY CARD PROMOTION WITH DIRECT PURCHASE -->
-  <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); padding: 24px; border-radius: 12px; margin: 24px 0; color: #78350f;">
-    <h3 style="margin: 0 0 12px 0; font-size: 20px;">🎉 Attiva la Tessera Fedeltà!</h3>
-    <p style="margin: 0 0 16px 0;">Con soli <strong>€30/anno</strong> ottieni vantaggi esclusivi:</p>
-    <ul style="margin: 0 0 16px 0; padding-left: 20px;">
-      <li><strong>Diagnosi a €10</strong> invece di €15 (risparmio €5)</li>
-      <li><strong>10% di sconto</strong> su tutte le riparazioni</li>
-      <li><strong>Fino a 3 dispositivi</strong> coperti per un anno</li>
-    </ul>
-    <div style="text-align: center; margin-top: 20px;">
-      <a href="{{loyalty_url}}" style="display: inline-block; background: #78350f; color: #fef3c7; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">💳 Attiva Ora - €30/anno</a>
-    </div>
-  </div>
-  
-  <p style="background: #fef3c7; padding: 12px; border-radius: 6px;">
-    ⚠️ Ti consigliamo di cambiare la password al primo accesso.
-  </p>
-  
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="{{login_url}}" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-      Accedi al tuo account
-    </a>
-  </div>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-  <p style="color: #666; font-size: 12px; text-align: center;">
-    {{shop_name}} {{#if shop_address}}- {{shop_address}}{{/if}}
-  </p>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background-color:#f8fafc;">
+<div style="text-align:center;padding:24px;background:linear-gradient(135deg,#10b981,#059669);border-radius:16px;">
+{{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height:60px;margin-bottom:12px;">{{/if}}
+<h1 style="color:white;margin:0;font-size:24px;">Benvenuto in {{shop_name}}</h1>
+<p style="color:#d1fae5;margin:8px 0 0 0;font-size:14px;">Protezione smartphone professionale</p>
+</div>
+
+<div style="background:white;padding:24px;border-radius:12px;margin-top:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+<h2 style="color:#1f2937;margin:0 0 16px 0;font-size:20px;">Ciao {{customer_name}}!</h2>
+
+<p style="color:#4b5563;line-height:1.6;margin:0 0 20px 0;">Grazie per aver scelto <strong>{{shop_name}}</strong>! Abbiamo una sorpresa speciale per te.</p>
+
+<div style="background:linear-gradient(135deg,#10b981,#059669);padding:24px;border-radius:12px;margin:20px 0;color:white;">
+<h3 style="margin:0 0 8px 0;font-size:20px;">NOVITA: App Antivirus GRATUITA!</h3>
+<p style="margin:0 0 16px 0;font-size:15px;line-height:1.5;opacity:0.95;">Proteggi il tuo smartphone con la nostra app antivirus e antimalware proprietaria. Sviluppata dai nostri tecnici esperti!</p>
+<ul style="margin:0 0 16px 0;padding-left:20px;font-size:14px;">
+<li style="margin-bottom:8px;"><strong>Scansione in tempo reale</strong> - Rileva virus e malware</li>
+<li style="margin-bottom:8px;"><strong>Monitoraggio salute</strong> - Batteria, memoria, prestazioni</li>
+<li style="margin-bottom:8px;"><strong>Avvisi intelligenti</strong> - Ti avvisa prima che sia troppo tardi</li>
+<li style="margin-bottom:8px;"><strong>100% GRATUITA</strong> - Nessun costo nascosto</li>
+</ul>
+<div style="text-align:center;">
+<a href="{{login_url}}" style="display:inline-block;background:white;color:#059669;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Scarica Subito l'App</a>
+</div>
+</div>
+
+<div style="background:linear-gradient(135deg,#f59e0b,#d97706);padding:24px;border-radius:12px;margin:20px 0;color:white;">
+<h3 style="margin:0 0 12px 0;font-size:18px;">Passa al Livello PRO con la Tessera!</h3>
+<p style="margin:0 0 16px 0;font-size:14px;line-height:1.5;">Con soli 30 euro/anno sblocchi vantaggi esclusivi:</p>
+<ul style="margin:0 0 16px 0;padding-left:20px;font-size:14px;">
+<li style="margin-bottom:6px;"><strong>Diagnosi a 10 euro</strong> invece di 15 euro</li>
+<li style="margin-bottom:6px;"><strong>10% di sconto</strong> su tutte le riparazioni</li>
+<li style="margin-bottom:6px;"><strong>Fino a 3 dispositivi</strong> protetti per un anno</li>
+<li style="margin-bottom:6px;"><strong>Supporto prioritario</strong> via app</li>
+</ul>
+<div style="text-align:center;">
+<a href="{{loyalty_url}}" style="display:inline-block;background:white;color:#d97706;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">Attiva Tessera - 30 euro/anno</a>
+</div>
+</div>
+
+<div style="background:#f0f9ff;border:1px solid #bae6fd;padding:16px;border-radius:8px;margin:20px 0;">
+<h3 style="color:#0369a1;margin:0 0 12px 0;font-size:16px;">I tuoi dati di accesso</h3>
+<p style="margin:0 0 8px 0;color:#1f2937;"><strong>Email:</strong> {{customer_email}}</p>
+<p style="margin:0;color:#1f2937;"><strong>Password:</strong> {{password}}</p>
+</div>
+
+<p style="background:#fef3c7;padding:12px;border-radius:6px;color:#92400e;font-size:13px;margin:0;">Ti consigliamo di cambiare la password al primo accesso.</p>
+</div>
+
+<div style="text-align:center;padding:20px;color:#6b7280;font-size:12px;">
+<p style="margin:0;">{{shop_name}} {{#if shop_address}}- {{shop_address}}{{/if}}</p>
+</div>
 </body>
 </html>`,
     variables: ["shop_name", "logo_url", "customer_name", "customer_email", "password", "login_url", "loyalty_url", "shop_address", "shop_phone", "shop_email"]
   },
   loyalty_welcome: {
     id: "loyalty_welcome",
-    name: "Benvenuto Tessera Fedeltà",
-    description: "Email inviata quando un cliente attiva la tessera fedeltà",
-    subject: "🎉 Benvenuto nel Club Fedeltà di {{shop_name}}!",
+    name: "Benvenuto Tessera Fedelta",
+    description: "Email inviata quando un cliente attiva la tessera fedelta",
+    subject: "Benvenuto nel Club PRO di {{shop_name}}!",
     html: `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 12px;">
-    {{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height: 60px;">{{/if}}
-    <h1 style="color: white; margin: 10px 0;">Benvenuto nel Club Fedeltà!</h1>
-  </div>
-  
-  <p style="margin-top: 24px;">Gentile <strong>{{customer_name}}</strong>,</p>
-  
-  <p>Grazie per aver attivato la <strong>Tessera Fedeltà</strong> di <strong>{{shop_name}}</strong>! 🎉</p>
-  
-  <div style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; padding: 25px; border-radius: 12px; margin: 25px 0;">
-    <h2 style="margin: 0 0 15px 0; font-size: 18px;">I Tuoi Vantaggi Esclusivi:</h2>
-    <ul style="margin: 0; padding-left: 20px;">
-      <li style="margin-bottom: 10px;"><strong>Diagnosi Scontata:</strong> Solo €10 invece di €15</li>
-      <li style="margin-bottom: 10px;"><strong>10% di Sconto</strong> su tutte le riparazioni</li>
-      <li style="margin-bottom: 10px;"><strong>Fino a {{max_devices}} dispositivi</strong> coperti per un anno</li>
-    </ul>
-  </div>
-  
-  <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-    <p style="margin: 0;"><strong>Numero Tessera:</strong> {{card_number}}</p>
-    <p style="margin: 10px 0 0 0;"><strong>Valida fino al:</strong> {{expiry_date}}</p>
-  </div>
-  
-  <p>I vantaggi verranno applicati <strong>automaticamente</strong> ad ogni riparazione.</p>
-  
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="{{dashboard_url}}" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-      Visualizza la tua Tessera
-    </a>
-  </div>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-  <p style="color: #666; font-size: 12px; text-align: center;">
-    {{shop_name}} - Tel: {{shop_phone}} - {{shop_email}}
-  </p>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background-color:#f8fafc;">
+<div style="text-align:center;padding:24px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:16px;">
+{{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height:60px;margin-bottom:12px;">{{/if}}
+<h1 style="color:white;margin:0;font-size:24px;">Benvenuto nel Club PRO!</h1>
+<p style="color:#ddd6fe;margin:8px 0 0 0;font-size:14px;">Hai sbloccato tutti i vantaggi esclusivi</p>
+</div>
+
+<div style="background:white;padding:24px;border-radius:12px;margin-top:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+<h2 style="color:#1f2937;margin:0 0 16px 0;font-size:20px;">Complimenti {{customer_name}}!</h2>
+
+<p style="color:#4b5563;line-height:1.6;margin:0 0 20px 0;">Hai attivato la <strong>Tessera Fedelta PRO</strong> di <strong>{{shop_name}}</strong>! Ora hai accesso a tutti i vantaggi esclusivi.</p>
+
+<div style="background:linear-gradient(135deg,#10b981,#059669);padding:20px;border-radius:12px;margin:20px 0;color:white;">
+<h3 style="margin:0 0 12px 0;font-size:18px;">App Antivirus Inclusa!</h3>
+<p style="margin:0;font-size:14px;line-height:1.5;">Come membro PRO hai accesso GRATUITO alla nostra app antivirus e antimalware. Scaricala subito per proteggere il tuo dispositivo!</p>
+</div>
+
+<div style="background:linear-gradient(135deg,#8b5cf6,#7c3aed);padding:20px;border-radius:12px;margin:20px 0;color:white;">
+<h3 style="margin:0 0 12px 0;font-size:16px;">I Tuoi Vantaggi PRO:</h3>
+<ul style="margin:0;padding-left:20px;font-size:14px;">
+<li style="margin-bottom:8px;"><strong>Diagnosi a 10 euro</strong> invece di 15 euro</li>
+<li style="margin-bottom:8px;"><strong>10% di sconto</strong> su tutte le riparazioni</li>
+<li style="margin-bottom:8px;"><strong>Fino a {{max_devices}} dispositivi</strong> protetti</li>
+<li style="margin-bottom:8px;"><strong>App antivirus</strong> inclusa gratuitamente</li>
+</ul>
+</div>
+
+<div style="background:#f3f4f6;padding:16px;border-radius:8px;margin:20px 0;">
+<p style="margin:0 0 8px 0;color:#1f2937;"><strong>Numero Tessera:</strong> {{card_number}}</p>
+<p style="margin:0;color:#1f2937;"><strong>Valida fino al:</strong> {{expiry_date}}</p>
+</div>
+
+<div style="text-align:center;margin:24px 0;">
+<a href="{{dashboard_url}}" style="display:inline-block;background:linear-gradient(135deg,#8b5cf6,#7c3aed);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Accedi e Scarica l'App</a>
+</div>
+</div>
+
+<div style="text-align:center;padding:20px;color:#6b7280;font-size:12px;">
+<p style="margin:0;">{{shop_name}} - Tel: {{shop_phone}} - {{shop_email}}</p>
+</div>
 </body>
 </html>`,
     variables: ["shop_name", "logo_url", "customer_name", "card_number", "expiry_date", "max_devices", "dashboard_url", "shop_phone", "shop_email"]
@@ -198,36 +219,35 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
     subject: "Preventivo #{{quote_number}} da {{shop_name}}",
     html: `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 12px;">
-    {{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height: 60px;">{{/if}}
-    <h1 style="color: white; margin: 10px 0;">Preventivo Riparazione</h1>
-  </div>
-  
-  <p style="margin-top: 24px;">Gentile <strong>{{customer_name}}</strong>,</p>
-  
-  <p>Abbiamo preparato un preventivo per la riparazione del tuo dispositivo:</p>
-  
-  <div style="background: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e2e8f0;">
-    <p><strong>Dispositivo:</strong> {{device_name}}</p>
-    <p><strong>Problema:</strong> {{issue_description}}</p>
-    <p style="font-size: 24px; color: #2563eb; margin: 16px 0;"><strong>Totale: €{{total_cost}}</strong></p>
-    <p style="color: #666; font-size: 13px;">Valido fino al: {{valid_until}}</p>
-  </div>
-  
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="{{sign_url}}" style="background: linear-gradient(135deg, #22c55e, #16a34a); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-      ✍️ Firma il Preventivo
-    </a>
-  </div>
-  
-  <p style="color: #666; font-size: 13px;">Clicca sul pulsante per visualizzare i dettagli e firmare il preventivo online.</p>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-  <p style="color: #666; font-size: 12px; text-align: center;">
-    {{shop_name}} - Tel: {{shop_phone}}
-  </p>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background-color:#f8fafc;">
+<div style="text-align:center;padding:24px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:16px;">
+{{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height:60px;margin-bottom:12px;">{{/if}}
+<h1 style="color:white;margin:0;font-size:24px;">Preventivo Riparazione</h1>
+</div>
+
+<div style="background:white;padding:24px;border-radius:12px;margin-top:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+<p style="color:#4b5563;margin:0 0 16px 0;">Gentile <strong>{{customer_name}}</strong>,</p>
+
+<p style="color:#4b5563;line-height:1.6;margin:0 0 20px 0;">Abbiamo preparato un preventivo per la riparazione del tuo dispositivo:</p>
+
+<div style="background:#f8fafc;padding:20px;border-radius:8px;border:1px solid #e2e8f0;margin:20px 0;">
+<p style="margin:0 0 8px 0;color:#1f2937;"><strong>Dispositivo:</strong> {{device_name}}</p>
+<p style="margin:0 0 16px 0;color:#1f2937;"><strong>Problema:</strong> {{issue_description}}</p>
+<p style="font-size:28px;color:#2563eb;margin:0 0 8px 0;font-weight:700;">{{total_cost}} euro</p>
+<p style="color:#6b7280;font-size:13px;margin:0;">Valido fino al: {{valid_until}}</p>
+</div>
+
+<div style="text-align:center;margin:24px 0;">
+<a href="{{sign_url}}" style="display:inline-block;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Firma il Preventivo</a>
+</div>
+
+<p style="color:#6b7280;font-size:13px;text-align:center;margin:0;">Clicca sul pulsante per visualizzare i dettagli e firmare online.</p>
+</div>
+
+<div style="text-align:center;padding:20px;color:#6b7280;font-size:12px;">
+<p style="margin:0;">{{shop_name}} - Tel: {{shop_phone}}</p>
+</div>
 </body>
 </html>`,
     variables: ["shop_name", "logo_url", "customer_name", "device_name", "issue_description", "total_cost", "valid_until", "sign_url", "quote_number", "shop_phone"]
@@ -239,33 +259,36 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
     subject: "Aggiornamento riparazione - {{device_name}}",
     html: `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 12px;">
-    {{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height: 60px;">{{/if}}
-    <h1 style="color: white; margin: 10px 0;">Aggiornamento Riparazione</h1>
-  </div>
-  
-  <p style="margin-top: 24px;">Gentile <strong>{{customer_name}}</strong>,</p>
-  
-  <p>Ti informiamo che lo stato della tua riparazione è stato aggiornato:</p>
-  
-  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-    <p><strong>Dispositivo:</strong> {{device_name}}</p>
-    <p><strong>Nuovo stato:</strong> <span style="color: #16a34a; font-weight: bold;">{{status}}</span></p>
-    {{#if status_note}}<p><strong>Note:</strong> {{status_note}}</p>{{/if}}
-  </div>
-  
-  <div style="text-align: center; margin: 24px 0;">
-    <a href="{{tracking_url}}" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600;">
-      Segui la Riparazione
-    </a>
-  </div>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-  <p style="color: #666; font-size: 12px; text-align: center;">
-    {{shop_name}} - Tel: {{shop_phone}}
-  </p>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background-color:#f8fafc;">
+<div style="text-align:center;padding:24px;background:linear-gradient(135deg,#3b82f6,#1d4ed8);border-radius:16px;">
+{{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height:60px;margin-bottom:12px;">{{/if}}
+<h1 style="color:white;margin:0;font-size:24px;">Aggiornamento Riparazione</h1>
+</div>
+
+<div style="background:white;padding:24px;border-radius:12px;margin-top:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+<p style="color:#4b5563;margin:0 0 16px 0;">Gentile <strong>{{customer_name}}</strong>,</p>
+
+<p style="color:#4b5563;line-height:1.6;margin:0 0 20px 0;">Ti informiamo che lo stato della tua riparazione e stato aggiornato:</p>
+
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:20px;border-radius:8px;margin:20px 0;">
+<p style="margin:0 0 8px 0;color:#1f2937;"><strong>Dispositivo:</strong> {{device_name}}</p>
+<p style="margin:0;color:#1f2937;"><strong>Nuovo stato:</strong> <span style="color:#16a34a;font-weight:bold;">{{status}}</span></p>
+{{#if status_note}}<p style="margin:12px 0 0 0;color:#1f2937;"><strong>Note:</strong> {{status_note}}</p>{{/if}}
+</div>
+
+<div style="background:#f0f9ff;border:1px solid #bae6fd;padding:16px;border-radius:8px;margin:20px 0;">
+<p style="margin:0;color:#0369a1;font-size:14px;"><strong>Suggerimento:</strong> Scarica la nostra app antivirus gratuita per ricevere notifiche in tempo reale sullo stato delle tue riparazioni!</p>
+</div>
+
+<div style="text-align:center;margin:24px 0;">
+<a href="{{tracking_url}}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:600;font-size:16px;">Segui la Riparazione</a>
+</div>
+</div>
+
+<div style="text-align:center;padding:20px;color:#6b7280;font-size:12px;">
+<p style="margin:0;">{{shop_name}} - Tel: {{shop_phone}}</p>
+</div>
 </body>
 </html>`,
     variables: ["shop_name", "logo_url", "customer_name", "device_name", "status", "status_note", "tracking_url", "shop_phone"]
@@ -273,37 +296,42 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
   repair_completed: {
     id: "repair_completed",
     name: "Riparazione Completata",
-    description: "Email inviata quando una riparazione è pronta per il ritiro",
-    subject: "✅ Riparazione completata - Pronta per il ritiro!",
+    description: "Email inviata quando una riparazione e pronta per il ritiro",
+    subject: "Riparazione completata - Pronta per il ritiro!",
     html: `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 12px;">
-    {{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height: 60px;">{{/if}}
-    <h1 style="color: white; margin: 10px 0;">Riparazione Completata! ✅</h1>
-  </div>
-  
-  <p style="margin-top: 24px;">Gentile <strong>{{customer_name}}</strong>,</p>
-  
-  <p>Ottime notizie! La riparazione del tuo dispositivo è stata completata ed è pronta per il ritiro.</p>
-  
-  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 8px; margin: 20px 0;">
-    <p><strong>Dispositivo:</strong> {{device_name}}</p>
-    <p><strong>Lavori eseguiti:</strong> {{repair_notes}}</p>
-    <p style="font-size: 20px; color: #16a34a; margin: 16px 0;"><strong>Totale da pagare: €{{final_cost}}</strong></p>
-  </div>
-  
-  <div style="background: #fef3c7; padding: 16px; border-radius: 8px; margin: 20px 0;">
-    <p style="margin: 0;"><strong>📍 Dove ritirare:</strong></p>
-    <p style="margin: 8px 0 0 0;">{{shop_address}}</p>
-    <p style="margin: 8px 0 0 0;"><strong>📞 Telefono:</strong> {{shop_phone}}</p>
-  </div>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-  <p style="color: #666; font-size: 12px; text-align: center;">
-    {{shop_name}} - Ti aspettiamo!
-  </p>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background-color:#f8fafc;">
+<div style="text-align:center;padding:24px;background:linear-gradient(135deg,#22c55e,#16a34a);border-radius:16px;">
+{{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height:60px;margin-bottom:12px;">{{/if}}
+<h1 style="color:white;margin:0;font-size:24px;">Riparazione Completata!</h1>
+</div>
+
+<div style="background:white;padding:24px;border-radius:12px;margin-top:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+<p style="color:#4b5563;margin:0 0 16px 0;">Gentile <strong>{{customer_name}}</strong>,</p>
+
+<p style="color:#4b5563;line-height:1.6;margin:0 0 20px 0;">Ottime notizie! La riparazione del tuo dispositivo e stata completata ed e pronta per il ritiro.</p>
+
+<div style="background:#f0fdf4;border:1px solid #bbf7d0;padding:20px;border-radius:8px;margin:20px 0;">
+<p style="margin:0 0 8px 0;color:#1f2937;"><strong>Dispositivo:</strong> {{device_name}}</p>
+<p style="margin:0 0 16px 0;color:#1f2937;"><strong>Lavori eseguiti:</strong> {{repair_notes}}</p>
+<p style="font-size:24px;color:#16a34a;margin:0;font-weight:700;">Totale: {{final_cost}} euro</p>
+</div>
+
+<div style="background:#fef3c7;padding:16px;border-radius:8px;margin:20px 0;">
+<p style="margin:0 0 8px 0;color:#92400e;"><strong>Dove ritirare:</strong></p>
+<p style="margin:0 0 8px 0;color:#92400e;">{{shop_address}}</p>
+<p style="margin:0;color:#92400e;"><strong>Telefono:</strong> {{shop_phone}}</p>
+</div>
+
+<div style="background:linear-gradient(135deg,#10b981,#059669);padding:16px;border-radius:8px;margin:20px 0;color:white;">
+<p style="margin:0;font-size:14px;"><strong>Proteggi il tuo dispositivo!</strong> Scarica la nostra app antivirus gratuita per mantenere il tuo smartphone sicuro e performante.</p>
+</div>
+</div>
+
+<div style="text-align:center;padding:20px;color:#6b7280;font-size:12px;">
+<p style="margin:0;">{{shop_name}} - Ti aspettiamo!</p>
+</div>
 </body>
 </html>`,
     variables: ["shop_name", "logo_url", "customer_name", "device_name", "repair_notes", "final_cost", "shop_address", "shop_phone"]
@@ -312,31 +340,36 @@ const DEFAULT_TEMPLATES: EmailTemplates = {
     id: "order_received",
     name: "Ricambi Arrivati",
     description: "Email inviata quando i ricambi ordinati sono arrivati",
-    subject: "📦 I ricambi per la tua riparazione sono arrivati!",
+    subject: "I ricambi per la tua riparazione sono arrivati!",
     html: `<!DOCTYPE html>
 <html>
-<head><meta charset="utf-8"></head>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #8b5cf6, #7c3aed); border-radius: 12px;">
-    {{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height: 60px;">{{/if}}
-    <h1 style="color: white; margin: 10px 0;">Ricambi Arrivati! 📦</h1>
-  </div>
-  
-  <p style="margin-top: 24px;">Gentile <strong>{{customer_name}}</strong>,</p>
-  
-  <p>Ti informiamo che i ricambi necessari per la riparazione del tuo dispositivo sono arrivati.</p>
-  
-  <div style="background: #f5f3ff; border: 1px solid #ddd6fe; padding: 20px; border-radius: 8px; margin: 20px 0;">
-    <p><strong>Dispositivo:</strong> {{device_name}}</p>
-    <p><strong>Ricambi ricevuti:</strong> {{parts_list}}</p>
-  </div>
-  
-  <p>Procederemo con la riparazione e ti aggiorneremo appena sarà completata.</p>
-  
-  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-  <p style="color: #666; font-size: 12px; text-align: center;">
-    {{shop_name}} - Tel: {{shop_phone}}
-  </p>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background-color:#f8fafc;">
+<div style="text-align:center;padding:24px;background:linear-gradient(135deg,#8b5cf6,#7c3aed);border-radius:16px;">
+{{#if logo_url}}<img src="{{logo_url}}" alt="{{shop_name}}" style="max-height:60px;margin-bottom:12px;">{{/if}}
+<h1 style="color:white;margin:0;font-size:24px;">Ricambi Arrivati!</h1>
+</div>
+
+<div style="background:white;padding:24px;border-radius:12px;margin-top:20px;box-shadow:0 2px 8px rgba(0,0,0,0.05);">
+<p style="color:#4b5563;margin:0 0 16px 0;">Gentile <strong>{{customer_name}}</strong>,</p>
+
+<p style="color:#4b5563;line-height:1.6;margin:0 0 20px 0;">Ti informiamo che i ricambi necessari per la riparazione del tuo dispositivo sono arrivati.</p>
+
+<div style="background:#f5f3ff;border:1px solid #ddd6fe;padding:20px;border-radius:8px;margin:20px 0;">
+<p style="margin:0 0 8px 0;color:#1f2937;"><strong>Dispositivo:</strong> {{device_name}}</p>
+<p style="margin:0;color:#1f2937;"><strong>Ricambi ricevuti:</strong> {{parts_list}}</p>
+</div>
+
+<p style="color:#4b5563;line-height:1.6;margin:0 0 20px 0;">Procederemo con la riparazione e ti aggiorneremo appena sara completata.</p>
+
+<div style="background:linear-gradient(135deg,#10b981,#059669);padding:16px;border-radius:8px;margin:20px 0;color:white;">
+<p style="margin:0;font-size:14px;"><strong>Hai scaricato la nostra app?</strong> Ricevi notifiche in tempo reale sullo stato della riparazione e proteggi il tuo dispositivo con il nostro antivirus gratuito!</p>
+</div>
+</div>
+
+<div style="text-align:center;padding:20px;color:#6b7280;font-size:12px;">
+<p style="margin:0;">{{shop_name}} - Tel: {{shop_phone}}</p>
+</div>
 </body>
 </html>`,
     variables: ["shop_name", "logo_url", "customer_name", "device_name", "parts_list", "shop_phone"]
