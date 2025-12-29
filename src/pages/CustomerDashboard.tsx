@@ -386,7 +386,6 @@ export default function CustomerDashboard() {
             hasActiveCard={loyaltyCards.length > 0 && loyaltyCards.some(card => card.status === 'active')}
             customerEmail={user?.email || undefined}
             existingCardCentroIds={loyaltyCards.map(c => c.centro_id)}
-            apkDownloadUrl="/app/lablinkriparo-diagnostics.apk"
           />
 
           {/* Loyalty Cards Section */}
