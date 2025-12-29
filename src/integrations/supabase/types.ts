@@ -3090,6 +3090,84 @@ export type Database = {
           },
         ]
       }
+      malware_definitions: {
+        Row: {
+          adware_count: number | null
+          changelog: string | null
+          created_at: string | null
+          dangerous_permission_combos: Json
+          id: string
+          is_active: boolean | null
+          known_adware: Json
+          known_malware: Json
+          known_riskware: Json
+          known_spyware: Json
+          malicious_signatures: Json | null
+          malware_count: number | null
+          release_date: string
+          source: string | null
+          spyware_count: number | null
+          suspicious_app_names: Json
+          suspicious_patterns: Json
+          system_app_whitelist: Json
+          threat_categories: Json
+          total_threats: number | null
+          trusted_sources: Json
+          updated_at: string | null
+          version: string
+        }
+        Insert: {
+          adware_count?: number | null
+          changelog?: string | null
+          created_at?: string | null
+          dangerous_permission_combos?: Json
+          id?: string
+          is_active?: boolean | null
+          known_adware?: Json
+          known_malware?: Json
+          known_riskware?: Json
+          known_spyware?: Json
+          malicious_signatures?: Json | null
+          malware_count?: number | null
+          release_date?: string
+          source?: string | null
+          spyware_count?: number | null
+          suspicious_app_names?: Json
+          suspicious_patterns?: Json
+          system_app_whitelist?: Json
+          threat_categories?: Json
+          total_threats?: number | null
+          trusted_sources?: Json
+          updated_at?: string | null
+          version: string
+        }
+        Update: {
+          adware_count?: number | null
+          changelog?: string | null
+          created_at?: string | null
+          dangerous_permission_combos?: Json
+          id?: string
+          is_active?: boolean | null
+          known_adware?: Json
+          known_malware?: Json
+          known_riskware?: Json
+          known_spyware?: Json
+          malicious_signatures?: Json | null
+          malware_count?: number | null
+          release_date?: string
+          source?: string | null
+          spyware_count?: number | null
+          suspicious_app_names?: Json
+          suspicious_patterns?: Json
+          system_app_whitelist?: Json
+          threat_categories?: Json
+          total_threats?: number | null
+          trusted_sources?: Json
+          updated_at?: string | null
+          version?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -3908,6 +3986,103 @@ export type Database = {
             columns: ["centro_id"]
             isOneToOne: false
             referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scan_reports: {
+        Row: {
+          adware_count: number | null
+          apps_scanned: number
+          centro_id: string | null
+          created_at: string | null
+          customer_id: string | null
+          definitions_version: string
+          device_info: Json | null
+          device_token: string | null
+          id: string
+          loyalty_card_id: string | null
+          malware_count: number | null
+          overall_risk_score: number | null
+          pua_count: number | null
+          risk_level: string | null
+          riskware_count: number | null
+          scan_duration_ms: number | null
+          scan_type: string | null
+          security_status: Json | null
+          spyware_count: number | null
+          suspicious_count: number | null
+          threat_details: Json | null
+          threats_found: number
+        }
+        Insert: {
+          adware_count?: number | null
+          apps_scanned?: number
+          centro_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          definitions_version: string
+          device_info?: Json | null
+          device_token?: string | null
+          id?: string
+          loyalty_card_id?: string | null
+          malware_count?: number | null
+          overall_risk_score?: number | null
+          pua_count?: number | null
+          risk_level?: string | null
+          riskware_count?: number | null
+          scan_duration_ms?: number | null
+          scan_type?: string | null
+          security_status?: Json | null
+          spyware_count?: number | null
+          suspicious_count?: number | null
+          threat_details?: Json | null
+          threats_found?: number
+        }
+        Update: {
+          adware_count?: number | null
+          apps_scanned?: number
+          centro_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          definitions_version?: string
+          device_info?: Json | null
+          device_token?: string | null
+          id?: string
+          loyalty_card_id?: string | null
+          malware_count?: number | null
+          overall_risk_score?: number | null
+          pua_count?: number | null
+          risk_level?: string | null
+          riskware_count?: number | null
+          scan_duration_ms?: number | null
+          scan_type?: string | null
+          security_status?: Json | null
+          spyware_count?: number | null
+          suspicious_count?: number | null
+          threat_details?: Json | null
+          threats_found?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scan_reports_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_reports_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_reports_loyalty_card_id_fkey"
+            columns: ["loyalty_card_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_cards"
             referencedColumns: ["id"]
           },
         ]
