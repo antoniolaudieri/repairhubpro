@@ -53,46 +53,46 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
 
   const emailTemplates = {
     diagnosis: {
-      name: "📱 Diagnosi Gratuita",
-      description: "Focus sulla webapp di diagnosi dispositivi - NOVITÀ",
-      subject: `{{nome}}, scopri lo stato di salute del tuo smartphone GRATIS! 📱`,
-      getMessage: () => `Ciao {{nome}}!\n\n🆕 GRANDE NOVITÀ: Abbiamo lanciato un nuovo servizio esclusivo!\n\nCon la Tessera Fedeltà ${centroName} hai accesso alla nostra WEBAPP DI DIAGNOSI DISPOSITIVI - un'applicazione intelligente che monitora la salute del tuo smartphone in tempo reale!\n\n📊 COSA FA LA WEBAPP:\n• Analisi stato batteria e cicli di ricarica\n• Controllo memoria e storage disponibile\n• Monitoraggio prestazioni del sistema\n• Alert automatici quando c'è un problema\n• Report dettagliato sulla salute del dispositivo\n\n🎁 CON LA TESSERA OTTIENI:\n✅ DIAGNOSI GRATUITA per ${settings?.max_devices || 3} dispositivi (valore €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)}!)\n✅ ${settings?.repair_discount_percent || 10}% di sconto su TUTTE le riparazioni\n✅ Accesso illimitato alla webapp di monitoraggio\n✅ Alert preventivi per evitare guasti\n\n💰 TUTTO QUESTO A SOLI €${settings?.annual_price || 30}/ANNO!\n\nNon aspettare che il tuo telefono si rompa - previeni i problemi!\n\n${centroName}`
+      name: "🛡️ App Antivirus",
+      description: "Focus sull'app antivirus e antimalware nativa - NOVITA",
+      subject: `{{nome}}, proteggi il tuo smartphone con il nostro ANTIVIRUS GRATIS!`,
+      getMessage: () => `Ciao {{nome}}!\n\nGRANDE NOVITA: Abbiamo lanciato la nostra APP ANTIVIRUS E ANTIMALWARE proprietaria!\n\nCon la Tessera Fedelta ${centroName} hai accesso GRATUITO alla nostra app nativa che protegge il tuo smartphone da virus, malware e minacce informatiche!\n\nCOSA FA LA NOSTRA APP ANTIVIRUS:\n- Scansione antivirus e antimalware in tempo reale\n- Rilevamento app dannose e pericolose\n- Monitoraggio permessi sospetti\n- Analisi integrita del sistema\n- Protezione continua 24/7\n- Monitoraggio salute batteria e memoria\n\nCON LA TESSERA OTTIENI:\n- APP ANTIVIRUS GRATUITA (valore inestimabile!)\n- DIAGNOSI per ${settings?.max_devices || 3} dispositivi (valore EUR ${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)}!)\n- ${settings?.repair_discount_percent || 10}% di sconto su TUTTE le riparazioni\n- Protezione completa per i tuoi dispositivi\n\nTUTTO QUESTO A SOLI EUR ${settings?.annual_price || 30}/ANNO!\n\nProteggi il tuo smartphone prima che sia troppo tardi!\n\n${centroName}`
     },
     friendly: {
       name: "💝 Amichevole",
-      description: "Tono caldo e personale con focus diagnosi",
-      subject: `${centroName} - Un regalo speciale per te! 🎁`,
-      getMessage: () => `Ciao {{nome}}!\n\nCome stai? Spero tutto bene con i tuoi dispositivi! 😊\n\nVolevo parlarti di una novità pensata proprio per clienti speciali come te: la nostra Tessera Fedeltà!\n\n🆕 NOVITÀ ESCLUSIVA: Con la tessera hai accesso alla nostra webapp di DIAGNOSI SMART che monitora la salute del tuo smartphone!\n\nCon soli €${settings?.annual_price || 30} all'anno avrai:\n📱 DIAGNOSI GRATUITA per ${settings?.max_devices || 3} dispositivi (normalmente €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)}!)\n✨ ${settings?.repair_discount_percent || 10}% di sconto su TUTTE le riparazioni\n📊 Webapp per controllare lo stato del tuo telefono\n🔔 Alert automatici prima che qualcosa si rompa\n\nÈ un piccolo investimento che si ripaga già con la prima diagnosi!\n\nTi aspetto in negozio o clicca il bottone qui sotto per attivare subito la tua tessera 🤗\n\nA presto!\n${centroName}`
+      description: "Tono caldo con focus antivirus",
+      subject: `${centroName} - Un regalo speciale per te!`,
+      getMessage: () => `Ciao {{nome}}!\n\nCome stai? Spero tutto bene con i tuoi dispositivi!\n\nVolevo parlarti di una novita pensata proprio per clienti speciali come te: la nostra Tessera Fedelta con APP ANTIVIRUS INCLUSA!\n\nNOVITA ESCLUSIVA: Con la tessera hai accesso GRATUITO alla nostra app ANTIVIRUS e ANTIMALWARE che protegge il tuo smartphone!\n\nCon soli EUR ${settings?.annual_price || 30} all'anno avrai:\n- APP ANTIVIRUS PROPRIETARIA GRATUITA\n- Scansione malware in tempo reale\n- DIAGNOSI per ${settings?.max_devices || 3} dispositivi\n- ${settings?.repair_discount_percent || 10}% di sconto su TUTTE le riparazioni\n- Protezione completa del tuo smartphone\n\nE' un piccolo investimento che protegge il tuo dispositivo ogni giorno!\n\nTi aspetto in negozio o clicca il bottone qui sotto per attivare subito la tua tessera\n\nA presto!\n${centroName}`
     },
     urgency: {
       name: "⚡ Urgenza",
-      description: "Crea senso di urgenza",
-      subject: `⚡ {{nome}}, offerta limitata - Diagnosi GRATIS per 3 dispositivi!`,
-      getMessage: () => `{{nome}}, non perdere questa occasione!\n\nSolo per un periodo limitato, puoi attivare la Tessera Fedeltà ${centroName} e ottenere la DIAGNOSI GRATUITA per ${settings?.max_devices || 3} dispositivi!\n\n🔥 COSA OTTIENI SUBITO:\n📱 DIAGNOSI INCLUSA per ${settings?.max_devices || 3} dispositivi (risparmio di €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)}!)\n📊 Accesso alla WEBAPP di monitoraggio salute dispositivi\n💰 ${settings?.repair_discount_percent || 10}% di sconto immediato su ogni riparazione\n🔔 Alert automatici per prevenire guasti\n\n💡 PERCHÉ È IMPORTANTE:\nLa nostra webapp analizza batteria, memoria e prestazioni. Ti avvisa PRIMA che il dispositivo si guasti - risparmiando centinaia di euro in riparazioni d'emergenza!\n\nIl prezzo? Solo €${settings?.annual_price || 30}/anno.\nIl valore? Oltre €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3) + 50}!\n\n⏰ Non aspettare che sia troppo tardi - clicca il bottone e attiva ORA!\n\n${centroName}`
+      description: "Crea senso di urgenza sulla sicurezza",
+      subject: `{{nome}}, il tuo smartphone e protetto da virus e malware?`,
+      getMessage: () => `{{nome}}, non perdere questa occasione!\n\nOgni giorno migliaia di smartphone vengono infettati da virus e malware. Il tuo e protetto?\n\nCon la Tessera Fedelta ${centroName} ottieni la nostra APP ANTIVIRUS E ANTIMALWARE GRATUITA!\n\nCOSA OTTIENI SUBITO:\n- APP ANTIVIRUS NATIVA - scansione in tempo reale\n- Protezione da malware e app dannose\n- Monitoraggio permessi sospetti\n- DIAGNOSI per ${settings?.max_devices || 3} dispositivi (risparmio di EUR ${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)}!)\n- ${settings?.repair_discount_percent || 10}% di sconto immediato su ogni riparazione\n\nPERCHE E IMPORTANTE:\nUn virus puo rubare i tuoi dati, rallentare il telefono o causare danni irreparabili. La nostra app ti protegge 24/7!\n\nIl prezzo? Solo EUR ${settings?.annual_price || 30}/anno.\nIl valore? La sicurezza dei tuoi dati!\n\nNon aspettare che sia troppo tardi - clicca il bottone e attiva ORA!\n\n${centroName}`
     },
     value: {
       name: "💰 Valore",
       description: "Focus sui vantaggi economici",
-      subject: `{{nome}}, ecco quanto risparmi con la Tessera 💰`,
-      getMessage: () => `Ciao {{nome}},\n\nFacciamo due conti insieme?\n\n📱 Hai uno smartphone, tablet o PC? Prima o poi avrai bisogno di controllarne lo stato o ripararlo.\n\n❌ SENZA TESSERA:\n• Diagnosi singola: €${settings?.diagnostic_fee || 15}\n• Per 3 dispositivi: €${(settings?.diagnostic_fee || 15) * 3}\n• Riparazione media: €80\n• Totale potenziale: €${(settings?.diagnostic_fee || 15) * 3 + 80}\n\n✅ CON LA TESSERA FEDELTÀ (€${settings?.annual_price || 30}/anno):\n• DIAGNOSI ${settings?.max_devices || 3} DISPOSITIVI: €0 (GRATIS!)\n• Webapp monitoraggio: INCLUSA\n• Riparazione con ${settings?.repair_discount_percent || 10}% sconto: €72\n• TOTALE: €${settings?.annual_price || 30} + €72 = €${(settings?.annual_price || 30) + 72}\n\n💵 RISPARMIO: €${(settings?.diagnostic_fee || 15) * 3 + 80 - ((settings?.annual_price || 30) + 72)}!\n\nE la webapp ti avvisa quando c'è un problema - PRIMA che si rompa tutto!\n\nÈ matematica: conviene. Punto.\n\nClicca il bottone qui sotto e attiva subito!\n\n${centroName}`
+      subject: `{{nome}}, ecco quanto risparmi con la Tessera`,
+      getMessage: () => `Ciao {{nome}},\n\nFacciamo due conti insieme?\n\nUn buon antivirus per smartphone costa dai 20 ai 50 euro all'anno. Una diagnosi professionale costa EUR ${settings?.diagnostic_fee || 15}.\n\nSENZA TESSERA:\n- Antivirus professionale: EUR 30-50/anno\n- Diagnosi singola: EUR ${settings?.diagnostic_fee || 15}\n- Per 3 dispositivi: EUR ${(settings?.diagnostic_fee || 15) * 3}\n- Riparazione media: EUR 80\n\nCON LA TESSERA FEDELTA (EUR ${settings?.annual_price || 30}/anno):\n- APP ANTIVIRUS: EUR 0 (GRATIS!)\n- DIAGNOSI ${settings?.max_devices || 3} DISPOSITIVI: EUR 0 (GRATIS!)\n- Riparazione con ${settings?.repair_discount_percent || 10}% sconto\n- Protezione malware 24/7\n\nRISPARMIO TOTALE: Oltre EUR ${30 + (settings?.diagnostic_fee || 15) * 3}!\n\nE la nostra app ti protegge da virus e malware ogni giorno!\n\nE' matematica: conviene. Punto.\n\nClicca il bottone qui sotto e attiva subito!\n\n${centroName}`
     },
     exclusive: {
       name: "⭐ Esclusività",
       description: "Fai sentire il cliente speciale",
-      subject: `{{nome}}, accesso VIP alla nuova tecnologia di diagnosi ⭐`,
-      getMessage: () => `Gentile {{nome}},\n\nSei tra i clienti che apprezziamo di più, e per questo vogliamo offrirti qualcosa di speciale.\n\nAbbiamo lanciato una TECNOLOGIA ESCLUSIVA: una webapp di diagnosi che monitora la salute dei tuoi dispositivi in tempo reale!\n\n🌟 VANTAGGI RISERVATI AI MEMBRI:\n📱 DIAGNOSI GRATUITA per ${settings?.max_devices || 3} dispositivi\n📊 Accesso ESCLUSIVO alla webapp di monitoraggio\n🔔 Alert intelligenti che prevengono guasti costosi\n💰 ${settings?.repair_discount_percent || 10}% di sconto permanente su ogni intervento\n⚡ Priorità nelle riparazioni\n\nLa webapp analizza:\n• Stato batteria e cicli di ricarica\n• Memoria e spazio disponibile\n• Prestazioni generali del sistema\n• Potenziali problemi prima che si verifichino\n\nQuesto programma non è per tutti - è pensato per chi, come te, vuole proteggere i propri dispositivi.\n\nL'investimento? Solo €${settings?.annual_price || 30}/anno.\nIl valore? Inestimabile.\n\nSarebbe un piacere averti nel nostro club di clienti premium.\n\nCon stima,\n${centroName}`
+      subject: `{{nome}}, accesso VIP alla nostra app antivirus esclusiva`,
+      getMessage: () => `Gentile {{nome}},\n\nSei tra i clienti che apprezziamo di piu, e per questo vogliamo offrirti qualcosa di speciale.\n\nAbbiamo sviluppato un'APP ANTIVIRUS E ANTIMALWARE PROPRIETARIA - e vogliamo dartela GRATIS!\n\nVANTAGGI RISERVATI AI MEMBRI:\n- APP ANTIVIRUS ESCLUSIVA GRATUITA\n- Scansione malware in tempo reale\n- Protezione da app dannose e virus\n- DIAGNOSI GRATUITA per ${settings?.max_devices || 3} dispositivi\n- ${settings?.repair_discount_percent || 10}% di sconto permanente su ogni intervento\n- Priorita nelle riparazioni\n\nLa nostra app protegge il tuo smartphone da:\n- Virus e malware\n- App con permessi pericolosi\n- Minacce alla sicurezza\n- Problemi di sistema\n\nQuesto programma non e per tutti - e pensato per chi, come te, vuole proteggere i propri dispositivi.\n\nL'investimento? Solo EUR ${settings?.annual_price || 30}/anno.\nIl valore? La sicurezza dei tuoi dati!\n\nSarebbe un piacere averti nel nostro club di clienti premium.\n\nCon stima,\n${centroName}`
     },
     prevention: {
-      name: "🛡️ Prevenzione",
-      description: "Focus sulla prevenzione guasti",
-      subject: `{{nome}}, previeni i guasti del tuo smartphone - Costa meno! 🛡️`,
-      getMessage: () => `Ciao {{nome}},\n\n❓ Lo sapevi che la maggior parte dei guasti smartphone si può PREVENIRE?\n\nBatteria che si scarica velocemente, telefono che rallenta, memoria piena... Sono tutti segnali che qualcosa non va. Ma spesso ce ne accorgiamo troppo tardi!\n\n🆕 ECCO LA SOLUZIONE:\n\nCon la Tessera Fedeltà ${centroName} hai accesso alla nostra webapp di DIAGNOSI SMART che:\n\n📊 Monitora la salute del dispositivo in tempo reale\n🔋 Controlla lo stato della batteria e cicli di ricarica\n💾 Analizza memoria e storage\n🔔 Ti avvisa PRIMA che qualcosa si rompa\n\n🎁 COSA INCLUDE LA TESSERA:\n✅ Diagnosi GRATUITA per ${settings?.max_devices || 3} dispositivi (valore €${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)})\n✅ Accesso illimitato alla webapp\n✅ ${settings?.repair_discount_percent || 10}% sconto su tutte le riparazioni\n✅ Alert preventivi automatici\n\n💡 PREVENIRE costa €${settings?.annual_price || 30}/anno\n❌ RIPARARE costa centinaia di euro + stress!\n\nLa scelta è facile. Attiva ora la tua tessera!\n\n${centroName}`
+      name: "🛡️ Sicurezza",
+      description: "Focus sulla protezione da virus",
+      subject: `{{nome}}, proteggi il tuo smartphone da virus e malware!`,
+      getMessage: () => `Ciao {{nome}},\n\nLo sapevi che ogni giorno vengono creati migliaia di nuovi malware per smartphone?\n\nApp che rubano i tuoi dati, virus che rallentano il telefono, malware che possono costarti caro... E spesso ce ne accorgiamo troppo tardi!\n\nECCO LA SOLUZIONE:\n\nCon la Tessera Fedelta ${centroName} hai accesso GRATUITO alla nostra APP ANTIVIRUS E ANTIMALWARE!\n\nCOSA FA LA NOSTRA APP:\n- Scansione virus e malware in tempo reale\n- Rilevamento app pericolose\n- Controllo permessi sospetti\n- Analisi integrita sistema\n- Protezione 24/7\n- Monitoraggio salute dispositivo\n\nCOSA INCLUDE LA TESSERA:\n- App Antivirus GRATUITA (valore EUR 30+!)\n- Diagnosi per ${settings?.max_devices || 3} dispositivi (valore EUR ${(settings?.diagnostic_fee || 15) * (settings?.max_devices || 3)})\n- ${settings?.repair_discount_percent || 10}% sconto su tutte le riparazioni\n- Protezione completa del dispositivo\n\nPROTEGGERSI costa EUR ${settings?.annual_price || 30}/anno\nSUBIRE UN ATTACCO costa molto di piu!\n\nLa scelta e facile. Attiva ora la tua tessera!\n\n${centroName}`
     },
     custom: {
       name: "✏️ Personalizzato",
       description: "Scrivi il tuo messaggio",
-      subject: `${centroName} - Tessera Fedeltà con Diagnosi Inclusa`,
-      getMessage: () => `Gentile {{nome}},\n\n[Scrivi qui il tuo messaggio personalizzato]\n\nRicorda di menzionare:\n• Diagnosi GRATUITA per ${settings?.max_devices || 3} dispositivi\n• Webapp di monitoraggio salute dispositivi\n• ${settings?.repair_discount_percent || 10}% sconto riparazioni\n• Costo: solo €${settings?.annual_price || 30}/anno\n\nCordiali saluti,\n${centroName}`
+      subject: `${centroName} - Tessera Fedelta con Antivirus Incluso`,
+      getMessage: () => `Gentile {{nome}},\n\n[Scrivi qui il tuo messaggio personalizzato]\n\nRicorda di menzionare:\n- App ANTIVIRUS e ANTIMALWARE GRATUITA\n- Diagnosi per ${settings?.max_devices || 3} dispositivi\n- ${settings?.repair_discount_percent || 10}% sconto riparazioni\n- Costo: solo EUR ${settings?.annual_price || 30}/anno\n\nCordiali saluti,\n${centroName}`
     }
   };
 
@@ -247,14 +247,14 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
       '</div>',
       '</td></tr>',
       
-      // WebApp section
-      '<tr><td style="background:#3b82f6;padding:25px;color:#fff;">',
+      // Antivirus App section
+      '<tr><td style="background:#10b981;padding:25px;color:#fff;">',
       '<p style="text-align:center;font-size:40px;margin:0 0 15px;">',
-      '&#128241;</p>',
+      '&#128737;</p>',
       '<h3 style="margin:0 0 12px;text-align:center;font-size:18px;">',
-      '&#127381; NOVIT&Agrave;: WebApp Diagnosi Smart</h3>',
+      '&#127381; INCLUSA: App Antivirus e Antimalware</h3>',
       '<p style="margin:0;text-align:center;font-size:14px;opacity:0.9;">',
-      'Monitora la salute dei tuoi dispositivi!</p>',
+      'Proteggi il tuo smartphone da virus e minacce!</p>',
       '</td></tr>',
       
       // Benefits
@@ -265,10 +265,10 @@ export function LoyaltyEmailCampaign({ centroId, centroName, settings }: Loyalty
       '<table width="100%" cellpadding="10" cellspacing="0">',
       '<tr>',
       '<td width="50%" style="text-align:center;">',
-      '<div style="font-size:28px;">&#128241;</div>',
-      '<div style="font-weight:bold;color:#92400e;">DIAGNOSI GRATIS</div>',
+      '<div style="font-size:28px;">&#128737;</div>',
+      '<div style="font-weight:bold;color:#92400e;">ANTIVIRUS GRATIS</div>',
       '<div style="font-size:13px;color:#78350f;">',
-      'Per ', String(settings?.max_devices || 3), ' dispositivi</div></td>',
+      'App nativa inclusa</div></td>',
       '<td width="50%" style="text-align:center;">',
       '<div style="font-size:28px;">&#128176;</div>',
       '<div style="font-weight:bold;color:#92400e;">',
