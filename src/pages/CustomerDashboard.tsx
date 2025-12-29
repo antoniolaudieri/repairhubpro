@@ -45,7 +45,6 @@ import { MarketingConsentManager } from "@/components/customer/MarketingConsentM
 import { PushNotificationSettings } from "@/components/notifications/PushNotificationSettings";
 import { useCustomerLoyaltyCards } from "@/hooks/useLoyaltyCard";
 import { LoyaltyCardDisplay } from "@/components/loyalty/LoyaltyCardDisplay";
-import { LoyaltyCardActivation } from "@/components/loyalty/LoyaltyCardActivation";
 import { AndroidAppDownloadWidget } from "@/components/customer/AndroidAppDownloadWidget";
 
 interface Repair {
@@ -385,14 +384,8 @@ export default function CustomerDashboard() {
           {/* Android App Download Widget */}
           <AndroidAppDownloadWidget 
             hasActiveCard={loyaltyCards.length > 0 && loyaltyCards.some(card => card.status === 'active')}
-            onActivateCard={() => {
-              // Scroll to loyalty activation section
-              const activationSection = document.getElementById('loyalty-activation');
-              if (activationSection) {
-                activationSection.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
-            loyaltyPrice={9.99}
+            customerEmail={user?.email || undefined}
+            existingCardCentroIds={loyaltyCards.map(c => c.centro_id)}
             apkDownloadUrl="/app/lablinkriparo-diagnostics.apk"
           />
 
@@ -412,15 +405,6 @@ export default function CustomerDashboard() {
             </div>
           )}
 
-          {/* Loyalty Card Activation for customers without cards */}
-          {user?.email && (
-            <div id="loyalty-activation">
-              <LoyaltyCardActivation 
-                customerEmail={user.email}
-                existingCardCentroIds={loyaltyCards.map(c => c.centro_id)}
-              />
-            </div>
-          )}
 
           {/* Quotes Section */}
           {quotes.length > 0 && (
