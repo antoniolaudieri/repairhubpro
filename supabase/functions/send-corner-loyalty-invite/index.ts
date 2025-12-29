@@ -43,7 +43,7 @@ serve(async (req) => {
     }
 
     // Build checkout URL with invitation token - use production domain
-    const baseUrl = Deno.env.get("SITE_URL") || "https://lablinkriparo.lovable.app";
+    const baseUrl = Deno.env.get("SITE_URL") || "https://lablinkriparo.com";
     const checkoutUrl = baseUrl + "/corner-loyalty-checkout?token=" + invitation.invitation_token;
     const cornerName = corner?.business_name || "Corner";
 
