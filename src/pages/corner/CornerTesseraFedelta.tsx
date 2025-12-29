@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { CornerLayout } from "@/layouts/CornerLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +56,6 @@ interface LoyaltyCardWithCorner {
 
 export default function CornerTesseraFedelta() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [cornerId, setCornerId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -241,6 +240,7 @@ export default function CornerTesseraFedelta() {
   }
 
   return (
+    <CornerLayout>
     <div className="space-y-6">
       {/* Hero Section */}
       <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border-primary/20">
@@ -524,5 +524,6 @@ export default function CornerTesseraFedelta() {
         </CardContent>
       </Card>
     </div>
+    </CornerLayout>
   );
 }
