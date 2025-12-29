@@ -15,7 +15,8 @@ import {
   Settings,
   CalendarCheck,
   Package,
-  Megaphone
+  Megaphone,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CornerNotificationCenter } from "@/components/corner/CornerNotificationCenter";
@@ -32,6 +33,7 @@ const navItems = [
   { to: "/corner/nuova-segnalazione", icon: Plus, label: "Nuova Segnalazione" },
   { to: "/corner/segnalazioni", icon: List, label: "Le Mie Segnalazioni" },
   { to: "/corner/usato", icon: Package, label: "Usato" },
+  { to: "/corner/tessera-fedelta", icon: CreditCard, label: "Tessera Fedeltà" },
   { to: "/corner/commissioni", icon: DollarSign, label: "Commissioni" },
   { to: "/corner/pubblicita", icon: Megaphone, label: "Pubblicità" },
   { to: "/corner/partnership", icon: Handshake, label: "Partnership" },
