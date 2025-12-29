@@ -343,8 +343,12 @@ export const SecurityScannerSection = () => {
                         <div className="px-3 pb-3 space-y-2 border-t pt-3">
                           {result.reasons.map((reason, i) => (
                             <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                              <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                              <span className="break-words">{reason}</span>
+                              <AlertTriangle className={`h-3 w-3 flex-shrink-0 mt-0.5 ${
+                                reason.severity === 'critical' ? 'text-red-500' :
+                                reason.severity === 'high' ? 'text-orange-500' :
+                                reason.severity === 'medium' ? 'text-yellow-500' : 'text-amber-500'
+                              }`} />
+                              <span className="break-words">{reason.text}</span>
                             </p>
                           ))}
                           <p className="text-xs font-medium flex items-start gap-2 pt-1">
