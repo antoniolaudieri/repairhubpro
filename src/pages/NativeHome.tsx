@@ -4,12 +4,11 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useNativeDeviceInfo } from "@/hooks/useNativeDeviceInfo";
-import { useCustomerAchievements } from "@/hooks/useCustomerAchievements";
 import { HealthScoreHero } from "@/components/native/HealthScoreHero";
 import { QuickStatsRow } from "@/components/native/QuickStatsRow";
 import { QuickActionsBar } from "@/components/native/QuickActionsBar";
-import { GamificationPreview } from "@/components/native/GamificationPreview";
 import { SmartRemindersWidget } from "@/components/native/SmartRemindersWidget";
+import { BookCheckupWidget } from "@/components/monitor/BookCheckupWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -35,37 +34,18 @@ interface DiagnosticIssue {
 interface NativeHomeProps {
   user: User;
   loyaltyCard: LoyaltyCard;
-  onNavigateProgress: () => void;
-  onBookCheckup?: () => void;
 }
 
 export const NativeHome = ({
   user,
   loyaltyCard,
-  onNavigateProgress,
-  onBookCheckup,
 }: NativeHomeProps) => {
   const [syncing, setSyncing] = useState(false);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [customerName, setCustomerName] = useState<string>("");
+  const [customerPhone, setCustomerPhone] = useState<string>("");
 
   const deviceData = useNativeDeviceInfo();
-
-  const {
-    achievements,
-    stats: gamificationStats,
-    levelInfo,
-    recordSync,
-    updateProgress,
-  } = useCustomerAchievements({
-    customerId: loyaltyCard.customer_id,
-    centroId: loyaltyCard.centro_id,
-    enabled: !!loyaltyCard,
-  });
-
-  // Find next achievement to unlock
-  const nextAchievement = achievements
-    .filter((a) => !a.is_unlocked)
-    .sort((a, b) => b.progress / b.target - a.progress / a.target)[0];
 
   // Analyze device issues
   const analyzeIssues = useCallback((): DiagnosticIssue[] => {
@@ -122,10 +102,11 @@ export const NativeHome = ({
   const criticalCount = issues.filter((i) => i.severity === "critical").length;
   const hasIssues = criticalCount > 0;
 
-  // Fetch last sync
+  // Fetch last sync and customer info
   useEffect(() => {
-    const fetchLastSync = async () => {
-      const { data } = await supabase
+    const fetchData = async () => {
+      // Fetch last sync
+      const { data: syncData } = await supabase
         .from("device_health_logs")
         .select("created_at")
         .eq("customer_id", loyaltyCard.customer_id)
@@ -133,12 +114,24 @@ export const NativeHome = ({
         .limit(1)
         .maybeSingle();
 
-      if (data) {
-        setLastSyncAt(new Date(data.created_at));
+      if (syncData) {
+        setLastSyncAt(new Date(syncData.created_at));
+      }
+
+      // Fetch customer info for booking
+      const { data: customerData } = await supabase
+        .from("customers")
+        .select("name, phone")
+        .eq("id", loyaltyCard.customer_id)
+        .single();
+
+      if (customerData) {
+        setCustomerName(customerData.name || "");
+        setCustomerPhone(customerData.phone || "");
       }
     };
 
-    fetchLastSync();
+    fetchData();
   }, [loyaltyCard.customer_id]);
 
   const handleSync = async () => {
@@ -252,39 +245,16 @@ export const NativeHome = ({
 
       if (insertError) throw insertError;
 
-      // Record sync for gamification
-      await recordSync();
-
-      // Update achievements
-      if (deviceData.healthScore && deviceData.healthScore >= 80) {
-        await updateProgress("health_master", (gamificationStats?.total_syncs || 0) + 1);
-      }
-      if (deviceData.batteryLevel && deviceData.batteryLevel >= 20) {
-        await updateProgress("battery_champion", (gamificationStats?.total_syncs || 0) + 1);
-      }
-
       setLastSyncAt(new Date());
 
-      toast.success("Sincronizzazione completata! 🎮", {
-        description: gamificationStats?.current_streak
-          ? `Streak: ${gamificationStats.current_streak + 1} giorni!`
-          : "Inizia la tua streak quotidiana!",
+      toast.success("Sincronizzazione completata!", {
+        description: "Dati del dispositivo aggiornati",
       });
     } catch (err) {
       console.error("Sync error:", err);
       toast.error("Errore durante la sincronizzazione");
     } finally {
       setSyncing(false);
-    }
-  };
-
-  const handleBookCheckup = () => {
-    if (onBookCheckup) {
-      onBookCheckup();
-    } else {
-      toast.info("Funzione in arrivo", {
-        description: "Presto potrai prenotare un check-up direttamente dall'app",
-      });
     }
   };
 
@@ -350,7 +320,6 @@ export const NativeHome = ({
         >
           <QuickActionsBar
             onSync={handleSync}
-            onBookCheckup={handleBookCheckup}
             isSyncing={syncing}
             hasIssues={hasIssues}
           />
@@ -390,29 +359,23 @@ export const NativeHome = ({
           </motion.div>
         )}
 
-        {/* Gamification Preview */}
+        {/* Book Checkup Widget */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
         >
-          <GamificationPreview
-            level={levelInfo.level}
-            levelName={levelInfo.name}
-            xp={levelInfo.xp}
-            progress={levelInfo.progress}
-            streak={gamificationStats?.current_streak || 0}
-            nextAchievement={
-              nextAchievement
-                ? {
-                    name: nextAchievement.achievement_name,
-                    icon: nextAchievement.achievement_icon || "🎯",
-                    progress: nextAchievement.progress,
-                    target: nextAchievement.target,
-                  }
-                : undefined
-            }
-            onViewAll={onNavigateProgress}
+          <BookCheckupWidget
+            centroId={loyaltyCard.centro_id}
+            customerId={loyaltyCard.customer_id}
+            customerEmail={user.email || ""}
+            customerName={customerName}
+            customerPhone={customerPhone}
+            deviceInfo={{
+              model: deviceData.deviceModel,
+              manufacturer: deviceData.deviceManufacturer,
+              healthScore: deviceData.healthScore || 0,
+            }}
           />
         </motion.div>
 

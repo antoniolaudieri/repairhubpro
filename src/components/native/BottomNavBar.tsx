@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { Home, Trophy, Activity, User } from "lucide-react";
+import { Home, Activity, User } from "lucide-react";
 
-export type NativeView = "home" | "progress" | "diagnostics" | "profile";
+export type NativeView = "home" | "diagnostics" | "profile";
 
 interface BottomNavBarProps {
   currentView: NativeView;
@@ -11,7 +11,6 @@ interface BottomNavBarProps {
 
 const navItems: { id: NativeView; icon: typeof Home; label: string }[] = [
   { id: "home", icon: Home, label: "Home" },
-  { id: "progress", icon: Trophy, label: "Progressi" },
   { id: "diagnostics", icon: Activity, label: "Diagnostica" },
   { id: "profile", icon: User, label: "Profilo" },
 ];
