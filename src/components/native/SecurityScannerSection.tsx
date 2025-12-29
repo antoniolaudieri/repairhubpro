@@ -132,9 +132,9 @@ export const SecurityScannerSection = () => {
     (summary?.suspiciousCount || 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 min-h-0 overflow-visible">
       {/* Hero Card */}
-      <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/15 to-pink-500/10">
+      <Card className="relative overflow-visible border-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/15 to-pink-500/10">
         <CardContent className="p-5">
           <div className="flex items-center gap-4">
             {/* Animated Shield */}
@@ -300,77 +300,75 @@ export const SecurityScannerSection = () => {
               <ShieldAlert className="h-4 w-4 text-red-500" />
               Minacce rilevate ({threatResults.length})
             </h4>
-            <ScrollArea className="max-h-60">
-              <div className="space-y-2">
-                {threatResults.map((result, index) => (
-                  <motion.div
-                    key={result.packageName}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.05 }}
+            <div className="space-y-2 overflow-visible">
+              {threatResults.map((result, index) => (
+                <motion.div
+                  key={result.packageName}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="min-h-[70px]"
+                >
+                  <Collapsible
+                    open={expandedResults.includes(result.packageName)}
+                    onOpenChange={() => toggleResult(result.packageName)}
                   >
-                    <Collapsible
-                      open={expandedResults.includes(result.packageName)}
-                      onOpenChange={() => toggleResult(result.packageName)}
-                    >
-                      <Card className={`border ${getSeverityColor(result.severity)}`}>
-                        <CollapsibleTrigger className="w-full">
-                          <CardContent className="p-3 flex items-center gap-3">
-                            <div
-                              className={`h-10 w-10 rounded-xl flex items-center justify-center ${getThreatColor(
-                                result.threatLevel
-                              )}`}
-                            >
-                              {getThreatIcon(result.threatLevel)}
-                            </div>
-                            <div className="flex-1 text-left">
-                              <p className="font-medium text-sm truncate">{result.appName}</p>
-                              <p className="text-xs text-muted-foreground truncate">
-                                {result.packageName}
-                              </p>
-                            </div>
-                            <Badge className={getThreatColor(result.threatLevel)}>
-                              {getThreatLabel(result.threatLevel)}
-                            </Badge>
-                            {expandedResults.includes(result.packageName) ? (
-                              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </CardContent>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="px-3 pb-3 space-y-2 border-t pt-3">
-                            {result.reasons.map((reason, i) => (
-                              <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                                <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0 mt-0.5" />
-                                {reason}
-                              </p>
-                            ))}
-                            <p className="text-xs font-medium flex items-start gap-2 pt-1">
-                              <ShieldCheck className="h-3 w-3 text-blue-500 flex-shrink-0 mt-0.5" />
-                              {result.recommendation}
-                            </p>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              className="w-full mt-2"
-                              onClick={() => {
-                                // In a real app, this would open app settings
-                                console.log("Uninstall:", result.packageName);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Rimuovi App
-                            </Button>
+                    <Card className={`border overflow-visible ${getSeverityColor(result.severity)}`}>
+                      <CollapsibleTrigger className="w-full">
+                        <CardContent className="p-3 flex items-center gap-3">
+                          <div
+                            className={`h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center ${getThreatColor(
+                              result.threatLevel
+                            )}`}
+                          >
+                            {getThreatIcon(result.threatLevel)}
                           </div>
-                        </CollapsibleContent>
-                      </Card>
-                    </Collapsible>
-                  </motion.div>
-                ))}
-              </div>
-            </ScrollArea>
+                          <div className="flex-1 text-left min-w-0">
+                            <p className="font-medium text-sm break-words">{result.appName}</p>
+                            <p className="text-xs text-muted-foreground break-all">
+                              {result.packageName}
+                            </p>
+                          </div>
+                          <Badge className={`flex-shrink-0 ${getThreatColor(result.threatLevel)}`}>
+                            {getThreatLabel(result.threatLevel)}
+                          </Badge>
+                          {expandedResults.includes(result.packageName) ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                          )}
+                        </CardContent>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="px-3 pb-3 space-y-2 border-t pt-3">
+                          {result.reasons.map((reason, i) => (
+                            <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                              <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                              <span className="break-words">{reason}</span>
+                            </p>
+                          ))}
+                          <p className="text-xs font-medium flex items-start gap-2 pt-1">
+                            <ShieldCheck className="h-3 w-3 text-blue-500 flex-shrink-0 mt-0.5" />
+                            <span className="break-words">{result.recommendation}</span>
+                          </p>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="w-full mt-2"
+                            onClick={() => {
+                              console.log("Uninstall:", result.packageName);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Rimuovi App
+                          </Button>
+                        </div>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

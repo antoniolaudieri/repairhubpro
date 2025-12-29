@@ -29,7 +29,6 @@ import {
   Store,
   Briefcase,
   CreditCard,
-  Activity,
   Smartphone,
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
@@ -47,6 +46,7 @@ import { PushNotificationSettings } from "@/components/notifications/PushNotific
 import { useCustomerLoyaltyCards } from "@/hooks/useLoyaltyCard";
 import { LoyaltyCardDisplay } from "@/components/loyalty/LoyaltyCardDisplay";
 import { LoyaltyCardActivation } from "@/components/loyalty/LoyaltyCardActivation";
+import { AndroidAppDownloadWidget } from "@/components/customer/AndroidAppDownloadWidget";
 
 interface Repair {
   id: string;
@@ -382,6 +382,20 @@ export default function CustomerDashboard() {
             </Card>
           </div>
 
+          {/* Android App Download Widget */}
+          <AndroidAppDownloadWidget 
+            hasActiveCard={loyaltyCards.length > 0 && loyaltyCards.some(card => card.status === 'active')}
+            onActivateCard={() => {
+              // Scroll to loyalty activation section
+              const activationSection = document.getElementById('loyalty-activation');
+              if (activationSection) {
+                activationSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            loyaltyPrice={9.99}
+            apkDownloadUrl="/app/lablinkriparo-diagnostics.apk"
+          />
+
           {/* Loyalty Cards Section */}
           {loyaltyCards.length > 0 && (
             <div className="space-y-6">
@@ -389,34 +403,6 @@ export default function CustomerDashboard() {
                 <CreditCard className="h-5 w-5 sm:h-6 sm:w-6" />
                 Le Mie Tessere Fedeltà
               </h2>
-              
-              {/* Device Health Monitoring Section - only if has active cards */}
-              <Card className="p-4 sm:p-6 border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
-                <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-xl bg-primary/10">
-                    <Activity className="h-6 w-6 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-lg flex items-center gap-2">
-                      Monitoraggio Dispositivo
-                      <Badge variant="secondary" className="text-xs">Premium</Badge>
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1 mb-3">
-                      Analizza la salute del tuo dispositivo con diagnosi AI personalizzate e ricevi consigli per mantenerlo in forma.
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button 
-                        onClick={() => navigate("/customer/device-health")}
-                        size="sm"
-                        className="gap-2"
-                      >
-                        <Smartphone className="h-4 w-4" />
-                        Avvia Diagnosi
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
 
               <div className="grid gap-4 md:grid-cols-2">
                 {loyaltyCards.map((card) => (
@@ -428,10 +414,12 @@ export default function CustomerDashboard() {
 
           {/* Loyalty Card Activation for customers without cards */}
           {user?.email && (
-            <LoyaltyCardActivation 
-              customerEmail={user.email}
-              existingCardCentroIds={loyaltyCards.map(c => c.centro_id)}
-            />
+            <div id="loyalty-activation">
+              <LoyaltyCardActivation 
+                customerEmail={user.email}
+                existingCardCentroIds={loyaltyCards.map(c => c.centro_id)}
+              />
+            </div>
           )}
 
           {/* Quotes Section */}
