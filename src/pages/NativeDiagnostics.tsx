@@ -6,6 +6,7 @@ import {
   HardDrive,
   Wifi,
   Shield,
+  ShieldCheck,
   ChevronDown,
   Zap,
   Cpu,
@@ -19,7 +20,9 @@ import {
   Activity,
   AlertTriangle,
   CheckCircle,
+  Bug,
 } from "lucide-react";
+import { SecurityScannerSection } from "@/components/native/SecurityScannerSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -207,9 +210,9 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
     },
     {
       id: "security",
-      title: "Sicurezza",
-      icon: Shield,
-      iconColor: "text-amber-500",
+      title: "Info Dispositivo",
+      icon: Monitor,
+      iconColor: "text-slate-500",
       status: "good",
       content: (
         <div className="space-y-4">
@@ -274,6 +277,14 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
           )}
         </div>
       ),
+    },
+    {
+      id: "scanner",
+      title: "Sicurezza App",
+      icon: ShieldCheck,
+      iconColor: "text-indigo-500",
+      status: "good",
+      content: <SecurityScannerSection />,
     },
   ];
 
