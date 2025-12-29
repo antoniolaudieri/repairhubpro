@@ -356,8 +356,8 @@ export const UpdateAvailableDialog = ({
                 <RefreshCw className="h-4 w-4 text-primary" />
                 Novità in questa versione
               </h4>
-              <ScrollArea className="max-h-48">
-                <div className="space-y-2 pr-2">
+              <ScrollArea className="h-[200px] w-full" style={{ touchAction: 'pan-y' }}>
+                <div className="space-y-2 pr-4">
                   {parsedChanges.map((change, index) => (
                     <motion.div
                       key={index}
