@@ -38,7 +38,7 @@ import { Progress } from "@/components/ui/progress";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { Capacitor } from "@capacitor/core";
-import DeviceDiagnostics, { SensorsInfo, AppStorageInfo } from "@/plugins/DeviceStoragePlugin";
+import DeviceDiagnostics, { SensorsInfo, AppStorageInfo, DangerousPermissionApp } from "@/plugins/DeviceStoragePlugin";
 import { useNativeDeviceInfo } from "@/hooks/useNativeDeviceInfo";
 
 interface TestResult {
@@ -62,6 +62,7 @@ export const DiagnosticTestSection = () => {
   const [isRunningAll, setIsRunningAll] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string[]>(["hardware", "sensor", "connectivity"]);
   const [installedApps, setInstalledApps] = useState<AppStorageInfo[] | null>(null);
+  const [appsWithPermissions, setAppsWithPermissions] = useState<DangerousPermissionApp[] | null>(null);
   const [loadingApps, setLoadingApps] = useState(false);
 
   const isNative = Capacitor.isNativePlatform();
@@ -306,8 +307,12 @@ export const DiagnosticTestSection = () => {
     if (!isNative) return;
     setLoadingApps(true);
     try {
-      const result = await DeviceDiagnostics.getInstalledAppsStorage();
-      setInstalledApps(result.apps);
+      const [appsResult, permResult] = await Promise.all([
+        DeviceDiagnostics.getInstalledAppsStorage(),
+        DeviceDiagnostics.getDangerousPermissions()
+      ]);
+      setInstalledApps(appsResult.apps);
+      setAppsWithPermissions(permResult.apps);
     } catch (e) {
       console.error("Error loading apps:", e);
     } finally {
@@ -359,12 +364,12 @@ export const DiagnosticTestSection = () => {
 
   return (
     <div className="space-y-4">
-      {/* Hero Stats Card */}
+      {/* Hero Stats Card - fixed height to prevent layout shift */}
       <Card className="relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/20 via-purple-500/15 to-pink-500/10">
         <CardContent className="p-5">
           <div className="flex items-center gap-4">
             <motion.div
-              className={`relative h-20 w-20 rounded-2xl flex items-center justify-center ${
+              className={`relative h-16 w-16 flex-shrink-0 rounded-2xl flex items-center justify-center ${
                 isRunningAll
                   ? "bg-gradient-to-br from-blue-500 to-purple-600"
                   : totalTested > 0
@@ -383,12 +388,12 @@ export const DiagnosticTestSection = () => {
                   animate={{ rotate: 360 }}
                   transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                 >
-                  <Cpu className="h-10 w-10 text-white" />
+                  <Cpu className="h-8 w-8 text-white" />
                 </motion.div>
               ) : totalTested > 0 ? (
-                <span className="text-2xl font-bold text-white">{overallScore}%</span>
+                <span className="text-xl font-bold text-white">{overallScore}%</span>
               ) : (
-                <Smartphone className="h-10 w-10 text-white" />
+                <Smartphone className="h-8 w-8 text-white" />
               )}
               
               {isRunningAll && (
@@ -400,56 +405,47 @@ export const DiagnosticTestSection = () => {
               )}
             </motion.div>
 
-            <div className="flex-1">
-              <h3 className="text-lg font-bold">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-bold">
                 {isRunningAll
                   ? "Test in corso..."
                   : totalTested > 0
-                  ? `${passedTests}/${totalTested} test superati`
+                  ? `${passedTests}/${totalTested} superati`
                   : "Test Componenti"}
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 {isRunningAll
                   ? `${totalTested}/${componentTests.length} completati`
                   : totalTested > 0
                   ? `${failedTests} problemi, ${warningTests} avvisi`
-                  : "Verifica hardware, sensori e connettività"}
+                  : "Verifica hardware, sensori e rete"}
               </p>
 
               {isRunningAll && (
-                <div className="mt-3">
-                  <Progress value={(totalTested / componentTests.length) * 100} className="h-2" />
+                <div className="mt-2">
+                  <Progress value={(totalTested / componentTests.length) * 100} className="h-1.5" />
                 </div>
               )}
             </div>
           </div>
 
-          {/* Quick stats after tests */}
-          {totalTested > 0 && !isRunningAll && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-4 grid grid-cols-3 gap-2"
-            >
-              {[
-                { label: "Superati", count: passedTests, color: "text-green-500", icon: CheckCircle },
-                { label: "Problemi", count: failedTests, color: "text-red-500", icon: XCircle },
-                { label: "Avvisi", count: warningTests, color: "text-yellow-500", icon: AlertTriangle },
-              ].map((stat, i) => (
-                <motion.div
-                  key={stat.label}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                  className="text-center p-2 bg-background/50 rounded-xl"
-                >
-                  <stat.icon className={`h-5 w-5 mx-auto mb-1 ${stat.color}`} />
-                  <div className={`text-lg font-bold ${stat.color}`}>{stat.count}</div>
-                  <div className="text-[10px] text-muted-foreground">{stat.label}</div>
-                </motion.div>
-              ))}
-            </motion.div>
-          )}
+          {/* Quick stats - fixed grid */}
+          <div className="mt-4 grid grid-cols-3 gap-2 min-h-[70px]">
+            {[
+              { label: "Superati", count: passedTests, color: "text-green-500", icon: CheckCircle },
+              { label: "Problemi", count: failedTests, color: "text-red-500", icon: XCircle },
+              { label: "Avvisi", count: warningTests, color: "text-yellow-500", icon: AlertTriangle },
+            ].map((stat, i) => (
+              <div
+                key={stat.label}
+                className="text-center p-2 bg-background/50 rounded-xl"
+              >
+                <stat.icon className={`h-4 w-4 mx-auto mb-1 ${stat.color}`} />
+                <div className={`text-lg font-bold ${stat.color}`}>{stat.count}</div>
+                <div className="text-[10px] text-muted-foreground">{stat.label}</div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
@@ -458,18 +454,18 @@ export const DiagnosticTestSection = () => {
         <Button
           onClick={runAllTests}
           disabled={isRunningAll}
-          className="flex-1 h-12 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
+          className="flex-1 h-11 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
         >
           {isRunningAll ? (
-            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
           ) : (
-            <Play className="h-5 w-5 mr-2" />
+            <Play className="h-4 w-4 mr-2" />
           )}
           {isRunningAll ? "Test in corso..." : "Avvia Test Completo"}
         </Button>
         {totalTested > 0 && (
-          <Button onClick={resetTests} variant="outline" className="h-12 px-4">
-            <RotateCcw className="h-5 w-5" />
+          <Button onClick={resetTests} variant="outline" className="h-11 px-3">
+            <RotateCcw className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -490,13 +486,13 @@ export const DiagnosticTestSection = () => {
             >
               <Card>
                 <CollapsibleTrigger className="w-full">
-                  <CardContent className="p-4 flex items-center justify-between">
+                  <CardContent className="p-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`h-10 w-10 rounded-xl bg-muted flex items-center justify-center ${category.color}`}>
-                        <category.icon className="h-5 w-5" />
+                      <div className={`h-9 w-9 rounded-lg bg-muted flex items-center justify-center ${category.color}`}>
+                        <category.icon className="h-4 w-4" />
                       </div>
                       <div className="text-left">
-                        <p className="font-semibold">{category.name}</p>
+                        <p className="font-medium text-sm">{category.name}</p>
                         <p className="text-xs text-muted-foreground">
                           {categoryTests.length} componenti
                         </p>
@@ -515,23 +511,21 @@ export const DiagnosticTestSection = () => {
                         </Badge>
                       )}
                       {expandedCategory.includes(category.id) ? (
-                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
                       ) : (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
                   </CardContent>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="px-4 pb-4 space-y-2">
+                  <div className="px-3 pb-3 space-y-1.5">
                     {categoryTests.map((test) => {
                       const result = testResults[test.id] || { status: "idle" };
                       return (
-                        <motion.div
+                        <div
                           key={test.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className={`flex items-center gap-3 p-3 rounded-lg border ${
+                          className={`flex items-center gap-2 p-2 rounded-lg border ${
                             result.status === "pass"
                               ? "bg-green-500/5 border-green-500/20"
                               : result.status === "fail"
@@ -541,33 +535,28 @@ export const DiagnosticTestSection = () => {
                               : "bg-muted/50 border-border"
                           }`}
                         >
-                          <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center">
-                            <test.icon className="h-4 w-4 text-muted-foreground" />
+                          <div className="h-7 w-7 flex-shrink-0 rounded bg-background flex items-center justify-center">
+                            <test.icon className="h-3.5 w-3.5 text-muted-foreground" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm">{test.name}</p>
-                            {result.status !== "idle" && result.message && (
-                              <p className="text-xs text-muted-foreground truncate">
-                                {result.message}
-                              </p>
-                            )}
-                            {result.status === "idle" && (
-                              <p className="text-xs text-muted-foreground">{test.description}</p>
-                            )}
+                            <p className="font-medium text-xs">{test.name}</p>
+                            <p className="text-[10px] text-muted-foreground line-clamp-2">
+                              {result.status !== "idle" && result.message ? result.message : test.description}
+                            </p>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
                             {getStatusIcon(result.status)}
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-7 px-2 text-xs"
+                              className="h-6 px-2 text-[10px]"
                               onClick={() => runTest(test)}
                               disabled={result.status === "testing" || isRunningAll}
                             >
                               Test
                             </Button>
                           </div>
-                        </motion.div>
+                        </div>
                       );
                     })}
                   </div>
@@ -578,51 +567,123 @@ export const DiagnosticTestSection = () => {
         })}
       </div>
 
-      {/* Installed Apps Section */}
+      {/* Installed Apps Section with Permissions */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <HardDrive className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold">App Installate</span>
+              <Smartphone className="h-4 w-4 text-muted-foreground" />
+              <span className="font-semibold text-sm">App e Permessi</span>
             </div>
             <Button
               size="sm"
               variant="outline"
               onClick={loadInstalledApps}
               disabled={loadingApps || !isNative}
+              className="h-8 text-xs"
             >
-              {loadingApps ? <Loader2 className="h-4 w-4 animate-spin" /> : "Carica"}
+              {loadingApps ? <Loader2 className="h-3 w-3 animate-spin" /> : "Analizza"}
             </Button>
           </div>
           
           {!isNative && (
-            <p className="text-sm text-muted-foreground">Disponibile solo su app nativa</p>
+            <p className="text-xs text-muted-foreground">Disponibile solo su app Android</p>
           )}
           
-          {installedApps && (
-            <div className="space-y-2 max-h-48 overflow-y-auto">
-              <p className="text-xs text-muted-foreground mb-2">{installedApps.length} app trovate</p>
-              {installedApps.slice(0, 10).map((app) => (
-                <div key={app.packageName} className="flex items-center gap-2 p-2 rounded bg-muted/50">
-                  {app.iconBase64 ? (
-                    <img src={app.iconBase64} alt="" className="w-6 h-6 rounded" />
-                  ) : (
-                    <div className="w-6 h-6 rounded bg-muted" />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{app.appName || app.packageName}</p>
+          {appsWithPermissions && appsWithPermissions.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                <span>{appsWithPermissions.length} app con permessi sensibili</span>
+                <Badge variant="outline" className="text-[10px]">Permessi pericolosi</Badge>
+              </div>
+              <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                {[...appsWithPermissions]
+                  .sort((a, b) => b.permissionCount - a.permissionCount)
+                  .slice(0, 15)
+                  .map((app, idx) => (
+                  <div key={app.packageName} className="p-2 rounded-lg bg-muted/50 border border-border/50">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center w-5 h-5 flex-shrink-0 rounded bg-muted text-[10px] font-bold text-muted-foreground">
+                        {idx + 1}
+                      </div>
+                      {app.iconBase64 ? (
+                        <img src={app.iconBase64} alt="" className="w-7 h-7 rounded flex-shrink-0" />
+                      ) : (
+                        <div className="w-7 h-7 rounded bg-gradient-to-br from-slate-200 to-slate-300 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{app.appName || app.packageName.split('.').pop()}</p>
+                        <div className="flex items-center gap-1">
+                          <Badge variant={app.isSystemApp ? "secondary" : "outline"} className="text-[9px] px-1 py-0">
+                            {app.isSystemApp ? 'Sistema' : 'Utente'}
+                          </Badge>
+                          <Badge variant="destructive" className="text-[9px] px-1 py-0">
+                            {app.permissionCount} permessi
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Permissions row */}
+                    {app.permissions && app.permissions.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1">
+                        {app.permissions.slice(0, 4).map((perm, i) => {
+                          const permName = perm.split('.').pop()?.toLowerCase() || perm;
+                          const isDangerous = ['camera', 'location', 'microphone', 'contacts', 'sms', 'phone', 'storage', 'record_audio', 'fine_location', 'coarse_location'].some(d => permName.includes(d));
+                          return (
+                            <Badge 
+                              key={i} 
+                              variant="outline" 
+                              className={`text-[9px] px-1 py-0 ${isDangerous ? 'border-red-500/50 text-red-600 bg-red-500/10' : ''}`}
+                            >
+                              {permName.length > 12 ? permName.slice(0, 12) + '...' : permName}
+                            </Badge>
+                          );
+                        })}
+                        {app.permissions.length > 4 && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0">
+                            +{app.permissions.length - 4}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {app.totalSizeMb.toFixed(0)} MB
-                  </Badge>
-                </div>
-              ))}
-              {installedApps.length > 10 && (
-                <p className="text-xs text-muted-foreground text-center">
-                  +{installedApps.length - 10} altre app
+                ))}
+              </div>
+              {appsWithPermissions.length > 15 && (
+                <p className="text-[10px] text-muted-foreground text-center pt-1">
+                  +{appsWithPermissions.length - 15} altre app non mostrate
                 </p>
               )}
+            </div>
+          )}
+          
+          {installedApps && !appsWithPermissions && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                <span>{installedApps.length} app trovate</span>
+                <Badge variant="outline" className="text-[10px]">Per dimensione</Badge>
+              </div>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                {[...installedApps]
+                  .sort((a, b) => b.totalSizeMb - a.totalSizeMb)
+                  .slice(0, 10)
+                  .map((app, idx) => (
+                  <div key={app.packageName} className="flex items-center gap-2 p-2 rounded bg-muted/50">
+                    <div className="text-[10px] font-bold text-muted-foreground w-4">{idx + 1}</div>
+                    {app.iconBase64 ? (
+                      <img src={app.iconBase64} alt="" className="w-6 h-6 rounded" />
+                    ) : (
+                      <div className="w-6 h-6 rounded bg-muted" />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium truncate">{app.appName || app.packageName.split('.').pop()}</p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px]">
+                      {app.totalSizeMb.toFixed(0)} MB
+                    </Badge>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
@@ -631,10 +692,10 @@ export const DiagnosticTestSection = () => {
       {/* Non-native warning */}
       {!isNative && (
         <Card className="border-amber-500/50 bg-amber-500/10">
-          <CardContent className="p-3 flex items-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
+          <CardContent className="p-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />
             <p className="text-xs text-muted-foreground">
-              Alcuni test richiedono l'app Android nativa per risultati completi
+              Alcuni test richiedono l'app Android per risultati completi
             </p>
           </CardContent>
         </Card>
