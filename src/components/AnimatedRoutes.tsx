@@ -77,6 +77,9 @@ import SuccessoPubblicita from "@/pages/ads/SuccessoPubblicita";
 import TrackQr from "@/pages/ads/TrackQr";
 // Corner pages
 import CornerPubblicita from "@/pages/corner/CornerPubblicita";
+import CornerTesseraFedelta from "@/pages/corner/CornerTesseraFedelta";
+import CornerLoyaltyCheckout from "@/pages/corner/CornerLoyaltyCheckout";
+import CornerLoyaltySuccess from "@/pages/corner/CornerLoyaltySuccess";
 // Loyalty
 import LoyaltyCheckoutRedirect from "@/pages/LoyaltyCheckoutRedirect";
 // Device Health + PWA Install
@@ -315,6 +318,17 @@ export const AnimatedRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/corner/tessera-fedelta"
+          element={
+            <ProtectedRoute requireCorner>
+              <CornerTesseraFedelta />
+            </ProtectedRoute>
+          }
+        />
+        {/* Public Corner Loyalty Checkout */}
+        <Route path="/corner-loyalty-checkout" element={<PageTransition><CornerLoyaltyCheckout /></PageTransition>} />
+        <Route path="/corner-loyalty-success" element={<PageTransition><CornerLoyaltySuccess /></PageTransition>} />
         {/* Riparatore Dashboard */}
         <Route
           path="/riparatore"

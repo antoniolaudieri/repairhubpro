@@ -759,6 +759,72 @@ export type Database = {
           },
         ]
       }
+      corner_loyalty_invitations: {
+        Row: {
+          clicked_at: string | null
+          corner_id: string
+          created_at: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string | null
+          expires_at: string | null
+          id: string
+          invitation_token: string
+          loyalty_card_id: string | null
+          paid_at: string | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          clicked_at?: string | null
+          corner_id: string
+          created_at?: string
+          customer_email: string
+          customer_name: string
+          customer_phone?: string | null
+          expires_at?: string | null
+          id?: string
+          invitation_token?: string
+          loyalty_card_id?: string | null
+          paid_at?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          clicked_at?: string | null
+          corner_id?: string
+          created_at?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          expires_at?: string | null
+          id?: string
+          invitation_token?: string
+          loyalty_card_id?: string | null
+          paid_at?: string | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "corner_loyalty_invitations_corner_id_fkey"
+            columns: ["corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "corner_loyalty_invitations_loyalty_card_id_fkey"
+            columns: ["loyalty_card_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       corner_partnerships: {
         Row: {
           corner_id: string
@@ -2780,6 +2846,9 @@ export type Database = {
           card_number: string | null
           centro_id: string
           centro_revenue: number
+          corner_commission: number | null
+          corner_commission_paid: boolean | null
+          corner_commission_paid_at: string | null
           created_at: string
           customer_id: string
           devices_used: number
@@ -2788,6 +2857,7 @@ export type Database = {
           max_devices: number
           payment_method: string
           platform_commission: number
+          referred_by_corner_id: string | null
           status: string
           stripe_payment_intent_id: string | null
           stripe_session_id: string | null
@@ -2801,6 +2871,9 @@ export type Database = {
           card_number?: string | null
           centro_id: string
           centro_revenue?: number
+          corner_commission?: number | null
+          corner_commission_paid?: boolean | null
+          corner_commission_paid_at?: string | null
           created_at?: string
           customer_id: string
           devices_used?: number
@@ -2809,6 +2882,7 @@ export type Database = {
           max_devices?: number
           payment_method: string
           platform_commission?: number
+          referred_by_corner_id?: string | null
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
@@ -2822,6 +2896,9 @@ export type Database = {
           card_number?: string | null
           centro_id?: string
           centro_revenue?: number
+          corner_commission?: number | null
+          corner_commission_paid?: boolean | null
+          corner_commission_paid_at?: string | null
           created_at?: string
           customer_id?: string
           devices_used?: number
@@ -2830,6 +2907,7 @@ export type Database = {
           max_devices?: number
           payment_method?: string
           platform_commission?: number
+          referred_by_corner_id?: string | null
           status?: string
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
@@ -2848,6 +2926,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_cards_referred_by_corner_id_fkey"
+            columns: ["referred_by_corner_id"]
+            isOneToOne: false
+            referencedRelation: "corners"
             referencedColumns: ["id"]
           },
         ]
