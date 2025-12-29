@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { User } from "@supabase/supabase-js";
 import NativeLogin from "@/pages/NativeLogin";
 import { NativeHome } from "@/pages/NativeHome";
-import { NativeProgress } from "@/pages/NativeProgress";
 import { NativeDiagnostics } from "@/pages/NativeDiagnostics";
 import { NativeProfile } from "@/pages/NativeProfile";
 import { BottomNavBar, NativeView } from "@/components/native/BottomNavBar";
@@ -174,14 +173,6 @@ const NativeApp = () => {
 
   const renderContent = () => {
     switch (currentView) {
-      case "progress":
-        return (
-          <NativeProgress
-            user={user}
-            customerId={loyaltyCard.customer_id}
-            centroId={loyaltyCard.centro_id}
-          />
-        );
       case "diagnostics":
         return <NativeDiagnostics user={user} />;
       case "profile":
@@ -192,7 +183,6 @@ const NativeApp = () => {
           <NativeHome
             user={user}
             loyaltyCard={loyaltyCard}
-            onNavigateProgress={() => setCurrentView("progress")}
           />
         );
     }
