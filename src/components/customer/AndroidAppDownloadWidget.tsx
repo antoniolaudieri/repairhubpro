@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   Smartphone,
@@ -15,6 +15,7 @@ import {
   Check,
   Loader2,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { useLoyaltyProgramSettingsForCentro, DEFAULT_SETTINGS } from "@/hooks/useLoyaltyProgramSettings";
+import { GITHUB_REPO } from "@/config/appVersion";
 
 interface Centro {
   id: string;
@@ -33,19 +35,66 @@ interface AndroidAppDownloadWidgetProps {
   hasActiveCard: boolean;
   customerEmail?: string;
   existingCardCentroIds?: string[];
-  apkDownloadUrl?: string;
 }
 
 export const AndroidAppDownloadWidget = ({
   hasActiveCard,
   customerEmail,
   existingCardCentroIds = [],
-  apkDownloadUrl = "#",
 }: AndroidAppDownloadWidgetProps) => {
   const [centri, setCentri] = useState<Centro[]>([]);
   const [loading, setLoading] = useState(true);
   const [activatingCentroId, setActivatingCentroId] = useState<string | null>(null);
   const [selectedCentroId, setSelectedCentroId] = useState<string | null>(null);
+  const [apkDownloadUrl, setApkDownloadUrl] = useState<string>("");
+  const [isLoadingApk, setIsLoadingApk] = useState(false);
+
+  // Fetch latest APK from GitHub Releases (same logic as useAppUpdate)
+  const fetchLatestApk = useCallback(async () => {
+    if (!GITHUB_REPO || GITHUB_REPO.includes("YOUR_GITHUB")) {
+      console.log("GitHub repo not configured");
+      return;
+    }
+
+    setIsLoadingApk(true);
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`,
+        {
+          headers: {
+            Accept: "application/vnd.github.v3+json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log("No releases available");
+          return;
+        }
+        throw new Error(`GitHub API error: ${response.status}`);
+      }
+
+      const release = await response.json();
+      const apkAsset = release.assets?.find(
+        (asset: any) => asset.name.endsWith(".apk")
+      );
+
+      if (apkAsset?.browser_download_url) {
+        setApkDownloadUrl(apkAsset.browser_download_url);
+      }
+    } catch (error) {
+      console.error("Error fetching APK:", error);
+    } finally {
+      setIsLoadingApk(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (hasActiveCard) {
+      fetchLatestApk();
+    }
+  }, [hasActiveCard, fetchLatestApk]);
 
   useEffect(() => {
     if (customerEmail && !hasActiveCard) {
@@ -158,12 +207,18 @@ export const AndroidAppDownloadWidget = ({
   };
 
   const handleDownload = () => {
-    if (apkDownloadUrl && apkDownloadUrl !== "#") {
+    if (apkDownloadUrl) {
       window.open(apkDownloadUrl, "_blank");
-    } else {
       toast({
-        title: "Download App",
-        description: "L'app sarà presto disponibile per il download.",
+        title: "Download avviato",
+        description: "Il download dell'APK è iniziato. Controlla la cartella download.",
+      });
+    } else {
+      // Try to fetch again if no URL
+      fetchLatestApk();
+      toast({
+        title: "Caricamento...",
+        description: "Stiamo recuperando l'ultima versione disponibile. Riprova tra qualche secondo.",
       });
     }
   };
@@ -211,10 +266,25 @@ export const AndroidAppDownloadWidget = ({
           {/* Download Button */}
           <Button
             onClick={handleDownload}
+            disabled={isLoadingApk}
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
           >
-            <Download className="h-4 w-4 mr-2" />
-            Scarica l'App Android
+            {isLoadingApk ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Caricamento...
+              </>
+            ) : apkDownloadUrl ? (
+              <>
+                <Download className="h-4 w-4 mr-2" />
+                Scarica l'App Android
+              </>
+            ) : (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Verifica disponibilità
+              </>
+            )}
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
