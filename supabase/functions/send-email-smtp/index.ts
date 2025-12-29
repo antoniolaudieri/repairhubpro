@@ -130,12 +130,24 @@ const handler = async (req: Request): Promise<Response> => {
           },
         });
 
+        // Generate plain text version from HTML
+        const plainText = html
+          .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
         const sendOptions: any = {
           from: `${fromName} <${trimmedFromEmail}>`,
           to: recipients,
           subject: subject,
-          content: "auto",
+          content: plainText,
           html: html,
+          headers: {
+            "X-Priority": "3",
+            "X-Mailer": "LabLinkRiparo",
+            "List-Unsubscribe": `<mailto:${trimmedFromEmail}?subject=unsubscribe>`,
+          },
         };
 
         // Add attachments if present
