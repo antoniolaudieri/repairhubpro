@@ -42,8 +42,9 @@ serve(async (req) => {
       throw new Error("Invitation not found");
     }
 
-    // Build checkout URL with invitation token
-    const checkoutUrl = "https://lablinkriparo.lovable.app/corner-loyalty-checkout?token=" + invitation.invitation_token;
+    // Build checkout URL with invitation token - use production domain
+    const baseUrl = Deno.env.get("SITE_URL") || "https://lablinkriparo.lovable.app";
+    const checkoutUrl = baseUrl + "/corner-loyalty-checkout?token=" + invitation.invitation_token;
     const cornerName = corner?.business_name || "Corner";
 
     // Build simple HTML email content (no line breaks to avoid =20 encoding issues)
