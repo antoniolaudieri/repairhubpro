@@ -21,7 +21,10 @@ import {
   AlertTriangle,
   CheckCircle,
   Bug,
+  Wrench,
+  Smartphone,
 } from "lucide-react";
+import { DiagnosticTestSection } from "@/components/native/DiagnosticTestSection";
 import { SecurityScannerSection } from "@/components/native/SecurityScannerSection";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +66,14 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
 
   const sections = [
     {
+      id: "tests",
+      title: "Test Componenti",
+      icon: Wrench,
+      iconColor: "text-blue-500",
+      status: "good",
+      content: <DiagnosticTestSection />,
+    },
+    {
       id: "battery",
       title: "Batteria",
       icon: Battery,
@@ -90,6 +101,22 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
               {getBatteryHealthLabel(deviceData.batteryHealth).label}
             </span>
           </div>
+
+          {/* Temperature */}
+          {deviceData.batteryTemperature !== null && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground flex items-center gap-2">
+                <Thermometer className="h-4 w-4" />
+                Temperatura
+              </span>
+              <span className={`font-medium ${
+                deviceData.batteryTemperature < 35 ? "text-green-500" :
+                deviceData.batteryTemperature < 45 ? "text-yellow-500" : "text-red-500"
+              }`}>
+                {deviceData.batteryTemperature}°C
+              </span>
+            </div>
+          )}
           
           {/* Charging Status */}
           <div className="flex items-center justify-between">
@@ -99,6 +126,14 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
               {deviceData.isCharging ? "In carica" : "Non in carica"}
             </Badge>
           </div>
+
+          {/* Voltage */}
+          {deviceData.batteryVoltage !== null && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Voltaggio</span>
+              <span className="font-medium">{(deviceData.batteryVoltage / 1000).toFixed(2)}V</span>
+            </div>
+          )}
         </div>
       ),
     },
@@ -209,9 +244,9 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
       ),
     },
     {
-      id: "security",
+      id: "device",
       title: "Info Dispositivo",
-      icon: Monitor,
+      icon: Smartphone,
       iconColor: "text-slate-500",
       status: "good",
       content: (
@@ -245,14 +280,14 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
           {/* Device Memory */}
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Memoria dispositivo</span>
-            <span className="font-medium">{deviceData.deviceMemoryGb || "--"} GB</span>
+            <span className="font-medium">{deviceData.deviceMemoryGb?.toFixed(1) || "--"} GB</span>
           </div>
           
           {/* Screen */}
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Schermo</span>
             <span className="font-medium">
-              {deviceData.screenWidth}x{deviceData.screenHeight}
+              {deviceData.screenWidth}x{deviceData.screenHeight} @{deviceData.pixelRatio}x
             </span>
           </div>
           
@@ -318,13 +353,13 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
         </motion.div>
 
         {/* Diagnostic Sections */}
-        <Accordion type="multiple" defaultValue={["battery", "memory", "network", "security"]} className="space-y-3">
+        <Accordion type="multiple" defaultValue={["tests"]} className="space-y-3">
           {sections.map((section, index) => (
             <motion.div
               key={section.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.05 }}
             >
               <AccordionItem value={section.id} className="border rounded-xl overflow-hidden bg-card">
                 <AccordionTrigger className="px-4 py-3 hover:no-underline hover:bg-muted/50">
@@ -335,7 +370,7 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
                       </div>
                       <span className="font-semibold">{section.title}</span>
                     </div>
-                    {getStatusBadge(section.status)}
+                    {section.id !== "tests" && getStatusBadge(section.status)}
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4">
@@ -350,7 +385,7 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
+          transition={{ delay: 0.3 }}
         >
           <Card>
             <CardHeader className="pb-3">
@@ -372,6 +407,14 @@ export const NativeDiagnostics = ({ user }: NativeDiagnosticsProps) => {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Pixel Ratio</span>
                 <span>{deviceData.pixelRatio || "--"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Color Depth</span>
+                <span>{deviceData.colorDepth || "--"} bit</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">App Version</span>
+                <span>{deviceData.appVersion || "--"}</span>
               </div>
             </CardContent>
           </Card>
