@@ -43,69 +43,13 @@ serve(async (req) => {
     }
 
     // Build checkout URL with invitation token
-    const baseUrl = "https://lablinkriparo.lovable.app";
-    const checkoutUrl = `${baseUrl}/corner-loyalty-checkout?token=${invitation.invitation_token}`;
+    const checkoutUrl = "https://lablinkriparo.lovable.app/corner-loyalty-checkout?token=" + invitation.invitation_token;
+    const cornerName = corner?.business_name || "Corner";
 
-    // Build HTML email content
-    const emailHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      </head>
-      <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-          <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 40px; border-radius: 16px 16px 0 0; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">Tessera Fedeltà</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">LabLink Riparo</p>
-          </div>
-          
-          <div style="background: white; padding: 40px; border-radius: 0 0 16px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
-            <p style="font-size: 18px; color: #333; margin: 0 0 20px 0;">
-              Ciao <strong>${customer_name}</strong>,
-            </p>
-            
-            <p style="color: #666; line-height: 1.6; margin: 0 0 20px 0;">
-              <strong>${corner?.business_name || "Il tuo Corner di fiducia"}</strong> ti invita ad attivare la 
-              <strong>Tessera Fedeltà</strong> per accedere a vantaggi esclusivi!
-            </p>
-            
-            <div style="background: #f8f9fa; padding: 24px; border-radius: 12px; margin: 20px 0;">
-              <h3 style="margin: 0 0 16px 0; color: #333;">✨ Cosa include:</h3>
-              <ul style="margin: 0; padding: 0 0 0 20px; color: #666; line-height: 1.8;">
-                <li><strong>App Android di Diagnostica</strong> - Scanner malware e monitoraggio salute dispositivo</li>
-                <li><strong>Sconti sulle riparazioni</strong> - Risparmia su ogni intervento</li>
-                <li><strong>Priorità</strong> - Code accelerate e assistenza dedicata</li>
-                <li><strong>Fino a 3 dispositivi</strong> - Proteggi tutta la famiglia</li>
-              </ul>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <p style="font-size: 32px; font-weight: bold; color: #6366f1; margin: 0;">€40<span style="font-size: 16px; color: #666;">/anno</span></p>
-            </div>
-            
-            <a href="${checkoutUrl}" 
-               style="display: block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); 
-                      color: white; text-decoration: none; padding: 16px 32px; border-radius: 12px; 
-                      font-weight: bold; font-size: 18px; text-align: center; margin: 20px 0;">
-              Attiva Ora la Tessera
-            </a>
-            
-            <p style="color: #999; font-size: 14px; text-align: center; margin: 20px 0 0 0;">
-              Questo link è valido per 30 giorni
-            </p>
-          </div>
-          
-          <p style="color: #999; font-size: 12px; text-align: center; margin: 20px 0 0 0;">
-            ${corner?.business_name || "Corner"} • ${corner?.phone || ""} • ${corner?.email || ""}
-          </p>
-        </div>
-      </body>
-      </html>
-    `;
+    // Build simple HTML email content (no line breaks to avoid =20 encoding issues)
+    const emailHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;"><div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 40px; border-radius: 16px 16px 0 0; text-align: center;"><h1 style="color: white; margin: 0; font-size: 28px;">Tessera Fedelta</h1><p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">LabLink Riparo</p></div><div style="background: white; padding: 40px; border-radius: 0 0 16px 16px;"><p style="font-size: 18px; color: #333; margin: 0 0 20px 0;">Ciao <strong>${customer_name}</strong>,</p><p style="color: #666; line-height: 1.6; margin: 0 0 20px 0;"><strong>${cornerName}</strong> ti invita ad attivare la Tessera Fedelta per accedere a vantaggi esclusivi!</p><div style="background: #f8f9fa; padding: 24px; border-radius: 12px; margin: 20px 0;"><h3 style="margin: 0 0 16px 0; color: #333;">Cosa include:</h3><ul style="margin: 0; padding: 0 0 0 20px; color: #666; line-height: 1.8;"><li>App Android di Diagnostica - Scanner malware</li><li>Sconti sulle riparazioni</li><li>Priorita nelle code</li><li>Fino a 3 dispositivi protetti</li></ul></div><div style="text-align: center; margin: 30px 0;"><p style="font-size: 32px; font-weight: bold; color: #6366f1; margin: 0;">40 Euro/anno</p></div><a href="${checkoutUrl}" style="display: block; background: #6366f1; color: white; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-weight: bold; font-size: 18px; text-align: center; margin: 20px 0;">Attiva Ora la Tessera</a><p style="color: #999; font-size: 14px; text-align: center; margin: 20px 0 0 0;">Questo link e valido per 30 giorni</p></div><p style="color: #999; font-size: 12px; text-align: center; margin: 20px 0 0 0;">${cornerName}</p></div></body></html>`;
 
-    // Find the centro associated with corner (via partnership or default first centro)
+    // Find the centro associated with corner
     const { data: partnership } = await supabaseClient
       .from("corner_partnerships")
       .select("provider_id")
@@ -118,12 +62,12 @@ serve(async (req) => {
 
     let centroId = partnership?.provider_id;
 
-    // If no partnership, get any active centro
+    // If no partnership, get any active centro with SMTP configured
     if (!centroId) {
       const { data: anyCentro } = await supabaseClient
         .from("centri_assistenza")
         .select("id")
-        .eq("status", "active")
+        .eq("status", "approved")
         .limit(1)
         .single();
       centroId = anyCentro?.id;
@@ -133,14 +77,17 @@ serve(async (req) => {
       throw new Error("No centro found for sending email");
     }
 
+    console.log("[SEND-CORNER-LOYALTY-INVITE] Sending via centro:", centroId);
+    console.log("[SEND-CORNER-LOYALTY-INVITE] Checkout URL:", checkoutUrl);
+
     // Send email via send-email-smtp function
     const { error: emailError } = await supabaseClient.functions.invoke("send-email-smtp", {
       body: {
         centro_id: centroId,
         to: customer_email,
-        subject: `${corner?.business_name || "Corner"} ti invita ad attivare la Tessera Fedeltà`,
+        subject: cornerName + " ti invita ad attivare la Tessera Fedelta",
         html: emailHtml,
-        from_name_override: corner?.business_name || "LabLink Riparo"
+        from_name_override: cornerName
       }
     });
 
