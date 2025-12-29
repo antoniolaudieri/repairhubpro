@@ -14,122 +14,62 @@ import {
   RefreshCw,
   Zap,
   Search,
-  ChevronDown,
-  ChevronUp,
-  Trash2,
   Database,
   Clock,
+  History,
+  TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { useMalwareScanner, ScanResult } from "@/hooks/useMalwareScanner";
+import { useMalwareScanner } from "@/hooks/useMalwareScanner";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Capacitor } from "@capacitor/core";
+
+// Import new components
+import { SystemSecurityCard } from "./SystemSecurityCard";
+import { ScanProgressDetail } from "./ScanProgressDetail";
+import { ThreatResultCard } from "./ThreatResultCard";
+import { ScanHistoryDialog } from "./ScanHistoryDialog";
 
 export const SecurityScannerSection = () => {
   const {
     isScanning,
     progress,
     currentApp,
+    currentAppIcon,
+    phase,
     results,
     summary,
+    systemSecurity,
     error,
     definitions,
     lastDefinitionsUpdate,
     isUpdatingDefinitions,
+    recentApps,
     startScan,
     clearResults,
     forceUpdateDefinitions,
   } = useMalwareScanner();
 
-  const [expandedResults, setExpandedResults] = useState<string[]>([]);
   const isNative = Capacitor.isNativePlatform();
-
-  const toggleResult = (packageName: string) => {
-    setExpandedResults((prev) =>
-      prev.includes(packageName)
-        ? prev.filter((p) => p !== packageName)
-        : [...prev, packageName]
-    );
-  };
-
-  const getThreatIcon = (threatLevel: ScanResult["threatLevel"]) => {
-    switch (threatLevel) {
-      case "malware":
-      case "trojan":
-        return <ShieldX className="h-5 w-5" />;
-      case "adware":
-        return <Megaphone className="h-5 w-5" />;
-      case "pua":
-        return <AlertTriangle className="h-5 w-5" />;
-      case "suspicious":
-        return <Eye className="h-5 w-5" />;
-      default:
-        return <ShieldCheck className="h-5 w-5" />;
-    }
-  };
-
-  const getThreatColor = (threatLevel: ScanResult["threatLevel"]) => {
-    switch (threatLevel) {
-      case "malware":
-      case "trojan":
-        return "bg-red-500 text-white";
-      case "adware":
-        return "bg-orange-500 text-white";
-      case "pua":
-        return "bg-yellow-500 text-white";
-      case "suspicious":
-        return "bg-amber-400 text-black";
-      default:
-        return "bg-green-500 text-white";
-    }
-  };
-
-  const getThreatLabel = (threatLevel: ScanResult["threatLevel"]) => {
-    switch (threatLevel) {
-      case "malware":
-        return "Malware";
-      case "trojan":
-        return "Trojan";
-      case "adware":
-        return "Adware";
-      case "pua":
-        return "PUA";
-      case "suspicious":
-        return "Sospetto";
-      default:
-        return "Sicuro";
-    }
-  };
-
-  const getSeverityColor = (severity: ScanResult["severity"]) => {
-    switch (severity) {
-      case "critical":
-        return "text-red-500 bg-red-500/10";
-      case "high":
-        return "text-orange-500 bg-orange-500/10";
-      case "medium":
-        return "text-yellow-500 bg-yellow-500/10";
-      case "low":
-        return "text-amber-500 bg-amber-500/10";
-      default:
-        return "text-green-500 bg-green-500/10";
-    }
-  };
 
   const threatResults = results.filter((r) => r.threatLevel !== "safe");
   const safeResults = results.filter((r) => r.threatLevel === "safe");
 
   const totalThreats =
     (summary?.malwareCount || 0) +
+    (summary?.spywareCount || 0) +
     (summary?.adwareCount || 0) +
+    (summary?.riskwareCount || 0) +
     (summary?.puaCount || 0) +
     (summary?.suspiciousCount || 0);
+
+  const handleUninstall = (packageName: string) => {
+    // Open Play Store to uninstall
+    window.open(`market://details?id=${packageName}`, "_system");
+  };
 
   return (
     <div className="space-y-4 min-h-0 overflow-visible">
@@ -190,29 +130,33 @@ export const SecurityScannerSection = () => {
               </h3>
               <p className="text-sm text-muted-foreground">
                 {isScanning
-                  ? currentApp
+                  ? `Fase: ${phase}`
                   : summary
-                  ? `${summary.scannedApps} app analizzate in ${(
-                      summary.scanDuration / 1000
-                    ).toFixed(1)}s`
+                  ? `${summary.scannedApps} app analizzate`
                   : "Rileva malware, adware e spyware"}
               </p>
 
-              {/* Progress bar during scan */}
-              {isScanning && (
-                <div className="mt-3 space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span>Analisi</span>
-                    <span>{progress}%</span>
-                  </div>
-                  <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-gradient-to-r from-white to-purple-200"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progress}%` }}
-                      transition={{ duration: 0.3 }}
-                    />
-                  </div>
+              {/* Risk score after scan */}
+              {summary && !isScanning && (
+                <div className="flex items-center gap-2 mt-2">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Rischio:</span>
+                  <Badge
+                    variant="outline"
+                    className={`text-xs ${
+                      summary.riskLevel === "critical"
+                        ? "border-red-500 text-red-500"
+                        : summary.riskLevel === "high"
+                        ? "border-orange-500 text-orange-500"
+                        : summary.riskLevel === "medium"
+                        ? "border-yellow-500 text-yellow-500"
+                        : summary.riskLevel === "low"
+                        ? "border-blue-500 text-blue-500"
+                        : "border-green-500 text-green-500"
+                    }`}
+                  >
+                    {summary.overallRiskScore}/100
+                  </Badge>
                 </div>
               )}
             </div>
@@ -227,8 +171,8 @@ export const SecurityScannerSection = () => {
             >
               {[
                 { label: "Malware", count: summary.malwareCount, color: "text-red-500", icon: Bug },
+                { label: "Spyware", count: summary.spywareCount, color: "text-purple-500", icon: Eye },
                 { label: "Adware", count: summary.adwareCount, color: "text-orange-500", icon: Megaphone },
-                { label: "Spyware", count: summary.puaCount, color: "text-yellow-500", icon: Eye },
                 { label: "Sicure", count: summary.safeCount, color: "text-green-500", icon: CheckCircle },
               ].map((stat, i) => (
                 <motion.div
@@ -247,6 +191,19 @@ export const SecurityScannerSection = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Detailed Progress during scan */}
+      {isScanning && (
+        <ScanProgressDetail
+          progress={progress}
+          currentApp={currentApp}
+          currentAppIcon={currentAppIcon}
+          phase={phase}
+          recentApps={recentApps}
+          totalApps={summary?.totalApps || 0}
+          scannedApps={summary?.scannedApps || results.length}
+        />
+      )}
 
       {/* Scan Buttons */}
       {!isScanning && (
@@ -287,7 +244,12 @@ export const SecurityScannerSection = () => {
         </Card>
       )}
 
-      {/* Threat Results */}
+      {/* System Security Status */}
+      {systemSecurity && !isScanning && (
+        <SystemSecurityCard security={systemSecurity} />
+      )}
+
+      {/* Threat Results with new ThreatResultCard */}
       <AnimatePresence>
         {threatResults.length > 0 && (
           <motion.div
@@ -302,75 +264,12 @@ export const SecurityScannerSection = () => {
             </h4>
             <div className="space-y-2 overflow-visible">
               {threatResults.map((result, index) => (
-                <motion.div
+                <ThreatResultCard
                   key={result.packageName}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05 }}
-                  className="min-h-[70px]"
-                >
-                  <Collapsible
-                    open={expandedResults.includes(result.packageName)}
-                    onOpenChange={() => toggleResult(result.packageName)}
-                  >
-                    <Card className={`border overflow-visible ${getSeverityColor(result.severity)}`}>
-                      <CollapsibleTrigger className="w-full">
-                        <CardContent className="p-3 flex items-center gap-3">
-                          <div
-                            className={`h-10 w-10 rounded-xl flex-shrink-0 flex items-center justify-center ${getThreatColor(
-                              result.threatLevel
-                            )}`}
-                          >
-                            {getThreatIcon(result.threatLevel)}
-                          </div>
-                          <div className="flex-1 text-left min-w-0">
-                            <p className="font-medium text-sm break-words">{result.appName}</p>
-                            <p className="text-xs text-muted-foreground break-all">
-                              {result.packageName}
-                            </p>
-                          </div>
-                          <Badge className={`flex-shrink-0 ${getThreatColor(result.threatLevel)}`}>
-                            {getThreatLabel(result.threatLevel)}
-                          </Badge>
-                          {expandedResults.includes(result.packageName) ? (
-                            <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          )}
-                        </CardContent>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="px-3 pb-3 space-y-2 border-t pt-3">
-                          {result.reasons.map((reason, i) => (
-                            <p key={i} className="text-xs text-muted-foreground flex items-start gap-2">
-                              <AlertTriangle className={`h-3 w-3 flex-shrink-0 mt-0.5 ${
-                                reason.severity === 'critical' ? 'text-red-500' :
-                                reason.severity === 'high' ? 'text-orange-500' :
-                                reason.severity === 'medium' ? 'text-yellow-500' : 'text-amber-500'
-                              }`} />
-                              <span className="break-words">{reason.text}</span>
-                            </p>
-                          ))}
-                          <p className="text-xs font-medium flex items-start gap-2 pt-1">
-                            <ShieldCheck className="h-3 w-3 text-blue-500 flex-shrink-0 mt-0.5" />
-                            <span className="break-words">{result.recommendation}</span>
-                          </p>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            className="w-full mt-2"
-                            onClick={() => {
-                              console.log("Uninstall:", result.packageName);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Rimuovi App
-                          </Button>
-                        </div>
-                      </CollapsibleContent>
-                    </Card>
-                  </Collapsible>
-                </motion.div>
+                  result={result}
+                  index={index}
+                  onUninstall={handleUninstall}
+                />
               ))}
             </div>
           </motion.div>
@@ -394,7 +293,7 @@ export const SecurityScannerSection = () => {
         </Card>
       )}
 
-      {/* Definitions Info */}
+      {/* Definitions Info + History */}
       <Card className="bg-muted/50">
         <CardContent className="p-3 space-y-2">
           <div className="flex items-center justify-between">
@@ -402,9 +301,16 @@ export const SecurityScannerSection = () => {
               <Database className="h-4 w-4 text-muted-foreground" />
               <span className="text-muted-foreground">Database definizioni</span>
             </div>
-            <Badge variant="outline" className="text-xs">
-              v{definitions?.version || "--"}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                v{definitions?.version || "--"}
+              </Badge>
+              {definitions && (
+                <span className="text-xs text-muted-foreground">
+                  {definitions.totalThreats} minacce
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -413,20 +319,30 @@ export const SecurityScannerSection = () => {
                 ? format(lastDefinitionsUpdate, "d MMM HH:mm", { locale: it })
                 : "Mai aggiornato"}
             </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={forceUpdateDefinitions}
-              disabled={isUpdatingDefinitions}
-              className="h-7 text-xs"
-            >
-              {isUpdatingDefinitions ? (
-                <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3 w-3 mr-1" />
-              )}
-              Aggiorna
-            </Button>
+            <div className="flex items-center gap-2">
+              <ScanHistoryDialog
+                trigger={
+                  <Button size="sm" variant="ghost" className="h-7 text-xs">
+                    <History className="h-3 w-3 mr-1" />
+                    Cronologia
+                  </Button>
+                }
+              />
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={forceUpdateDefinitions}
+                disabled={isUpdatingDefinitions}
+                className="h-7 text-xs"
+              >
+                {isUpdatingDefinitions ? (
+                  <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                )}
+                Aggiorna
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
