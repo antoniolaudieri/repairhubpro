@@ -1218,11 +1218,12 @@ public class DeviceDiagnosticsPlugin extends Plugin {
             PackageManager pm = context.getPackageManager();
             long totalCacheBytes = 0;
             int appCount = 0;
+            boolean hasPermission = hasUsageStatsPermission();
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && hasPermission) {
                 StorageStatsManager storageStatsManager = (StorageStatsManager) context.getSystemService(Context.STORAGE_STATS_SERVICE);
                 
-                if (storageStatsManager != null && hasUsageStatsPermission()) {
+                if (storageStatsManager != null) {
                     List<ApplicationInfo> apps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
                     android.os.UserHandle userHandle = android.os.Process.myUserHandle();
                     UUID storageUuid = StorageManager.UUID_DEFAULT;
@@ -1237,6 +1238,29 @@ public class DeviceDiagnosticsPlugin extends Plugin {
                         }
                     }
                 }
+            } else if (!hasPermission) {
+                // Alternative method: estimate cache by checking common cache directories
+                // This won't be as accurate but gives an idea
+                List<ApplicationInfo> apps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+                
+                for (ApplicationInfo app : apps) {
+                    try {
+                        // Try to get cache dir size from app's data directory
+                        File appCacheDir = new File(app.dataDir, "cache");
+                        if (appCacheDir.exists() && appCacheDir.isDirectory()) {
+                            totalCacheBytes += getDirSize(appCacheDir);
+                            appCount++;
+                        }
+                        
+                        // Also check code_cache
+                        File codeCacheDir = new File(app.dataDir, "code_cache");
+                        if (codeCacheDir.exists() && codeCacheDir.isDirectory()) {
+                            totalCacheBytes += getDirSize(codeCacheDir);
+                        }
+                    } catch (Exception e) {
+                        // Skip apps we can't access
+                    }
+                }
             }
 
             JSObject result = new JSObject();
@@ -1244,10 +1268,29 @@ public class DeviceDiagnosticsPlugin extends Plugin {
             result.put("totalCacheMb", totalCacheBytes / (1024.0 * 1024.0));
             result.put("totalCacheGb", totalCacheBytes / (1024.0 * 1024.0 * 1024.0));
             result.put("appsScanned", appCount);
+            result.put("hasPermission", hasPermission);
+            result.put("needsPermission", !hasPermission);
             call.resolve(result);
         } catch (Exception e) {
             call.reject("Error getting cache size: " + e.getMessage());
         }
+    }
+    
+    private long getDirSize(File dir) {
+        long size = 0;
+        if (dir != null && dir.exists()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isDirectory()) {
+                        size += getDirSize(file);
+                    } else {
+                        size += file.length();
+                    }
+                }
+            }
+        }
+        return size;
     }
 
     @PluginMethod

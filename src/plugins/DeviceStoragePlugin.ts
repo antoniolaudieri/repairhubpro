@@ -110,6 +110,8 @@ export interface CacheInfo {
   totalCacheMb: number;
   totalCacheGb: number;
   appsScanned: number;
+  hasPermission: boolean;
+  needsPermission: boolean;
 }
 
 export interface ClearCacheResult {
