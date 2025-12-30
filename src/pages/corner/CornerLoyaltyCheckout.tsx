@@ -292,7 +292,7 @@ export default function CornerLoyaltyCheckout() {
           <CardContent className="pt-6">
             <div className="text-center mb-6">
               <p className="text-sm text-muted-foreground mb-2">Prezzo annuale</p>
-              <p className="text-5xl font-bold text-primary">€40</p>
+              <p className="text-5xl font-bold text-primary">€30</p>
               <Badge variant="outline" className="mt-2">Validità 12 mesi</Badge>
             </div>
 
