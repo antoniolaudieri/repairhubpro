@@ -142,9 +142,12 @@ export const ThreatResultCard = ({ result, index, onUninstall }: ThreatResultCar
               <div className="relative flex-shrink-0">
                 {result.iconBase64 ? (
                   <img
-                    src={`data:image/png;base64,${result.iconBase64}`}
+                    src={result.iconBase64.startsWith('data:') ? result.iconBase64 : `data:image/png;base64,${result.iconBase64}`}
                     alt=""
                     className="h-12 w-12 rounded-xl"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
                   />
                 ) : (
                   <div
