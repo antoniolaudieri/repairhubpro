@@ -8,9 +8,9 @@ const corsHeaders = {
 };
 
 // Corner loyalty pricing
-const CORNER_LOYALTY_PRICE = 40; // €40 for customer
+const CORNER_LOYALTY_PRICE = 30; // €30 for customer
 const CORNER_COMMISSION = 10; // €10 for corner
-const PLATFORM_COMMISSION = 30; // €30 remaining (Centro gets this minus platform fee)
+const PLATFORM_COMMISSION = 20; // €20 remaining (Centro gets this minus platform fee)
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
