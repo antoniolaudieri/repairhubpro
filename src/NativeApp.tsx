@@ -8,6 +8,7 @@ import { NativeDiagnostics } from "@/pages/NativeDiagnostics";
 import { NativeProfile } from "@/pages/NativeProfile";
 import { BottomNavBar, NativeView } from "@/components/native/BottomNavBar";
 import { UpdateAvailableDialog } from "@/components/native/UpdateAvailableDialog";
+import { useAppUpdate } from "@/hooks/useAppUpdate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditCard, LogOut } from "lucide-react";
@@ -26,38 +27,6 @@ interface LoyaltyCard {
   };
 }
 
-// Lazy load hooks to prevent blocking - these run AFTER app is ready
-const useDeferredHooks = (isReady: boolean) => {
-  const [updateState, setUpdateState] = useState({
-    showUpdateDialog: false,
-    currentVersion: '',
-    latestVersion: '',
-    changelog: '',
-    downloadUrl: '',
-    releaseDate: '',
-    dismissUpdate: (_v: string) => {},
-  });
-
-  useEffect(() => {
-    if (!isReady) return;
-    
-    // Defer hook loading to prevent blocking
-    const timer = setTimeout(async () => {
-      try {
-        const { useAppUpdate } = await import("@/hooks/useAppUpdate");
-        // We can't call hooks dynamically, so we'll just trigger notification prompt
-        const { useFirstLaunchNotificationPrompt } = await import("@/hooks/useFirstLaunchNotificationPrompt");
-      } catch (e) {
-        console.log('[NativeApp] Deferred hooks error:', e);
-      }
-    }, 1000);
-
-    return () => clearTimeout(timer);
-  }, [isReady]);
-
-  return updateState;
-};
-
 const NativeApp = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,6 +34,17 @@ const NativeApp = () => {
   const [loyaltyCard, setLoyaltyCard] = useState<LoyaltyCard | null>(null);
   const [cardLoading, setCardLoading] = useState(true);
   const [appReady, setAppReady] = useState(false);
+
+  // Hook per controllare aggiornamenti app
+  const {
+    showUpdateDialog,
+    currentVersion,
+    latestVersion,
+    changelog,
+    downloadUrl,
+    releaseDate,
+    dismissUpdate,
+  } = useAppUpdate();
 
   // Auth state with AGGRESSIVE timeout to prevent infinite loading
   useEffect(() => {
@@ -263,6 +243,17 @@ const NativeApp = () => {
         {renderContent()}
       </div>
       <BottomNavBar currentView={currentView} onNavigate={setCurrentView} />
+      
+      {/* Dialog aggiornamento app */}
+      <UpdateAvailableDialog
+        open={showUpdateDialog}
+        onDismiss={() => dismissUpdate(latestVersion)}
+        currentVersion={currentVersion}
+        latestVersion={latestVersion}
+        changelog={changelog}
+        downloadUrl={downloadUrl}
+        releaseDate={releaseDate}
+      />
     </div>
   );
 };
