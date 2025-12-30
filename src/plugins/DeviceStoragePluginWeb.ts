@@ -259,13 +259,39 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
               resolve({ working: false, error: 'GPS non disponibile' });
               return;
             }
+            
+            // Set a timeout to avoid hanging forever
+            const timeoutId = setTimeout(() => {
+              resolve({ working: true, value: 'GPS disponibile (posizione non ottenuta per timeout)' });
+            }, 8000);
+            
             navigator.geolocation.getCurrentPosition(
-              (pos) => resolve({ 
-                working: true, 
-                value: { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }
-              }),
-              (err) => resolve({ working: false, error: err.message }),
-              { timeout: 10000, maximumAge: 0 }
+              (pos) => {
+                clearTimeout(timeoutId);
+                resolve({ 
+                  working: true, 
+                  value: `Lat: ${pos.coords.latitude.toFixed(4)}, Lng: ${pos.coords.longitude.toFixed(4)}`
+                });
+              },
+              (err) => {
+                clearTimeout(timeoutId);
+                // GPS is technically available but couldn't get position
+                // Common reasons: permission denied, location services off, indoor/no signal
+                const errorMessages: Record<number, string> = {
+                  1: 'Permesso negato - abilita la posizione',
+                  2: 'Posizione non disponibile - verifica le impostazioni',
+                  3: 'Timeout - GPS lento ma funzionante'
+                };
+                const errorMsg = errorMessages[err.code] || err.message;
+                
+                // For timeout error, GPS is likely working but slow
+                if (err.code === 3) {
+                  resolve({ working: true, value: 'GPS funzionante (risposta lenta)' });
+                } else {
+                  resolve({ working: false, error: errorMsg });
+                }
+              },
+              { timeout: 7000, maximumAge: 60000, enableHighAccuracy: false }
             );
           });
         

@@ -447,41 +447,97 @@ public class DeviceDiagnosticsPlugin extends Plugin {
         try {
             SensorManager sensorManager = (SensorManager) getContext().getSystemService(Context.SENSOR_SERVICE);
             boolean working = false;
+            String errorMsg = null;
             
             switch (sensorType.toLowerCase()) {
                 case "accelerometer":
-                    working = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) != null;
+                    Sensor accel = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+                    working = accel != null;
+                    if (working) {
+                        result.put("value", "Sensore rilevato: " + accel.getName());
+                    }
                     break;
                 case "gyroscope":
-                    working = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null;
+                    Sensor gyro = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+                    working = gyro != null;
+                    if (working) {
+                        result.put("value", "Sensore rilevato: " + gyro.getName());
+                    }
                     break;
                 case "magnetometer":
-                    working = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null;
+                    Sensor mag = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+                    working = mag != null;
+                    if (working) {
+                        result.put("value", "Sensore rilevato: " + mag.getName());
+                    }
                     break;
                 case "proximity":
-                    working = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY) != null;
+                    Sensor prox = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY);
+                    working = prox != null;
+                    if (working) {
+                        result.put("value", "Sensore rilevato: " + prox.getName());
+                    }
                     break;
                 case "light":
-                    working = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT) != null;
+                    Sensor light = sensorManager.getDefaultSensor(Sensor.TYPE_LIGHT);
+                    working = light != null;
+                    if (working) {
+                        result.put("value", "Sensore rilevato: " + light.getName());
+                    }
                     break;
                 case "barometer":
-                    working = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE) != null;
+                    Sensor baro = sensorManager.getDefaultSensor(Sensor.TYPE_PRESSURE);
+                    working = baro != null;
+                    if (working) {
+                        result.put("value", "Sensore rilevato: " + baro.getName());
+                    }
                     break;
                 case "gps":
-                    working = getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS);
+                    // Check if GPS hardware exists
+                    boolean hasGpsFeature = getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_LOCATION_GPS);
+                    if (!hasGpsFeature) {
+                        working = false;
+                        errorMsg = "Hardware GPS non presente";
+                    } else {
+                        // Check if location is enabled
+                        android.location.LocationManager locationManager = (android.location.LocationManager) 
+                            getContext().getSystemService(Context.LOCATION_SERVICE);
+                        
+                        boolean gpsEnabled = locationManager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER);
+                        boolean networkEnabled = locationManager.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER);
+                        
+                        if (gpsEnabled || networkEnabled) {
+                            working = true;
+                            result.put("value", "GPS " + (gpsEnabled ? "attivo" : "via rete"));
+                        } else {
+                            working = false;
+                            errorMsg = "Localizzazione disattivata nelle impostazioni";
+                        }
+                    }
                     break;
                 case "microphone":
                     working = getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_MICROPHONE);
+                    if (working) {
+                        result.put("value", "Microfono disponibile");
+                    }
                     break;
                 case "camera":
                     working = getContext().getPackageManager().hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY);
+                    if (working) {
+                        result.put("value", "Fotocamera disponibile");
+                    }
                     break;
+                default:
+                    errorMsg = "Sensore non riconosciuto: " + sensorType;
             }
             
             result.put("working", working);
+            if (errorMsg != null) {
+                result.put("error", errorMsg);
+            }
             call.resolve(result);
         } catch (Exception e) {
-        result.put("working", false);
+            result.put("working", false);
             result.put("error", e.getMessage());
             call.resolve(result);
         }
