@@ -56,15 +56,19 @@ export const useAppUpdate = () => {
   const checkForUpdates = useCallback(async (force = false) => {
     // Controlla se l'aggiornamento è già stato rimandato (solo se non forzato)
     if (!force) {
-      const dismissedData = localStorage.getItem(STORAGE_KEY);
-      if (dismissedData) {
-        const { version, timestamp } = JSON.parse(dismissedData);
-        const hoursSinceDismissed = (Date.now() - timestamp) / (1000 * 60 * 60);
-        // Se è stato rimandato meno di 24 ore fa per la stessa versione, non mostrare
-        if (hoursSinceDismissed < 24) {
-          setIsDismissed(true);
-          return;
+      try {
+        const dismissedData = localStorage.getItem(STORAGE_KEY);
+        if (dismissedData) {
+          const { version, timestamp } = JSON.parse(dismissedData);
+          const hoursSinceDismissed = (Date.now() - timestamp) / (1000 * 60 * 60);
+          // Se è stato rimandato meno di 24 ore fa per la stessa versione, non mostrare
+          if (hoursSinceDismissed < 24) {
+            setIsDismissed(true);
+            return;
+          }
         }
+      } catch (e) {
+        console.log('Error reading localStorage:', e);
       }
     }
 
@@ -132,18 +136,26 @@ export const useAppUpdate = () => {
   }, []);
 
   const dismissUpdate = useCallback((version: string) => {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        version,
-        timestamp: Date.now(),
-      })
-    );
+    try {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          version,
+          timestamp: Date.now(),
+        })
+      );
+    } catch (e) {
+      console.log('Error saving to localStorage:', e);
+    }
     setIsDismissed(true);
   }, []);
 
   const clearDismissal = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      console.log('Error removing from localStorage:', e);
+    }
     setIsDismissed(false);
   }, []);
 

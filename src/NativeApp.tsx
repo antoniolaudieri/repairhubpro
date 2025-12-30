@@ -35,34 +35,82 @@ const NativeApp = () => {
   const [loyaltyCard, setLoyaltyCard] = useState<LoyaltyCard | null>(null);
   const [cardLoading, setCardLoading] = useState(true);
 
-  const {
-    showUpdateDialog,
-    currentVersion,
-    latestVersion,
-    changelog,
-    downloadUrl,
-    releaseDate,
-    dismissUpdate,
-  } = useAppUpdate();
+  // Wrap hooks in try-catch to prevent crashes on Android
+  let updateState = {
+    showUpdateDialog: false,
+    currentVersion: '',
+    latestVersion: '',
+    changelog: '',
+    downloadUrl: '',
+    releaseDate: '',
+    dismissUpdate: (_v: string) => {},
+  };
+  
+  try {
+    const update = useAppUpdate();
+    updateState = {
+      showUpdateDialog: update.showUpdateDialog,
+      currentVersion: update.currentVersion,
+      latestVersion: update.latestVersion,
+      changelog: update.changelog,
+      downloadUrl: update.downloadUrl,
+      releaseDate: update.releaseDate,
+      dismissUpdate: update.dismissUpdate,
+    };
+  } catch (e) {
+    console.log('useAppUpdate error:', e);
+  }
 
-  useFirstLaunchNotificationPrompt();
+  // Call notification prompt hook in a safe way
+  try {
+    useFirstLaunchNotificationPrompt();
+  } catch (e) {
+    console.log('useFirstLaunchNotificationPrompt error:', e);
+  }
 
-  // Auth state
+  // Auth state with timeout to prevent infinite loading
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    let isMounted = true;
+    
+    // Safety timeout - force end loading after 10 seconds max
+    const safetyTimeout = setTimeout(() => {
+      if (isMounted && loading) {
+        console.log('[NativeApp] Safety timeout triggered, forcing loading to end');
+        setLoading(false);
+        setCardLoading(false);
+      }
+    }, 10000);
+
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (isMounted) {
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.log('[NativeApp] getSession error:', err);
+        if (isMounted) {
+          setUser(null);
+          setLoading(false);
+        }
+      });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
+        if (isMounted) {
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
       }
     );
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      isMounted = false;
+      clearTimeout(safetyTimeout);
+      subscription.unsubscribe();
+    };
+  }, [loading]);
 
   // Fetch loyalty card
   const fetchLoyaltyCard = useCallback(async () => {
@@ -196,13 +244,13 @@ const NativeApp = () => {
       </div>
       <BottomNavBar currentView={currentView} onNavigate={setCurrentView} />
       <UpdateAvailableDialog
-        open={showUpdateDialog}
-        onDismiss={() => dismissUpdate(latestVersion)}
-        currentVersion={currentVersion}
-        latestVersion={latestVersion}
-        changelog={changelog}
-        downloadUrl={downloadUrl}
-        releaseDate={releaseDate}
+        open={updateState.showUpdateDialog}
+        onDismiss={() => updateState.dismissUpdate(updateState.latestVersion)}
+        currentVersion={updateState.currentVersion}
+        latestVersion={updateState.latestVersion}
+        changelog={updateState.changelog}
+        downloadUrl={updateState.downloadUrl}
+        releaseDate={updateState.releaseDate}
       />
     </div>
   );
