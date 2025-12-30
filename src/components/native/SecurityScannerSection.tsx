@@ -72,7 +72,7 @@ export const SecurityScannerSection = () => {
   };
 
   return (
-    <div className="space-y-4 min-h-0 overflow-visible">
+    <div className="space-y-4 min-h-0 overflow-visible px-1">
       {/* Hero Card */}
       <Card className="relative overflow-visible border-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/15 to-pink-500/10">
         <CardContent className="p-5">
