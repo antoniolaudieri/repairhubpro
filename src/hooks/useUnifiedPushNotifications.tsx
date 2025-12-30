@@ -53,17 +53,35 @@ export function useUnifiedPushNotifications() {
   // Initialize the appropriate push hook based on platform
   useEffect(() => {
     const init = async () => {
+      // Set a timeout to ensure we never get stuck in loading state
+      const timeout = setTimeout(() => {
+        setState(prev => {
+          if (prev.isLoading) {
+            console.log('[UnifiedPush] Init timeout, falling back to disabled state');
+            return { ...prev, isSupported: false, isLoading: false };
+          }
+          return prev;
+        });
+      }, 5000);
+
       if (isNative) {
         // Dynamically import native push hook to avoid issues on web
         try {
-          const { useNativePushNotifications } = await import('./useNativePushNotifications');
-          // We can't use hooks dynamically, so we'll implement inline
           const { PushNotifications } = await import('@capacitor/push-notifications');
           
-          // Check current permission status
-          const permResult = await PushNotifications.checkPermissions();
-          const isGranted = permResult.receive === 'granted';
+          // Check current permission status with timeout
+          let isGranted = false;
+          try {
+            const permResult = await Promise.race([
+              PushNotifications.checkPermissions(),
+              new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Permission check timeout')), 3000))
+            ]);
+            isGranted = permResult.receive === 'granted';
+          } catch (permError) {
+            console.log('[UnifiedPush] Permission check failed:', permError);
+          }
           
+          clearTimeout(timeout);
           setState({
             isSupported: true,
             isGranted,
@@ -125,6 +143,7 @@ export function useUnifiedPushNotifications() {
 
         } catch (error) {
           console.log('[UnifiedPush] Native push not available:', error);
+          clearTimeout(timeout);
           setState(prev => ({ ...prev, isSupported: false, isLoading: false }));
         }
       } else {
