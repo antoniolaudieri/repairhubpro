@@ -78,9 +78,13 @@ export const ScanProgressDetail = ({
             <div className="relative">
               {currentAppIcon ? (
                 <img
-                  src={`data:image/png;base64,${currentAppIcon}`}
+                  src={currentAppIcon.startsWith('data:') ? currentAppIcon : `data:image/png;base64,${currentAppIcon}`}
                   alt=""
                   className="h-12 w-12 rounded-xl"
+                  onError={(e) => {
+                    // Hide broken image
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
                 />
               ) : (
                 <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center">
@@ -121,9 +125,12 @@ export const ScanProgressDetail = ({
                   {/* App mini icon */}
                   {app.icon ? (
                     <img
-                      src={`data:image/png;base64,${app.icon}`}
+                      src={app.icon.startsWith('data:') ? app.icon : `data:image/png;base64,${app.icon}`}
                       alt=""
                       className="h-5 w-5 rounded"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                   ) : (
                     <div className="h-5 w-5 rounded bg-muted flex items-center justify-center">
