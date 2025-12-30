@@ -312,7 +312,7 @@ export default function CornerTesseraFedelta() {
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <span className="text-xl font-bold text-primary">3</span>
               </div>
-              <h4 className="font-medium mb-1">Pagamento €40</h4>
+              <h4 className="font-medium mb-1">Pagamento €30</h4>
               <p className="text-sm text-muted-foreground">Il cliente paga con Stripe</p>
             </div>
             <div className="text-center p-4">
