@@ -1210,4 +1210,126 @@ public class DeviceDiagnosticsPlugin extends Plugin {
         drawable.draw(canvas);
         return bitmap;
     }
+
+    @PluginMethod
+    public void getTotalCacheSize(PluginCall call) {
+        try {
+            Context context = getContext();
+            PackageManager pm = context.getPackageManager();
+            long totalCacheBytes = 0;
+            int appCount = 0;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                StorageStatsManager storageStatsManager = (StorageStatsManager) context.getSystemService(Context.STORAGE_STATS_SERVICE);
+                
+                if (storageStatsManager != null && hasUsageStatsPermission()) {
+                    List<ApplicationInfo> apps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+                    android.os.UserHandle userHandle = android.os.Process.myUserHandle();
+                    UUID storageUuid = StorageManager.UUID_DEFAULT;
+
+                    for (ApplicationInfo app : apps) {
+                        try {
+                            StorageStats stats = storageStatsManager.queryStatsForPackage(storageUuid, app.packageName, userHandle);
+                            totalCacheBytes += stats.getCacheBytes();
+                            appCount++;
+                        } catch (Exception e) {
+                            // Skip apps we can't query
+                        }
+                    }
+                }
+            }
+
+            JSObject result = new JSObject();
+            result.put("totalCacheBytes", totalCacheBytes);
+            result.put("totalCacheMb", totalCacheBytes / (1024.0 * 1024.0));
+            result.put("totalCacheGb", totalCacheBytes / (1024.0 * 1024.0 * 1024.0));
+            result.put("appsScanned", appCount);
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("Error getting cache size: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void openStorageSettings(PluginCall call) {
+        try {
+            Context context = getContext();
+            Intent intent;
+            
+            // Try to open the storage manager (Free up space)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N_MR1) {
+                intent = new Intent(StorageManager.ACTION_MANAGE_STORAGE);
+            } else {
+                // Fallback to internal storage settings
+                intent = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
+            }
+            
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+            
+            JSObject result = new JSObject();
+            result.put("opened", true);
+            call.resolve(result);
+        } catch (Exception e) {
+            // Fallback to device settings
+            try {
+                Intent fallbackIntent = new Intent(Settings.ACTION_SETTINGS);
+                fallbackIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                getContext().startActivity(fallbackIntent);
+                
+                JSObject result = new JSObject();
+                result.put("opened", true);
+                result.put("fallback", true);
+                call.resolve(result);
+            } catch (Exception e2) {
+                call.reject("Error opening storage settings: " + e2.getMessage());
+            }
+        }
+    }
+
+    @PluginMethod
+    public void clearAppCache(PluginCall call) {
+        try {
+            Context context = getContext();
+            
+            // Clear this app's own cache
+            File cacheDir = context.getCacheDir();
+            long freedBytes = deleteDir(cacheDir);
+            
+            // Also clear external cache if available
+            File externalCacheDir = context.getExternalCacheDir();
+            if (externalCacheDir != null) {
+                freedBytes += deleteDir(externalCacheDir);
+            }
+            
+            JSObject result = new JSObject();
+            result.put("success", true);
+            result.put("freedBytes", freedBytes);
+            result.put("freedMb", freedBytes / (1024.0 * 1024.0));
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("Error clearing cache: " + e.getMessage());
+        }
+    }
+
+    private long deleteDir(File dir) {
+        long freedBytes = 0;
+        if (dir != null && dir.isDirectory()) {
+            String[] children = dir.list();
+            if (children != null) {
+                for (String child : children) {
+                    File file = new File(dir, child);
+                    if (file.isDirectory()) {
+                        freedBytes += deleteDir(file);
+                    } else {
+                        long fileSize = file.length();
+                        if (file.delete()) {
+                            freedBytes += fileSize;
+                        }
+                    }
+                }
+            }
+        }
+        return freedBytes;
+    }
 }

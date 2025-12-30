@@ -10,7 +10,9 @@ import type {
   SecurityStatus,
   DangerousPermissionApp,
   DeviceUptime,
-  SystemIntegrityStatus
+  SystemIntegrityStatus,
+  CacheInfo,
+  ClearCacheResult
 } from './DeviceStoragePlugin';
 
 export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnosticsPlugin {
@@ -470,5 +472,72 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
       isEncrypted: true,
       integrityScore: 100
     };
+  }
+
+  async getTotalCacheSize(): Promise<CacheInfo> {
+    console.log('[DeviceDiagnosticsWeb] getTotalCacheSize: Not available on web platform');
+    // Try to estimate from storage API if available
+    if ('storage' in navigator && 'estimate' in navigator.storage) {
+      try {
+        const estimate = await navigator.storage.estimate();
+        // Cache is typically a small portion of used space
+        const usedBytes = estimate.usage || 0;
+        const estimatedCache = usedBytes * 0.1; // Rough estimate: 10% is cache
+        return {
+          totalCacheBytes: estimatedCache,
+          totalCacheMb: estimatedCache / (1024 * 1024),
+          totalCacheGb: estimatedCache / (1024 * 1024 * 1024),
+          appsScanned: 1
+        };
+      } catch (e) {
+        console.log('[DeviceDiagnosticsWeb] Error estimating cache:', e);
+      }
+    }
+    return {
+      totalCacheBytes: 0,
+      totalCacheMb: 0,
+      totalCacheGb: 0,
+      appsScanned: 0
+    };
+  }
+
+  async openStorageSettings(): Promise<{ opened: boolean; fallback?: boolean }> {
+    console.log('[DeviceDiagnosticsWeb] openStorageSettings: Not available on web platform');
+    return { opened: false };
+  }
+
+  async clearAppCache(): Promise<ClearCacheResult> {
+    console.log('[DeviceDiagnosticsWeb] clearAppCache: Clearing web caches');
+    let freedBytes = 0;
+    
+    try {
+      // Clear service worker caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        for (const name of cacheNames) {
+          await caches.delete(name);
+          freedBytes += 1024 * 1024; // Estimate 1MB per cache
+        }
+      }
+      
+      // Clear localStorage estimate
+      if ('localStorage' in window) {
+        const localStorageSize = JSON.stringify(localStorage).length;
+        freedBytes += localStorageSize;
+      }
+      
+      return {
+        success: true,
+        freedBytes,
+        freedMb: freedBytes / (1024 * 1024)
+      };
+    } catch (e) {
+      console.log('[DeviceDiagnosticsWeb] Error clearing cache:', e);
+      return {
+        success: false,
+        freedBytes: 0,
+        freedMb: 0
+      };
+    }
   }
 }

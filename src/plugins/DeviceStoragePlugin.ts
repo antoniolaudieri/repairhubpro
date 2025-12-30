@@ -105,6 +105,19 @@ export interface SystemIntegrityStatus {
   integrityScore: number;
 }
 
+export interface CacheInfo {
+  totalCacheBytes: number;
+  totalCacheMb: number;
+  totalCacheGb: number;
+  appsScanned: number;
+}
+
+export interface ClearCacheResult {
+  success: boolean;
+  freedBytes: number;
+  freedMb: number;
+}
+
 export interface DeviceDiagnosticsPlugin {
   getStorageInfo(): Promise<DeviceStorageInfo>;
   getRamInfo(): Promise<RamInfo>;
@@ -125,6 +138,10 @@ export interface DeviceDiagnosticsPlugin {
   getDangerousPermissions(): Promise<{ apps: DangerousPermissionApp[]; totalApps: number }>;
   getDeviceUptime(): Promise<DeviceUptime>;
   checkSystemIntegrity(): Promise<SystemIntegrityStatus>;
+  // Cache management
+  getTotalCacheSize(): Promise<CacheInfo>;
+  openStorageSettings(): Promise<{ opened: boolean; fallback?: boolean }>;
+  clearAppCache(): Promise<ClearCacheResult>;
 }
 
 // This will use the native implementation on Android/iOS, or fallback to web
