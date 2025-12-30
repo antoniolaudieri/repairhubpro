@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2, Settings, Loader2, HardDrive, AlertTriangle, Shield } from "lucide-react";
+import { Trash2, Settings, Loader2, HardDrive, AlertTriangle, Shield, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 
 interface CacheCleanerWidgetProps {
@@ -10,6 +10,7 @@ interface CacheCleanerWidgetProps {
 
 export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetProps) => {
   const [totalCacheSize, setTotalCacheSize] = useState<number | null>(null);
+  const [ownAppCacheSize, setOwnAppCacheSize] = useState<number | null>(null);
   const [appsScanned, setAppsScanned] = useState<number>(0);
   const [needsPermission, setNeedsPermission] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,10 +24,17 @@ export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetPro
     setIsLoading(true);
     try {
       const DeviceDiagnostics = (await import("@/plugins/DeviceStoragePlugin")).default;
-      const result = await DeviceDiagnostics.getTotalCacheSize();
-      setTotalCacheSize(result.totalCacheMb);
-      setAppsScanned(result.appsScanned);
-      setNeedsPermission(result.needsPermission);
+      
+      // Load both total cache and own app cache in parallel
+      const [totalResult, ownResult] = await Promise.all([
+        DeviceDiagnostics.getTotalCacheSize(),
+        DeviceDiagnostics.getOwnAppCacheSize()
+      ]);
+      
+      setTotalCacheSize(totalResult.totalCacheMb);
+      setAppsScanned(totalResult.appsScanned);
+      setNeedsPermission(totalResult.needsPermission);
+      setOwnAppCacheSize(ownResult.cacheSizeMb);
     } catch (error) {
       console.error("Error loading cache size:", error);
     } finally {
@@ -54,6 +62,9 @@ export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetPro
     try {
       const DeviceDiagnostics = (await import("@/plugins/DeviceStoragePlugin")).default;
       await DeviceDiagnostics.openStorageSettings();
+      toast.info("Pulisci la cache delle app", {
+        description: "Seleziona le app e svuota la cache per liberare spazio",
+      });
     } catch (error) {
       console.error("Error opening storage settings:", error);
       toast.error("Impossibile aprire le impostazioni");
@@ -67,9 +78,16 @@ export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetPro
       const result = await DeviceDiagnostics.clearAppCache();
       
       if (result.success) {
-        toast.success("Cache app pulita!", {
-          description: `Liberati ${result.freedMb?.toFixed(1) || 0} MB`,
-        });
+        const freedMb = result.freedMb || 0;
+        if (freedMb > 0.01) {
+          toast.success("Cache app pulita!", {
+            description: `Liberati ${formatSize(freedMb)}`,
+          });
+        } else {
+          toast.info("Cache già pulita", {
+            description: "La cache di questa app era già vuota",
+          });
+        }
         // Reload cache size
         await loadCacheSize();
       } else {
@@ -86,8 +104,8 @@ export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetPro
   const formatSize = (mb: number | null) => {
     if (mb === null) return "—";
     if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
-    if (mb < 1) return `${(mb * 1024).toFixed(0)} KB`;
-    return `${mb.toFixed(0)} MB`;
+    if (mb < 0.1) return `${(mb * 1024).toFixed(0)} KB`;
+    return `${mb.toFixed(1)} MB`;
   };
 
   const showWarning = storagePercentUsed && storagePercentUsed > 80;
@@ -101,11 +119,26 @@ export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetPro
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Cache Info */}
+        {/* Own App Cache Info */}
+        <div className="flex items-center justify-between p-2 rounded-md bg-primary/5 border border-primary/10">
+          <div className="flex items-center gap-2">
+            <Smartphone className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">Cache di questa app</span>
+          </div>
+          {isLoading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : (
+            <span className="text-sm font-bold text-primary">
+              {formatSize(ownAppCacheSize)}
+            </span>
+          )}
+        </div>
+
+        {/* Total System Cache Info */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <HardDrive className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Cache totale</span>
+            <span className="text-sm text-muted-foreground">Cache sistema (tutte le app)</span>
           </div>
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -157,7 +190,7 @@ export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetPro
             size="sm"
             className="flex-1"
             onClick={handleClearAppCache}
-            disabled={isClearing}
+            disabled={isClearing || (ownAppCacheSize !== null && ownAppCacheSize < 0.01)}
           >
             {isClearing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -178,7 +211,7 @@ export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetPro
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          "Pulisci Tutto" apre le impostazioni Android per liberare cache di tutte le app
+          "Pulisci App" svuota solo la cache di questa app. Per liberare la cache di tutte le app usa "Pulisci Tutto".
         </p>
       </CardContent>
     </Card>

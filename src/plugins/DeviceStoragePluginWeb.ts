@@ -12,7 +12,8 @@ import type {
   DeviceUptime,
   SystemIntegrityStatus,
   CacheInfo,
-  ClearCacheResult
+  ClearCacheResult,
+  OwnAppCacheInfo
 } from './DeviceStoragePlugin';
 
 export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnosticsPlugin {
@@ -502,6 +503,33 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
       appsScanned: 0,
       hasPermission: true,
       needsPermission: false
+    };
+  }
+
+  async getOwnAppCacheSize(): Promise<OwnAppCacheInfo> {
+    console.log('[DeviceDiagnosticsWeb] getOwnAppCacheSize: Estimating from web storage');
+    // Estimate from local storage and caches
+    let cacheBytes = 0;
+    
+    try {
+      if ('localStorage' in window) {
+        cacheBytes += JSON.stringify(localStorage).length * 2; // UTF-16 encoding
+      }
+      if ('sessionStorage' in window) {
+        cacheBytes += JSON.stringify(sessionStorage).length * 2;
+      }
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        cacheBytes += cacheNames.length * 512 * 1024; // Estimate 512KB per cache
+      }
+    } catch (e) {
+      console.log('[DeviceDiagnosticsWeb] Error estimating own cache:', e);
+    }
+    
+    return {
+      cacheSizeBytes: cacheBytes,
+      cacheSizeMb: cacheBytes / (1024 * 1024),
+      cacheSizeKb: cacheBytes / 1024
     };
   }
 
