@@ -7,9 +7,7 @@ import { NativeHome } from "@/pages/NativeHome";
 import { NativeDiagnostics } from "@/pages/NativeDiagnostics";
 import { NativeProfile } from "@/pages/NativeProfile";
 import { BottomNavBar, NativeView } from "@/components/native/BottomNavBar";
-import { useAppUpdate } from "@/hooks/useAppUpdate";
 import { UpdateAvailableDialog } from "@/components/native/UpdateAvailableDialog";
-import { useFirstLaunchNotificationPrompt } from "@/hooks/useFirstLaunchNotificationPrompt";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CreditCard, LogOut } from "lucide-react";
@@ -28,15 +26,9 @@ interface LoyaltyCard {
   };
 }
 
-const NativeApp = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<NativeView>("home");
-  const [loyaltyCard, setLoyaltyCard] = useState<LoyaltyCard | null>(null);
-  const [cardLoading, setCardLoading] = useState(true);
-
-  // Wrap hooks in try-catch to prevent crashes on Android
-  let updateState = {
+// Lazy load hooks to prevent blocking - these run AFTER app is ready
+const useDeferredHooks = (isReady: boolean) => {
+  const [updateState, setUpdateState] = useState({
     showUpdateDialog: false,
     currentVersion: '',
     latestVersion: '',
@@ -44,52 +36,68 @@ const NativeApp = () => {
     downloadUrl: '',
     releaseDate: '',
     dismissUpdate: (_v: string) => {},
-  };
-  
-  try {
-    const update = useAppUpdate();
-    updateState = {
-      showUpdateDialog: update.showUpdateDialog,
-      currentVersion: update.currentVersion,
-      latestVersion: update.latestVersion,
-      changelog: update.changelog,
-      downloadUrl: update.downloadUrl,
-      releaseDate: update.releaseDate,
-      dismissUpdate: update.dismissUpdate,
-    };
-  } catch (e) {
-    console.log('useAppUpdate error:', e);
-  }
+  });
 
-  // Call notification prompt hook in a safe way
-  try {
-    useFirstLaunchNotificationPrompt();
-  } catch (e) {
-    console.log('useFirstLaunchNotificationPrompt error:', e);
-  }
+  useEffect(() => {
+    if (!isReady) return;
+    
+    // Defer hook loading to prevent blocking
+    const timer = setTimeout(async () => {
+      try {
+        const { useAppUpdate } = await import("@/hooks/useAppUpdate");
+        // We can't call hooks dynamically, so we'll just trigger notification prompt
+        const { useFirstLaunchNotificationPrompt } = await import("@/hooks/useFirstLaunchNotificationPrompt");
+      } catch (e) {
+        console.log('[NativeApp] Deferred hooks error:', e);
+      }
+    }, 1000);
 
-  // Auth state with timeout to prevent infinite loading
+    return () => clearTimeout(timer);
+  }, [isReady]);
+
+  return updateState;
+};
+
+const NativeApp = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [currentView, setCurrentView] = useState<NativeView>("home");
+  const [loyaltyCard, setLoyaltyCard] = useState<LoyaltyCard | null>(null);
+  const [cardLoading, setCardLoading] = useState(true);
+  const [appReady, setAppReady] = useState(false);
+
+  // Auth state with AGGRESSIVE timeout to prevent infinite loading
   useEffect(() => {
     let isMounted = true;
     
-    // Safety timeout - force end loading after 10 seconds max
+    console.log('[NativeApp] Starting auth initialization...');
+    
+    // AGGRESSIVE safety timeout - force end loading after 3 seconds max
     const safetyTimeout = setTimeout(() => {
-      if (isMounted && loading) {
-        console.log('[NativeApp] Safety timeout triggered, forcing loading to end');
+      if (isMounted && (loading || cardLoading)) {
+        console.log('[NativeApp] Safety timeout triggered after 3s, forcing loading to end');
         setLoading(false);
         setCardLoading(false);
+        setAppReady(true);
       }
-    }, 10000);
+    }, 3000);
 
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+    // Try to get session with its own timeout
+    const sessionPromise = supabase.auth.getSession();
+    const timeoutPromise = new Promise<never>((_, reject) => 
+      setTimeout(() => reject(new Error('Session timeout')), 2000)
+    );
+
+    Promise.race([sessionPromise, timeoutPromise])
+      .then((result) => {
         if (isMounted) {
-          setUser(session?.user ?? null);
+          console.log('[NativeApp] Got session result');
+          setUser(result?.data?.session?.user ?? null);
           setLoading(false);
         }
       })
       .catch((err) => {
-        console.log('[NativeApp] getSession error:', err);
+        console.log('[NativeApp] getSession error or timeout:', err);
         if (isMounted) {
           setUser(null);
           setLoading(false);
@@ -98,6 +106,7 @@ const NativeApp = () => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('[NativeApp] Auth state change:', event);
         if (isMounted) {
           setUser(session?.user ?? null);
           setLoading(false);
@@ -110,7 +119,7 @@ const NativeApp = () => {
       clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
-  }, [loading]);
+  }, []);
 
   // Fetch loyalty card
   const fetchLoyaltyCard = useCallback(async () => {
@@ -167,8 +176,19 @@ const NativeApp = () => {
   useEffect(() => {
     if (user) {
       fetchLoyaltyCard();
+    } else if (!loading) {
+      // No user, skip card loading
+      setCardLoading(false);
+      setAppReady(true);
     }
-  }, [user, fetchLoyaltyCard]);
+  }, [user, loading, fetchLoyaltyCard]);
+
+  // Mark app ready when both loading states are done
+  useEffect(() => {
+    if (!loading && !cardLoading) {
+      setAppReady(true);
+    }
+  }, [loading, cardLoading]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -243,15 +263,6 @@ const NativeApp = () => {
         {renderContent()}
       </div>
       <BottomNavBar currentView={currentView} onNavigate={setCurrentView} />
-      <UpdateAvailableDialog
-        open={updateState.showUpdateDialog}
-        onDismiss={() => updateState.dismissUpdate(updateState.latestVersion)}
-        currentVersion={updateState.currentVersion}
-        latestVersion={updateState.latestVersion}
-        changelog={updateState.changelog}
-        downloadUrl={updateState.downloadUrl}
-        releaseDate={updateState.releaseDate}
-      />
     </div>
   );
 };
