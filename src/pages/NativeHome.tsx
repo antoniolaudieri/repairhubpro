@@ -9,6 +9,7 @@ import { QuickStatsRow } from "@/components/native/QuickStatsRow";
 import { QuickActionsBar } from "@/components/native/QuickActionsBar";
 import { SmartRemindersWidget } from "@/components/native/SmartRemindersWidget";
 import { BookCheckupWidget } from "@/components/monitor/BookCheckupWidget";
+import { CacheCleanerWidget } from "@/components/native/CacheCleanerWidget";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -359,11 +360,20 @@ export const NativeHome = ({
           </motion.div>
         )}
 
-        {/* Book Checkup Widget */}
+        {/* Cache Cleaner Widget */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
+        >
+          <CacheCleanerWidget storagePercentUsed={deviceData.storagePercentUsed} />
+        </motion.div>
+
+        {/* Book Checkup Widget */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
         >
           <BookCheckupWidget
             centroId={loyaltyCard.centro_id}
