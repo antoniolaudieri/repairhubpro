@@ -487,7 +487,9 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
           totalCacheBytes: estimatedCache,
           totalCacheMb: estimatedCache / (1024 * 1024),
           totalCacheGb: estimatedCache / (1024 * 1024 * 1024),
-          appsScanned: 1
+          appsScanned: 1,
+          hasPermission: true,
+          needsPermission: false
         };
       } catch (e) {
         console.log('[DeviceDiagnosticsWeb] Error estimating cache:', e);
@@ -497,7 +499,9 @@ export class DeviceDiagnosticsWeb extends WebPlugin implements DeviceDiagnostics
       totalCacheBytes: 0,
       totalCacheMb: 0,
       totalCacheGb: 0,
-      appsScanned: 0
+      appsScanned: 0,
+      hasPermission: true,
+      needsPermission: false
     };
   }
 
