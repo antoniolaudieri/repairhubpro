@@ -13,11 +13,16 @@ import {
   Smartphone,
   Settings,
   Info,
-  Shield
+  Shield,
+  Trash2,
+  HardDrive,
+  Sparkles
 } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUnifiedPushNotifications } from "@/hooks/useUnifiedPushNotifications";
+import { Capacitor } from "@capacitor/core";
+import DeviceDiagnostics, { CacheInfo } from "@/plugins/DeviceStoragePlugin";
 
 interface NativeSettingsProps {
   user: User;
@@ -36,9 +41,69 @@ const NativeSettings = ({ user, onBack }: NativeSettingsProps) => {
     sendLocalNotification 
   } = pushNotifications;
   const [isToggling, setIsToggling] = useState(false);
+  
+  // Cache management state
+  const [cacheInfo, setCacheInfo] = useState<CacheInfo | null>(null);
+  const [isLoadingCache, setIsLoadingCache] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const isNative = Capacitor.isNativePlatform();
 
   // Check if permission was denied (not granted and not loading)
   const permissionDenied = !isGranted && !isLoading && isSupported;
+
+  // Load cache info on mount
+  useEffect(() => {
+    if (isNative) {
+      loadCacheInfo();
+    }
+  }, [isNative]);
+
+  const loadCacheInfo = async () => {
+    setIsLoadingCache(true);
+    try {
+      const info = await DeviceDiagnostics.getTotalCacheSize();
+      setCacheInfo(info);
+    } catch (error) {
+      console.error("Error loading cache info:", error);
+    } finally {
+      setIsLoadingCache(false);
+    }
+  };
+
+  const handleOpenStorageSettings = async () => {
+    try {
+      const result = await DeviceDiagnostics.openStorageSettings();
+      if (result.opened) {
+        toast.success("Impostazioni storage aperte", {
+          description: "Seleziona 'Libera spazio' per pulire la cache"
+        });
+      }
+    } catch (error) {
+      console.error("Error opening storage settings:", error);
+      toast.error("Impossibile aprire le impostazioni");
+    }
+  };
+
+  const handleClearOwnCache = async () => {
+    setIsClearing(true);
+    try {
+      const result = await DeviceDiagnostics.clearAppCache();
+      if (result.success) {
+        toast.success(`Cache app pulita!`, {
+          description: `Liberati ${result.freedMb.toFixed(2)} MB`
+        });
+        // Reload cache info
+        await loadCacheInfo();
+      } else {
+        toast.error("Errore nella pulizia cache");
+      }
+    } catch (error) {
+      console.error("Error clearing cache:", error);
+      toast.error("Errore nella pulizia cache");
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   const handleToggleNotifications = async () => {
     setIsToggling(true);
@@ -92,6 +157,13 @@ const NativeSettings = ({ user, onBack }: NativeSettingsProps) => {
     return <Badge variant="secondary" className="gap-1"><Bell className="h-3 w-3" /> Non attive</Badge>;
   };
 
+  const formatCacheSize = (mb: number) => {
+    if (mb >= 1024) {
+      return `${(mb / 1024).toFixed(2)} GB`;
+    }
+    return `${mb.toFixed(1)} MB`;
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -108,6 +180,118 @@ const NativeSettings = ({ user, onBack }: NativeSettingsProps) => {
       </div>
 
       <div className="p-4 space-y-4">
+        {/* Cache Management Card - Only on Native */}
+        {isNative && (
+          <Card className="border-border/50 overflow-hidden">
+            <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-yellow-500/10 p-1">
+              <CardHeader className="bg-background rounded-t-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-gradient-to-br from-orange-500/20 to-amber-500/20">
+                      <Trash2 className="h-5 w-5 text-orange-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Pulizia Cache</CardTitle>
+                      <CardDescription>
+                        Libera spazio eliminando file temporanei
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {cacheInfo && (
+                    <Badge variant="secondary" className="font-mono">
+                      {formatCacheSize(cacheInfo.totalCacheMb)}
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+            </div>
+            <CardContent className="space-y-4 pt-4">
+              {isLoadingCache ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  {/* Cache Info */}
+                  <div className="p-4 rounded-lg bg-accent/50 border border-border/50">
+                    <div className="flex items-start gap-3">
+                      <HardDrive className="h-5 w-5 text-muted-foreground mt-0.5" />
+                      <div className="space-y-1 flex-1">
+                        <p className="text-sm font-medium">Cache Sistema</p>
+                        <p className="text-xs text-muted-foreground">
+                          {cacheInfo ? (
+                            <>
+                              Analizzate {cacheInfo.appsScanned} app. 
+                              Cache totale: <span className="font-medium text-foreground">{formatCacheSize(cacheInfo.totalCacheMb)}</span>
+                            </>
+                          ) : (
+                            "Premi il pulsante per analizzare la cache"
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Info box */}
+                  <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-xs text-muted-foreground">
+                        La pulizia cache non elimina dati personali, foto o file importanti. 
+                        Rimuove solo file temporanei che verranno ricreati automaticamente.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-1 gap-3">
+                    <Button 
+                      onClick={handleOpenStorageSettings}
+                      variant="default"
+                      className="w-full gap-2"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      Apri Gestione Storage
+                    </Button>
+                    
+                    <Button 
+                      onClick={handleClearOwnCache}
+                      disabled={isClearing}
+                      variant="outline"
+                      className="w-full gap-2"
+                    >
+                      {isClearing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Pulizia in corso...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4" />
+                          Pulisci Cache App
+                        </>
+                      )}
+                    </Button>
+
+                    <Button 
+                      onClick={loadCacheInfo}
+                      disabled={isLoadingCache}
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-muted-foreground"
+                    >
+                      {isLoadingCache ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Aggiorna informazioni cache
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Push Notifications Card */}
         <Card className="border-border/50">
           <CardHeader>
