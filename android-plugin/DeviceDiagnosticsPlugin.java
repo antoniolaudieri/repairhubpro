@@ -1331,24 +1331,88 @@ public class DeviceDiagnosticsPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void getOwnAppCacheSize(PluginCall call) {
+        try {
+            Context context = getContext();
+            long totalCacheBytes = 0;
+            
+            // Get internal cache size
+            File cacheDir = context.getCacheDir();
+            if (cacheDir != null && cacheDir.exists()) {
+                totalCacheBytes += getDirSize(cacheDir);
+            }
+            
+            // Get external cache size
+            File externalCacheDir = context.getExternalCacheDir();
+            if (externalCacheDir != null && externalCacheDir.exists()) {
+                totalCacheBytes += getDirSize(externalCacheDir);
+            }
+            
+            // Get code cache (API 21+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                File codeCacheDir = context.getCodeCacheDir();
+                if (codeCacheDir != null && codeCacheDir.exists()) {
+                    totalCacheBytes += getDirSize(codeCacheDir);
+                }
+            }
+            
+            JSObject result = new JSObject();
+            result.put("cacheSizeBytes", totalCacheBytes);
+            result.put("cacheSizeMb", totalCacheBytes / (1024.0 * 1024.0));
+            result.put("cacheSizeKb", totalCacheBytes / 1024.0);
+            call.resolve(result);
+        } catch (Exception e) {
+            call.reject("Error getting app cache size: " + e.getMessage());
+        }
+    }
+
+    @PluginMethod
     public void clearAppCache(PluginCall call) {
         try {
             Context context = getContext();
+            long totalBefore = 0;
+            long freedBytes = 0;
             
-            // Clear this app's own cache
+            // Measure before
             File cacheDir = context.getCacheDir();
-            long freedBytes = deleteDir(cacheDir);
-            
-            // Also clear external cache if available
+            if (cacheDir != null && cacheDir.exists()) {
+                totalBefore += getDirSize(cacheDir);
+            }
             File externalCacheDir = context.getExternalCacheDir();
+            if (externalCacheDir != null && externalCacheDir.exists()) {
+                totalBefore += getDirSize(externalCacheDir);
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                File codeCacheDir = context.getCodeCacheDir();
+                if (codeCacheDir != null && codeCacheDir.exists()) {
+                    totalBefore += getDirSize(codeCacheDir);
+                }
+            }
+            
+            // Clear internal cache
+            if (cacheDir != null) {
+                freedBytes += deleteDir(cacheDir);
+            }
+            
+            // Clear external cache
             if (externalCacheDir != null) {
                 freedBytes += deleteDir(externalCacheDir);
+            }
+            
+            // Clear code cache
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                File codeCacheDir = context.getCodeCacheDir();
+                if (codeCacheDir != null) {
+                    freedBytes += deleteDir(codeCacheDir);
+                }
             }
             
             JSObject result = new JSObject();
             result.put("success", true);
             result.put("freedBytes", freedBytes);
             result.put("freedMb", freedBytes / (1024.0 * 1024.0));
+            result.put("cacheBefore", totalBefore);
+            result.put("cacheBeforeMb", totalBefore / (1024.0 * 1024.0));
             call.resolve(result);
         } catch (Exception e) {
             call.reject("Error clearing cache: " + e.getMessage());

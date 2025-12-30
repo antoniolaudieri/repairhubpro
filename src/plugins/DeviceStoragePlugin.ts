@@ -114,10 +114,18 @@ export interface CacheInfo {
   needsPermission: boolean;
 }
 
+export interface OwnAppCacheInfo {
+  cacheSizeBytes: number;
+  cacheSizeMb: number;
+  cacheSizeKb: number;
+}
+
 export interface ClearCacheResult {
   success: boolean;
   freedBytes: number;
   freedMb: number;
+  cacheBefore?: number;
+  cacheBeforeMb?: number;
 }
 
 export interface DeviceDiagnosticsPlugin {
@@ -142,6 +150,7 @@ export interface DeviceDiagnosticsPlugin {
   checkSystemIntegrity(): Promise<SystemIntegrityStatus>;
   // Cache management
   getTotalCacheSize(): Promise<CacheInfo>;
+  getOwnAppCacheSize(): Promise<OwnAppCacheInfo>;
   openStorageSettings(): Promise<{ opened: boolean; fallback?: boolean }>;
   clearAppCache(): Promise<ClearCacheResult>;
 }
