@@ -150,26 +150,37 @@ export function DymoPrinterSettings({
 
             {/* Error/Warning Messages */}
             {environment && !environment.isServiceRunning && (
-              <Alert variant="destructive">
+              <Alert>
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription className="ml-2">
                   <p className="font-medium mb-2">
-                    {environment.errorMessage || 'Dymo Connect non è disponibile'}
+                    Dymo Connect non rilevato
                   </p>
                   
-                  {/* Connection Instructions */}
-                  <div className="bg-background/50 p-3 rounded-md mb-3 border border-border/50">
-                    <p className="font-medium text-sm mb-2">🔧 Problema SSL nel servizio Dymo</p>
-                    <p className="text-xs mb-2">
-                      Il Web Service di Dymo ha un problema di connessione SSL. Prova:
+                  {/* Important Notice about local execution */}
+                  <div className="bg-amber-500/10 p-3 rounded-md mb-3 border border-amber-500/30">
+                    <p className="font-medium text-sm mb-2 text-amber-600 dark:text-amber-400">⚠️ Importante: Esecuzione Locale Richiesta</p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      La stampa Dymo funziona <strong>solo quando l'app viene eseguita localmente</strong> sul 
+                      computer dove è installato Dymo Connect. La preview online di Lovable non può 
+                      connettersi a servizi locali per motivi di sicurezza del browser.
                     </p>
-                    <ol className="list-decimal list-inside text-xs space-y-1 mb-2">
+                    <p className="text-xs text-muted-foreground">
+                      Per utilizzare la stampa Dymo, scarica l'app ed eseguila sul tuo PC.
+                    </p>
+                  </div>
+                  
+                  {/* If running locally */}
+                  <div className="bg-muted/50 p-3 rounded-md mb-3 border border-border/50">
+                    <p className="font-medium text-sm mb-2">🔧 Se stai eseguendo l'app localmente:</p>
+                    <ol className="list-decimal list-inside text-xs space-y-1">
+                      <li>Verifica che <strong>Dymo Connect</strong> sia installato e in esecuzione</li>
                       <li>
-                        <strong>Riavvia il servizio:</strong> Apri "services.msc" dal menu Start, 
-                        trova "Dymo Connect Web Service" e clicca Riavvia
+                        Apri "services.msc" e assicurati che "Dymo Connect Web Service" sia attivo
                       </li>
+                      <li>Riavvia il servizio se necessario</li>
                       <li>
-                        <strong>Se non funziona:</strong> Reinstalla Dymo Connect da{' '}
+                        Se non hai Dymo Connect, scaricalo da{' '}
                         <a
                           href="https://www.dymo.com/support"
                           target="_blank"
@@ -190,24 +201,6 @@ export function DymoPrinterSettings({
                       selezionando la stampante Dymo. Non è automatico ma funziona sempre.
                     </p>
                   </div>
-
-                  <p className="text-sm font-medium mb-1">Se non hai Dymo Connect:</p>
-                  <ol className="list-decimal list-inside text-sm space-y-1">
-                    <li>
-                      Scarica e installa{' '}
-                      <a
-                        href="https://www.dymo.com/support/dymo-connect-sdk"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="underline inline-flex items-center gap-1"
-                      >
-                        Dymo Connect <ExternalLink className="h-3 w-3" />
-                      </a>
-                    </li>
-                    <li>Avvia l'applicazione Dymo Connect</li>
-                    <li>Collega la stampante Dymo via USB</li>
-                    <li>Clicca "Rileva" per verificare la connessione</li>
-                  </ol>
                 </AlertDescription>
               </Alert>
             )}
