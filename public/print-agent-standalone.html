@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LabLinkRiparo - Print Agent Standalone</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: #fff;
+            padding: 20px;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        h1 { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+        .subtitle { color: #888; margin-bottom: 24px; }
+        .card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+        .status-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+        .status-label { display: flex; align-items: center; gap: 12px; }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        .status-dot.connected { background: #22c55e; }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #3b82f6; color: #fff; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: #22c55e; color: #fff; }
+        .btn-success:hover { background: #16a34a; }
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-outline { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        select option { background: #1a1a2e; }
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-success { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        .badge-warning { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+        .badge-danger { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .queue-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            margin-bottom: 8px;
+        }
+        .empty-state { text-align: center; color: #888; padding: 32px; }
+        .log { 
+            background: #0a0a0a; 
+            border-radius: 8px; 
+            padding: 12px; 
+            font-family: monospace; 
+            font-size: 12px; 
+            max-height: 200px; 
+            overflow-y: auto;
+            color: #22c55e;
+        }
+        .log-entry { margin-bottom: 4px; }
+        .log-entry.error { color: #ef4444; }
+        .log-entry.warning { color: #eab308; }
+        .flex { display: flex; }
+        .gap-2 { gap: 8px; }
+        .mt-4 { margin-top: 16px; }
+        .text-sm { font-size: 14px; }
+        .text-muted { color: #888; }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .config-section { margin-bottom: 16px; }
+        .config-section label { display: block; margin-bottom: 8px; color: #888; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖨️ Print Agent Standalone</h1>
+        <p class="subtitle">Agent locale per stampa etichette Dymo da LabLinkRiparo</p>
+
+        <!-- Config Section -->
+        <div class="card">
+            <div class="card-title">⚙️ Configurazione Supabase</div>
+            <div class="config-section">
+                <label>Centro ID (lo trovi nelle impostazioni del tuo centro)</label>
+                <input type="text" id="centroId" placeholder="es: 21920759-488b-4011-ba04-9270b45d601d">
+            </div>
+            <button class="btn btn-primary" onclick="saveConfig()">Salva Configurazione</button>
+        </div>
+
+        <!-- Dymo Status -->
+        <div class="card">
+            <div class="card-title">Stato Dymo Connect</div>
+            <div class="status-row">
+                <div class="status-label">
+                    <div class="status-dot" id="dymoStatusDot"></div>
+                    <div>
+                        <div id="dymoStatusText">Verificando...</div>
+                        <div class="text-sm text-muted" id="dymoServiceUrl"></div>
+                    </div>
+                </div>
+                <button class="btn btn-outline" onclick="checkDymo()">🔄 Ricontrolla</button>
+            </div>
+            <div id="printerSection" style="display: none;">
+                <label style="display: block; margin-bottom: 8px; color: #888;">Stampante</label>
+                <select id="printerSelect"></select>
+                <button class="btn btn-outline" onclick="testPrint()">🧪 Stampa Test</button>
+            </div>
+        </div>
+
+        <!-- Agent Control -->
+        <div class="card">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Print Agent</span>
+                <span class="badge" id="agentBadge">Inattivo</span>
+            </div>
+            <div class="status-row">
+                <div>
+                    <div>Attiva Print Agent</div>
+                    <div class="text-sm text-muted">Stampa automaticamente i lavori in coda</div>
+                </div>
+                <button class="btn" id="agentToggle" onclick="toggleAgent()">▶️ Avvia</button>
+            </div>
+        </div>
+
+        <!-- Queue -->
+        <div class="card">
+            <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>📋 Coda di Stampa</span>
+                <span class="badge badge-warning" id="queueCount">0 in attesa</span>
+            </div>
+            <div id="queueList">
+                <div class="empty-state">Nessun lavoro in coda</div>
+            </div>
+        </div>
+
+        <!-- Log -->
+        <div class="card">
+            <div class="card-title">📝 Log Attività</div>
+            <div class="log" id="logContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase config
+        const SUPABASE_URL = 'https://mivvpthovnkynigfwmjm.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pdnZwdGhvdm5reW5pZ2Z3bWptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ1OTc2MjksImV4cCI6MjA4MDE3MzYyOX0.505BrB0P5OfRnMI36jjCvQUPvlRZSU__NQOeAWu20Ls';
+
+        // State
+        let dymoServiceUrl = null;
+        let selectedPrinter = null;
+        let agentActive = false;
+        let centroId = localStorage.getItem('printAgentCentroId') || '';
+        let pollInterval = null;
+
+        // Initialize
+        document.getElementById('centroId').value = centroId;
+        checkDymo();
+
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry' + (type === 'error' ? ' error' : type === 'warning' ? ' warning' : '');
+            entry.textContent = `[${new Date().toLocaleTimeString('it-IT')}] ${message}`;
+            container.insertBefore(entry, container.firstChild);
+        }
+
+        function saveConfig() {
+            centroId = document.getElementById('centroId').value.trim();
+            if (centroId) {
+                localStorage.setItem('printAgentCentroId', centroId);
+                log('Configurazione salvata');
+                if (agentActive) {
+                    fetchQueue();
+                }
+            }
+        }
+
+        async function checkDymo() {
+            const endpoints = [
+                'https://localhost:41951',
+                'https://127.0.0.1:41951',
+                'http://localhost:41952',
+                'http://127.0.0.1:41952',
+                'http://localhost:8080',
+            ];
+
+            document.getElementById('dymoStatusText').textContent = 'Verificando...';
+            document.getElementById('dymoStatusDot').classList.remove('connected');
+
+            for (const url of endpoints) {
+                try {
+                    const response = await fetch(`${url}/DYMO/DLS/Printing/StatusConnected`, {
+                        signal: AbortSignal.timeout(2000)
+                    });
+                    if (response.ok) {
+                        dymoServiceUrl = url;
+                        document.getElementById('dymoStatusText').textContent = 'Connesso';
+                        document.getElementById('dymoServiceUrl').textContent = url;
+                        document.getElementById('dymoStatusDot').classList.add('connected');
+                        log(`Dymo Connect trovato su ${url}`);
+                        await loadPrinters();
+                        return;
+                    }
+                } catch (e) {
+                    // Continue to next endpoint
+                }
+            }
+
+            document.getElementById('dymoStatusText').textContent = 'Non connesso';
+            document.getElementById('dymoServiceUrl').textContent = 'Verifica che Dymo Connect sia in esecuzione';
+            log('Dymo Connect non trovato', 'error');
+        }
+
+        async function loadPrinters() {
+            if (!dymoServiceUrl) return;
+
+            try {
+                const response = await fetch(`${dymoServiceUrl}/DYMO/DLS/Printing/GetPrinters`);
+                const xmlText = await response.text();
+                
+                const parser = new DOMParser();
+                const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+                const printerNodes = xmlDoc.querySelectorAll('LabelWriterPrinter');
+                
+                const select = document.getElementById('printerSelect');
+                select.innerHTML = '';
+                
+                printerNodes.forEach(node => {
+                    const name = node.querySelector('Name')?.textContent || '';
+                    const modelName = node.querySelector('ModelName')?.textContent || '';
+                    const isConnected = node.querySelector('IsConnected')?.textContent === 'True';
+                    
+                    if (name && isConnected) {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = `${name} (${modelName})`;
+                        select.appendChild(option);
+                        
+                        if (!selectedPrinter) selectedPrinter = name;
+                    }
+                });
+
+                if (select.options.length > 0) {
+                    document.getElementById('printerSection').style.display = 'block';
+                    log(`Trovate ${select.options.length} stampante/i`);
+                }
+            } catch (e) {
+                log('Errore caricamento stampanti: ' + e.message, 'error');
+            }
+        }
+
+        async function testPrint() {
+            selectedPrinter = document.getElementById('printerSelect').value;
+            if (!selectedPrinter || !dymoServiceUrl) {
+                log('Seleziona una stampante', 'warning');
+                return;
+            }
+
+            const testLabel = `<?xml version="1.0" encoding="utf-8"?>
+<DieCutLabel Version="8.0" Units="twips">
+    <PaperOrientation>Landscape</PaperOrientation>
+    <Id>Address</Id>
+    <PaperName>30252 Address</PaperName>
+    <DrawCommands>
+        <RoundRectangle X="0" Y="0" Width="1581" Height="5040" Rx="270" Ry="270"/>
+    </DrawCommands>
+    <ObjectInfo>
+        <TextObject>
+            <Name>Text</Name>
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+            <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
+            <LinkedObjectName></LinkedObjectName>
+            <Rotation>Rotation0</Rotation>
+            <IsMirrored>False</IsMirrored>
+            <IsVariable>True</IsVariable>
+            <HorizontalAlignment>Center</HorizontalAlignment>
+            <VerticalAlignment>Middle</VerticalAlignment>
+            <TextFitMode>ShrinkToFit</TextFitMode>
+            <UseFullFontHeight>True</UseFullFontHeight>
+            <Verticalized>False</Verticalized>
+            <StyledText>
+                <Element>
+                    <String>TEST STAMPA</String>
+                    <Attributes>
+                        <Font Family="Arial" Size="14" Bold="True"/>
+                        <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+                    </Attributes>
+                </Element>
+                <Element>
+                    <String>&#13;&#10;LabLinkRiparo</String>
+                    <Attributes>
+                        <Font Family="Arial" Size="10" Bold="False"/>
+                        <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+                    </Attributes>
+                </Element>
+            </StyledText>
+        </TextObject>
+        <Bounds X="331" Y="150" Width="4368" Height="1231"/>
+    </ObjectInfo>
+</DieCutLabel>`;
+
+            await printLabel(testLabel, 1);
+        }
+
+        async function printLabel(labelXml, copies = 1) {
+            if (!dymoServiceUrl || !selectedPrinter) return false;
+
+            try {
+                const printParams = `<LabelWriterPrintParams><Copies>${copies}</Copies><PrintQuality>BarcodeAndGraphics</PrintQuality></LabelWriterPrintParams>`;
+                
+                const formData = new URLSearchParams();
+                formData.append('printerName', selectedPrinter);
+                formData.append('printParamsXml', printParams);
+                formData.append('labelXml', labelXml);
+                formData.append('labelSetXml', '');
+
+                const response = await fetch(`${dymoServiceUrl}/DYMO/DLS/Printing/PrintLabel`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                });
+
+                if (response.ok) {
+                    log(`Etichetta stampata su ${selectedPrinter}`);
+                    return true;
+                } else {
+                    throw new Error(response.statusText);
+                }
+            } catch (e) {
+                log('Errore stampa: ' + e.message, 'error');
+                return false;
+            }
+        }
+
+        function toggleAgent() {
+            if (!centroId) {
+                log('Configura prima il Centro ID', 'warning');
+                return;
+            }
+            if (!dymoServiceUrl) {
+                log('Dymo Connect non disponibile', 'warning');
+                return;
+            }
+
+            selectedPrinter = document.getElementById('printerSelect').value;
+            if (!selectedPrinter) {
+                log('Seleziona una stampante', 'warning');
+                return;
+            }
+
+            agentActive = !agentActive;
+            const btn = document.getElementById('agentToggle');
+            const badge = document.getElementById('agentBadge');
+
+            if (agentActive) {
+                btn.textContent = '⏸️ Ferma';
+                btn.className = 'btn btn-danger';
+                badge.textContent = 'Attivo';
+                badge.className = 'badge badge-success';
+                log('Agent attivato');
+                startPolling();
+            } else {
+                btn.textContent = '▶️ Avvia';
+                btn.className = 'btn btn-success';
+                badge.textContent = 'Inattivo';
+                badge.className = 'badge badge-warning';
+                log('Agent fermato');
+                stopPolling();
+            }
+        }
+
+        function startPolling() {
+            fetchQueue();
+            pollInterval = setInterval(fetchQueue, 5000);
+        }
+
+        function stopPolling() {
+            if (pollInterval) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+            }
+        }
+
+        async function fetchQueue() {
+            if (!centroId) return;
+
+            try {
+                const response = await fetch(
+                    `${SUPABASE_URL}/rest/v1/print_queue?centro_id=eq.${centroId}&status=eq.pending&order=priority.desc,created_at.asc`,
+                    {
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        }
+                    }
+                );
+
+                if (!response.ok) throw new Error('Errore fetch coda');
+
+                const jobs = await response.json();
+                updateQueueUI(jobs);
+
+                if (agentActive && jobs.length > 0) {
+                    await processQueue(jobs);
+                }
+            } catch (e) {
+                log('Errore fetch coda: ' + e.message, 'error');
+            }
+        }
+
+        function updateQueueUI(jobs) {
+            document.getElementById('queueCount').textContent = `${jobs.length} in attesa`;
+            const container = document.getElementById('queueList');
+
+            if (jobs.length === 0) {
+                container.innerHTML = '<div class="empty-state">Nessun lavoro in coda</div>';
+                return;
+            }
+
+            container.innerHTML = jobs.map(job => `
+                <div class="queue-item">
+                    <div>
+                        <div>${job.label_type === 'repair' ? '🔧 Riparazione' : job.label_type === 'device' ? '📱 Dispositivo' : '📦 Scaffale'}</div>
+                        <div class="text-sm text-muted">${new Date(job.created_at).toLocaleString('it-IT')}</div>
+                    </div>
+                    <span class="badge badge-warning">${job.status}</span>
+                </div>
+            `).join('');
+        }
+
+        async function processQueue(jobs) {
+            for (const job of jobs) {
+                if (!agentActive) break;
+                await processJob(job);
+            }
+        }
+
+        async function processJob(job) {
+            log(`Elaborazione job ${job.id.substring(0, 8)}...`);
+
+            // Update status to printing
+            await updateJobStatus(job.id, 'printing');
+
+            try {
+                const labelXml = job.label_xml || generateLabelXml(job);
+                const success = await printLabel(labelXml, job.copies || 1);
+
+                if (success) {
+                    await updateJobStatus(job.id, 'completed', { printed_at: new Date().toISOString(), printer_name: selectedPrinter });
+                    log(`Job ${job.id.substring(0, 8)} completato`);
+                } else {
+                    throw new Error('Stampa fallita');
+                }
+            } catch (e) {
+                await updateJobStatus(job.id, 'failed', { error_message: e.message });
+                log(`Job ${job.id.substring(0, 8)} fallito: ${e.message}`, 'error');
+            }
+
+            // Refresh queue
+            await fetchQueue();
+        }
+
+        async function updateJobStatus(jobId, status, extraData = {}) {
+            try {
+                await fetch(`${SUPABASE_URL}/rest/v1/print_queue?id=eq.${jobId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ status, ...extraData })
+                });
+            } catch (e) {
+                log('Errore aggiornamento status: ' + e.message, 'error');
+            }
+        }
+
+        function generateLabelXml(job) {
+            const data = job.label_data || {};
+            // Basic repair label
+            return `<?xml version="1.0" encoding="utf-8"?>
+<DieCutLabel Version="8.0" Units="twips">
+    <PaperOrientation>Landscape</PaperOrientation>
+    <Id>Address</Id>
+    <PaperName>30252 Address</PaperName>
+    <DrawCommands>
+        <RoundRectangle X="0" Y="0" Width="1581" Height="5040" Rx="270" Ry="270"/>
+    </DrawCommands>
+    <ObjectInfo>
+        <TextObject>
+            <Name>Text</Name>
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+            <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
+            <LinkedObjectName></LinkedObjectName>
+            <Rotation>Rotation0</Rotation>
+            <IsMirrored>False</IsMirrored>
+            <IsVariable>True</IsVariable>
+            <HorizontalAlignment>Center</HorizontalAlignment>
+            <VerticalAlignment>Middle</VerticalAlignment>
+            <TextFitMode>ShrinkToFit</TextFitMode>
+            <UseFullFontHeight>True</UseFullFontHeight>
+            <Verticalized>False</Verticalized>
+            <StyledText>
+                <Element>
+                    <String>${data.repairCode || data.deviceBrand || 'ETICHETTA'}</String>
+                    <Attributes>
+                        <Font Family="Arial" Size="14" Bold="True"/>
+                        <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+                    </Attributes>
+                </Element>
+                <Element>
+                    <String>&#13;&#10;${data.customerName || data.deviceModel || ''}</String>
+                    <Attributes>
+                        <Font Family="Arial" Size="10" Bold="False"/>
+                        <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+                    </Attributes>
+                </Element>
+                <Element>
+                    <String>&#13;&#10;${data.deviceBrand ? data.deviceBrand + ' ' + (data.deviceModel || '') : ''}</String>
+                    <Attributes>
+                        <Font Family="Arial" Size="9" Bold="False"/>
+                        <ForeColor Alpha="255" Red="80" Green="80" Blue="80"/>
+                    </Attributes>
+                </Element>
+            </StyledText>
+        </TextObject>
+        <Bounds X="331" Y="150" Width="4368" Height="1231"/>
+    </ObjectInfo>
+</DieCutLabel>`;
+        }
+    </script>
+</body>
+</html>
