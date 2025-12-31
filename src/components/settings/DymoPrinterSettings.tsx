@@ -157,41 +157,46 @@ export function DymoPrinterSettings({
                     Dymo Connect non rilevato
                   </p>
                   
-                  {/* Important Notice about local execution */}
-                  <div className="bg-amber-500/10 p-3 rounded-md mb-3 border border-amber-500/30">
-                    <p className="font-medium text-sm mb-2 text-amber-600 dark:text-amber-400">⚠️ Importante: Esecuzione Locale Richiesta</p>
-                    <p className="text-xs text-muted-foreground mb-2">
-                      La stampa Dymo funziona <strong>solo quando l'app viene eseguita localmente</strong> sul 
-                      computer dove è installato Dymo Connect. La preview online di Lovable non può 
-                      connettersi a servizi locali per motivi di sicurezza del browser.
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Per utilizzare la stampa Dymo, scarica l'app ed eseguila sul tuo PC.
-                    </p>
-                  </div>
+                  {/* Mixed Content Warning - when on HTTPS */}
+                  {environment.isMixedContentBlocked && (
+                    <div className="bg-destructive/10 p-3 rounded-md mb-3 border border-destructive/30">
+                      <p className="font-medium text-sm mb-2 text-destructive">🔒 Blocco Sicurezza Browser (Mixed Content)</p>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Questa pagina è servita su <strong>HTTPS</strong>, ma il servizio Dymo Connect 
+                        usa <strong>HTTP</strong>. I browser moderni bloccano queste connessioni "mixed content" 
+                        per sicurezza.
+                      </p>
+                      <p className="text-xs font-medium text-destructive">
+                        Soluzione: Esegui l'app su <code className="bg-muted px-1 rounded">http://localhost:5173</code> (non HTTPS)
+                      </p>
+                    </div>
+                  )}
                   
-                  {/* If running locally */}
-                  <div className="bg-muted/50 p-3 rounded-md mb-3 border border-border/50">
-                    <p className="font-medium text-sm mb-2">🔧 Se stai eseguendo l'app localmente:</p>
-                    <ol className="list-decimal list-inside text-xs space-y-1">
-                      <li>Verifica che <strong>Dymo Connect</strong> sia installato e in esecuzione</li>
-                      <li>
-                        Apri "services.msc" e assicurati che "Dymo Connect Web Service" sia attivo
-                      </li>
-                      <li>Riavvia il servizio se necessario</li>
-                      <li>
-                        Se non hai Dymo Connect, scaricalo da{' '}
-                        <a
-                          href="https://www.dymo.com/support"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="underline text-primary"
-                        >
-                          dymo.com/support
-                        </a>
-                      </li>
-                    </ol>
-                  </div>
+                  {/* If NOT mixed content issue - service might actually be down */}
+                  {!environment.isMixedContentBlocked && (
+                    <div className="bg-muted/50 p-3 rounded-md mb-3 border border-border/50">
+                      <p className="font-medium text-sm mb-2">🔧 Verifica Dymo Connect:</p>
+                      <ol className="list-decimal list-inside text-xs space-y-1">
+                        <li>Verifica che <strong>Dymo Connect</strong> sia installato e in esecuzione</li>
+                        <li>
+                          Apri "services.msc" (Windows) e assicurati che "Dymo Connect Web Service" sia attivo
+                        </li>
+                        <li>Prova a riavviare il servizio</li>
+                        <li>Assicurati che la stampante sia collegata via USB e accesa</li>
+                        <li>
+                          Se non hai Dymo Connect, scaricalo da{' '}
+                          <a
+                            href="https://www.dymo.com/support"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="underline text-primary"
+                          >
+                            dymo.com/support
+                          </a>
+                        </li>
+                      </ol>
+                    </div>
+                  )}
                   
                   {/* Alternative: Browser Print */}
                   <div className="bg-primary/5 p-3 rounded-md border border-primary/20">
