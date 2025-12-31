@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
@@ -12,8 +12,8 @@ import {
   AlertTriangle,
   Loader2,
   X,
-  ChevronDown,
-  ChevronUp
+  Package,
+  Layers
 } from "lucide-react";
 import { useStorageSlots, MultiShelfConfig, ShelfConfig } from "@/hooks/useStorageSlots";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -56,7 +56,6 @@ export function StorageSlotWidget({
   const [showPicker, setShowPicker] = useState(false);
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
   const [stats, setStats] = useState<{ occupied: number; total: number; percentage: number } | null>(null);
-  const [showMiniMap, setShowMiniMap] = useState(false);
   const [activeShelfTab, setActiveShelfTab] = useState<string>("");
 
   useEffect(() => {
@@ -115,22 +114,17 @@ export function StorageSlotWidget({
     setAssigning(false);
   };
 
-  // Find which shelf contains the current slot
   const findShelfForSlot = (slot: number): ShelfConfig | null => {
     if (!config?.shelves) return null;
-    
-    let runningTotal = 0;
     for (const shelf of config.shelves) {
       const shelfSlots = shelf.rows * shelf.columns;
       if (slot >= shelf.start_number && slot < shelf.start_number + shelfSlots) {
         return shelf;
       }
-      runningTotal += shelfSlots;
     }
     return null;
   };
 
-  // Get slot position within a shelf
   const getSlotPositionInShelf = (slot: number, shelf: ShelfConfig): { row: number; col: number } => {
     const localSlot = slot - shelf.start_number;
     const row = Math.floor(localSlot / shelf.columns);
@@ -138,22 +132,19 @@ export function StorageSlotWidget({
     return { row, col };
   };
 
-  // Format display for current slot
   const formatCurrentSlot = (): string => {
     if (!currentSlot || !config?.shelves) return "";
-    
     const shelf = findShelfForSlot(currentSlot);
     if (!shelf) return `#${currentSlot}`;
-    
     const position = getSlotPositionInShelf(currentSlot, shelf);
     return `${shelf.prefix}${position.row + 1}-${position.col + 1}`;
   };
 
   if (loading) {
     return (
-      <Card className="border-dashed">
-        <CardContent className="flex items-center justify-center py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      <Card>
+        <CardContent className="flex items-center justify-center py-8">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
     );
@@ -164,58 +155,63 @@ export function StorageSlotWidget({
   }
 
   const currentShelf = currentSlot ? findShelfForSlot(currentSlot) : null;
-  const totalSlots = getTotalSlots(config);
+  const currentPosition = currentSlot && currentShelf ? getSlotPositionInShelf(currentSlot, currentShelf) : null;
 
-  const renderShelfMiniMap = (shelf: ShelfConfig, isExpanded: boolean = false) => {
-    const slots = [];
-    for (let row = 0; row < shelf.rows; row++) {
-      for (let col = 0; col < shelf.columns; col++) {
-        const slotNum = shelf.start_number + (row * shelf.columns) + col;
-        const isCurrentSlot = slotNum === currentSlot;
-        const isOccupied = occupiedSlots.includes(slotNum);
-
-        slots.push(
-          <motion.div
-            key={slotNum}
-            animate={isCurrentSlot ? {
-              scale: [1, 1.15, 1],
-            } : {}}
-            transition={isCurrentSlot ? { duration: 1.5, repeat: Infinity } : {}}
-            className={`
-              ${isExpanded ? 'aspect-square min-h-[24px]' : 'aspect-square min-h-[12px]'}
-              rounded-sm flex items-center justify-center
-              ${isCurrentSlot 
-                ? 'ring-2 ring-primary ring-offset-1' 
-                : ''
-              }
-            `}
-            style={{
-              backgroundColor: isCurrentSlot 
-                ? shelf.color || 'hsl(var(--primary))' 
-                : isOccupied 
-                  ? 'hsl(var(--muted))' 
-                  : 'hsl(var(--accent))'
-            }}
-          >
-            {isExpanded && (
-              <span className="text-[8px] font-bold text-foreground/70">
-                {row + 1}-{col + 1}
-              </span>
-            )}
-          </motion.div>
-        );
-      }
-    }
-
+  // Render a single shelf visual grid
+  const renderShelfGrid = (shelf: ShelfConfig, compact: boolean = false) => {
+    const cellSize = compact ? 'h-4 w-4' : 'h-8 w-8 sm:h-10 sm:w-10';
+    const gap = compact ? 'gap-0.5' : 'gap-1';
+    
     return (
-      <div 
-        className={`grid gap-0.5 p-2 rounded-lg`}
-        style={{ 
-          gridTemplateColumns: `repeat(${shelf.columns}, minmax(0, 1fr))`,
-          backgroundColor: `${shelf.color || 'hsl(var(--primary))'}20`
-        }}
-      >
-        {slots}
+      <div className={`grid ${gap}`} style={{ gridTemplateColumns: `repeat(${shelf.columns}, minmax(0, 1fr))` }}>
+        {Array.from({ length: shelf.rows * shelf.columns }, (_, i) => {
+          const slotNum = shelf.start_number + i;
+          const row = Math.floor(i / shelf.columns);
+          const col = i % shelf.columns;
+          const isCurrentSlot = slotNum === currentSlot;
+          const isOccupied = occupiedSlots.includes(slotNum);
+
+          return (
+            <motion.div
+              key={slotNum}
+              initial={false}
+              animate={isCurrentSlot ? {
+                scale: [1, 1.1, 1],
+                opacity: 1
+              } : { opacity: 1 }}
+              transition={isCurrentSlot ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : {}}
+              className={`
+                ${cellSize} rounded-sm flex items-center justify-center relative
+                ${isCurrentSlot 
+                  ? 'ring-2 ring-primary shadow-lg z-10' 
+                  : isOccupied 
+                    ? 'bg-muted/60' 
+                    : 'bg-accent/40'
+                }
+              `}
+              style={isCurrentSlot ? { 
+                backgroundColor: shelf.color || 'hsl(var(--primary))'
+              } : {}}
+            >
+              {!compact && (
+                <span className={`text-[9px] sm:text-[10px] font-medium ${
+                  isCurrentSlot ? 'text-white' : 'text-muted-foreground'
+                }`}>
+                  {row + 1}-{col + 1}
+                </span>
+              )}
+              {isCurrentSlot && (
+                <motion.div
+                  className="absolute inset-0 rounded-sm"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: [0, 0.5, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  style={{ backgroundColor: shelf.color || 'hsl(var(--primary))' }}
+                />
+              )}
+            </motion.div>
+          );
+        })}
       </div>
     );
   };
@@ -223,131 +219,131 @@ export function StorageSlotWidget({
   const renderPickerContent = () => (
     <div className="space-y-4">
       {stats && (
-        <div className="flex items-center justify-between text-sm px-1">
-          <span className="text-muted-foreground">
-            Disponibili: <span className="font-semibold text-foreground">{stats.total - stats.occupied}/{stats.total}</span>
-          </span>
-          {stats.percentage >= 90 && (
-            <Badge variant="destructive" className="gap-1">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <Package className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              <span className="font-semibold text-foreground">{stats.total - stats.occupied}</span> slot liberi su {stats.total}
+            </span>
+          </div>
+          {stats.percentage >= 80 && (
+            <Badge variant={stats.percentage >= 90 ? "destructive" : "secondary"} className="gap-1">
               <AlertTriangle className="h-3 w-3" />
-              Quasi pieno
+              {stats.percentage}%
             </Badge>
           )}
         </div>
       )}
 
-      <Tabs value={activeShelfTab} onValueChange={setActiveShelfTab} className="w-full">
-        <TabsList className="w-full flex-wrap h-auto gap-1 p-1">
+      <Tabs value={activeShelfTab} onValueChange={setActiveShelfTab}>
+        <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${config.shelves.length}, 1fr)` }}>
           {config.shelves.map((shelf) => (
             <TabsTrigger 
               key={shelf.id} 
               value={shelf.id}
-              className="flex-1 min-w-[80px] gap-1.5 data-[state=active]:shadow-sm"
-              style={{ 
-                borderLeft: `3px solid ${shelf.color || 'hsl(var(--primary))'}` 
-              }}
+              className="gap-1.5 px-2"
             >
-              <span className="font-bold">{shelf.prefix}</span>
-              <span className="text-muted-foreground text-xs hidden sm:inline">{shelf.name}</span>
+              <div 
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: shelf.color || 'hsl(var(--primary))' }}
+              />
+              <span className="truncate text-xs sm:text-sm">{shelf.name}</span>
             </TabsTrigger>
           ))}
         </TabsList>
 
-        {config.shelves.map((shelf) => {
-          const shelfSlots = [];
-          for (let row = 0; row < shelf.rows; row++) {
-            for (let col = 0; col < shelf.columns; col++) {
-              const slotNum = shelf.start_number + (row * shelf.columns) + col;
-              const isCurrentSlot = slotNum === currentSlot;
-              const isOccupied = occupiedSlots.includes(slotNum) && !isCurrentSlot;
-              const isSelected = selectedSlot === slotNum;
-              const isAvailable = !isOccupied;
-              const label = `${shelf.prefix}${row + 1}-${col + 1}`;
-
-              shelfSlots.push(
-                <motion.button
-                  key={slotNum}
-                  whileHover={isAvailable ? { scale: 1.05 } : {}}
-                  whileTap={isAvailable ? { scale: 0.95 } : {}}
-                  onClick={() => isAvailable && setSelectedSlot(slotNum)}
-                  disabled={isOccupied}
-                  className={`
-                    aspect-square rounded-lg text-xs sm:text-sm flex items-center justify-center font-bold
-                    transition-all min-h-[40px] sm:min-h-[48px]
-                    ${isCurrentSlot 
-                      ? 'text-white ring-2 ring-offset-1' 
-                      : isSelected
-                        ? 'bg-primary text-primary-foreground ring-2 ring-primary'
-                        : isOccupied 
-                          ? 'bg-muted text-muted-foreground cursor-not-allowed opacity-50' 
-                          : 'bg-accent hover:bg-accent/80 cursor-pointer'
-                    }
-                  `}
-                  style={isCurrentSlot ? { 
-                    backgroundColor: shelf.color || 'hsl(var(--primary))'
-                  } : {}}
-                >
-                  {isCurrentSlot ? (
-                    <MapPin className="h-4 w-4" />
-                  ) : isSelected ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    label
-                  )}
-                </motion.button>
-              );
-            }
-          }
-
-          return (
-            <TabsContent key={shelf.id} value={shelf.id} className="mt-3">
-              <div 
-                className="p-3 rounded-xl border-2"
-                style={{ 
-                  borderColor: `${shelf.color || 'hsl(var(--primary))'}50`,
-                  backgroundColor: `${shelf.color || 'hsl(var(--primary))'}10`
-                }}
-              >
-                <div className="flex items-center gap-2 mb-3">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: shelf.color || 'hsl(var(--primary))' }}
-                  />
-                  <span className="font-medium text-sm">{shelf.name}</span>
-                  <span className="text-muted-foreground text-xs">
-                    ({shelf.rows}x{shelf.columns} = {shelf.rows * shelf.columns} slot)
-                  </span>
+        {config.shelves.map((shelf) => (
+          <TabsContent key={shelf.id} value={shelf.id} className="mt-4">
+            <div 
+              className="p-4 rounded-xl border-2 bg-gradient-to-b from-background to-muted/30"
+              style={{ borderColor: `${shelf.color || 'hsl(var(--primary))'}40` }}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4" style={{ color: shelf.color || 'hsl(var(--primary))' }} />
+                  <span className="font-medium">{shelf.name}</span>
                 </div>
-                <ScrollArea className="max-h-[300px]">
-                  <div 
-                    className="grid gap-1.5"
-                    style={{ gridTemplateColumns: `repeat(${shelf.columns}, minmax(0, 1fr))` }}
-                  >
-                    {shelfSlots}
-                  </div>
-                </ScrollArea>
+                <span className="text-xs text-muted-foreground">
+                  {shelf.rows} × {shelf.columns}
+                </span>
               </div>
-            </TabsContent>
-          );
-        })}
+
+              <ScrollArea className="max-h-[280px] sm:max-h-[320px]">
+                <div 
+                  className="grid gap-1.5 sm:gap-2"
+                  style={{ gridTemplateColumns: `repeat(${shelf.columns}, minmax(0, 1fr))` }}
+                >
+                  {Array.from({ length: shelf.rows * shelf.columns }, (_, i) => {
+                    const slotNum = shelf.start_number + i;
+                    const row = Math.floor(i / shelf.columns);
+                    const col = i % shelf.columns;
+                    const isCurrentSlot = slotNum === currentSlot;
+                    const isOccupied = occupiedSlots.includes(slotNum) && !isCurrentSlot;
+                    const isSelected = selectedSlot === slotNum;
+                    const isAvailable = !isOccupied;
+                    const label = `${row + 1}-${col + 1}`;
+
+                    return (
+                      <motion.button
+                        key={slotNum}
+                        whileHover={isAvailable ? { scale: 1.05, y: -2 } : {}}
+                        whileTap={isAvailable ? { scale: 0.95 } : {}}
+                        onClick={() => isAvailable && setSelectedSlot(slotNum)}
+                        disabled={isOccupied}
+                        className={`
+                          aspect-square rounded-lg flex flex-col items-center justify-center font-medium
+                          transition-all shadow-sm min-h-[44px] sm:min-h-[52px]
+                          ${isCurrentSlot 
+                            ? 'text-white shadow-md' 
+                            : isSelected
+                              ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary ring-offset-2'
+                              : isOccupied 
+                                ? 'bg-muted/50 text-muted-foreground/50 cursor-not-allowed' 
+                                : 'bg-card hover:bg-accent border border-border/50 hover:border-primary/30 cursor-pointer'
+                          }
+                        `}
+                        style={isCurrentSlot ? { 
+                          backgroundColor: shelf.color || 'hsl(var(--primary))'
+                        } : {}}
+                      >
+                        {isCurrentSlot ? (
+                          <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
+                        ) : isSelected ? (
+                          <Check className="h-4 w-4 sm:h-5 sm:w-5" />
+                        ) : (
+                          <>
+                            <span className="text-[10px] sm:text-xs font-bold">{shelf.prefix}</span>
+                            <span className="text-[10px] sm:text-xs">{label}</span>
+                          </>
+                        )}
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          </TabsContent>
+        ))}
       </Tabs>
 
-      <div className="flex flex-wrap items-center gap-3 text-xs px-1">
+      {/* Legend */}
+      <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-2 border-t">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-accent" />
-          <span className="text-muted-foreground">Disponibile</span>
+          <div className="w-4 h-4 rounded bg-card border border-border/50" />
+          <span className="text-muted-foreground">Libero</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-muted opacity-50" />
+          <div className="w-4 h-4 rounded bg-muted/50" />
           <span className="text-muted-foreground">Occupato</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded bg-primary" />
-          <span className="text-muted-foreground">Attuale</span>
+          <div className="w-4 h-4 rounded bg-primary" />
+          <span className="text-muted-foreground">Selezionato</span>
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+      {/* Actions */}
+      <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
         <Button variant="outline" onClick={() => setShowPicker(false)} className="w-full sm:w-auto">
           Annulla
         </Button>
@@ -361,11 +357,7 @@ export function StorageSlotWidget({
           ) : (
             <Check className="h-4 w-4" />
           )}
-          {selectedSlot ? `Assegna ${formatSlotWithShelf(
-            findShelfForSlot(selectedSlot)?.id || '', 
-            selectedSlot, 
-            config
-          )}` : 'Seleziona slot'}
+          {selectedSlot ? `Conferma posizione` : 'Seleziona uno slot'}
         </Button>
       </div>
     </div>
@@ -373,176 +365,145 @@ export function StorageSlotWidget({
 
   return (
     <>
-      <Card className="overflow-hidden">
-        <CardContent className="p-3 sm:p-4">
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <motion.div 
-                animate={currentSlot ? { 
-                  boxShadow: ['0 0 0 0 rgba(var(--primary), 0)', '0 0 0 8px rgba(var(--primary), 0.2)', '0 0 0 0 rgba(var(--primary), 0)']
-                } : {}}
-                transition={currentSlot ? { duration: 2, repeat: Infinity } : {}}
-                className={`h-12 w-12 sm:h-14 sm:w-14 rounded-xl flex items-center justify-center shrink-0 ${
-                  currentSlot 
-                    ? 'text-white' 
-                    : 'bg-muted text-muted-foreground'
-                }`}
-                style={currentSlot && currentShelf ? { 
-                  backgroundColor: currentShelf.color || 'hsl(var(--primary))'
-                } : {}}
-              >
-                {currentSlot ? (
-                  <span className="text-sm sm:text-lg font-bold">{formatCurrentSlot()}</span>
-                ) : (
-                  <Archive className="h-5 w-5 sm:h-6 sm:w-6" />
-                )}
-              </motion.div>
-              <div className="min-w-0">
-                <h4 className="font-semibold flex items-center gap-2 flex-wrap">
-                  <span className="truncate">Posizione</span>
-                  {currentSlot && currentShelf && (
-                    <Badge 
-                      variant="secondary" 
-                      className="text-xs"
-                      style={{ 
-                        backgroundColor: `${currentShelf.color || 'hsl(var(--primary))'}20`,
-                        color: currentShelf.color || 'hsl(var(--primary))'
-                      }}
-                    >
-                      {currentShelf.name}
-                    </Badge>
-                  )}
-                </h4>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  {currentSlot && currentShelf
-                    ? `Scaffale ${currentShelf.prefix} • Slot ${formatCurrentSlot()}` 
-                    : `${config.shelves.length} scaffali configurati`
-                  }
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-end sm:self-center">
-              {currentSlot ? (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => setShowPicker(true)}
-                    className="gap-1.5 text-xs sm:text-sm"
-                  >
-                    <Grid3X3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span className="hidden xs:inline">Cambia</span>
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={handleRelease}
-                    disabled={assigning}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                  >
-                    {assigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={handleAutoAssign}
-                    disabled={assigning || availableSlots.length === 0}
-                    className="gap-1.5 text-xs sm:text-sm"
-                  >
-                    {assigning ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Plus className="h-3.5 w-3.5" />
-                    )}
-                    Auto
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={() => setShowPicker(true)}
-                    disabled={availableSlots.length === 0}
-                    className="gap-1.5 text-xs sm:text-sm"
-                  >
-                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    Scegli
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Visual Mini-map */}
-          {currentSlot && currentShelf && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="mt-3 sm:mt-4"
-            >
-              <button
-                onClick={() => setShowMiniMap(!showMiniMap)}
-                className="w-full flex items-center justify-between gap-2 py-2 px-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Grid3X3 className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">
-                    Vista scaffale {currentShelf.name}
-                  </span>
-                </div>
-                {showMiniMap ? (
-                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
-
-              <AnimatePresence>
-                {showMiniMap && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="pt-3">
-                      {renderShelfMiniMap(currentShelf, true)}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
-
-          {/* Multi-shelf overview when no slot assigned */}
-          {!currentSlot && config.shelves.length > 1 && (
-            <div className="mt-3 pt-3 border-t">
-              <div className="flex items-center gap-2 mb-2">
-                <Grid3X3 className="h-4 w-4 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">Scaffali disponibili</span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {config.shelves.map((shelf) => (
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Grid3X3 className="h-4 w-4 text-primary" />
+            Posizione Scaffale
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {currentSlot && currentShelf && currentPosition ? (
+            // Assigned state - show visual position
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                {/* Visual indicator */}
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="shrink-0"
+                >
                   <div 
-                    key={shelf.id}
-                    className="p-2 rounded-lg border"
-                    style={{ 
-                      borderColor: `${shelf.color || 'hsl(var(--primary))'}50`,
-                      backgroundColor: `${shelf.color || 'hsl(var(--primary))'}10`
-                    }}
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex flex-col items-center justify-center text-white shadow-lg"
+                    style={{ backgroundColor: currentShelf.color || 'hsl(var(--primary))' }}
                   >
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <div 
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: shelf.color || 'hsl(var(--primary))' }}
-                      />
-                      <span className="text-xs font-medium truncate">{shelf.name}</span>
-                    </div>
-                    {renderShelfMiniMap(shelf)}
+                    <span className="text-xs opacity-80">{currentShelf.prefix}</span>
+                    <span className="text-xl sm:text-2xl font-bold leading-none">
+                      {currentPosition.row + 1}-{currentPosition.col + 1}
+                    </span>
                   </div>
-                ))}
+                </motion.div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div>
+                    <p className="font-semibold text-foreground">{currentShelf.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Riga {currentPosition.row + 1}, Colonna {currentPosition.col + 1}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowPicker(true)}
+                      className="gap-1.5"
+                    >
+                      <Grid3X3 className="h-3.5 w-3.5" />
+                      Cambia
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={handleRelease}
+                      disabled={assigning}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 gap-1.5"
+                    >
+                      {assigning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
+                      Rimuovi
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Mini shelf map */}
+              <div 
+                className="p-3 rounded-lg"
+                style={{ backgroundColor: `${currentShelf.color || 'hsl(var(--primary))'}10` }}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Vista scaffale</span>
+                </div>
+                {renderShelfGrid(currentShelf, true)}
+              </div>
+            </div>
+          ) : (
+            // Unassigned state - show all shelves overview
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center">
+                  <Archive className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">Nessuna posizione</p>
+                  <p className="text-sm text-muted-foreground">
+                    {stats ? `${stats.total - stats.occupied} slot disponibili` : 'Assegna uno slot'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Shelves overview */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {config.shelves.map((shelf) => {
+                  const shelfTotal = shelf.rows * shelf.columns;
+                  const shelfOccupied = occupiedSlots.filter(s => 
+                    s >= shelf.start_number && s < shelf.start_number + shelfTotal
+                  ).length;
+
+                  return (
+                    <div 
+                      key={shelf.id}
+                      className="p-3 rounded-lg border"
+                      style={{ borderColor: `${shelf.color || 'hsl(var(--primary))'}30` }}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: shelf.color || 'hsl(var(--primary))' }}
+                          />
+                          <span className="text-sm font-medium">{shelf.name}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {shelfTotal - shelfOccupied}/{shelfTotal}
+                        </span>
+                      </div>
+                      {renderShelfGrid(shelf, true)}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleAutoAssign}
+                  disabled={assigning || availableSlots.length === 0}
+                  className="flex-1 gap-2"
+                >
+                  {assigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Assegna automatico
+                </Button>
+                <Button 
+                  onClick={() => setShowPicker(true)}
+                  disabled={availableSlots.length === 0}
+                  className="flex-1 gap-2"
+                >
+                  <MapPin className="h-4 w-4" />
+                  Scegli posizione
+                </Button>
               </div>
             </div>
           )}
@@ -555,7 +516,7 @@ export function StorageSlotWidget({
           <DrawerContent className="max-h-[90vh]">
             <DrawerHeader className="pb-2">
               <DrawerTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
+                <MapPin className="h-5 w-5 text-primary" />
                 Seleziona Posizione
               </DrawerTitle>
             </DrawerHeader>
@@ -566,10 +527,10 @@ export function StorageSlotWidget({
         </Drawer>
       ) : (
         <Dialog open={showPicker} onOpenChange={setShowPicker}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
+                <MapPin className="h-5 w-5 text-primary" />
                 Seleziona Posizione Scaffale
               </DialogTitle>
             </DialogHeader>
