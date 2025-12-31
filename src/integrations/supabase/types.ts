@@ -3361,6 +3361,62 @@ export type Database = {
         }
         Relationships: []
       }
+      print_queue: {
+        Row: {
+          centro_id: string
+          copies: number
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          id: string
+          label_data: Json
+          label_type: string
+          label_xml: string | null
+          printed_at: string | null
+          printer_name: string | null
+          priority: number
+          status: string
+        }
+        Insert: {
+          centro_id: string
+          copies?: number
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          label_data: Json
+          label_type?: string
+          label_xml?: string | null
+          printed_at?: string | null
+          printer_name?: string | null
+          priority?: number
+          status?: string
+        }
+        Update: {
+          centro_id?: string
+          copies?: number
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          label_data?: Json
+          label_type?: string
+          label_xml?: string | null
+          printed_at?: string | null
+          printer_name?: string | null
+          priority?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "print_queue_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
