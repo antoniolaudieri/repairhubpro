@@ -34,7 +34,8 @@ import {
   MessageCircle,
   ClipboardCheck,
   Truck,
-  Send
+  Send,
+  Archive
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -67,6 +68,7 @@ import { VisualStatusManager, DIRECT_REPAIR_STATUSES } from "@/components/repair
 import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
+import { StorageSlotWidget } from "@/components/centro/StorageSlotWidget";
 
 interface RepairGuideData {
   diagnosis: {
@@ -160,6 +162,7 @@ interface RepairDetail {
   completed_at: string | null;
   delivered_at: string | null;
   forfeited_at: string | null;
+  storage_slot: number | null;
   device: {
     brand: string;
     model: string;
@@ -326,6 +329,7 @@ export default function RepairDetail() {
         completed_at: data.completed_at,
         delivered_at: data.delivered_at,
         forfeited_at: data.forfeited_at,
+        storage_slot: data.storage_slot,
         device: data.device,
         customer: data.device.customer,
         orders: data.orders || [],
@@ -1116,6 +1120,21 @@ export default function RepairDetail() {
               />
             </motion.div>
 
+            {/* Storage Slot Widget */}
+            {isCentroContext && repair.customer?.centro_id && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.32 }}
+              >
+                <StorageSlotWidget
+                  repairId={repair.id}
+                  centroId={repair.customer.centro_id}
+                  currentSlot={repair.storage_slot}
+                  onSlotAssigned={(slot) => setRepair({ ...repair, storage_slot: slot || null })}
+                />
+              </motion.div>
+            )}
 
             {/* Repair Info Card */}
             <motion.div
