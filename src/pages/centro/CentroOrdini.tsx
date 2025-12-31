@@ -71,7 +71,18 @@ interface Order {
   received_at: string | null;
   order_items: OrderItem[];
   customer_id: string | null;
+  quote_id: string | null;
   customers?: { name: string; phone: string; email: string | null; centro_id: string } | null;
+  quotes?: {
+    id: string;
+    device_type: string;
+    device_brand: string | null;
+    device_model: string | null;
+    total_cost: number;
+    customers: {
+      name: string;
+    } | null;
+  } | null;
   repairs?: {
     devices: {
       brand: string;
@@ -197,6 +208,14 @@ export default function CentroOrdini() {
             spare_parts (image_url)
           ),
           customers (name, phone, email, centro_id),
+          quotes (
+            id,
+            device_type,
+            device_brand,
+            device_model,
+            total_cost,
+            customers (name)
+          ),
           repairs (
             devices (
               brand,
@@ -345,7 +364,21 @@ export default function CentroOrdini() {
         }
       }
 
-      toast.success("Ordine scaricato! Stock aggiornato");
+      // Update linked quote if exists
+      if (order.quote_id) {
+        await supabase
+          .from("quotes")
+          .update({
+            parts_arrived_at: new Date().toISOString(),
+            status: 'parts_arrived'
+          })
+          .eq("id", order.quote_id);
+        
+        toast.success("Ordine scaricato! Ricambi arrivati per il preventivo");
+      } else {
+        toast.success("Ordine scaricato! Stock aggiornato");
+      }
+
       fetchCentroAndOrders();
     } catch (error: any) {
       console.error("Error receiving order:", error);
