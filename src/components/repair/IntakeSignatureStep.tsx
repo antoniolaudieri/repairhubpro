@@ -49,6 +49,9 @@ interface IntakeSignatureStepProps {
   /** Marketing consents */
   marketingConsents?: MarketingConsents;
   onMarketingConsentsChange?: (consents: MarketingConsents) => void;
+  /** Device with customer option */
+  deviceWithCustomer?: boolean;
+  onDeviceWithCustomerChange?: (value: boolean) => void;
   /** Loyalty card activation props */
   showLoyaltyProposal?: boolean;
   customerId?: string | null;
@@ -81,6 +84,8 @@ export function IntakeSignatureStep({
   onPrivacyConsentChange,
   marketingConsents,
   onMarketingConsentsChange,
+  deviceWithCustomer = false,
+  onDeviceWithCustomerChange,
   showLoyaltyProposal = false,
   customerId,
   centroId,
@@ -630,7 +635,42 @@ export function IntakeSignatureStep({
         </Card>
       </motion.div>
 
-      {/* Diagnostic Fee Card - only show if fee is separate/discountable */}
+      {/* Device With Customer Option */}
+      {onDeviceWithCustomerChange && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <Card className={`p-4 border-2 transition-all ${deviceWithCustomer ? "border-amber-500 bg-amber-500/5" : "border-muted"}`}>
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="device-with-customer"
+                checked={deviceWithCustomer}
+                onCheckedChange={(checked) => onDeviceWithCustomerChange(checked === true)}
+                className="mt-0.5"
+              />
+              <Label htmlFor="device-with-customer" className="flex-1 cursor-pointer">
+                <div className="flex items-center gap-2 mb-1">
+                  <Smartphone className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-medium">Dispositivo presso il cliente</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Il cliente tiene il dispositivo e lo porterà quando i ricambi saranno disponibili
+                </p>
+              </Label>
+            </div>
+            {deviceWithCustomer && (
+              <div className="mt-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <p className="text-xs text-amber-700 flex items-center gap-1.5">
+                  <Bell className="h-3.5 w-3.5" />
+                  Riceverai una notifica quando arriveranno i ricambi per avvisare il cliente
+                </p>
+              </div>
+            )}
+          </Card>
+        </motion.div>
+      )}
       {!isFeeDisabledBySettings && onDiagnosticFeeChange && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}

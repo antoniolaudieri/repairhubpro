@@ -67,6 +67,7 @@ export default function CentroNuovoRitiro() {
   const [createdRepairId, setCreatedRepairId] = useState<string | null>(null);
   const [shippingEnabled, setShippingEnabled] = useState(false);
   const [externalPrivacyConsent, setExternalPrivacyConsent] = useState(false);
+  const [deviceWithCustomer, setDeviceWithCustomer] = useState(false);
   
   const UTOPYA_SHIPPING_COST = 7.50;
   
@@ -772,7 +773,7 @@ export default function CentroNuovoRitiro() {
         .from("repairs")
         .insert({
           device_id: device.id,
-          status: "pending",
+          status: deviceWithCustomer ? "waiting_for_device" : "pending",
           priority: "normal",
           intake_signature: intakeSignature,
           intake_signature_date: new Date().toISOString(),
@@ -782,6 +783,7 @@ export default function CentroNuovoRitiro() {
           repair_notes: servicesNotes || null,
           acconto: finalAcconto,
           shipping_cost: shippingEnabled ? UTOPYA_SHIPPING_COST : null,
+          device_location: deviceWithCustomer ? 'with_customer' : 'in_lab',
         })
         .select()
         .single();
@@ -1130,6 +1132,8 @@ export default function CentroNuovoRitiro() {
             onPaymentModeChange={setPaymentMode}
             externalPrivacyConsent={externalPrivacyConsent}
             onPrivacyConsentChange={setExternalPrivacyConsent}
+            deviceWithCustomer={deviceWithCustomer}
+            onDeviceWithCustomerChange={setDeviceWithCustomer}
             showLoyaltyProposal={!loyaltyBenefits.hasActiveCard && !loyaltyLoading && !forceLoyaltyIncentive}
             customerId={existingCustomerId}
             centroId={centroId}
