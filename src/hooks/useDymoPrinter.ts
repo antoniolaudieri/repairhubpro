@@ -1,14 +1,24 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 
-// Dymo Connect Web Service runs locally on these ports
-// Try multiple host variations as browsers handle localhost vs 127.0.0.1 differently
+// Dymo Connect Web Service runs locally on various ports
+// Different versions use different ports, try all known variations
 const DYMO_ENDPOINTS = [
+  // Dymo Connect (newer versions)
   { host: 'localhost', port: 41951, protocol: 'https' },
   { host: '127.0.0.1', port: 41951, protocol: 'https' },
   { host: 'localhost', port: 41952, protocol: 'http' },
   { host: '127.0.0.1', port: 41952, protocol: 'http' },
+  // Dymo Label Web Service (older versions)
+  { host: 'localhost', port: 8080, protocol: 'http' },
+  { host: '127.0.0.1', port: 8080, protocol: 'http' },
+  // Some versions use these ports
+  { host: 'localhost', port: 443, protocol: 'https' },
+  { host: 'localhost', port: 8443, protocol: 'https' },
 ];
+
+// Check if current page is served over HTTPS
+const isSecureContext = typeof window !== 'undefined' && window.location.protocol === 'https:';
 
 interface DymoPrinter {
   name: string;
@@ -23,6 +33,7 @@ interface DymoEnvironment {
   isServiceRunning: boolean;
   serviceUrl?: string;
   errorMessage?: string;
+  isMixedContentBlocked?: boolean;
 }
 
 interface UseDymoPrinterReturn {
@@ -40,18 +51,23 @@ interface UseDymoPrinterReturn {
 
 // Try to find the running Dymo service
 async function findDymoService(): Promise<{ url: string; port: number } | null> {
+  // If running on HTTPS, we can only try HTTPS endpoints due to mixed content restrictions
+  const endpointsToTry = isSecureContext 
+    ? DYMO_ENDPOINTS.filter(e => e.protocol === 'https')
+    : DYMO_ENDPOINTS;
+
   // Try all endpoints in parallel for faster detection
-  const attempts = DYMO_ENDPOINTS.map(async ({ host, port, protocol }) => {
+  const attempts = endpointsToTry.map(async ({ host, port, protocol }) => {
     const url = `${protocol}://${host}:${port}`;
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       
       const response = await fetch(`${url}/DYMO/DLS/Printing/StatusConnected`, {
         method: 'GET',
         signal: controller.signal,
-        mode: 'cors',
+        // Note: mode 'no-cors' won't give us usable response, but 'cors' may be blocked
       });
       
       clearTimeout(timeoutId);
@@ -61,8 +77,8 @@ async function findDymoService(): Promise<{ url: string; port: number } | null> 
         return { url, port };
       }
     } catch (e) {
-      // This endpoint didn't work
-      console.log(`Dymo not found at ${url}:`, e);
+      // This endpoint didn't work - expected for most endpoints
+      console.debug(`Dymo not available at ${url}`);
     }
     return null;
   });
@@ -175,6 +191,7 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
           isInstalled: true,
           isServiceRunning: true,
           serviceUrl: service.url,
+          isMixedContentBlocked: false,
         };
         setEnvironment(env);
         setServiceUrl(service.url);
@@ -182,11 +199,15 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
         return env;
       }
       
+      // If we're on HTTPS, mixed content is likely the issue
       const env: DymoEnvironment = {
         isSupported: true,
         isInstalled: false,
         isServiceRunning: false,
-        errorMessage: 'Dymo Connect Web Service non trovato. Assicurati che Dymo Connect sia installato e in esecuzione.',
+        isMixedContentBlocked: isSecureContext,
+        errorMessage: isSecureContext 
+          ? 'Connessione bloccata: questa pagina è servita su HTTPS ma Dymo Web Service usa HTTP. Esegui l\'app su http://localhost per usare Dymo.'
+          : 'Dymo Connect Web Service non trovato. Assicurati che Dymo Connect sia installato e il servizio sia in esecuzione.',
       };
       setEnvironment(env);
       return env;
@@ -196,6 +217,7 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
         isSupported: false,
         isInstalled: false,
         isServiceRunning: false,
+        isMixedContentBlocked: isSecureContext,
         errorMessage: error.message || 'Errore nella verifica Dymo Connect',
       };
       setEnvironment(env);
