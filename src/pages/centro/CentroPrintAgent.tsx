@@ -270,6 +270,26 @@ export default function CentroPrintAgent() {
         </p>
       </div>
 
+      {/* Info Alert when Dymo not connected */}
+      {!environment?.isServiceRunning && (
+        <Alert className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
+          <AlertTriangle className="h-4 w-4 text-blue-600" />
+          <AlertDescription className="text-blue-800 dark:text-blue-200">
+            <strong>Dymo Connect non rilevato.</strong> Questa pagina deve essere aperta sul PC dove è installata la stampante Dymo con Dymo Connect attivo.
+            <br /><br />
+            <strong>Come funziona:</strong>
+            <ol className="list-decimal list-inside mt-2 space-y-1">
+              <li>Apri questa pagina sul PC con la stampante Dymo</li>
+              <li>Assicurati che Dymo Connect sia in esecuzione</li>
+              <li>Seleziona la stampante e clicca "Avvia"</li>
+              <li>Da qualsiasi dispositivo, usa "Coda Remota" per inviare le stampe</li>
+            </ol>
+            <br />
+            <strong>Intanto puoi vedere la coda di stampa qui sotto.</strong>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Status Card */}
       <Card className="mb-6">
         <CardHeader>
@@ -300,12 +320,12 @@ export default function CentroPrintAgent() {
               {environment?.isServiceRunning ? (
                 <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               ) : (
-                <XCircle className="h-5 w-5 text-destructive" />
+                <XCircle className="h-5 w-5 text-amber-500" />
               )}
               <div>
                 <p className="font-medium">Dymo Connect</p>
                 <p className="text-sm text-muted-foreground">
-                  {environment?.isServiceRunning ? 'Connesso' : 'Non connesso'}
+                  {environment?.isServiceRunning ? 'Connesso' : 'Non rilevato su questo PC'}
                 </p>
               </div>
             </div>
