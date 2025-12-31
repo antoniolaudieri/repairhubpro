@@ -12,15 +12,16 @@ interface QRScannerProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const SCANNER_CONTAINER_ID = 'qr-scanner-container';
+
 export function QRScanner({ open, onOpenChange }: QRScannerProps) {
   const navigate = useNavigate();
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [scannedId, setScannedId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const scannerContainerId = useRef(`qr-reader-${Date.now()}`);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -44,22 +45,24 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
   }, []);
 
   const startScanner = useCallback(async () => {
-    const containerId = scannerContainerId.current;
-    const container = document.getElementById(containerId);
+    const container = document.getElementById(SCANNER_CONTAINER_ID);
     if (!container) {
-      console.error('QR reader container not found');
-      return;
+      console.error('QR reader container not found, retrying...');
+      return false;
     }
     
     // First ensure any existing scanner is stopped
     await stopScanner();
+    
+    // Clear container
+    container.innerHTML = '';
     
     setError(null);
     setScannedId(null);
     setIsStarting(true);
     
     try {
-      const html5QrCode = new Html5Qrcode(containerId);
+      const html5QrCode = new Html5Qrcode(SCANNER_CONTAINER_ID);
       scannerRef.current = html5QrCode;
       
       await html5QrCode.start(
@@ -97,6 +100,7 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
       
       setIsScanning(true);
       setIsStarting(false);
+      return true;
     } catch (err: any) {
       console.error('Scanner error:', err);
       
@@ -108,26 +112,39 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
       } else {
         setError('Errore nell\'avvio della fotocamera: ' + (err.message || err));
       }
+      return false;
     }
   }, [stopScanner, onOpenChange, navigate]);
 
-  // Handle open state
+  // Mark as ready after mount
   useEffect(() => {
     if (open) {
       // Reset state
       setError(null);
       setScannedId(null);
-      // Generate new container ID to avoid conflicts
-      scannerContainerId.current = `qr-reader-${Date.now()}`;
-      // Small delay to ensure DOM is ready
-      const timeout = setTimeout(() => {
-        startScanner();
-      }, 300);
-      return () => clearTimeout(timeout);
+      setIsScanning(false);
+      setIsStarting(false);
+      // Set ready after a frame to ensure DOM is rendered
+      const frameId = requestAnimationFrame(() => {
+        setIsReady(true);
+      });
+      return () => cancelAnimationFrame(frameId);
     } else {
+      setIsReady(false);
       stopScanner();
     }
-  }, [open, startScanner, stopScanner]);
+  }, [open, stopScanner]);
+
+  // Start scanner when ready
+  useEffect(() => {
+    if (isReady && open && !isScanning && !isStarting && !error) {
+      // Use a small timeout to ensure the container is in the DOM
+      const timeout = setTimeout(() => {
+        startScanner();
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [isReady, open, isScanning, isStarting, error, startScanner]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -146,7 +163,13 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
 
   const handleClose = async () => {
     await stopScanner();
+    setIsReady(false);
     onOpenChange(false);
+  };
+
+  const handleRetry = async () => {
+    setError(null);
+    await startScanner();
   };
 
   if (!open) return null;
@@ -161,10 +184,7 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
       />
       
       {/* Modal content */}
-      <div 
-        ref={containerRef}
-        className="relative z-50 w-full max-w-md mx-4 bg-background rounded-lg shadow-lg border"
-      >
+      <div className="relative z-50 w-full max-w-md mx-4 bg-background rounded-lg shadow-lg border">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div>
@@ -182,11 +202,12 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
         </div>
 
         <div className="p-4 space-y-4">
-          {/* Scanner container - isolated from React */}
-          <div 
-            id={scannerContainerId.current}
-            className="w-full aspect-square bg-muted rounded-lg overflow-hidden relative"
-          >
+          {/* Scanner container - always render this div */}
+          <div className="w-full aspect-square bg-muted rounded-lg overflow-hidden relative">
+            <div 
+              id={SCANNER_CONTAINER_ID}
+              className="w-full h-full"
+            />
             {(isStarting || (!isScanning && !error && !scannedId)) && (
               <div className="absolute inset-0 flex items-center justify-center z-10 bg-muted">
                 <div className="text-center">
@@ -222,7 +243,7 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
               Chiudi
             </Button>
             {error && (
-              <Button onClick={startScanner} disabled={isStarting} className="flex-1">
+              <Button onClick={handleRetry} disabled={isStarting} className="flex-1">
                 <Camera className="h-4 w-4 mr-2" />
                 Riprova
               </Button>
