@@ -26,6 +26,8 @@ import { GoalsSuggestionBanner } from "@/components/centro/GoalsSuggestionBanner
 import { MaintenanceSuggestionBanner } from "@/components/centro/MaintenanceSuggestionBanner";
 import { IntakeLoyaltyBanner } from "@/components/loyalty/IntakeLoyaltyBanner";
 import { useLoyaltyCard } from "@/hooks/useLoyaltyCard";
+import { useStorageSlots } from "@/hooks/useStorageSlots";
+import { StorageSlotWidget } from "@/components/centro/StorageSlotWidget";
 
 export default function CentroNuovoRitiro() {
   const navigate = useNavigate();
@@ -68,8 +70,13 @@ export default function CentroNuovoRitiro() {
   const [shippingEnabled, setShippingEnabled] = useState(false);
   const [externalPrivacyConsent, setExternalPrivacyConsent] = useState(false);
   const [deviceWithCustomer, setDeviceWithCustomer] = useState(false);
+  const [assignedStorageSlot, setAssignedStorageSlot] = useState<number | null>(null);
+  const [formattedStorageSlot, setFormattedStorageSlot] = useState<string>("");
   
   const UTOPYA_SHIPPING_COST = 7.50;
+  
+  // Storage slots hook
+  const storageSlots = useStorageSlots(centroId || undefined);
   
   // Customer display integration
   const { 
@@ -867,6 +874,30 @@ export default function CentroNuovoRitiro() {
       // Save repair ID and offer checklist
       setCreatedRepairId(repairData.id);
       
+      // Auto-assign storage slot
+      try {
+        const assignedSlot = await storageSlots.assignStorageSlot(repairData.id);
+        if (assignedSlot) {
+          setAssignedStorageSlot(assignedSlot);
+          // Format the slot for the label
+          const config = await storageSlots.getMultiShelfConfig();
+          if (config) {
+            let slotStart = 1;
+            for (const shelf of config.shelves) {
+              const shelfSlots = shelf.rows * shelf.columns;
+              if (assignedSlot >= slotStart && assignedSlot < slotStart + shelfSlots) {
+                setFormattedStorageSlot(storageSlots.formatSlotWithShelf(shelf.id, assignedSlot, config));
+                break;
+              }
+              slotStart += shelfSlots;
+            }
+          }
+        }
+      } catch (slotError) {
+        console.error("Error assigning storage slot:", slotError);
+        // Non blocchiamo il flusso se l'assegnazione fallisce
+      }
+      
       // Complete customer display session
       await handleCompleteIntake();
       
@@ -881,7 +912,7 @@ export default function CentroNuovoRitiro() {
         });
       } else {
         toast.success("Dispositivo registrato con successo!");
-        navigate("/centro/lavori");
+        // Don't navigate immediately, let user see slot and print label
       }
     } catch (error: any) {
       console.error("Error:", error);
@@ -1248,8 +1279,44 @@ export default function CentroNuovoRitiro() {
               </div>
             )}
 
+            {/* Storage slot assignment */}
+            {centroId && createdRepairId && (
+              <StorageSlotWidget
+                repairId={createdRepairId}
+                centroId={centroId}
+                currentSlot={assignedStorageSlot}
+                onSlotAssigned={async (slot) => {
+                  setAssignedStorageSlot(slot);
+                  // Format the slot for the label
+                  const config = await storageSlots.getMultiShelfConfig();
+                  if (config && slot) {
+                    // Find which shelf this slot belongs to
+                    let slotStart = 1;
+                    for (const shelf of config.shelves) {
+                      const shelfSlots = shelf.rows * shelf.columns;
+                      if (slot >= slotStart && slot < slotStart + shelfSlots) {
+                        setFormattedStorageSlot(storageSlots.formatSlotWithShelf(shelf.id, slot, config));
+                        break;
+                      }
+                      slotStart += shelfSlots;
+                    }
+                  }
+                }}
+              />
+            )}
+
+            {/* Storage slot picker before repair is created */}
+            {centroId && !createdRepairId && (
+              <Card className="p-4 space-y-3 border-dashed border-2 border-muted-foreground/30">
+                <h4 className="font-semibold flex items-center gap-2">📍 Posizione Scaffale</h4>
+                <p className="text-sm text-muted-foreground">
+                  La posizione verrà assegnata automaticamente dopo la registrazione del ritiro.
+                </p>
+              </Card>
+            )}
+
             {/* Print Label button in summary */}
-            <div className="pt-2">
+            <div className="pt-2 space-y-3">
               <PrintLabelButton
                 repairId={createdRepairId || 'preview'}
                 customerName={customerData.name}
@@ -1259,13 +1326,27 @@ export default function CentroNuovoRitiro() {
                 deviceType={deviceData.device_type}
                 issueDescription={deviceData.reported_issue}
                 createdAt={new Date().toISOString()}
+                storageSlot={formattedStorageSlot || undefined}
                 variant="outline"
                 className="w-full gap-2"
                 showLabel={true}
               />
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                Stampa l'etichetta dopo aver confermato il ritiro
+              <p className="text-xs text-muted-foreground text-center">
+                {createdRepairId 
+                  ? "Stampa l'etichetta con la posizione assegnata"
+                  : "Stampa l'etichetta dopo aver confermato il ritiro"
+                }
               </p>
+              
+              {/* Complete button after repair is created */}
+              {createdRepairId && (
+                <Button 
+                  onClick={() => navigate("/centro/lavori")}
+                  className="w-full"
+                >
+                  Vai ai Lavori
+                </Button>
+              )}
             </div>
           </div>
         );
