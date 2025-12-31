@@ -13,17 +13,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDymoPrinter } from '@/hooks/useDymoPrinter';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { generateRepairLabel, getLabelFormats, LabelFormat } from '@/utils/labelTemplates';
-import { Printer, Loader2, Tag, Edit3, Eye, QrCode, Send, Cloud, ExternalLink, CheckCircle2 } from 'lucide-react';
+import { Printer, Loader2, Tag, Edit3, Eye, QrCode, Cloud, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface LabelData {
   repairId: string;
@@ -42,12 +42,12 @@ interface LabelPreviewDialogProps {
   data: LabelData;
 }
 
-type LabelStyle = 'standard' | 'compact' | 'detailed';
+type LabelStyle = 'standard' | 'compact' | 'qrcode';
 
 const LABEL_STYLES: { value: LabelStyle; label: string; description: string }[] = [
+  { value: 'qrcode', label: 'Con QR Code', description: 'Info + QR per scansione rapida' },
   { value: 'standard', label: 'Standard', description: 'ID, cliente, dispositivo, problema' },
   { value: 'compact', label: 'Compatto', description: 'Solo ID e dispositivo' },
-  { value: 'detailed', label: 'Dettagliato', description: 'Tutte le informazioni + QR' },
 ];
 
 const PAPER_FORMATS = getLabelFormats();
@@ -64,10 +64,8 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
   const [deviceInfo, setDeviceInfo] = useState('');
   const [issue, setIssue] = useState('');
   
-  // Label configuration
   const [labelFormat, setLabelFormat] = useState<LabelFormat>('11354'); // Default to 57x32mm
-  const [labelStyle, setLabelStyle] = useState<LabelStyle>('standard');
-  const [showQrCode, setShowQrCode] = useState(false);
+  const [labelStyle, setLabelStyle] = useState<LabelStyle>('qrcode');
   
   const [isPrinting, setIsPrinting] = useState(false);
   const [isSendingToQueue, setIsSendingToQueue] = useState(false);
@@ -233,20 +231,21 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
                     <div className="font-bold text-lg text-gray-900">#{shortId}</div>
                     <div className="text-sm text-gray-600 break-words">{deviceInfo || 'Dispositivo'}</div>
                   </div>
-                ) : labelStyle === 'detailed' ? (
+                ) : labelStyle === 'qrcode' ? (
                   <div className="flex gap-3 h-full">
                     <div className="flex-1 flex flex-col gap-1 overflow-hidden">
                       <div className="font-bold text-lg text-gray-900">#{shortId}</div>
                       <div className="text-sm font-medium text-gray-800 break-words leading-tight">{customerName || 'Cliente'}</div>
                       <div className="text-xs text-gray-600 break-words leading-tight">{deviceInfo || 'Dispositivo'}</div>
-                      <div className="text-xs text-gray-500 break-words italic leading-tight">{issue || 'Problema'}</div>
                       <div className="text-[10px] text-gray-400 mt-auto">{intakeDate}</div>
                     </div>
-                    {showQrCode && (
-                      <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 self-center">
-                        <QrCode className="h-10 w-10 text-gray-400" />
-                      </div>
-                    )}
+                    <div className="flex-shrink-0 self-center">
+                      <QRCodeSVG 
+                        value={`${window.location.origin}/centro/lavori/${data?.repairId || ''}`}
+                        size={60}
+                        level="M"
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-1 h-full">
@@ -298,19 +297,14 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
               </div>
             </div>
 
-            {labelStyle === 'detailed' && (
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="show-qr"
-                  checked={showQrCode}
-                  onChange={(e) => setShowQrCode(e.target.checked)}
-                  className="rounded border-border"
-                />
-                <Label htmlFor="show-qr" className="text-sm cursor-pointer">
-                  Includi QR Code per tracking
-                </Label>
-              </div>
+            {/* Info stile QR code */}
+            {labelStyle === 'qrcode' && (
+              <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950">
+                <QrCode className="h-4 w-4 text-emerald-600" />
+                <AlertDescription className="text-emerald-800 dark:text-emerald-200 text-sm">
+                  Il QR code permette di scansionare l'etichetta e aprire la riparazione direttamente.
+                </AlertDescription>
+              </Alert>
             )}
 
             {/* Info sulla stampa - niente più "nessuna stampante" */}
