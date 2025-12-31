@@ -19,7 +19,7 @@ import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import EmailTemplateEditor, { EmailTemplates } from "@/components/centro/EmailTemplateEditor";
 import { DeviceHealthSettings } from "@/components/centro/DeviceHealthSettings";
 import { StorageSlotsSettings } from "@/components/centro/StorageSlotsSettings";
-import { StorageSlotsConfig } from "@/hooks/useStorageSlots";
+import { MultiShelfConfig } from "@/hooks/useStorageSlots";
 import { 
   Settings,
   Building2,
@@ -96,8 +96,9 @@ interface CentroSettings {
   dymo_config?: DymoConfig;
   monthly_goal?: number;
   email_templates?: Partial<EmailTemplates>;
-  storage_slots?: StorageSlotsConfig;
-  [key: string]: boolean | string | number | DisplayAd[] | SmtpConfig | DymoConfig | Partial<EmailTemplates> | StorageSlotsConfig | undefined;
+  storage_slots?: { enabled: boolean; max_slots: number; prefix: string };
+  multi_shelf?: MultiShelfConfig;
+  [key: string]: any;
 }
 
 interface Centro {
@@ -216,11 +217,10 @@ export default function CentroImpostazioni() {
   // Email Templates State
   const [emailTemplates, setEmailTemplates] = useState<Partial<EmailTemplates>>({});
   
-  // Storage Slots State
-  const [storageSlotsConfig, setStorageSlotsConfig] = useState<StorageSlotsConfig>({
+  // Storage Slots State (Multi-shelf)
+  const [storageSlotsConfig, setStorageSlotsConfig] = useState<MultiShelfConfig>({
     enabled: false,
-    max_slots: 50,
-    prefix: "",
+    shelves: [],
   });
   
   // Opening Hours State
@@ -373,12 +373,23 @@ export default function CentroImpostazioni() {
       // Load Email Templates
       setEmailTemplates(settings?.email_templates || {});
       
-      // Load Storage Slots config
-      if (settings?.storage_slots) {
+      // Load Storage Slots config (multi-shelf or legacy)
+      if (settings?.multi_shelf) {
+        setStorageSlotsConfig(settings.multi_shelf);
+      } else if (settings?.storage_slots?.enabled) {
+        // Convert legacy format to multi-shelf
+        const legacy = settings.storage_slots;
         setStorageSlotsConfig({
-          enabled: settings.storage_slots.enabled ?? false,
-          max_slots: settings.storage_slots.max_slots ?? 50,
-          prefix: settings.storage_slots.prefix ?? "",
+          enabled: true,
+          shelves: [{
+            id: 'legacy-shelf',
+            name: 'Scaffale Principale',
+            prefix: legacy.prefix || '',
+            rows: Math.ceil((legacy.max_slots || 50) / 10),
+            columns: 10,
+            start_number: 1,
+            color: 'from-blue-500 to-blue-600',
+          }],
         });
       }
       
@@ -435,7 +446,7 @@ export default function CentroImpostazioni() {
         dymoPrinter: settings?.dymo_config?.printer_name || null,
         dymoLabelFormat: settings?.dymo_config?.label_format || '30252',
         monthlyGoal: settings?.monthly_goal || 0,
-        storageSlotsConfig: settings?.storage_slots || { enabled: false, max_slots: 50, prefix: "" },
+        storageSlotsConfig: settings?.multi_shelf || { enabled: false, shelves: [] },
       }));
     } catch (error: any) {
       console.error("Error fetching data:", error);
@@ -476,7 +487,7 @@ export default function CentroImpostazioni() {
         },
         monthly_goal: monthlyGoal,
         email_templates: emailTemplates,
-        storage_slots: storageSlotsConfig,
+        multi_shelf: storageSlotsConfig,
       };
       
       const { error } = await supabase

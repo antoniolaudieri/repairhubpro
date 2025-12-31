@@ -4,14 +4,17 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Archive, Package } from "lucide-react";
-import { useStorageSlots, StorageSlotsConfig } from "@/hooks/useStorageSlots";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Archive, Package, Settings2, Map } from "lucide-react";
+import { useStorageSlots, MultiShelfConfig } from "@/hooks/useStorageSlots";
+import { MultiShelfEditor } from "./MultiShelfEditor";
+import { ShelfMapView } from "./ShelfMapView";
 import { cn } from "@/lib/utils";
 
 interface StorageSlotsSettingsProps {
   centroId: string | null;
-  config: StorageSlotsConfig;
-  onChange: (config: StorageSlotsConfig) => void;
+  config: MultiShelfConfig;
+  onChange: (config: MultiShelfConfig) => void;
 }
 
 export function StorageSlotsSettings({ centroId, config, onChange }: StorageSlotsSettingsProps) {
@@ -25,6 +28,7 @@ export function StorageSlotsSettings({ centroId, config, onChange }: StorageSlot
     occupiedSlots?: number[];
     prefix?: string;
   } | null>(null);
+  const [activeTab, setActiveTab] = useState<"settings" | "map">("settings");
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -36,6 +40,9 @@ export function StorageSlotsSettings({ centroId, config, onChange }: StorageSlot
     fetchStats();
   }, [centroId, config.enabled, getSlotsStats]);
 
+  // Calculate total slots from all shelves
+  const totalSlots = config.shelves.reduce((sum, shelf) => sum + shelf.rows * shelf.columns, 0);
+
   return (
     <Card className="border border-border/50 hover:border-border transition-colors">
       <CardHeader className="pb-3">
@@ -46,7 +53,7 @@ export function StorageSlotsSettings({ centroId, config, onChange }: StorageSlot
           Gestione Scaffalatura
         </CardTitle>
         <CardDescription className="text-xs">
-          Assegna automaticamente una posizione sullo scaffale ad ogni ritiro
+          Configura le tue scaffalature in modo visuale e assegna automaticamente posizioni ad ogni ritiro
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -66,92 +73,72 @@ export function StorageSlotsSettings({ centroId, config, onChange }: StorageSlot
 
         {config.enabled && (
           <>
-            {/* Max Slots */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-xs">Numero massimo slot</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={999}
-                  value={config.max_slots}
-                  onChange={(e) => onChange({ ...config, max_slots: parseInt(e.target.value) || 50 })}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Prefisso (opzionale)</Label>
-                <Input
-                  type="text"
-                  maxLength={5}
-                  value={config.prefix}
-                  onChange={(e) => onChange({ ...config, prefix: e.target.value })}
-                  placeholder="es. A, SCAFF-"
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-
-            {/* Stats */}
-            {stats && stats.enabled && (
-              <div className="rounded-lg bg-muted/50 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Stato attuale</span>
-                  <Badge variant={stats.percentage >= 90 ? "destructive" : stats.percentage >= 70 ? "secondary" : "outline"}>
-                    {stats.occupied}/{stats.total} occupati ({stats.percentage}%)
-                  </Badge>
+            {/* Stats Summary */}
+            {config.shelves.length > 0 && (
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <Package className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">
+                    <strong>{config.shelves.length}</strong> scaffalatur{config.shelves.length === 1 ? 'a' : 'e'}
+                  </span>
                 </div>
-
-                {/* Visual Grid */}
-                <div className="grid grid-cols-10 gap-1">
-                  {Array.from({ length: Math.min(config.max_slots, 50) }, (_, i) => i + 1).map((slot) => {
-                    const isOccupied = stats.occupiedSlots?.includes(slot);
-                    return (
-                      <div
-                        key={slot}
-                        className={cn(
-                          "aspect-square rounded flex items-center justify-center text-[10px] font-medium transition-colors",
-                          isOccupied
-                            ? "bg-destructive/20 text-destructive border border-destructive/30"
-                            : "bg-emerald-500/20 text-emerald-600 border border-emerald-500/30"
-                        )}
-                        title={isOccupied ? `Slot ${slot} - Occupato` : `Slot ${slot} - Libero`}
-                      >
-                        {slot}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {config.max_slots > 50 && (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Mostrando i primi 50 slot su {config.max_slots}
-                  </p>
+                <div className="h-4 w-px bg-border" />
+                <span className="text-sm">
+                  <strong>{totalSlots}</strong> slot totali
+                </span>
+                {stats && stats.enabled && (
+                  <>
+                    <div className="h-4 w-px bg-border" />
+                    <Badge 
+                      variant={stats.percentage >= 90 ? "destructive" : stats.percentage >= 70 ? "secondary" : "outline"}
+                    >
+                      {stats.occupied}/{stats.total} occupati
+                    </Badge>
+                  </>
                 )}
-
-                <div className="flex items-center gap-4 text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded bg-emerald-500/20 border border-emerald-500/30" />
-                    <span className="text-muted-foreground">Libero ({stats.available})</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded bg-destructive/20 border border-destructive/30" />
-                    <span className="text-muted-foreground">Occupato ({stats.occupied})</span>
-                  </div>
-                </div>
               </div>
             )}
 
-            {/* Preview */}
-            <div className="rounded-lg border border-dashed border-border p-3">
-              <p className="text-xs text-muted-foreground mb-2">Anteprima etichetta slot:</p>
-              <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-md">
-                <Package className="h-4 w-4" />
-                <span className="font-mono font-bold">
-                  {config.prefix ? `${config.prefix}12` : "SLOT 12"}
-                </span>
+            {/* Tabs for Settings and Map */}
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "settings" | "map")}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="settings" className="gap-2">
+                  <Settings2 className="h-4 w-4" />
+                  Configurazione
+                </TabsTrigger>
+                <TabsTrigger value="map" className="gap-2" disabled={config.shelves.length === 0}>
+                  <Map className="h-4 w-4" />
+                  Mappa Visuale
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="settings" className="mt-4">
+                <MultiShelfEditor
+                  config={config}
+                  onChange={onChange}
+                />
+              </TabsContent>
+
+              <TabsContent value="map" className="mt-4">
+                <ShelfMapView 
+                  centroId={centroId} 
+                  compact={true}
+                />
+              </TabsContent>
+            </Tabs>
+
+            {/* Help Text */}
+            {config.shelves.length === 0 && (
+              <div className="text-center p-6 rounded-lg border border-dashed border-border/50">
+                <Archive className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+                <p className="text-sm text-muted-foreground">
+                  Nessuna scaffalatura configurata.
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Clicca "Aggiungi Scaffalatura" per iniziare.
+                </p>
               </div>
-            </div>
+            )}
           </>
         )}
       </CardContent>

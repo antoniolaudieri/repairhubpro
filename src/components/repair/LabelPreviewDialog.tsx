@@ -34,6 +34,7 @@ interface LabelData {
   deviceType: string;
   issueDescription: string;
   createdAt: string;
+  storageSlot?: string; // Added storage slot
 }
 
 interface LabelPreviewDialogProps {
@@ -98,6 +99,7 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
 
   const shortId = data?.repairId?.slice(0, 8).toUpperCase() || '';
   const intakeDate = data?.createdAt ? format(new Date(data.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '';
+  const slotDisplay = data?.storageSlot ? `[${data.storageSlot}]` : '';
 
   // Get label dimensions for preview (scaled for display)
   const getLabelDimensions = () => {
@@ -148,6 +150,7 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
         deviceType: data.deviceType || '',
         issueDescription: issue.substring(0, 40),
         intakeDate,
+        storageSlot: data.storageSlot,
       }, labelFormat);
 
       await printLabel(labelXml);
@@ -228,13 +231,13 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
               >
                 {labelStyle === 'compact' ? (
                   <div className="flex flex-col justify-center gap-2 h-full">
-                    <div className="font-bold text-lg text-gray-900">#{shortId}</div>
+                    <div className="font-bold text-lg text-gray-900">#{shortId} {slotDisplay && <span className="text-primary">{slotDisplay}</span>}</div>
                     <div className="text-sm text-gray-600 break-words">{deviceInfo || 'Dispositivo'}</div>
                   </div>
                 ) : labelStyle === 'qrcode' ? (
                   <div className="flex gap-3 h-full">
                     <div className="flex-1 flex flex-col gap-1 overflow-hidden">
-                      <div className="font-bold text-lg text-gray-900">#{shortId}</div>
+                      <div className="font-bold text-lg text-gray-900">#{shortId} {slotDisplay && <span className="text-primary">{slotDisplay}</span>}</div>
                       <div className="text-sm font-medium text-gray-800 break-words leading-tight">{customerName || 'Cliente'}</div>
                       <div className="text-xs text-gray-600 break-words leading-tight">{deviceInfo || 'Dispositivo'}</div>
                       <div className="text-[10px] text-gray-400 mt-auto">{intakeDate}</div>
@@ -249,7 +252,7 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
                   </div>
                 ) : (
                   <div className="flex flex-col gap-1 h-full">
-                    <div className="font-bold text-lg text-gray-900">#{shortId}</div>
+                    <div className="font-bold text-lg text-gray-900">#{shortId} {slotDisplay && <span className="text-primary">{slotDisplay}</span>}</div>
                     <div className="text-sm font-medium text-gray-800 break-words leading-tight">{customerName || 'Cliente'}</div>
                     <div className="text-xs text-gray-600 break-words leading-tight">{deviceInfo || 'Dispositivo'}</div>
                     <div className="text-xs text-gray-500 break-words italic leading-tight">{issue || 'Problema'}</div>

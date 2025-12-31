@@ -2,10 +2,27 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
+// Legacy single-shelf config (for backward compatibility)
 export interface StorageSlotsConfig {
   enabled: boolean;
   max_slots: number;
   prefix: string;
+}
+
+// New multi-shelf config
+export interface ShelfConfig {
+  id: string;
+  name: string;
+  prefix: string;
+  rows: number;
+  columns: number;
+  start_number: number;
+  color: string;
+}
+
+export interface MultiShelfConfig {
+  enabled: boolean;
+  shelves: ShelfConfig[];
 }
 
 const DEFAULT_CONFIG: StorageSlotsConfig = {
@@ -14,10 +31,15 @@ const DEFAULT_CONFIG: StorageSlotsConfig = {
   prefix: "",
 };
 
+const DEFAULT_MULTI_CONFIG: MultiShelfConfig = {
+  enabled: false,
+  shelves: [],
+};
+
 export function useStorageSlots(centroId: string | null) {
   const [isLoading, setIsLoading] = useState(false);
 
-  // Get storage slots configuration from centro settings
+  // Get legacy storage slots configuration from centro settings
   const getConfig = useCallback(async (): Promise<StorageSlotsConfig> => {
     if (!centroId) return DEFAULT_CONFIG;
 
@@ -41,6 +63,62 @@ export function useStorageSlots(centroId: string | null) {
       return DEFAULT_CONFIG;
     }
   }, [centroId]);
+
+  // Get multi-shelf configuration
+  const getMultiShelfConfig = useCallback(async (): Promise<MultiShelfConfig> => {
+    if (!centroId) return DEFAULT_MULTI_CONFIG;
+
+    try {
+      const { data, error } = await supabase
+        .from("centri_assistenza")
+        .select("settings")
+        .eq("id", centroId)
+        .single();
+
+      if (error) throw error;
+
+      const settings = data?.settings as Record<string, any> | null;
+      
+      // Check for multi-shelf config first
+      if (settings?.multi_shelf) {
+        return settings.multi_shelf as MultiShelfConfig;
+      }
+      
+      // Fallback: Convert legacy config to multi-shelf format
+      if (settings?.storage_slots?.enabled) {
+        const legacyConfig = settings.storage_slots;
+        return {
+          enabled: true,
+          shelves: [{
+            id: 'legacy-shelf',
+            name: 'Scaffale Principale',
+            prefix: legacyConfig.prefix || '',
+            rows: Math.ceil(legacyConfig.max_slots / 10),
+            columns: 10,
+            start_number: 1,
+            color: 'from-blue-500 to-blue-600',
+          }],
+        };
+      }
+      
+      return DEFAULT_MULTI_CONFIG;
+    } catch (error) {
+      console.error("Error fetching multi-shelf config:", error);
+      return DEFAULT_MULTI_CONFIG;
+    }
+  }, [centroId]);
+
+  // Get total slots across all shelves
+  const getTotalSlots = useCallback((config: MultiShelfConfig): number => {
+    return config.shelves.reduce((total, shelf) => total + shelf.rows * shelf.columns, 0);
+  }, []);
+
+  // Format slot with shelf info
+  const formatSlotWithShelf = useCallback((shelfId: string, slotNumber: number, config: MultiShelfConfig): string => {
+    const shelf = config.shelves.find(s => s.id === shelfId);
+    if (!shelf) return `${slotNumber}`;
+    return `${shelf.prefix}${slotNumber}`;
+  }, []);
 
   // Get all occupied slots for a centro
   const getOccupiedSlots = useCallback(async (): Promise<number[]> => {
@@ -189,6 +267,9 @@ export function useStorageSlots(centroId: string | null) {
   return {
     isLoading,
     getConfig,
+    getMultiShelfConfig,
+    getTotalSlots,
+    formatSlotWithShelf,
     getOccupiedSlots,
     getAvailableSlots,
     getFirstAvailableSlot,
