@@ -157,46 +157,44 @@ export function DymoPrinterSettings({
                     Dymo Connect non rilevato
                   </p>
                   
-                  {/* Mixed Content Warning - when on HTTPS */}
-                  {environment.isMixedContentBlocked && (
-                    <div className="bg-destructive/10 p-3 rounded-md mb-3 border border-destructive/30">
-                      <p className="font-medium text-sm mb-2 text-destructive">🔒 Blocco Sicurezza Browser (Mixed Content)</p>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        Questa pagina è servita su <strong>HTTPS</strong>, ma il servizio Dymo Connect 
-                        usa <strong>HTTP</strong>. I browser moderni bloccano queste connessioni "mixed content" 
-                        per sicurezza.
-                      </p>
-                      <p className="text-xs font-medium text-destructive">
-                        Soluzione: Esegui l'app su <code className="bg-muted px-1 rounded">http://localhost:5173</code> (non HTTPS)
-                      </p>
-                    </div>
-                  )}
+                  {/* Certificate Issue - Most common problem */}
+                  <div className="bg-amber-500/10 p-3 rounded-md mb-3 border border-amber-500/30">
+                    <p className="font-medium text-sm mb-2 text-amber-600 dark:text-amber-400">🔐 Certificato SSL da accettare</p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Il servizio Dymo usa un certificato auto-firmato che il browser blocca. 
+                      Per risolverlo:
+                    </p>
+                    <ol className="list-decimal list-inside text-xs space-y-1 mb-2">
+                      <li>
+                        <a
+                          href="https://localhost:41951/DYMO/DLS/Printing/StatusConnected"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline text-primary font-medium"
+                        >
+                          Clicca qui per aprire il servizio Dymo
+                        </a>
+                      </li>
+                      <li>Il browser mostrerà un avviso di sicurezza</li>
+                      <li>Clicca <strong>"Avanzate"</strong> → <strong>"Procedi comunque"</strong> (o simile)</li>
+                      <li>Torna qui e clicca "Rileva" di nuovo</li>
+                    </ol>
+                    <p className="text-xs text-muted-foreground">
+                      Questo passaggio va fatto una sola volta per browser.
+                    </p>
+                  </div>
                   
-                  {/* If NOT mixed content issue - service might actually be down */}
-                  {!environment.isMixedContentBlocked && (
-                    <div className="bg-muted/50 p-3 rounded-md mb-3 border border-border/50">
-                      <p className="font-medium text-sm mb-2">🔧 Verifica Dymo Connect:</p>
-                      <ol className="list-decimal list-inside text-xs space-y-1">
-                        <li>Verifica che <strong>Dymo Connect</strong> sia installato e in esecuzione</li>
-                        <li>
-                          Apri "services.msc" (Windows) e assicurati che "Dymo Connect Web Service" sia attivo
-                        </li>
-                        <li>Prova a riavviare il servizio</li>
-                        <li>Assicurati che la stampante sia collegata via USB e accesa</li>
-                        <li>
-                          Se non hai Dymo Connect, scaricalo da{' '}
-                          <a
-                            href="https://www.dymo.com/support"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="underline text-primary"
-                          >
-                            dymo.com/support
-                          </a>
-                        </li>
-                      </ol>
-                    </div>
-                  )}
+                  {/* If service not running at all */}
+                  <div className="bg-muted/50 p-3 rounded-md mb-3 border border-border/50">
+                    <p className="font-medium text-sm mb-2">🔧 Se il certificato è già accettato:</p>
+                    <ol className="list-decimal list-inside text-xs space-y-1">
+                      <li>Verifica che <strong>Dymo Connect</strong> sia in esecuzione</li>
+                      <li>
+                        Apri "services.msc" e controlla "Dymo Connect Web Service"
+                      </li>
+                      <li>Riavvia il servizio se necessario</li>
+                    </ol>
+                  </div>
                   
                   {/* Alternative: Browser Print */}
                   <div className="bg-primary/5 p-3 rounded-md border border-primary/20">
