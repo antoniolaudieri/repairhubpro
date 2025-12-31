@@ -61,6 +61,9 @@ interface Device {
     acconto: number | null;
     created_at: string;
     completed_at: string | null;
+    device_location?: string | null;
+    customer_notified_at?: string | null;
+    parts_arrived_at?: string | null;
   }>;
 }
 
@@ -270,7 +273,10 @@ export default function CentroClienteDetail() {
             estimated_cost,
             acconto,
             created_at,
-            completed_at
+            completed_at,
+            device_location,
+            customer_notified_at,
+            parts_arrived_at
           )
         `)
         .eq("customer_id", id);
@@ -386,16 +392,30 @@ export default function CentroClienteDetail() {
     ? allDates.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]
     : null;
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, deviceLocation?: string | null) => {
     const config: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; label: string; className?: string }> = {
       pending: { variant: "secondary", label: "In Attesa", className: "bg-warning/10 text-warning border-warning/20" },
       "in-progress": { variant: "default", label: "In Corso", className: "bg-primary/10 text-primary border-primary/20" },
       completed: { variant: "outline", label: "Completata", className: "bg-accent/10 text-accent border-accent/20" },
       cancelled: { variant: "destructive", label: "Annullata" },
       waiting_for_parts: { variant: "secondary", label: "Attesa Ricambi", className: "bg-purple-500/10 text-purple-600 border-purple-500/20" },
+      waiting_for_device: { variant: "secondary", label: "Attesa Dispositivo", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
       delivered: { variant: "outline", label: "Consegnata", className: "bg-info/10 text-info border-info/20" },
     };
     const { variant, label, className } = config[status] || { variant: "secondary", label: status };
+    
+    // Show device location badge if with customer
+    if (deviceLocation === 'with_customer') {
+      return (
+        <div className="flex flex-col items-end gap-0.5">
+          <Badge variant={variant} className={className}>{label}</Badge>
+          <Badge className="bg-amber-500/20 text-amber-600 border-amber-500/30 text-[9px]">
+            📱 Presso cliente
+          </Badge>
+        </div>
+      );
+    }
+    
     return <Badge variant={variant} className={className}>{label}</Badge>;
   };
 
@@ -875,7 +895,7 @@ export default function CentroClienteDetail() {
                             </div>
                             
                             <div className="flex flex-col items-end gap-0.5">
-                              {getStatusBadge(repair.status)}
+                              {getStatusBadge(repair.status, repair.device_location)}
                               {repair.final_cost && (
                                 <span className="text-sm font-semibold text-accent">
                                   €{repair.final_cost.toFixed(0)}

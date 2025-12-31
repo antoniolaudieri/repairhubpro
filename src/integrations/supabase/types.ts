@@ -3803,8 +3803,10 @@ export type Database = {
           completed_at: string | null
           created_at: string
           customer_email: string | null
+          customer_notified_at: string | null
           delivered_at: string | null
           device_id: string
+          device_location: string | null
           diagnosis: string | null
           diagnostic_fee: number | null
           diagnostic_fee_paid: boolean | null
@@ -3836,8 +3838,10 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           customer_email?: string | null
+          customer_notified_at?: string | null
           delivered_at?: string | null
           device_id: string
+          device_location?: string | null
           diagnosis?: string | null
           diagnostic_fee?: number | null
           diagnostic_fee_paid?: boolean | null
@@ -3869,8 +3873,10 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           customer_email?: string | null
+          customer_notified_at?: string | null
           delivered_at?: string | null
           device_id?: string
+          device_location?: string | null
           diagnosis?: string | null
           diagnostic_fee?: number | null
           diagnostic_fee_paid?: boolean | null
