@@ -219,29 +219,28 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
           </TabsList>
 
           <TabsContent value="preview" className="space-y-4 mt-4">
-            {/* Label Preview */}
+            {/* Label Preview - più spazio e testo leggibile */}
             <div className="flex justify-center p-4 bg-muted/30 rounded-lg">
               <div 
-                className="bg-white border-2 border-dashed border-gray-300 rounded shadow-sm p-3 flex flex-col"
+                className="bg-white border-2 border-dashed border-gray-300 rounded shadow-sm p-4 flex flex-col overflow-hidden"
                 style={{ 
-                  width: dimensions.width, 
-                  height: dimensions.height,
-                  minHeight: dimensions.height 
+                  width: dimensions.width + 40, 
+                  minHeight: dimensions.height + 20 
                 }}
               >
                 {labelStyle === 'compact' ? (
-                  <div className="h-full flex flex-col justify-center gap-1">
-                    <div className="font-bold text-base text-gray-900">#{shortId}</div>
-                    <div className="text-sm text-gray-600 truncate">{deviceInfo || 'Dispositivo'}</div>
+                  <div className="flex flex-col justify-center gap-2 h-full">
+                    <div className="font-bold text-lg text-gray-900">#{shortId}</div>
+                    <div className="text-sm text-gray-600 break-words">{deviceInfo || 'Dispositivo'}</div>
                   </div>
                 ) : labelStyle === 'detailed' ? (
                   <div className="flex gap-3 h-full">
-                    <div className="flex-1 flex flex-col justify-between overflow-hidden">
-                      <div className="font-bold text-base text-gray-900">#{shortId}</div>
-                      <div className="text-sm font-medium text-gray-800 truncate">{customerName || 'Cliente'}</div>
-                      <div className="text-xs text-gray-600 truncate">{deviceInfo || 'Dispositivo'}</div>
-                      <div className="text-xs text-gray-500 truncate italic">{issue || 'Problema'}</div>
-                      <div className="text-[10px] text-gray-400">{intakeDate}</div>
+                    <div className="flex-1 flex flex-col gap-1 overflow-hidden">
+                      <div className="font-bold text-lg text-gray-900">#{shortId}</div>
+                      <div className="text-sm font-medium text-gray-800 break-words leading-tight">{customerName || 'Cliente'}</div>
+                      <div className="text-xs text-gray-600 break-words leading-tight">{deviceInfo || 'Dispositivo'}</div>
+                      <div className="text-xs text-gray-500 break-words italic leading-tight">{issue || 'Problema'}</div>
+                      <div className="text-[10px] text-gray-400 mt-auto">{intakeDate}</div>
                     </div>
                     {showQrCode && (
                       <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 self-center">
@@ -250,12 +249,12 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
                     )}
                   </div>
                 ) : (
-                  <div className="h-full flex flex-col justify-between">
-                    <div className="font-bold text-base text-gray-900">#{shortId}</div>
-                    <div className="text-sm font-medium text-gray-800 truncate">{customerName || 'Cliente'}</div>
-                    <div className="text-xs text-gray-600 truncate">{deviceInfo || 'Dispositivo'}</div>
-                    <div className="text-xs text-gray-500 truncate italic">{issue || 'Problema'}</div>
-                    <div className="text-[10px] text-gray-400">{intakeDate}</div>
+                  <div className="flex flex-col gap-1 h-full">
+                    <div className="font-bold text-lg text-gray-900">#{shortId}</div>
+                    <div className="text-sm font-medium text-gray-800 break-words leading-tight">{customerName || 'Cliente'}</div>
+                    <div className="text-xs text-gray-600 break-words leading-tight">{deviceInfo || 'Dispositivo'}</div>
+                    <div className="text-xs text-gray-500 break-words italic leading-tight">{issue || 'Problema'}</div>
+                    <div className="text-[10px] text-gray-400 mt-auto">{intakeDate}</div>
                   </div>
                 )}
               </div>
@@ -314,24 +313,13 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
               </div>
             )}
 
-            {/* Printer Status */}
-            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-              <div className="flex items-center gap-2">
-                <Printer className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">
-                  {selectedPrinter || 'Nessuna stampante'}
-                </span>
-              </div>
-              {environment?.isServiceRunning ? (
-                <Badge variant="outline" className="text-emerald-600 border-emerald-600">
-                  Connessa
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-amber-600 border-amber-600">
-                  Non attiva
-                </Badge>
-              )}
-            </div>
+            {/* Info sulla stampa - niente più "nessuna stampante" */}
+            <Alert className="border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
+              <Cloud className="h-4 w-4 text-blue-600" />
+              <AlertDescription className="text-blue-800 dark:text-blue-200 text-sm">
+                Usa <strong>Coda Remota</strong> per inviare l'etichetta al Print Agent sul PC con la stampante Dymo.
+              </AlertDescription>
+            </Alert>
           </TabsContent>
 
           <TabsContent value="edit" className="space-y-4 mt-4">
