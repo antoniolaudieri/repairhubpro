@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { StatusBadge, DIRECT_REPAIR_STATUSES } from "@/components/repair/VisualStatusManager";
 import { DeviceImage } from "@/components/common/DeviceImage";
+import { useStorageSlots } from "@/hooks/useStorageSlots";
 import { 
   Plus, 
   Search, 
@@ -24,7 +25,8 @@ import {
   Eye,
   MessageCircle,
   Mail,
-  ScanLine
+  ScanLine,
+  Archive
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
@@ -34,6 +36,7 @@ import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/re
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { QRScanner } from "@/components/centro/QRScanner";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Centro {
   id: string;
@@ -50,6 +53,7 @@ interface DirectRepair {
   started_at: string | null;
   completed_at: string | null;
   delivered_at: string | null;
+  storage_slot: number | null;
   device: {
     id: string;
     device_type: string;
@@ -76,6 +80,9 @@ export default function CentroLavori() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
+  const [slotsStats, setSlotsStats] = useState<{ enabled: boolean; total: number; occupied: number; available: number; percentage: number; prefix?: string } | null>(null);
+  
+  const { getSlotsStats, formatSlotNumber } = useStorageSlots(centro?.id || null);
 
   const fetchData = async () => {
     if (!user) return;
@@ -103,6 +110,7 @@ export default function CentroLavori() {
             started_at,
             completed_at,
             delivered_at,
+            storage_slot,
             devices!inner (
               id,
               device_type,
@@ -134,6 +142,7 @@ export default function CentroLavori() {
           started_at: r.started_at,
           completed_at: r.completed_at,
           delivered_at: r.delivered_at,
+          storage_slot: r.storage_slot,
           device: {
             id: r.devices.id,
             device_type: r.devices.device_type,
@@ -164,6 +173,17 @@ export default function CentroLavori() {
     fetchData();
   }, [user]);
 
+  // Fetch storage slots stats when centro is loaded
+  useEffect(() => {
+    const loadSlotsStats = async () => {
+      if (centro?.id) {
+        const stats = await getSlotsStats();
+        setSlotsStats(stats);
+      }
+    };
+    loadSlotsStats();
+  }, [centro?.id, getSlotsStats]);
+
   const handleUpdateStatus = async (repairId: string, newStatus: string) => {
     try {
       const updateData: any = { status: newStatus };
@@ -193,11 +213,13 @@ export default function CentroLavori() {
   };
 
   const filteredRepairs = repairs.filter((repair) => {
+    const slotString = repair.storage_slot ? String(repair.storage_slot) : "";
     const matchesSearch =
       repair.device.brand?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       repair.device.model?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       repair.device.customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      repair.device.reported_issue?.toLowerCase().includes(searchTerm.toLowerCase());
+      repair.device.reported_issue?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      slotString.includes(searchTerm);
 
     // "in_corso" filter includes both in_progress and waiting_for_parts to match stats
     const matchesStatus = 
@@ -341,12 +363,22 @@ export default function CentroLavori() {
             )}
           </div>
 
+          {/* Storage Slots Warning */}
+          {slotsStats?.enabled && slotsStats.percentage >= 90 && (
+            <Alert variant="destructive" className="border-destructive/50 bg-destructive/10">
+              <Archive className="h-4 w-4" />
+              <AlertDescription>
+                Scaffalatura quasi piena: {slotsStats.occupied}/{slotsStats.total} slot occupati ({slotsStats.percentage}%)
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Cerca per cliente, dispositivo o problema..."
+                placeholder="Cerca per cliente, dispositivo, slot..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -417,6 +449,13 @@ export default function CentroLavori() {
                                       {repair.device.brand} {repair.device.model}
                                     </h3>
                                     <StatusBadge status={repair.status} statuses={DIRECT_REPAIR_STATUSES} />
+                                    {/* Storage Slot Badge */}
+                                    {slotsStats?.enabled && repair.storage_slot && (
+                                      <Badge variant="outline" className="bg-indigo-500/10 text-indigo-600 border-indigo-500/30">
+                                        <Archive className="h-3 w-3 mr-1" />
+                                        {formatSlotNumber(repair.storage_slot, slotsStats.prefix)}
+                                      </Badge>
+                                    )}
                                   {/* Forfeiture countdown badge */}
                                   {repair.status === 'completed' && repair.completed_at && !repair.delivered_at && (() => {
                                     const daysRemaining = 30 - differenceInDays(new Date(), new Date(repair.completed_at));

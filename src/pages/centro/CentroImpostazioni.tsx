@@ -18,6 +18,8 @@ import { UnsavedChangesDialog } from "@/components/settings/UnsavedChangesDialog
 import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import EmailTemplateEditor, { EmailTemplates } from "@/components/centro/EmailTemplateEditor";
 import { DeviceHealthSettings } from "@/components/centro/DeviceHealthSettings";
+import { StorageSlotsSettings } from "@/components/centro/StorageSlotsSettings";
+import { StorageSlotsConfig } from "@/hooks/useStorageSlots";
 import { 
   Settings,
   Building2,
@@ -94,7 +96,8 @@ interface CentroSettings {
   dymo_config?: DymoConfig;
   monthly_goal?: number;
   email_templates?: Partial<EmailTemplates>;
-  [key: string]: boolean | string | number | DisplayAd[] | SmtpConfig | DymoConfig | Partial<EmailTemplates> | undefined;
+  storage_slots?: StorageSlotsConfig;
+  [key: string]: boolean | string | number | DisplayAd[] | SmtpConfig | DymoConfig | Partial<EmailTemplates> | StorageSlotsConfig | undefined;
 }
 
 interface Centro {
@@ -213,6 +216,13 @@ export default function CentroImpostazioni() {
   // Email Templates State
   const [emailTemplates, setEmailTemplates] = useState<Partial<EmailTemplates>>({});
   
+  // Storage Slots State
+  const [storageSlotsConfig, setStorageSlotsConfig] = useState<StorageSlotsConfig>({
+    enabled: false,
+    max_slots: 50,
+    prefix: "",
+  });
+  
   // Opening Hours State
   const [openingHours, setOpeningHours] = useState<OpeningHours | null>(null);
   
@@ -316,9 +326,10 @@ export default function CentroImpostazioni() {
       dymoPrinter,
       dymoLabelFormat,
       monthlyGoal,
+      storageSlotsConfig,
     });
     return currentValues !== originalValues;
-  }, [formData, latitude, longitude, openingHours, disableDiagnosticFee, displayAds, slideInterval, smtpEnabled, smtpConfig, dymoEnabled, dymoPrinter, dymoLabelFormat, monthlyGoal, originalValues, centro]);
+  }, [formData, latitude, longitude, openingHours, disableDiagnosticFee, displayAds, slideInterval, smtpEnabled, smtpConfig, dymoEnabled, dymoPrinter, dymoLabelFormat, monthlyGoal, storageSlotsConfig, originalValues, centro]);
 
   const { showDialog, closeDialog } = useUnsavedChanges(hasChanges);
 
@@ -361,6 +372,16 @@ export default function CentroImpostazioni() {
       
       // Load Email Templates
       setEmailTemplates(settings?.email_templates || {});
+      
+      // Load Storage Slots config
+      if (settings?.storage_slots) {
+        setStorageSlotsConfig({
+          enabled: settings.storage_slots.enabled ?? false,
+          max_slots: settings.storage_slots.max_slots ?? 50,
+          prefix: settings.storage_slots.prefix ?? "",
+        });
+      }
+      
       // Load Opening Hours
       setOpeningHours(centroData.opening_hours as unknown as OpeningHours | null);
       
@@ -414,6 +435,7 @@ export default function CentroImpostazioni() {
         dymoPrinter: settings?.dymo_config?.printer_name || null,
         dymoLabelFormat: settings?.dymo_config?.label_format || '30252',
         monthlyGoal: settings?.monthly_goal || 0,
+        storageSlotsConfig: settings?.storage_slots || { enabled: false, max_slots: 50, prefix: "" },
       }));
     } catch (error: any) {
       console.error("Error fetching data:", error);
@@ -454,6 +476,7 @@ export default function CentroImpostazioni() {
         },
         monthly_goal: monthlyGoal,
         email_templates: emailTemplates,
+        storage_slots: storageSlotsConfig,
       };
       
       const { error } = await supabase
@@ -918,6 +941,15 @@ export default function CentroImpostazioni() {
                     </div>
                   </CardContent>
                 </Card>
+              </motion.div>
+
+              {/* Storage Slots Settings */}
+              <motion.div variants={itemVariants}>
+                <StorageSlotsSettings
+                  centroId={centro?.id || null}
+                  config={storageSlotsConfig}
+                  onChange={setStorageSlotsConfig}
+                />
               </motion.div>
 
               {/* Monthly Revenue Goal */}
