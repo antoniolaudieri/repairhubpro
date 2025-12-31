@@ -272,17 +272,26 @@ export default function CentroPrintAgent() {
 
       {/* Info Alert when Dymo not connected */}
       {!environment?.isServiceRunning && (
-        <Alert className="mb-6 border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950">
-          <AlertTriangle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800 dark:text-blue-200">
-            <strong>Dymo Connect non rilevato.</strong> Questa pagina deve essere aperta sul PC dove è installata la stampante Dymo con Dymo Connect attivo.
+        <Alert className="mb-6 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800 dark:text-amber-200">
+            <strong>Dymo Connect non rilevato dal browser.</strong> Per motivi di sicurezza del browser (HTTPS/CORS), questa pagina web non può connettersi direttamente a Dymo Connect.
             <br /><br />
-            <strong>Come funziona:</strong>
+            <strong>Soluzione: Usa il Print Agent Standalone</strong>
             <ol className="list-decimal list-inside mt-2 space-y-1">
-              <li>Apri questa pagina sul PC con la stampante Dymo</li>
-              <li>Assicurati che Dymo Connect sia in esecuzione</li>
-              <li>Seleziona la stampante e clicca "Avvia"</li>
-              <li>Da qualsiasi dispositivo, usa "Coda Remota" per inviare le stampe</li>
+              <li>
+                <a 
+                  href="/print-agent-standalone.html" 
+                  target="_blank" 
+                  className="text-primary underline font-medium hover:text-primary/80"
+                >
+                  Clicca qui per aprire il Print Agent Standalone
+                </a>
+              </li>
+              <li>Salva la pagina sul desktop del PC con la stampante (Ctrl+S)</li>
+              <li>Apri il file HTML salvato localmente</li>
+              <li>Inserisci il tuo Centro ID: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded text-xs">{centroId}</code></li>
+              <li>Clicca "Avvia" - il file locale può connettersi a Dymo senza restrizioni</li>
             </ol>
             <br />
             <strong>Intanto puoi vedere la coda di stampa qui sotto.</strong>
