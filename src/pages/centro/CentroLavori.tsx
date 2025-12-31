@@ -23,7 +23,8 @@ import {
   AlertTriangle,
   Eye,
   MessageCircle,
-  Mail
+  Mail,
+  ScanLine
 } from "lucide-react";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
@@ -32,6 +33,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
+import { QRScanner } from "@/components/centro/QRScanner";
 
 interface Centro {
   id: string;
@@ -73,6 +75,7 @@ export default function CentroLavori() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
+  const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
 
   const fetchData = async () => {
     if (!user) return;
@@ -238,7 +241,11 @@ export default function CentroLavori() {
               </p>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" onClick={() => setIsQRScannerOpen(true)}>
+                <ScanLine className="h-4 w-4 mr-2" />
+                Scansiona QR
+              </Button>
               <Button variant="outline" onClick={() => setIsCustomerDialogOpen(true)}>
                 <UserPlus className="h-4 w-4 mr-2" />
                 Nuovo Cliente
@@ -575,6 +582,11 @@ export default function CentroLavori() {
           setIsCustomerDialogOpen(false);
           toast.success("Cliente creato con successo");
         }}
+      />
+
+      <QRScanner
+        open={isQRScannerOpen}
+        onOpenChange={setIsQRScannerOpen}
       />
     </CentroLayout>
   );
