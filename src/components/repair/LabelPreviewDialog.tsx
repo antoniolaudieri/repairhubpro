@@ -14,8 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useDymoPrinter } from '@/hooks/useDymoPrinter';
+import { usePrintQueue } from '@/hooks/usePrintQueue';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { generateRepairLabel, getLabelFormats, LabelFormat } from '@/utils/labelTemplates';
-import { Printer, Loader2, Tag, Edit3, Eye, QrCode } from 'lucide-react';
+import { Printer, Loader2, Tag, Edit3, Eye, QrCode, Send, Cloud } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -48,7 +51,10 @@ const LABEL_STYLES: { value: LabelStyle; label: string; description: string }[] 
 const PAPER_FORMATS = getLabelFormats();
 
 export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDialogProps) {
+  const { user } = useAuth();
   const { environment, selectedPrinter, printLabel, isLoading, checkEnvironment, refreshPrinters } = useDymoPrinter();
+  const [centroId, setCentroId] = useState<string | null>(null);
+  const { addRepairLabel } = usePrintQueue(centroId);
   
   // Editable fields - use empty string defaults to avoid crashes when data is undefined
   const [customerName, setCustomerName] = useState('');
@@ -61,7 +67,22 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
   const [showQrCode, setShowQrCode] = useState(false);
   
   const [isPrinting, setIsPrinting] = useState(false);
+  const [isSendingToQueue, setIsSendingToQueue] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
+
+  // Fetch Centro ID
+  useEffect(() => {
+    const fetchCentroId = async () => {
+      if (!user) return;
+      const { data: centro } = await supabase
+        .from('centri_assistenza')
+        .select('id')
+        .eq('owner_user_id', user.id)
+        .single();
+      if (centro) setCentroId(centro.id);
+    };
+    fetchCentroId();
+  }, [user]);
 
   // Reset fields when dialog opens with new data
   useEffect(() => {
@@ -136,7 +157,29 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
     }
   };
 
-  const loading = isPrinting || isLoading;
+  const handleSendToQueue = async () => {
+    if (!data || !centroId) {
+      toast.error('Dati non disponibili');
+      return;
+    }
+    setIsSendingToQueue(true);
+    try {
+      await addRepairLabel({
+        repairId: data.repairId || '',
+        customerName: customerName.substring(0, 25),
+        deviceBrand: data.deviceBrand || '',
+        deviceModel: data.deviceModel || '',
+        deviceType: data.deviceType || '',
+        issue: issue.substring(0, 40),
+        date: intakeDate,
+      });
+      onOpenChange(false);
+    } finally {
+      setIsSendingToQueue(false);
+    }
+  };
+
+  const loading = isPrinting || isLoading || isSendingToQueue;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -328,16 +371,29 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
         </Tabs>
 
         <div className="flex gap-2 pt-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annulla
           </Button>
-          <Button onClick={handlePrint} disabled={loading} className="flex-1 gap-2">
-            {loading ? (
+          <Button 
+            variant="secondary" 
+            onClick={handleSendToQueue} 
+            disabled={loading || !centroId} 
+            className="gap-2"
+          >
+            {isSendingToQueue ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Cloud className="h-4 w-4" />
+            )}
+            Coda Remota
+          </Button>
+          <Button onClick={handlePrint} disabled={loading} className="gap-2">
+            {isPrinting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Printer className="h-4 w-4" />
             )}
-            {loading ? 'Stampa...' : 'Stampa'}
+            Stampa Locale
           </Button>
         </div>
       </DialogContent>

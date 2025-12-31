@@ -194,13 +194,27 @@ export function DymoPrinterSettings({
                     </ol>
                   </div>
                   
+                  {/* Remote Print Solution */}
+                  <div className="bg-emerald-500/10 p-3 rounded-md border border-emerald-500/30">
+                    <p className="font-medium text-sm mb-1 text-emerald-600 dark:text-emerald-400">🖨️ Stampa Remota con Print Agent</p>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Per stampare da remoto, apri la pagina <strong>Print Agent</strong> sul PC con la stampante Dymo. 
+                      I lavori di stampa verranno inviati automaticamente.
+                    </p>
+                    <a
+                      href="/centro/print-agent"
+                      className="text-xs font-medium text-primary underline"
+                    >
+                      Apri Print Agent →
+                    </a>
+                  </div>
+                  
                   {/* Alternative: Browser Print */}
                   <div className="bg-primary/5 p-3 rounded-md border border-primary/20">
                     <p className="font-medium text-sm mb-1">💡 Alternativa: Stampa Browser</p>
                     <p className="text-xs text-muted-foreground">
                       Puoi stampare etichette usando la funzione di stampa del browser (Ctrl+P) 
-                      selezionando la stampante Dymo. Non è automatico ma funziona sempre, 
-                      anche dalla preview online.
+                      selezionando la stampante Dymo. Non è automatico ma funziona sempre.
                     </p>
                   </div>
                 </AlertDescription>

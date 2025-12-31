@@ -18,7 +18,8 @@ import {
   Store,
   Bell,
   Smartphone,
-  Megaphone
+  Megaphone,
+  Printer
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -67,6 +68,7 @@ const menuItems = [
   { title: "Marketing", url: "/centro/marketing", icon: Megaphone },
   { title: "Finanza", url: "/centro/finanza", icon: Wallet },
   { title: "Commissioni", url: "/centro/commissioni", icon: DollarSign },
+  { title: "Print Agent", url: "/centro/print-agent", icon: Printer },
   { title: "Impostazioni", url: "/centro/impostazioni", icon: Settings },
 ];
 
