@@ -1,13 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Camera, X, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
@@ -25,7 +19,8 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
   const [scannedId, setScannedId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
-  const isMountedRef = useRef(true);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const scannerContainerId = useRef(`qr-reader-${Date.now()}`);
 
   const stopScanner = useCallback(async () => {
     if (scannerRef.current) {
@@ -44,33 +39,27 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
       }
       scannerRef.current = null;
     }
-    if (isMountedRef.current) {
-      setIsScanning(false);
-      setIsStarting(false);
-    }
+    setIsScanning(false);
+    setIsStarting(false);
   }, []);
 
   const startScanner = useCallback(async () => {
-    if (!isMountedRef.current) return;
-    
-    // First ensure any existing scanner is stopped
-    await stopScanner();
-    
-    const container = document.getElementById('qr-reader');
+    const containerId = scannerContainerId.current;
+    const container = document.getElementById(containerId);
     if (!container) {
       console.error('QR reader container not found');
       return;
     }
     
-    // Clear container content
-    container.innerHTML = '';
+    // First ensure any existing scanner is stopped
+    await stopScanner();
     
     setError(null);
     setScannedId(null);
     setIsStarting(true);
     
     try {
-      const html5QrCode = new Html5Qrcode('qr-reader');
+      const html5QrCode = new Html5Qrcode(containerId);
       scannerRef.current = html5QrCode;
       
       await html5QrCode.start(
@@ -80,8 +69,6 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
           qrbox: { width: 200, height: 200 },
         },
         (decodedText) => {
-          if (!isMountedRef.current) return;
-          
           // Check if it's a valid repair URL
           const repairIdMatch = decodedText.match(/\/centro\/lavori\/([a-f0-9-]+)/i) ||
                                 decodedText.match(/\/repair\/([a-f0-9-]+)/i) ||
@@ -93,7 +80,6 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
             
             // Stop scanner before navigating
             stopScanner().then(() => {
-              if (!isMountedRef.current) return;
               setTimeout(() => {
                 onOpenChange(false);
                 navigate(`/centro/lavori/${repairId}`);
@@ -109,13 +95,10 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
         }
       );
       
-      if (isMountedRef.current) {
-        setIsScanning(true);
-        setIsStarting(false);
-      }
+      setIsScanning(true);
+      setIsStarting(false);
     } catch (err: any) {
       console.error('Scanner error:', err);
-      if (!isMountedRef.current) return;
       
       setIsStarting(false);
       if (err.message?.includes('NotAllowedError') || err.name === 'NotAllowedError') {
@@ -128,61 +111,80 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
     }
   }, [stopScanner, onOpenChange, navigate]);
 
-  // Handle dialog open/close
+  // Handle open state
   useEffect(() => {
     if (open) {
-      isMountedRef.current = true;
+      // Reset state
+      setError(null);
+      setScannedId(null);
+      // Generate new container ID to avoid conflicts
+      scannerContainerId.current = `qr-reader-${Date.now()}`;
       // Small delay to ensure DOM is ready
       const timeout = setTimeout(() => {
         startScanner();
-      }, 500);
+      }, 300);
       return () => clearTimeout(timeout);
     } else {
-      // Stop scanner when dialog closes
       stopScanner();
     }
   }, [open, startScanner, stopScanner]);
 
   // Cleanup on unmount
   useEffect(() => {
-    isMountedRef.current = true;
     return () => {
-      isMountedRef.current = false;
-      stopScanner();
+      if (scannerRef.current) {
+        try {
+          scannerRef.current.stop().catch(() => {});
+          scannerRef.current.clear();
+        } catch (e) {
+          // Ignore errors
+        }
+        scannerRef.current = null;
+      }
     };
-  }, [stopScanner]);
+  }, []);
 
   const handleClose = async () => {
     await stopScanner();
-    // Small delay before closing dialog
-    setTimeout(() => {
-      onOpenChange(false);
-    }, 100);
+    onOpenChange(false);
   };
 
-  return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      if (!newOpen) {
-        handleClose();
-      } else {
-        onOpenChange(true);
-      }
-    }}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Camera className="h-5 w-5 text-primary" />
-            Scansione QR Riparazione
-          </DialogTitle>
-          <DialogDescription>
-            Inquadra il QR code sull'etichetta per aprire la riparazione
-          </DialogDescription>
-        </DialogHeader>
+  if (!open) return null;
 
-        <div className="space-y-4">
-          {/* Scanner container */}
+  // Use portal to render outside of React tree to avoid DOM conflicts
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black/80" 
+        onClick={handleClose}
+      />
+      
+      {/* Modal content */}
+      <div 
+        ref={containerRef}
+        className="relative z-50 w-full max-w-md mx-4 bg-background rounded-lg shadow-lg border"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <Camera className="h-5 w-5 text-primary" />
+              Scansione QR Riparazione
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Inquadra il QR code sull'etichetta
+            </p>
+          </div>
+          <Button variant="ghost" size="icon" onClick={handleClose}>
+            <X className="h-5 w-5" />
+          </Button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Scanner container - isolated from React */}
           <div 
-            id="qr-reader" 
+            id={scannerContainerId.current}
             className="w-full aspect-square bg-muted rounded-lg overflow-hidden relative"
           >
             {(isStarting || (!isScanning && !error && !scannedId)) && (
@@ -227,7 +229,8 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
             )}
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </div>,
+    document.body
   );
 }
