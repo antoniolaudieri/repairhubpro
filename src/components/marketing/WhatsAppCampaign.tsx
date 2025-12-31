@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLoyaltyProgramSettings } from "@/hooks/useLoyaltyProgramSettings";
 import { toast } from "sonner";
 import { 
   MessageSquare, 
@@ -65,7 +66,7 @@ const DEFAULT_TEMPLATES = [
   },
   {
     name: "Antivirus Android - Offerta Lancio",
-    message: "Ciao {{nome}}! 🛡️ Proteggi il tuo smartphone con il nostro Antivirus Android esclusivo! A soli 30€/anno hai: protezione malware, blocco pubblicità e scansione app. Offerta limitata ai primi 100 clienti! Attiva ora: {{link_pagamento}} - {{centro}}",
+    message: "Ciao {{nome}}! 🛡️ Proteggi il tuo smartphone con il nostro Antivirus Android esclusivo! A soli {{prezzo_annuale}}/anno hai: protezione malware, blocco pubblicità e scansione app. Offerta limitata ai primi 100 clienti! Attiva ora: {{link_pagamento}} - {{centro}}",
     category: "promo"
   },
   {
@@ -100,6 +101,10 @@ export default function WhatsAppCampaign() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Get loyalty program settings for dynamic payment link
+  const { getEffectiveSettings } = useLoyaltyProgramSettings(centroId);
+  const loyaltySettings = getEffectiveSettings();
+  
   // Composer state
   const [campaignName, setCampaignName] = useState("");
   const [messageTemplate, setMessageTemplate] = useState("");
@@ -113,6 +118,13 @@ export default function WhatsAppCampaign() {
   // Template saving
   const [templateName, setTemplateName] = useState("");
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  
+  // Generate dynamic payment link based on centro's loyalty settings
+  const getPaymentLink = () => {
+    if (!centroId) return "";
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/loyalty-checkout?centro=${centroId}`;
+  };
 
   useEffect(() => {
     if (user) {
@@ -233,7 +245,9 @@ export default function WhatsAppCampaign() {
       .replace(/\{\{nome_completo\}\}/g, customer.name)
       .replace(/\{\{centro\}\}/g, centroName)
       .replace(/\{\{dispositivo\}\}/g, "dispositivo") // TODO: get last device
-      .replace(/\{\{data\}\}/g, format(new Date(), "d MMMM yyyy", { locale: it }));
+      .replace(/\{\{data\}\}/g, format(new Date(), "d MMMM yyyy", { locale: it }))
+      .replace(/\{\{link_pagamento\}\}/g, getPaymentLink())
+      .replace(/\{\{prezzo_annuale\}\}/g, `${loyaltySettings.annual_price}€`);
   };
 
   const saveTemplate = async () => {
@@ -434,6 +448,20 @@ export default function WhatsAppCampaign() {
                       onClick={() => insertVariable("data")}
                     >
                       {"{{data}}"}
+                    </Badge>
+                    <Badge 
+                      variant="outline" 
+                      className="cursor-pointer hover:bg-primary/10 text-green-600 border-green-300"
+                      onClick={() => insertVariable("link_pagamento")}
+                    >
+                      {"{{link_pagamento}}"}
+                    </Badge>
+                    <Badge 
+                      variant="outline" 
+                      className="cursor-pointer hover:bg-primary/10 text-amber-600 border-amber-300"
+                      onClick={() => insertVariable("prezzo_annuale")}
+                    >
+                      {"{{prezzo_annuale}}"}
                     </Badge>
                   </div>
                 </div>
