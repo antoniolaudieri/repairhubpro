@@ -5,6 +5,7 @@ import { CentroLayout } from "@/layouts/CentroLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, 
   FileText, 
@@ -16,7 +17,13 @@ import {
   Euro,
   PenLine,
   Eye,
-  Trash2
+  Trash2,
+  ShoppingCart,
+  Package,
+  Bell,
+  User,
+  Smartphone,
+  Settings2
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -25,6 +32,7 @@ import { toast } from "sonner";
 import { EditQuoteDialog } from "@/components/quotes/EditQuoteDialog";
 import { CreateQuoteDialog } from "@/components/quotes/CreateQuoteDialog";
 import { QuotePDFPreview } from "@/components/quotes/QuotePDFPreview";
+import { QuoteActionsDialog } from "@/components/quotes/QuoteActionsDialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { motion } from "framer-motion";
 
@@ -46,6 +54,13 @@ interface Quote {
   signed_at: string | null;
   created_at: string;
   repair_request_id: string | null;
+  deposit_amount?: number;
+  deposit_paid_at?: string;
+  device_location?: string;
+  parts_ordered_at?: string;
+  parts_arrived_at?: string;
+  customer_notified_at?: string;
+  linked_order_id?: string;
   customers: {
     name: string;
     email: string | null;
@@ -65,10 +80,13 @@ export default function CentroPreventivi() {
   const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [viewTab, setViewTab] = useState<string>("all");
   const [centroInfo, setCentroInfo] = useState<any>(null);
   const [isSending, setIsSending] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
+  const [actionsDialogOpen, setActionsDialogOpen] = useState(false);
+  const [actionQuote, setActionQuote] = useState<Quote | null>(null);
 
   // Load centro info for PDF
   useEffect(() => {
@@ -270,6 +288,16 @@ export default function CentroPreventivi() {
       );
     }
 
+    // View tab filter
+    if (viewTab === "awaiting_parts") {
+      filtered = filtered.filter(q => q.parts_ordered_at && !q.parts_arrived_at);
+    } else if (viewTab === "parts_arrived") {
+      filtered = filtered.filter(q => q.parts_arrived_at && !q.customer_notified_at);
+    } else if (viewTab === "awaiting_device") {
+      filtered = filtered.filter(q => q.device_location === 'with_customer' && q.customer_notified_at);
+    }
+
+    // Status filter
     if (statusFilter !== "all") {
       if (statusFilter === "signed") {
         filtered = filtered.filter(q => q.signed_at);
@@ -279,7 +307,7 @@ export default function CentroPreventivi() {
     }
 
     setFilteredQuotes(filtered);
-  }, [searchQuery, quotes, statusFilter]);
+  }, [searchQuery, quotes, statusFilter, viewTab]);
 
   // Stats
   const stats = {
@@ -289,38 +317,83 @@ export default function CentroPreventivi() {
     rejected: quotes.filter(q => q.status === "rejected").length,
     totalValue: quotes.reduce((sum, q) => sum + q.total_cost, 0),
     signedValue: quotes.filter(q => q.signed_at).reduce((sum, q) => sum + q.total_cost, 0),
+    awaitingParts: quotes.filter(q => q.parts_ordered_at && !q.parts_arrived_at).length,
+    partsArrived: quotes.filter(q => q.parts_arrived_at && !q.customer_notified_at).length,
+    awaitingDevice: quotes.filter(q => q.device_location === 'with_customer' && q.customer_notified_at).length,
   };
 
-  const getStatusBadge = (status: string, signedAt: string | null) => {
-    if (signedAt) {
-      return (
-        <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
+  const getStatusBadge = (quote: Quote) => {
+    const { status, signed_at, parts_ordered_at, parts_arrived_at, customer_notified_at, device_location, deposit_amount } = quote;
+
+    const badges = [];
+
+    if (signed_at) {
+      badges.push(
+        <Badge key="signed" className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
           <CheckCircle className="h-3 w-3 mr-1" />Firmato
         </Badge>
       );
+    } else if (status === "pending") {
+      badges.push(
+        <Badge key="pending" variant="secondary" className="bg-amber-500/20 text-amber-600 border-amber-500/30">
+          <Clock className="h-3 w-3 mr-1" />In Attesa
+        </Badge>
+      );
+    } else if (status === "rejected") {
+      badges.push(
+        <Badge key="rejected" variant="destructive" className="bg-red-500/20 text-red-600 border-red-500/30">
+          <XCircle className="h-3 w-3 mr-1" />Rifiutato
+        </Badge>
+      );
     }
-    switch (status) {
-      case "pending":
-        return (
-          <Badge variant="secondary" className="bg-amber-500/20 text-amber-600 border-amber-500/30">
-            <Clock className="h-3 w-3 mr-1" />In Attesa
-          </Badge>
-        );
-      case "accepted":
-        return (
-          <Badge className="bg-emerald-500/20 text-emerald-600 border-emerald-500/30">
-            <CheckCircle className="h-3 w-3 mr-1" />Accettato
-          </Badge>
-        );
-      case "rejected":
-        return (
-          <Badge variant="destructive" className="bg-red-500/20 text-red-600 border-red-500/30">
-            <XCircle className="h-3 w-3 mr-1" />Rifiutato
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+
+    // Additional status badges
+    if (deposit_amount && deposit_amount > 0) {
+      badges.push(
+        <Badge key="deposit" className="bg-blue-500/20 text-blue-600 border-blue-500/30">
+          <Euro className="h-3 w-3 mr-1" />€{deposit_amount}
+        </Badge>
+      );
     }
+
+    if (device_location === 'with_customer') {
+      badges.push(
+        <Badge key="device" className="bg-amber-500/20 text-amber-600 border-amber-500/30">
+          <User className="h-3 w-3 mr-1" />c/o Cliente
+        </Badge>
+      );
+    }
+
+    if (parts_ordered_at && !parts_arrived_at) {
+      badges.push(
+        <Badge key="ordered" className="bg-purple-500/20 text-purple-600 border-purple-500/30">
+          <ShoppingCart className="h-3 w-3 mr-1" />Ordinato
+        </Badge>
+      );
+    }
+
+    if (parts_arrived_at && !customer_notified_at) {
+      badges.push(
+        <Badge key="arrived" className="bg-teal-500/20 text-teal-600 border-teal-500/30">
+          <Package className="h-3 w-3 mr-1" />Arrivato
+        </Badge>
+      );
+    }
+
+    if (customer_notified_at && device_location === 'with_customer') {
+      badges.push(
+        <Badge key="notified" className="bg-indigo-500/20 text-indigo-600 border-indigo-500/30">
+          <Bell className="h-3 w-3 mr-1" />Avvisato
+        </Badge>
+      );
+    }
+
+    return badges;
+  };
+
+  const handleOpenActions = (quote: Quote) => {
+    setActionQuote(quote);
+    setActionsDialogOpen(true);
   };
 
   const handleEditQuote = (quote: Quote) => {
@@ -480,6 +553,31 @@ export default function CentroPreventivi() {
           </Card>
         </motion.div>
 
+        {/* View Tabs for special states */}
+        {(stats.awaitingParts > 0 || stats.partsArrived > 0 || stats.awaitingDevice > 0) && (
+          <motion.div variants={itemVariants}>
+            <Tabs value={viewTab} onValueChange={setViewTab}>
+              <TabsList className="w-full sm:w-auto grid grid-cols-4 sm:flex">
+                <TabsTrigger value="all" className="text-xs sm:text-sm">
+                  Tutti
+                </TabsTrigger>
+                <TabsTrigger value="awaiting_parts" className="text-xs sm:text-sm">
+                  <ShoppingCart className="h-3 w-3 mr-1 hidden sm:inline" />
+                  Ricambi ({stats.awaitingParts})
+                </TabsTrigger>
+                <TabsTrigger value="parts_arrived" className="text-xs sm:text-sm">
+                  <Package className="h-3 w-3 mr-1 hidden sm:inline" />
+                  Arrivati ({stats.partsArrived})
+                </TabsTrigger>
+                <TabsTrigger value="awaiting_device" className="text-xs sm:text-sm">
+                  <Smartphone className="h-3 w-3 mr-1 hidden sm:inline" />
+                  Dispositivo ({stats.awaitingDevice})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </motion.div>
+        )}
+
         {/* Search & Filter */}
         <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -491,10 +589,14 @@ export default function CentroPreventivi() {
               className="pl-10 h-11"
             />
           </div>
-          {statusFilter !== 'all' && (
-            <Button variant="outline" onClick={() => setStatusFilter('all')} className="h-11">
+          {(statusFilter !== 'all' || viewTab !== 'all') && (
+            <Button 
+              variant="outline" 
+              onClick={() => { setStatusFilter('all'); setViewTab('all'); }} 
+              className="h-11"
+            >
               <XCircle className="h-4 w-4 mr-2" />
-              Rimuovi Filtro
+              Rimuovi Filtri
             </Button>
           )}
         </motion.div>
@@ -548,7 +650,7 @@ export default function CentroPreventivi() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2 flex-wrap mb-1">
                                 <h3 className="font-semibold text-lg truncate">{quote.customers?.name}</h3>
-                                {getStatusBadge(quote.status, quote.signed_at)}
+                                {getStatusBadge(quote)}
                                 {quote.repair_request_id && (
                                   <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
                                     Da Corner
@@ -587,6 +689,17 @@ export default function CentroPreventivi() {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
+                            {quote.signed_at && (
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleOpenActions(quote)}
+                                className="h-9 w-9"
+                                title="Gestione"
+                              >
+                                <Settings2 className="h-4 w-4" />
+                              </Button>
+                            )}
                             {!quote.signed_at && (
                               <Button
                                 variant="outline"
@@ -692,6 +805,19 @@ export default function CentroPreventivi() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Quote Actions Dialog */}
+      {actionQuote && (
+        <QuoteActionsDialog
+          open={actionsDialogOpen}
+          onOpenChange={setActionsDialogOpen}
+          quote={actionQuote}
+          centroId={centroId}
+          onSuccess={() => {
+            if (centroId) loadQuotes(centroId);
+          }}
+        />
+      )}
     </CentroLayout>
   );
 }

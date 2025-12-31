@@ -3224,6 +3224,7 @@ export type Database = {
           notes: string | null
           order_number: string
           ordered_at: string | null
+          quote_id: string | null
           received_at: string | null
           repair_id: string | null
           status: string
@@ -3239,6 +3240,7 @@ export type Database = {
           notes?: string | null
           order_number: string
           ordered_at?: string | null
+          quote_id?: string | null
           received_at?: string | null
           repair_id?: string | null
           status?: string
@@ -3254,6 +3256,7 @@ export type Database = {
           notes?: string | null
           order_number?: string
           ordered_at?: string | null
+          quote_id?: string | null
           received_at?: string | null
           repair_id?: string | null
           status?: string
@@ -3268,6 +3271,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
             referencedColumns: ["id"]
           },
           {
@@ -3415,7 +3425,11 @@ export type Database = {
           created_at: string
           created_by: string | null
           customer_id: string
+          customer_notified_at: string | null
+          deposit_amount: number | null
+          deposit_paid_at: string | null
           device_brand: string | null
+          device_location: string | null
           device_model: string | null
           device_type: string
           diagnosis: string | null
@@ -3423,8 +3437,11 @@ export type Database = {
           issue_description: string
           items: Json
           labor_cost: number | null
+          linked_order_id: string | null
           notes: string | null
+          parts_arrived_at: string | null
           parts_cost: number | null
+          parts_ordered_at: string | null
           payment_collection_method: string | null
           repair_request_id: string | null
           signature_data: string | null
@@ -3440,7 +3457,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id: string
+          customer_notified_at?: string | null
+          deposit_amount?: number | null
+          deposit_paid_at?: string | null
           device_brand?: string | null
+          device_location?: string | null
           device_model?: string | null
           device_type: string
           diagnosis?: string | null
@@ -3448,8 +3469,11 @@ export type Database = {
           issue_description: string
           items?: Json
           labor_cost?: number | null
+          linked_order_id?: string | null
           notes?: string | null
+          parts_arrived_at?: string | null
           parts_cost?: number | null
+          parts_ordered_at?: string | null
           payment_collection_method?: string | null
           repair_request_id?: string | null
           signature_data?: string | null
@@ -3465,7 +3489,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           customer_id?: string
+          customer_notified_at?: string | null
+          deposit_amount?: number | null
+          deposit_paid_at?: string | null
           device_brand?: string | null
+          device_location?: string | null
           device_model?: string | null
           device_type?: string
           diagnosis?: string | null
@@ -3473,8 +3501,11 @@ export type Database = {
           issue_description?: string
           items?: Json
           labor_cost?: number | null
+          linked_order_id?: string | null
           notes?: string | null
+          parts_arrived_at?: string | null
           parts_cost?: number | null
+          parts_ordered_at?: string | null
           payment_collection_method?: string | null
           repair_request_id?: string | null
           signature_data?: string | null
@@ -3490,6 +3521,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_linked_order_id_fkey"
+            columns: ["linked_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
           {
