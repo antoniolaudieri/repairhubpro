@@ -4603,6 +4603,139 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_campaign_recipients: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          customer_id: string
+          id: string
+          personalized_message: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          customer_id: string
+          id?: string
+          personalized_message?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          customer_id?: string
+          id?: string
+          personalized_message?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_campaign_recipients_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_campaigns: {
+        Row: {
+          centro_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          message_template: string
+          name: string
+          recipients_count: number
+          sent_count: number
+          status: string
+        }
+        Insert: {
+          centro_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message_template: string
+          name: string
+          recipients_count?: number
+          sent_count?: number
+          status?: string
+        }
+        Update: {
+          centro_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          message_template?: string
+          name?: string
+          recipients_count?: number
+          sent_count?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_campaigns_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_message_templates: {
+        Row: {
+          category: string
+          centro_id: string
+          created_at: string
+          id: string
+          is_default: boolean
+          message: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          centro_id: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          message: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          centro_id?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          message?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_message_templates_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
