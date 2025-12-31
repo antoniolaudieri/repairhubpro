@@ -2,30 +2,19 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useDymoPrinter } from '@/hooks/useDymoPrinter';
-import { generateRepairLabel, generateDeviceLabel, generateShelfLabel } from '@/utils/labelTemplates';
 import { 
   Printer, 
-  RefreshCw, 
   CheckCircle2, 
   XCircle, 
-  AlertTriangle,
-  Loader2,
-  Play,
-  Pause,
-  Wifi,
-  WifiOff,
   Clock,
-  FileText
+  FileText,
+  Download,
+  RefreshCw
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
 
@@ -44,20 +33,8 @@ interface PrintJob {
 
 export default function CentroPrintAgent() {
   const { user } = useAuth();
-  const {
-    printers,
-    selectedPrinter,
-    setSelectedPrinter,
-    environment,
-    isLoading: isDymoLoading,
-    checkEnvironment,
-    refreshPrinters,
-    printLabel,
-  } = useDymoPrinter();
 
   const [centroId, setCentroId] = useState<string | null>(null);
-  const [isAgentActive, setIsAgentActive] = useState(false);
-  const [isPrinting, setIsPrinting] = useState(false);
   const [printQueue, setPrintQueue] = useState<PrintJob[]>([]);
   const [printHistory, setPrintHistory] = useState<PrintJob[]>([]);
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
@@ -106,10 +83,12 @@ export default function CentroPrintAgent() {
     setLastCheck(new Date());
   }, [centroId]);
 
-  // Initial fetch
+  // Initial fetch and polling
   useEffect(() => {
     if (centroId) {
       fetchQueue();
+      const interval = setInterval(fetchQueue, 10000);
+      return () => clearInterval(interval);
     }
   }, [centroId, fetchQueue]);
 
@@ -138,118 +117,6 @@ export default function CentroPrintAgent() {
     };
   }, [centroId, fetchQueue]);
 
-  // Generate label XML from job data
-  const generateLabelXml = (job: PrintJob): string => {
-    if (job.label_xml) return job.label_xml;
-    
-    switch (job.label_type) {
-      case 'repair':
-        return generateRepairLabel(job.label_data);
-      case 'device':
-        return generateDeviceLabel(job.label_data);
-      case 'shelf':
-        return generateShelfLabel(job.label_data);
-      default:
-        throw new Error(`Unknown label type: ${job.label_type}`);
-    }
-  };
-
-  // Process a single print job
-  const processJob = async (job: PrintJob): Promise<boolean> => {
-    try {
-      // Update status to printing
-      await supabase
-        .from('print_queue')
-        .update({ status: 'printing' })
-        .eq('id', job.id);
-
-      // Generate label XML
-      const labelXml = generateLabelXml(job);
-
-      // Print
-      const success = await printLabel(labelXml, job.copies);
-
-      if (success) {
-        await supabase
-          .from('print_queue')
-          .update({ 
-            status: 'completed', 
-            printed_at: new Date().toISOString(),
-            printer_name: selectedPrinter
-          })
-          .eq('id', job.id);
-        return true;
-      } else {
-        throw new Error('Stampa fallita');
-      }
-    } catch (error: any) {
-      await supabase
-        .from('print_queue')
-        .update({ 
-          status: 'failed', 
-          error_message: error.message || 'Errore sconosciuto'
-        })
-        .eq('id', job.id);
-      return false;
-    }
-  };
-
-  // Process queue
-  const processQueue = useCallback(async () => {
-    if (!isAgentActive || !selectedPrinter || isPrinting || printQueue.length === 0) return;
-
-    setIsPrinting(true);
-
-    for (const job of printQueue) {
-      if (!isAgentActive) break;
-      await processJob(job);
-      await fetchQueue();
-    }
-
-    setIsPrinting(false);
-  }, [isAgentActive, selectedPrinter, isPrinting, printQueue, fetchQueue]);
-
-  // Auto-process when queue changes and agent is active
-  useEffect(() => {
-    if (isAgentActive && printQueue.length > 0 && !isPrinting && selectedPrinter) {
-      processQueue();
-    }
-  }, [isAgentActive, printQueue, isPrinting, selectedPrinter, processQueue]);
-
-  // Polling interval when agent is active
-  useEffect(() => {
-    if (!isAgentActive || !centroId) return;
-
-    const interval = setInterval(() => {
-      fetchQueue();
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [isAgentActive, centroId, fetchQueue]);
-
-  const handleToggleAgent = () => {
-    if (!environment?.isServiceRunning) {
-      toast.error('Dymo Connect non disponibile');
-      return;
-    }
-    if (!selectedPrinter) {
-      toast.error('Seleziona prima una stampante');
-      return;
-    }
-    setIsAgentActive(!isAgentActive);
-    if (!isAgentActive) {
-      toast.success('Print Agent attivato');
-    }
-  };
-
-  const handleRetryJob = async (job: PrintJob) => {
-    await supabase
-      .from('print_queue')
-      .update({ status: 'pending', error_message: null })
-      .eq('id', job.id);
-    fetchQueue();
-  };
-
   const handleDeleteJob = async (jobId: string) => {
     await supabase
       .from('print_queue')
@@ -263,157 +130,46 @@ export default function CentroPrintAgent() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Printer className="h-6 w-6 text-primary" />
-          Print Agent
+          Print Agent - Coda di Stampa
         </h1>
         <p className="text-muted-foreground mt-1">
-          Questo agent stampa automaticamente le etichette dalla coda di stampa remota
+          Visualizza la coda di stampa. Per stampare, usa il Print Agent Standalone sul PC con la stampante.
         </p>
       </div>
 
-      {/* Info Alert when Dymo not connected */}
-      {!environment?.isServiceRunning && (
-        <Alert className="mb-6 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <AlertDescription className="text-amber-800 dark:text-amber-200">
-            <strong>Dymo Connect non rilevato dal browser.</strong> Per motivi di sicurezza del browser (HTTPS/CORS), questa pagina web non può connettersi direttamente a Dymo Connect.
-            <br /><br />
-            <strong>Soluzione: Usa il Print Agent Standalone</strong>
-            <ol className="list-decimal list-inside mt-2 space-y-1">
+      {/* Instructions Alert */}
+      <Alert className="mb-6 border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950">
+        <Printer className="h-4 w-4 text-emerald-600" />
+        <AlertDescription className="text-emerald-800 dark:text-emerald-200">
+          <strong>Come stampare le etichette:</strong>
+          <p className="mt-2">
+            I browser web non possono connettersi direttamente a Dymo Connect per motivi di sicurezza. 
+            Devi usare il <strong>Print Agent Standalone</strong> sul PC con la stampante.
+          </p>
+          <div className="mt-3 p-3 bg-white dark:bg-emerald-900/50 rounded-lg border border-emerald-200 dark:border-emerald-800">
+            <ol className="list-decimal list-inside space-y-2">
               <li>
                 <a 
                   href="/print-agent-standalone.html" 
                   target="_blank" 
-                  className="text-primary underline font-medium hover:text-primary/80"
+                  className="text-primary underline font-bold hover:text-primary/80"
                 >
-                  Clicca qui per aprire il Print Agent Standalone
+                  Scarica il Print Agent Standalone
                 </a>
+                {' '} (clicca col tasto destro → "Salva con nome")
               </li>
-              <li>Salva la pagina sul desktop del PC con la stampante (Ctrl+S)</li>
-              <li>Apri il file HTML salvato localmente</li>
-              <li>Inserisci il tuo Centro ID: <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded text-xs">{centroId}</code></li>
-              <li>Clicca "Avvia" - il file locale può connettersi a Dymo senza restrizioni</li>
+              <li>Apri il file HTML salvato sul PC con la stampante Dymo</li>
+              <li>
+                Inserisci il Centro ID: <code className="bg-emerald-100 dark:bg-emerald-800 px-2 py-0.5 rounded font-mono text-sm">{centroId}</code>
+              </li>
+              <li>Clicca <strong>"Avvia"</strong> - il file locale può connettersi a Dymo senza restrizioni</li>
             </ol>
-            <br />
-            <strong>Intanto puoi vedere la coda di stampa qui sotto.</strong>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Status Card */}
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Stato Agent</span>
-            <Badge variant={isAgentActive ? 'default' : 'secondary'} className="gap-1">
-              {isAgentActive ? (
-                <>
-                  <Wifi className="h-3 w-3" />
-                  Attivo
-                </>
-              ) : (
-                <>
-                  <WifiOff className="h-3 w-3" />
-                  Inattivo
-                </>
-              )}
-            </Badge>
-          </CardTitle>
-          <CardDescription>
-            Mantieni questa pagina aperta sul PC con la stampante Dymo collegata
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Dymo Status */}
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-3">
-              {environment?.isServiceRunning ? (
-                <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-              ) : (
-                <XCircle className="h-5 w-5 text-amber-500" />
-              )}
-              <div>
-                <p className="font-medium">Dymo Connect</p>
-                <p className="text-sm text-muted-foreground">
-                  {environment?.isServiceRunning ? 'Connesso' : 'Non rilevato su questo PC'}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                checkEnvironment();
-                refreshPrinters();
-              }}
-              disabled={isDymoLoading}
-            >
-              {isDymoLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <RefreshCw className="h-4 w-4" />
-              )}
-            </Button>
           </div>
-
-          {/* Printer Selection */}
-          {environment?.isServiceRunning && (
-            <div className="space-y-2">
-              <Label>Stampante</Label>
-              <Select
-                value={selectedPrinter || ''}
-                onValueChange={setSelectedPrinter}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleziona stampante..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {printers.map((printer) => (
-                    <SelectItem key={printer.name} value={printer.name}>
-                      {printer.name} ({printer.modelName})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {/* Agent Toggle */}
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div>
-              <Label htmlFor="agent-toggle" className="text-base font-medium">
-                Attiva Print Agent
-              </Label>
-              <p className="text-sm text-muted-foreground">
-                Stampa automaticamente i lavori in coda
-              </p>
-            </div>
-            <Button
-              variant={isAgentActive ? 'destructive' : 'default'}
-              onClick={handleToggleAgent}
-              disabled={!environment?.isServiceRunning || !selectedPrinter}
-              className="gap-2"
-            >
-              {isAgentActive ? (
-                <>
-                  <Pause className="h-4 w-4" />
-                  Ferma
-                </>
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  Avvia
-                </>
-              )}
-            </Button>
-          </div>
-
-          {lastCheck && (
-            <p className="text-xs text-muted-foreground text-right">
-              Ultimo controllo: {format(lastCheck, 'HH:mm:ss', { locale: it })}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          <p className="mt-3 text-sm">
+            ✅ <strong>Lo hai già fatto?</strong> Perfetto! Il file standalone stamperà automaticamente i lavori in coda.
+          </p>
+        </AlertDescription>
+      </Alert>
 
       {/* Queue Card */}
       <Card className="mb-6">
@@ -423,8 +179,18 @@ export default function CentroPrintAgent() {
               <Clock className="h-5 w-5" />
               Coda di Stampa
             </span>
-            <Badge variant="outline">{printQueue.length} in attesa</Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant={printQueue.length > 0 ? 'default' : 'outline'}>
+                {printQueue.length} in attesa
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={fetchQueue}>
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
           </CardTitle>
+          <CardDescription>
+            I lavori in coda verranno stampati automaticamente dal Print Agent Standalone
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {printQueue.length === 0 ? (
@@ -432,7 +198,7 @@ export default function CentroPrintAgent() {
               Nessun lavoro in coda
             </p>
           ) : (
-            <ScrollArea className="h-[200px]">
+            <ScrollArea className="h-[250px]">
               <div className="space-y-2">
                 {printQueue.map((job) => (
                   <div
@@ -453,22 +219,22 @@ export default function CentroPrintAgent() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {job.status === 'printing' && (
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteJob(job.id)}
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeleteJob(job.id)}
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
                   </div>
                 ))}
               </div>
             </ScrollArea>
+          )}
+          {lastCheck && (
+            <p className="text-xs text-muted-foreground text-right mt-4">
+              Ultimo aggiornamento: {format(lastCheck, 'HH:mm:ss', { locale: it })}
+            </p>
           )}
         </CardContent>
       </Card>
@@ -508,21 +274,10 @@ export default function CentroPrintAgent() {
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {job.printed_at && format(new Date(job.printed_at), 'dd/MM HH:mm', { locale: it })}
-                          {job.error_message && (
-                            <span className="text-destructive"> • {job.error_message}</span>
-                          )}
+                          {job.error_message && ` • ${job.error_message}`}
                         </p>
                       </div>
                     </div>
-                    {job.status === 'failed' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRetryJob(job)}
-                      >
-                        Riprova
-                      </Button>
-                    )}
                   </div>
                 ))}
               </div>
@@ -530,20 +285,6 @@ export default function CentroPrintAgent() {
           )}
         </CardContent>
       </Card>
-
-      {/* Instructions */}
-      <Alert className="mt-6">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertDescription>
-          <p className="font-medium mb-1">Come funziona:</p>
-          <ol className="list-decimal list-inside text-sm space-y-1">
-            <li>Apri questa pagina sul PC dove è collegata la stampante Dymo</li>
-            <li>Seleziona la stampante e clicca "Avvia"</li>
-            <li>Mantieni la pagina aperta - stamperà automaticamente i lavori in coda</li>
-            <li>Da qualsiasi altro dispositivo puoi inviare etichette alla coda</li>
-          </ol>
-        </AlertDescription>
-      </Alert>
     </div>
   );
 }
