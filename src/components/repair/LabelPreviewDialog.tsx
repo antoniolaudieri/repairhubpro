@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -13,12 +14,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useDymoPrinter } from '@/hooks/useDymoPrinter';
 import { usePrintQueue } from '@/hooks/usePrintQueue';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { generateRepairLabel, getLabelFormats, LabelFormat } from '@/utils/labelTemplates';
-import { Printer, Loader2, Tag, Edit3, Eye, QrCode, Send, Cloud } from 'lucide-react';
+import { Printer, Loader2, Tag, Edit3, Eye, QrCode, Send, Cloud, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -52,6 +54,7 @@ const PAPER_FORMATS = getLabelFormats();
 
 export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDialogProps) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { environment, selectedPrinter, printLabel, isLoading, checkEnvironment, refreshPrinters } = useDymoPrinter();
   const [centroId, setCentroId] = useState<string | null>(null);
   const { addRepairLabel } = usePrintQueue(centroId);
@@ -62,12 +65,13 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
   const [issue, setIssue] = useState('');
   
   // Label configuration
-  const [labelFormat, setLabelFormat] = useState<LabelFormat>('30252');
+  const [labelFormat, setLabelFormat] = useState<LabelFormat>('11354'); // Default to 57x32mm
   const [labelStyle, setLabelStyle] = useState<LabelStyle>('standard');
   const [showQrCode, setShowQrCode] = useState(false);
   
   const [isPrinting, setIsPrinting] = useState(false);
   const [isSendingToQueue, setIsSendingToQueue] = useState(false);
+  const [sentToQueue, setSentToQueue] = useState(false);
   const [activeTab, setActiveTab] = useState<'preview' | 'edit'>('preview');
 
   // Fetch Centro ID
@@ -90,20 +94,21 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
       setCustomerName(data.customerName || '');
       setDeviceInfo(`${data.deviceBrand || ''} ${data.deviceModel || ''}`.trim());
       setIssue(data.issueDescription || '');
+      setSentToQueue(false);
     }
   }, [open, data]);
 
   const shortId = data?.repairId?.slice(0, 8).toUpperCase() || '';
   const intakeDate = data?.createdAt ? format(new Date(data.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '';
 
-  // Get label dimensions for preview
+  // Get label dimensions for preview (scaled for display)
   const getLabelDimensions = () => {
     switch (labelFormat) {
-      case '30252': return { width: 220, height: 70 }; // 89x28mm
-      case '99012': return { width: 220, height: 90 }; // 89x36mm
-      case '11354': return { width: 140, height: 80 }; // 57x32mm
-      case '30336': return { width: 135, height: 62 }; // 54x25mm
-      default: return { width: 220, height: 70 };
+      case '30252': return { width: 260, height: 85 }; // 89x28mm
+      case '99012': return { width: 260, height: 105 }; // 89x36mm
+      case '11354': return { width: 180, height: 100 }; // 57x32mm (default)
+      case '30336': return { width: 170, height: 80 }; // 54x25mm
+      default: return { width: 180, height: 100 };
     }
   };
 
@@ -164,7 +169,7 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
     }
     setIsSendingToQueue(true);
     try {
-      await addRepairLabel({
+      const success = await addRepairLabel({
         repairId: data.repairId || '',
         customerName: customerName.substring(0, 25),
         deviceBrand: data.deviceBrand || '',
@@ -173,10 +178,17 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
         issue: issue.substring(0, 40),
         date: intakeDate,
       });
-      onOpenChange(false);
+      if (success) {
+        setSentToQueue(true);
+      }
     } finally {
       setIsSendingToQueue(false);
     }
+  };
+
+  const handleGoToPrintAgent = () => {
+    onOpenChange(false);
+    navigate('/centro/print-agent');
   };
 
   const loading = isPrinting || isLoading || isSendingToQueue;
@@ -210,7 +222,7 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
             {/* Label Preview */}
             <div className="flex justify-center p-4 bg-muted/30 rounded-lg">
               <div 
-                className="bg-white border-2 border-dashed border-border rounded shadow-sm p-3 flex flex-col justify-between"
+                className="bg-white border-2 border-dashed border-gray-300 rounded shadow-sm p-3 flex flex-col"
                 style={{ 
                   width: dimensions.width, 
                   height: dimensions.height,
@@ -218,33 +230,33 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
                 }}
               >
                 {labelStyle === 'compact' ? (
-                  <>
-                    <div className="font-bold text-sm text-foreground">#{shortId}</div>
-                    <div className="text-xs text-muted-foreground truncate">{deviceInfo}</div>
-                  </>
+                  <div className="h-full flex flex-col justify-center gap-1">
+                    <div className="font-bold text-base text-gray-900">#{shortId}</div>
+                    <div className="text-sm text-gray-600 truncate">{deviceInfo || 'Dispositivo'}</div>
+                  </div>
                 ) : labelStyle === 'detailed' ? (
-                  <div className="flex gap-2 h-full">
+                  <div className="flex gap-3 h-full">
                     <div className="flex-1 flex flex-col justify-between overflow-hidden">
-                      <div className="font-bold text-sm text-foreground">#{shortId}</div>
-                      <div className="text-[10px] font-medium text-foreground truncate">{customerName}</div>
-                      <div className="text-[9px] text-muted-foreground truncate">{deviceInfo}</div>
-                      <div className="text-[8px] text-muted-foreground/80 truncate italic">{issue}</div>
-                      <div className="text-[7px] text-muted-foreground">{intakeDate}</div>
+                      <div className="font-bold text-base text-gray-900">#{shortId}</div>
+                      <div className="text-sm font-medium text-gray-800 truncate">{customerName || 'Cliente'}</div>
+                      <div className="text-xs text-gray-600 truncate">{deviceInfo || 'Dispositivo'}</div>
+                      <div className="text-xs text-gray-500 truncate italic">{issue || 'Problema'}</div>
+                      <div className="text-[10px] text-gray-400">{intakeDate}</div>
                     </div>
                     {showQrCode && (
-                      <div className="w-12 h-12 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                        <QrCode className="h-8 w-8 text-muted-foreground" />
+                      <div className="w-14 h-14 bg-gray-100 rounded flex items-center justify-center flex-shrink-0 self-center">
+                        <QrCode className="h-10 w-10 text-gray-400" />
                       </div>
                     )}
                   </div>
                 ) : (
-                  <>
-                    <div className="font-bold text-sm text-foreground">#{shortId}</div>
-                    <div className="text-[10px] font-medium text-foreground truncate">{customerName}</div>
-                    <div className="text-[9px] text-muted-foreground truncate">{deviceInfo}</div>
-                    <div className="text-[8px] text-muted-foreground/80 truncate italic">{issue}</div>
-                    <div className="text-[7px] text-muted-foreground">{intakeDate}</div>
-                  </>
+                  <div className="h-full flex flex-col justify-between">
+                    <div className="font-bold text-base text-gray-900">#{shortId}</div>
+                    <div className="text-sm font-medium text-gray-800 truncate">{customerName || 'Cliente'}</div>
+                    <div className="text-xs text-gray-600 truncate">{deviceInfo || 'Dispositivo'}</div>
+                    <div className="text-xs text-gray-500 truncate italic">{issue || 'Problema'}</div>
+                    <div className="text-[10px] text-gray-400">{intakeDate}</div>
+                  </div>
                 )}
               </div>
             </div>
@@ -370,31 +382,52 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
           </TabsContent>
         </Tabs>
 
+        {sentToQueue ? (
+          <Alert className="border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <AlertDescription className="text-emerald-800 dark:text-emerald-200">
+              <strong>Etichetta aggiunta alla coda!</strong>
+              <p className="text-sm mt-1">
+                Apri il Print Agent Standalone sul PC con la stampante per stampare.
+              </p>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         <div className="flex gap-2 pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Annulla
+            {sentToQueue ? 'Chiudi' : 'Annulla'}
           </Button>
-          <Button 
-            variant="secondary" 
-            onClick={handleSendToQueue} 
-            disabled={loading || !centroId} 
-            className="gap-2"
-          >
-            {isSendingToQueue ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Cloud className="h-4 w-4" />
-            )}
-            Coda Remota
-          </Button>
-          <Button onClick={handlePrint} disabled={loading} className="gap-2">
-            {isPrinting ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Printer className="h-4 w-4" />
-            )}
-            Stampa Locale
-          </Button>
+          {sentToQueue ? (
+            <Button onClick={handleGoToPrintAgent} className="gap-2">
+              <ExternalLink className="h-4 w-4" />
+              Vai al Print Agent
+            </Button>
+          ) : (
+            <>
+              <Button 
+                variant="secondary" 
+                onClick={handleSendToQueue} 
+                disabled={loading || !centroId} 
+                className="gap-2"
+              >
+                {isSendingToQueue ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Cloud className="h-4 w-4" />
+                )}
+                Coda Remota
+              </Button>
+              <Button onClick={handlePrint} disabled={loading} className="gap-2">
+                {isPrinting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Printer className="h-4 w-4" />
+                )}
+                Stampa Locale
+              </Button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
