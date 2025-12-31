@@ -3883,6 +3883,8 @@ export type Database = {
           shipping_cost: number | null
           started_at: string | null
           status: string
+          storage_slot: number | null
+          storage_slot_assigned_at: string | null
           updated_at: string
         }
         Insert: {
@@ -3918,6 +3920,8 @@ export type Database = {
           shipping_cost?: number | null
           started_at?: string | null
           status?: string
+          storage_slot?: number | null
+          storage_slot_assigned_at?: string | null
           updated_at?: string
         }
         Update: {
@@ -3953,6 +3957,8 @@ export type Database = {
           shipping_cost?: number | null
           started_at?: string | null
           status?: string
+          storage_slot?: number | null
+          storage_slot_assigned_at?: string | null
           updated_at?: string
         }
         Relationships: [
