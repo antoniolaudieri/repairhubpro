@@ -8,10 +8,11 @@ import { ActiveLoyaltyCardsList } from "@/components/marketing/ActiveLoyaltyCard
 import { LoyaltyEmailCampaign } from "@/components/marketing/LoyaltyEmailCampaign";
 import { EmailCampaignAnalytics } from "@/components/marketing/EmailCampaignAnalytics";
 import { PromoManager } from "@/components/marketing/PromoManager";
+import WhatsAppCampaign from "@/components/marketing/WhatsAppCampaign";
 import { useLoyaltyProgramSettings } from "@/hooks/useLoyaltyProgramSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag, Settings, UserCheck, Send } from "lucide-react";
+import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag, Settings, UserCheck, Send, MessageSquare } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LoyaltyStats {
@@ -213,18 +214,22 @@ export default function CentroMarketing() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="loyalty" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 max-w-md">
+          <TabsList className="grid w-full grid-cols-4 max-w-lg">
             <TabsTrigger value="loyalty" className="flex items-center gap-1">
               <CreditCard className="h-4 w-4" />
-              Tessera Fedeltà
+              <span className="hidden sm:inline">Fedeltà</span>
+            </TabsTrigger>
+            <TabsTrigger value="whatsapp" className="flex items-center gap-1">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">WhatsApp</span>
             </TabsTrigger>
             <TabsTrigger value="email" className="flex items-center gap-1">
               <Mail className="h-4 w-4" />
-              Email
+              <span className="hidden sm:inline">Email</span>
             </TabsTrigger>
             <TabsTrigger value="promos" className="flex items-center gap-1">
               <Tag className="h-4 w-4" />
-              Promo
+              <span className="hidden sm:inline">Promo</span>
             </TabsTrigger>
           </TabsList>
 
@@ -261,6 +266,10 @@ export default function CentroMarketing() {
                 <ActiveLoyaltyCardsList centroId={centroId} />
               </TabsContent>
             </Tabs>
+          </TabsContent>
+
+          <TabsContent value="whatsapp" className="mt-6">
+            <WhatsAppCampaign />
           </TabsContent>
 
           <TabsContent value="email" className="mt-6">
