@@ -157,42 +157,40 @@ export function DymoPrinterSettings({
                     Dymo Connect non rilevato
                   </p>
                   
-                  {/* Certificate Issue - Most common problem */}
-                  <div className="bg-amber-500/10 p-3 rounded-md mb-3 border border-amber-500/30">
-                    <p className="font-medium text-sm mb-2 text-amber-600 dark:text-amber-400">🔐 Certificato SSL da accettare</p>
+                  {/* CORS explanation - the real issue */}
+                  <div className="bg-destructive/10 p-3 rounded-md mb-3 border border-destructive/30">
+                    <p className="font-medium text-sm mb-2 text-destructive">🚫 Limitazione Browser (CORS)</p>
                     <p className="text-xs text-muted-foreground mb-2">
-                      Il servizio Dymo usa un certificato auto-firmato che il browser blocca. 
-                      Per risolverlo:
+                      I browser moderni bloccano le connessioni da siti web remoti (come questa preview) 
+                      verso servizi locali (come Dymo Connect) per motivi di sicurezza.
                     </p>
-                    <ol className="list-decimal list-inside text-xs space-y-1 mb-2">
+                    <p className="text-xs font-medium">
+                      La stampa Dymo funziona <strong>solo quando l'app viene eseguita localmente</strong> sul tuo PC 
+                      (dopo aver scaricato il codice da GitHub ed eseguito <code className="bg-muted px-1 rounded">npm run dev</code>).
+                    </p>
+                  </div>
+                  
+                  {/* Certificate reminder */}
+                  <div className="bg-amber-500/10 p-3 rounded-md mb-3 border border-amber-500/30">
+                    <p className="font-medium text-sm mb-2 text-amber-600 dark:text-amber-400">🔐 Quando esegui in locale:</p>
+                    <p className="text-xs text-muted-foreground mb-1">
+                      Potresti dover accettare il certificato SSL di Dymo:
+                    </p>
+                    <ol className="list-decimal list-inside text-xs space-y-1">
                       <li>
+                        Apri{' '}
                         <a
                           href="https://localhost:41951/DYMO/DLS/Printing/StatusConnected"
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="underline text-primary font-medium"
+                          className="underline text-primary"
                         >
-                          Clicca qui per aprire il servizio Dymo
+                          https://localhost:41951
                         </a>
+                        {' '}nel browser
                       </li>
-                      <li>Il browser mostrerà un avviso di sicurezza</li>
-                      <li>Clicca <strong>"Avanzate"</strong> → <strong>"Procedi comunque"</strong> (o simile)</li>
-                      <li>Torna qui e clicca "Rileva" di nuovo</li>
-                    </ol>
-                    <p className="text-xs text-muted-foreground">
-                      Questo passaggio va fatto una sola volta per browser.
-                    </p>
-                  </div>
-                  
-                  {/* If service not running at all */}
-                  <div className="bg-muted/50 p-3 rounded-md mb-3 border border-border/50">
-                    <p className="font-medium text-sm mb-2">🔧 Se il certificato è già accettato:</p>
-                    <ol className="list-decimal list-inside text-xs space-y-1">
-                      <li>Verifica che <strong>Dymo Connect</strong> sia in esecuzione</li>
-                      <li>
-                        Apri "services.msc" e controlla "Dymo Connect Web Service"
-                      </li>
-                      <li>Riavvia il servizio se necessario</li>
+                      <li>Accetta l'avviso di sicurezza ("Avanzate" → "Procedi")</li>
+                      <li>Torna qui e clicca "Rileva"</li>
                     </ol>
                   </div>
                   
@@ -201,7 +199,8 @@ export function DymoPrinterSettings({
                     <p className="font-medium text-sm mb-1">💡 Alternativa: Stampa Browser</p>
                     <p className="text-xs text-muted-foreground">
                       Puoi stampare etichette usando la funzione di stampa del browser (Ctrl+P) 
-                      selezionando la stampante Dymo. Non è automatico ma funziona sempre.
+                      selezionando la stampante Dymo. Non è automatico ma funziona sempre, 
+                      anche dalla preview online.
                     </p>
                   </div>
                 </AlertDescription>
