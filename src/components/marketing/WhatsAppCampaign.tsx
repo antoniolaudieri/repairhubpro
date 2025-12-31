@@ -64,6 +64,11 @@ const DEFAULT_TEMPLATES = [
     category: "promo"
   },
   {
+    name: "Antivirus Android - Offerta Lancio",
+    message: "Ciao {{nome}}! 🛡️ Proteggi il tuo smartphone con il nostro Antivirus Android esclusivo! A soli 30€/anno hai: protezione malware, blocco pubblicità e scansione app. Offerta limitata ai primi 100 clienti! Attiva ora: {{link_pagamento}} - {{centro}}",
+    category: "promo"
+  },
+  {
     name: "Buon Compleanno",
     message: "Buon compleanno {{nome}}! 🎂 Da parte di tutto il team di {{centro}}, ti auguriamo una giornata fantastica! Per festeggiare, hai diritto a uno sconto speciale del 15% sulla tua prossima riparazione.",
     category: "auguri"
