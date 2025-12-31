@@ -69,6 +69,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
 import { StorageSlotWidget } from "@/components/centro/StorageSlotWidget";
+import { useStorageSlots } from "@/hooks/useStorageSlots";
 
 interface RepairGuideData {
   diagnosis: {
@@ -226,10 +227,47 @@ export default function RepairDetail() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [sendingFinalCostEmail, setSendingFinalCostEmail] = useState(false);
   const [acceptingByPhone, setAcceptingByPhone] = useState(false);
+  const [formattedStorageSlot, setFormattedStorageSlot] = useState<string | undefined>();
 
   // Determine back route based on current path
   const isCentroContext = location.pathname.startsWith("/centro");
   const backRoute = isCentroContext ? "/centro/lavori" : "/repairs";
+
+  // Storage slots for formatting
+  const centroId = repair?.customer?.centro_id || null;
+  const { getMultiShelfConfig } = useStorageSlots(centroId);
+
+  // Calculate formatted storage slot when repair changes
+  useEffect(() => {
+    const formatSlot = async () => {
+      if (!repair?.storage_slot || !centroId) {
+        setFormattedStorageSlot(undefined);
+        return;
+      }
+
+      const config = await getMultiShelfConfig();
+      if (!config?.enabled || config.shelves.length === 0) {
+        setFormattedStorageSlot(`${repair.storage_slot}`);
+        return;
+      }
+
+      // Find which shelf this slot belongs to
+      for (const shelf of config.shelves) {
+        const shelfSlots = shelf.rows * shelf.columns;
+        if (repair.storage_slot >= shelf.start_number && repair.storage_slot < shelf.start_number + shelfSlots) {
+          const localSlot = repair.storage_slot - shelf.start_number;
+          const row = Math.floor(localSlot / shelf.columns);
+          const col = localSlot % shelf.columns;
+          setFormattedStorageSlot(`${shelf.prefix}${row + 1}-${col + 1}`);
+          return;
+        }
+      }
+
+      setFormattedStorageSlot(`${repair.storage_slot}`);
+    };
+
+    formatSlot();
+  }, [repair?.storage_slot, centroId, getMultiShelfConfig]);
 
   useEffect(() => {
     if (id) {
@@ -990,6 +1028,7 @@ export default function RepairDetail() {
                   deviceType={repair.device.device_type}
                   issueDescription={repair.device.reported_issue}
                   createdAt={repair.created_at}
+                  storageSlot={formattedStorageSlot}
                   variant="outline"
                   className="gap-2"
                 />
