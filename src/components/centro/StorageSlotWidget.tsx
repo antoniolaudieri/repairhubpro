@@ -13,7 +13,8 @@ import {
   Loader2,
   X,
   Package,
-  Layers
+  Layers,
+  Edit3
 } from "lucide-react";
 import { useStorageSlots, MultiShelfConfig, ShelfConfig } from "@/hooks/useStorageSlots";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -22,6 +23,21 @@ import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+
+// Same color definitions as in MultiShelfEditor for consistency
+const SHELF_COLORS = [
+  { name: "Blu", value: "from-blue-500 to-blue-600", bg: "bg-blue-500/20", border: "border-blue-500/30", text: "text-blue-600", solid: "bg-blue-500" },
+  { name: "Verde", value: "from-emerald-500 to-emerald-600", bg: "bg-emerald-500/20", border: "border-emerald-500/30", text: "text-emerald-600", solid: "bg-emerald-500" },
+  { name: "Viola", value: "from-violet-500 to-violet-600", bg: "bg-violet-500/20", border: "border-violet-500/30", text: "text-violet-600", solid: "bg-violet-500" },
+  { name: "Arancione", value: "from-orange-500 to-orange-600", bg: "bg-orange-500/20", border: "border-orange-500/30", text: "text-orange-600", solid: "bg-orange-500" },
+  { name: "Rosa", value: "from-pink-500 to-pink-600", bg: "bg-pink-500/20", border: "border-pink-500/30", text: "text-pink-600", solid: "bg-pink-500" },
+  { name: "Ciano", value: "from-cyan-500 to-cyan-600", bg: "bg-cyan-500/20", border: "border-cyan-500/30", text: "text-cyan-600", solid: "bg-cyan-500" },
+];
+
+function getColorClasses(colorValue: string) {
+  return SHELF_COLORS.find(c => c.value === colorValue) || SHELF_COLORS[0];
+}
 
 interface StorageSlotWidgetProps {
   repairId: string;
@@ -132,14 +148,6 @@ export function StorageSlotWidget({
     return { row, col };
   };
 
-  const formatCurrentSlot = (): string => {
-    if (!currentSlot || !config?.shelves) return "";
-    const shelf = findShelfForSlot(currentSlot);
-    if (!shelf) return `#${currentSlot}`;
-    const position = getSlotPositionInShelf(currentSlot, shelf);
-    return `${shelf.prefix}${position.row + 1}-${position.col + 1}`;
-  };
-
   if (loading) {
     return (
       <Card>
@@ -156,62 +164,49 @@ export function StorageSlotWidget({
 
   const currentShelf = currentSlot ? findShelfForSlot(currentSlot) : null;
   const currentPosition = currentSlot && currentShelf ? getSlotPositionInShelf(currentSlot, currentShelf) : null;
+  const currentColorClasses = currentShelf ? getColorClasses(currentShelf.color) : null;
 
-  // Render a single shelf visual grid
-  const renderShelfGrid = (shelf: ShelfConfig, compact: boolean = false) => {
-    const cellSize = compact ? 'h-4 w-4' : 'h-8 w-8 sm:h-10 sm:w-10';
-    const gap = compact ? 'gap-0.5' : 'gap-1';
+  // Render mini preview grid (same style as settings)
+  const renderMiniPreviewGrid = (shelf: ShelfConfig) => {
+    const colorClasses = getColorClasses(shelf.color);
+    const totalSlots = shelf.rows * shelf.columns;
+    const maxDisplay = Math.min(totalSlots, 30);
     
     return (
-      <div className={`grid ${gap}`} style={{ gridTemplateColumns: `repeat(${shelf.columns}, minmax(0, 1fr))` }}>
-        {Array.from({ length: shelf.rows * shelf.columns }, (_, i) => {
-          const slotNum = shelf.start_number + i;
-          const row = Math.floor(i / shelf.columns);
-          const col = i % shelf.columns;
-          const isCurrentSlot = slotNum === currentSlot;
-          const isOccupied = occupiedSlots.includes(slotNum);
-
-          return (
-            <motion.div
-              key={slotNum}
-              initial={false}
-              animate={isCurrentSlot ? {
-                scale: [1, 1.1, 1],
-                opacity: 1
-              } : { opacity: 1 }}
-              transition={isCurrentSlot ? { duration: 2, repeat: Infinity, ease: "easeInOut" } : {}}
-              className={`
-                ${cellSize} rounded-sm flex items-center justify-center relative
-                ${isCurrentSlot 
-                  ? 'ring-2 ring-primary shadow-lg z-10' 
-                  : isOccupied 
-                    ? 'bg-muted/60' 
-                    : 'bg-accent/40'
-                }
-              `}
-              style={isCurrentSlot ? { 
-                backgroundColor: shelf.color || 'hsl(var(--primary))'
-              } : {}}
-            >
-              {!compact && (
-                <span className={`text-[9px] sm:text-[10px] font-medium ${
-                  isCurrentSlot ? 'text-white' : 'text-muted-foreground'
-                }`}>
-                  {row + 1}-{col + 1}
-                </span>
-              )}
-              {isCurrentSlot && (
-                <motion.div
-                  className="absolute inset-0 rounded-sm"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: [0, 0.5, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  style={{ backgroundColor: shelf.color || 'hsl(var(--primary))' }}
-                />
-              )}
-            </motion.div>
-          );
-        })}
+      <div className="rounded-lg bg-muted/30 p-2">
+        <div 
+          className="grid gap-0.5"
+          style={{ 
+            gridTemplateColumns: `repeat(${Math.min(shelf.columns, 10)}, 1fr)` 
+          }}
+        >
+          {Array.from({ length: maxDisplay }, (_, i) => {
+            const slotNum = shelf.start_number + i;
+            const isCurrentSlot = slotNum === currentSlot;
+            const isOccupied = occupiedSlots.includes(slotNum) && !isCurrentSlot;
+            
+            return (
+              <motion.div
+                key={i}
+                animate={isCurrentSlot ? { scale: [1, 1.2, 1] } : {}}
+                transition={isCurrentSlot ? { duration: 2, repeat: Infinity } : {}}
+                className={cn(
+                  "aspect-square rounded-sm transition-colors",
+                  isCurrentSlot 
+                    ? cn("bg-gradient-to-br ring-2 ring-offset-1 ring-offset-background", shelf.color, "ring-foreground/50")
+                    : isOccupied 
+                      ? "bg-muted-foreground/30" 
+                      : colorClasses.bg
+                )}
+              />
+            );
+          })}
+        </div>
+        {totalSlots > 30 && (
+          <p className="text-[10px] text-muted-foreground text-center mt-1">
+            +{totalSlots - 30} slot
+          </p>
+        )}
       </div>
     );
   };
@@ -237,99 +232,110 @@ export function StorageSlotWidget({
 
       <Tabs value={activeShelfTab} onValueChange={setActiveShelfTab}>
         <TabsList className="w-full grid" style={{ gridTemplateColumns: `repeat(${config.shelves.length}, 1fr)` }}>
-          {config.shelves.map((shelf) => (
-            <TabsTrigger 
-              key={shelf.id} 
-              value={shelf.id}
-              className="gap-1.5 px-2"
-            >
-              <div 
-                className="w-2.5 h-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: shelf.color || 'hsl(var(--primary))' }}
-              />
-              <span className="truncate text-xs sm:text-sm">{shelf.name}</span>
-            </TabsTrigger>
-          ))}
+          {config.shelves.map((shelf) => {
+            const colorClasses = getColorClasses(shelf.color);
+            return (
+              <TabsTrigger 
+                key={shelf.id} 
+                value={shelf.id}
+                className="gap-1.5 px-2"
+              >
+                <div className={cn("w-2.5 h-2.5 rounded-full shrink-0 bg-gradient-to-br", shelf.color)} />
+                <span className="truncate text-xs sm:text-sm">{shelf.name}</span>
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
-        {config.shelves.map((shelf) => (
-          <TabsContent key={shelf.id} value={shelf.id} className="mt-4">
-            <div 
-              className="p-4 rounded-xl border-2 bg-gradient-to-b from-background to-muted/30"
-              style={{ borderColor: `${shelf.color || 'hsl(var(--primary))'}40` }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Layers className="h-4 w-4" style={{ color: shelf.color || 'hsl(var(--primary))' }} />
-                  <span className="font-medium">{shelf.name}</span>
+        {config.shelves.map((shelf) => {
+          const colorClasses = getColorClasses(shelf.color);
+          
+          return (
+            <TabsContent key={shelf.id} value={shelf.id} className="mt-4">
+              <div className={cn(
+                "rounded-xl border-2 overflow-hidden",
+                colorClasses.border
+              )}>
+                {/* Color Header Bar */}
+                <div className={cn("h-1.5 bg-gradient-to-r", shelf.color)} />
+                
+                <div className="p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <div className={cn(
+                        "h-8 w-8 rounded-lg flex items-center justify-center bg-gradient-to-br",
+                        shelf.color
+                      )}>
+                        <Archive className="h-4 w-4 text-white" />
+                      </div>
+                      <div>
+                        <span className="font-semibold text-sm">{shelf.name}</span>
+                        <p className="text-xs text-muted-foreground">
+                          Prefisso: <span className="font-mono font-bold">{shelf.prefix}</span>
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {shelf.rows} × {shelf.columns}
+                    </Badge>
+                  </div>
+
+                  <ScrollArea className="max-h-[280px] sm:max-h-[320px]">
+                    <div 
+                      className="grid gap-1"
+                      style={{ gridTemplateColumns: `repeat(${shelf.columns}, minmax(0, 1fr))` }}
+                    >
+                      {Array.from({ length: shelf.rows * shelf.columns }, (_, i) => {
+                        const slotNum = shelf.start_number + i;
+                        const row = Math.floor(i / shelf.columns);
+                        const col = i % shelf.columns;
+                        const isCurrentSlot = slotNum === currentSlot;
+                        const isOccupied = occupiedSlots.includes(slotNum) && !isCurrentSlot;
+                        const isSelected = selectedSlot === slotNum;
+                        const isAvailable = !isOccupied;
+                        const label = `${shelf.prefix}${row + 1}-${col + 1}`;
+
+                        return (
+                          <motion.button
+                            key={slotNum}
+                            whileHover={isAvailable ? { scale: 1.05 } : {}}
+                            whileTap={isAvailable ? { scale: 0.95 } : {}}
+                            onClick={() => isAvailable && setSelectedSlot(slotNum)}
+                            disabled={isOccupied}
+                            className={cn(
+                              "aspect-square rounded flex flex-col items-center justify-center text-[8px] sm:text-[10px] font-mono transition-all border",
+                              isCurrentSlot 
+                                ? cn("bg-gradient-to-br text-white border-transparent", shelf.color)
+                                : isSelected
+                                  ? cn("bg-gradient-to-br text-white border-transparent ring-2 ring-offset-2", shelf.color, "ring-foreground/50")
+                                  : isOccupied 
+                                    ? "bg-muted/50 text-muted-foreground/40 cursor-not-allowed border-transparent" 
+                                    : cn("cursor-pointer", colorClasses.bg, colorClasses.border, colorClasses.text, "hover:opacity-80")
+                            )}
+                          >
+                            {isCurrentSlot ? (
+                              <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+                            ) : isSelected ? (
+                              <Check className="h-3 w-3 sm:h-4 sm:w-4" />
+                            ) : (
+                              <span className="font-medium">{label}</span>
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
                 </div>
-                <span className="text-xs text-muted-foreground">
-                  {shelf.rows} × {shelf.columns}
-                </span>
               </div>
-
-              <ScrollArea className="max-h-[280px] sm:max-h-[320px]">
-                <div 
-                  className="grid gap-1.5 sm:gap-2"
-                  style={{ gridTemplateColumns: `repeat(${shelf.columns}, minmax(0, 1fr))` }}
-                >
-                  {Array.from({ length: shelf.rows * shelf.columns }, (_, i) => {
-                    const slotNum = shelf.start_number + i;
-                    const row = Math.floor(i / shelf.columns);
-                    const col = i % shelf.columns;
-                    const isCurrentSlot = slotNum === currentSlot;
-                    const isOccupied = occupiedSlots.includes(slotNum) && !isCurrentSlot;
-                    const isSelected = selectedSlot === slotNum;
-                    const isAvailable = !isOccupied;
-                    const label = `${row + 1}-${col + 1}`;
-
-                    return (
-                      <motion.button
-                        key={slotNum}
-                        whileHover={isAvailable ? { scale: 1.05, y: -2 } : {}}
-                        whileTap={isAvailable ? { scale: 0.95 } : {}}
-                        onClick={() => isAvailable && setSelectedSlot(slotNum)}
-                        disabled={isOccupied}
-                        className={`
-                          aspect-square rounded-lg flex flex-col items-center justify-center font-medium
-                          transition-all shadow-sm min-h-[44px] sm:min-h-[52px]
-                          ${isCurrentSlot 
-                            ? 'text-white shadow-md' 
-                            : isSelected
-                              ? 'bg-primary text-primary-foreground shadow-md ring-2 ring-primary ring-offset-2'
-                              : isOccupied 
-                                ? 'bg-muted/50 text-muted-foreground/50 cursor-not-allowed' 
-                                : 'bg-card hover:bg-accent border border-border/50 hover:border-primary/30 cursor-pointer'
-                          }
-                        `}
-                        style={isCurrentSlot ? { 
-                          backgroundColor: shelf.color || 'hsl(var(--primary))'
-                        } : {}}
-                      >
-                        {isCurrentSlot ? (
-                          <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
-                        ) : isSelected ? (
-                          <Check className="h-4 w-4 sm:h-5 sm:w-5" />
-                        ) : (
-                          <>
-                            <span className="text-[10px] sm:text-xs font-bold">{shelf.prefix}</span>
-                            <span className="text-[10px] sm:text-xs">{label}</span>
-                          </>
-                        )}
-                      </motion.button>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            </div>
-          </TabsContent>
-        ))}
+            </TabsContent>
+          );
+        })}
       </Tabs>
 
       {/* Legend */}
       <div className="flex flex-wrap items-center justify-center gap-4 text-xs pt-2 border-t">
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-card border border-border/50" />
+          <div className="w-4 h-4 rounded bg-blue-500/20 border border-blue-500/30" />
           <span className="text-muted-foreground">Libero</span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -337,7 +343,7 @@ export function StorageSlotWidget({
           <span className="text-muted-foreground">Occupato</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-4 h-4 rounded bg-primary" />
+          <div className="w-4 h-4 rounded bg-gradient-to-br from-blue-500 to-blue-600" />
           <span className="text-muted-foreground">Selezionato</span>
         </div>
       </div>
@@ -365,30 +371,50 @@ export function StorageSlotWidget({
 
   return (
     <>
-      <Card>
+      <Card className={cn(
+        "border-2 transition-all",
+        currentColorClasses?.border || "border-border"
+      )}>
+        {/* Color Header Bar (matching settings) */}
+        {currentShelf && (
+          <div className={cn("h-1.5 bg-gradient-to-r", currentShelf.color)} />
+        )}
+        
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Grid3X3 className="h-4 w-4 text-primary" />
+            <div className={cn(
+              "h-8 w-8 rounded-lg flex items-center justify-center bg-gradient-to-br",
+              currentShelf?.color || "from-indigo-500 to-violet-500"
+            )}>
+              <Archive className="h-4 w-4 text-white" />
+            </div>
             Posizione Scaffale
           </CardTitle>
         </CardHeader>
+        
         <CardContent className="pt-0">
-          {currentSlot && currentShelf && currentPosition ? (
-            // Assigned state - show visual position
+          {currentSlot && currentShelf && currentPosition && currentColorClasses ? (
+            // Assigned state - matching settings style
             <div className="space-y-4">
               <div className="flex items-start gap-4">
-                {/* Visual indicator */}
+                {/* Visual indicator box - matching settings card style */}
                 <motion.div 
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
-                  className="shrink-0"
+                  className={cn(
+                    "shrink-0 rounded-xl border-2 overflow-hidden",
+                    currentColorClasses.border
+                  )}
                 >
-                  <div 
-                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl flex flex-col items-center justify-center text-white shadow-lg"
-                    style={{ backgroundColor: currentShelf.color || 'hsl(var(--primary))' }}
-                  >
-                    <span className="text-xs opacity-80">{currentShelf.prefix}</span>
-                    <span className="text-xl sm:text-2xl font-bold leading-none">
+                  <div className={cn("h-1 bg-gradient-to-r", currentShelf.color)} />
+                  <div className={cn(
+                    "w-16 h-16 sm:w-20 sm:h-20 flex flex-col items-center justify-center",
+                    currentColorClasses.bg
+                  )}>
+                    <span className={cn("text-xs font-medium", currentColorClasses.text)}>
+                      {currentShelf.prefix}
+                    </span>
+                    <span className={cn("text-xl sm:text-2xl font-bold leading-none", currentColorClasses.text)}>
                       {currentPosition.row + 1}-{currentPosition.col + 1}
                     </span>
                   </div>
@@ -409,7 +435,7 @@ export function StorageSlotWidget({
                       onClick={() => setShowPicker(true)}
                       className="gap-1.5"
                     >
-                      <Grid3X3 className="h-3.5 w-3.5" />
+                      <Edit3 className="h-3.5 w-3.5" />
                       Cambia
                     </Button>
                     <Button 
@@ -426,82 +452,91 @@ export function StorageSlotWidget({
                 </div>
               </div>
 
-              {/* Mini shelf map */}
-              <div 
-                className="p-3 rounded-lg"
-                style={{ backgroundColor: `${currentShelf.color || 'hsl(var(--primary))'}10` }}
-              >
+              {/* Mini shelf preview - same style as settings */}
+              <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <Layers className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Vista scaffale</span>
+                  <Grid3X3 className={cn("h-3.5 w-3.5", currentColorClasses.text)} />
+                  <span className="text-xs text-muted-foreground">
+                    {currentShelf.rows} × {currentShelf.columns} = {currentShelf.rows * currentShelf.columns} slot
+                  </span>
                 </div>
-                {renderShelfGrid(currentShelf, true)}
+                {renderMiniPreviewGrid(currentShelf)}
               </div>
             </div>
           ) : (
-            // Unassigned state - show all shelves overview
+            // Unassigned state - show shelves overview like settings
             <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                <div className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center">
-                  <Archive className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium">Nessuna posizione</p>
-                  <p className="text-sm text-muted-foreground">
-                    {stats ? `${stats.total - stats.occupied} slot disponibili` : 'Assegna uno slot'}
-                  </p>
-                </div>
+              <div className="text-center py-2">
+                <p className="font-medium text-muted-foreground">Nessuna posizione assegnata</p>
               </div>
-
-              {/* Shelves overview */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {config.shelves.map((shelf) => {
-                  const shelfTotal = shelf.rows * shelf.columns;
-                  const shelfOccupied = occupiedSlots.filter(s => 
-                    s >= shelf.start_number && s < shelf.start_number + shelfTotal
+              
+              {/* Show all shelves preview - matching settings grid */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                {config.shelves.slice(0, 4).map((shelf) => {
+                  const colorClasses = getColorClasses(shelf.color);
+                  const shelfSlots = shelf.rows * shelf.columns;
+                  const occupiedInShelf = occupiedSlots.filter(s => 
+                    s >= shelf.start_number && s < shelf.start_number + shelfSlots
                   ).length;
-
+                  
                   return (
                     <div 
-                      key={shelf.id}
-                      className="p-3 rounded-lg border"
-                      style={{ borderColor: `${shelf.color || 'hsl(var(--primary))'}30` }}
+                      key={shelf.id} 
+                      className={cn(
+                        "rounded-lg border-2 overflow-hidden",
+                        colorClasses.border
+                      )}
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      <div className={cn("h-1 bg-gradient-to-r", shelf.color)} />
+                      <div className="p-3 space-y-2">
                         <div className="flex items-center gap-2">
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: shelf.color || 'hsl(var(--primary))' }}
-                          />
-                          <span className="text-sm font-medium">{shelf.name}</span>
+                          <div className={cn(
+                            "h-6 w-6 rounded flex items-center justify-center bg-gradient-to-br",
+                            shelf.color
+                          )}>
+                            <Archive className="h-3 w-3 text-white" />
+                          </div>
+                          <span className="font-medium text-sm truncate">{shelf.name}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">
-                          {shelfTotal - shelfOccupied}/{shelfTotal}
-                        </span>
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{shelf.rows} × {shelf.columns}</span>
+                          <Badge 
+                            variant={occupiedInShelf / shelfSlots >= 0.9 ? "destructive" : "secondary"}
+                            className="text-[10px]"
+                          >
+                            {occupiedInShelf}/{shelfSlots}
+                          </Badge>
+                        </div>
                       </div>
-                      {renderShelfGrid(shelf, true)}
                     </div>
                   );
                 })}
               </div>
+              
+              {config.shelves.length > 4 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  +{config.shelves.length - 4} altre scaffalature
+                </p>
+              )}
 
-              {/* Actions */}
-              <div className="flex gap-2">
+              {/* Action buttons */}
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button 
-                  variant="outline" 
                   onClick={handleAutoAssign}
                   disabled={assigning || availableSlots.length === 0}
-                  className="flex-1 gap-2"
+                  className={cn("flex-1 gap-2 bg-gradient-to-r text-white border-0", 
+                    config.shelves[0]?.color || "from-indigo-500 to-violet-500"
+                  )}
                 >
                   {assigning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                   Assegna automatico
                 </Button>
                 <Button 
+                  variant="outline" 
                   onClick={() => setShowPicker(true)}
-                  disabled={availableSlots.length === 0}
                   className="flex-1 gap-2"
                 >
-                  <MapPin className="h-4 w-4" />
+                  <Grid3X3 className="h-4 w-4" />
                   Scegli posizione
                 </Button>
               </div>
@@ -510,13 +545,13 @@ export function StorageSlotWidget({
         </CardContent>
       </Card>
 
-      {/* Picker - Drawer on mobile, Dialog on desktop */}
+      {/* Picker Modal */}
       {isMobile ? (
         <Drawer open={showPicker} onOpenChange={setShowPicker}>
           <DrawerContent className="max-h-[90vh]">
-            <DrawerHeader className="pb-2">
+            <DrawerHeader>
               <DrawerTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
+                <Grid3X3 className="h-5 w-5" />
                 Seleziona Posizione
               </DrawerTitle>
             </DrawerHeader>
@@ -527,11 +562,11 @@ export function StorageSlotWidget({
         </Drawer>
       ) : (
         <Dialog open={showPicker} onOpenChange={setShowPicker}>
-          <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5 text-primary" />
-                Seleziona Posizione Scaffale
+                <Grid3X3 className="h-5 w-5" />
+                Seleziona Posizione
               </DialogTitle>
             </DialogHeader>
             {renderPickerContent()}
