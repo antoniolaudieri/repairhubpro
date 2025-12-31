@@ -12,6 +12,7 @@ export interface RepairLabelData {
   issueDescription: string;
   intakeDate: string;
   trackingUrl?: string;
+  storageSlot?: string; // Added storage slot
 }
 
 export interface DeviceLabelData {
@@ -60,6 +61,7 @@ export function generateRepairLabel(data: RepairLabelData, format: LabelFormat =
   const deviceInfo = `${data.deviceBrand} ${data.deviceModel}`.substring(0, 30);
   const customerInfo = data.customerName.substring(0, 25);
   const issue = data.issueDescription.substring(0, 40);
+  const slotInfo = data.storageSlot ? ` [${data.storageSlot}]` : '';
   
   return `<?xml version="1.0" encoding="utf-8"?>
 <DieCutLabel Version="8.0" Units="twips">
@@ -85,7 +87,7 @@ export function generateRepairLabel(data: RepairLabelData, format: LabelFormat =
       <Verticalized>False</Verticalized>
       <StyledText>
         <Element>
-          <String>#${escapeXml(shortId)}</String>
+          <String>#${escapeXml(shortId)}${escapeXml(slotInfo)}</String>
           <Attributes>
             <Font Family="Arial" Size="12" Bold="True" Italic="False" Underline="False" Strikeout="False"/>
             <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
