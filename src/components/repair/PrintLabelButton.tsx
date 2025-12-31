@@ -12,6 +12,7 @@ interface PrintLabelButtonProps {
   deviceType: string;
   issueDescription: string;
   createdAt: string;
+  storageSlot?: string;
   variant?: 'default' | 'outline' | 'ghost' | 'secondary';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   className?: string;
@@ -27,6 +28,7 @@ export function PrintLabelButton({
   deviceType,
   issueDescription,
   createdAt,
+  storageSlot,
   variant = 'outline',
   size = 'default',
   className = '',
@@ -58,6 +60,7 @@ export function PrintLabelButton({
           deviceType,
           issueDescription,
           createdAt,
+          storageSlot,
         }}
       />
     </>
