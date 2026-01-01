@@ -3971,6 +3971,69 @@ export type Database = {
           },
         ]
       }
+      revenue_opportunities_log: {
+        Row: {
+          actual_value: number | null
+          centro_id: string
+          contacted_at: string | null
+          converted_at: string | null
+          created_at: string
+          customer_id: string
+          dismissed_at: string | null
+          estimated_value: number
+          id: string
+          notes: string | null
+          opportunity_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actual_value?: number | null
+          centro_id: string
+          contacted_at?: string | null
+          converted_at?: string | null
+          created_at?: string
+          customer_id: string
+          dismissed_at?: string | null
+          estimated_value?: number
+          id?: string
+          notes?: string | null
+          opportunity_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actual_value?: number | null
+          centro_id?: string
+          contacted_at?: string | null
+          converted_at?: string | null
+          created_at?: string
+          customer_id?: string
+          dismissed_at?: string | null
+          estimated_value?: number
+          id?: string
+          notes?: string | null
+          opportunity_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenue_opportunities_log_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenue_opportunities_log_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       riparatori: {
         Row: {
           address: string | null
