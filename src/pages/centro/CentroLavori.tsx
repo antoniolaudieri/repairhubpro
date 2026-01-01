@@ -222,11 +222,20 @@ export default function CentroLavori() {
       slotString.includes(searchTerm);
 
     // "in_corso" filter includes both in_progress and waiting_for_parts to match stats
-    const matchesStatus = 
-      statusFilter === "all" || 
-      (statusFilter === "in_corso" 
-        ? (repair.status === "in_progress" || repair.status === "waiting_for_parts")
-        : repair.status === statusFilter);
+    // "expiring" filter shows completed repairs older than 14 days
+    let matchesStatus = false;
+    if (statusFilter === "all") {
+      matchesStatus = true;
+    } else if (statusFilter === "in_corso") {
+      matchesStatus = repair.status === "in_progress" || repair.status === "waiting_for_parts";
+    } else if (statusFilter === "expiring") {
+      if (repair.status === "completed") {
+        const completedDate = repair.completed_at ? new Date(repair.completed_at) : new Date(repair.created_at);
+        matchesStatus = differenceInDays(new Date(), completedDate) > 14;
+      }
+    } else {
+      matchesStatus = repair.status === statusFilter;
+    }
 
     return matchesSearch && matchesStatus;
   }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -240,6 +249,13 @@ export default function CentroLavori() {
   const completedCount = repairs.filter((r) => r.status === "completed").length;
   const deliveredCount = repairs.filter((r) => r.status === "delivered").length;
   const forfeitedCount = repairs.filter((r) => r.status === "forfeited").length;
+  
+  // Dispositivi in scadenza: completati da più di 14 giorni
+  const expiringCount = repairs.filter((r) => {
+    if (r.status !== "completed") return false;
+    const completedDate = r.completed_at ? new Date(r.completed_at) : new Date(r.created_at);
+    return differenceInDays(new Date(), completedDate) > 14;
+  }).length;
 
   if (isLoading) {
     return (
@@ -361,6 +377,24 @@ export default function CentroLavori() {
                 </div>
               </CardContent>
             </Card>
+            {expiringCount > 0 && (
+              <Card 
+                className={`bg-card/50 border-orange-500/30 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${statusFilter === 'expiring' ? 'ring-2 ring-orange-500' : ''}`}
+                onClick={() => setStatusFilter('expiring')}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-orange-500/10">
+                      <Clock className="h-5 w-5 text-orange-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-orange-600">{expiringCount}</p>
+                      <p className="text-xs text-muted-foreground">In Scadenza</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             {forfeitedCount > 0 && (
               <Card 
                 className={`bg-card/50 border-rose-500/30 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${statusFilter === 'forfeited' ? 'ring-2 ring-rose-500' : ''}`}
@@ -412,6 +446,7 @@ export default function CentroLavori() {
                 <SelectItem value="in_corso">In Corso (+ Attesa Ricambi)</SelectItem>
                 <SelectItem value="completed">Completato</SelectItem>
                 <SelectItem value="delivered">Consegnato</SelectItem>
+                <SelectItem value="expiring">In Scadenza (+14gg)</SelectItem>
                 <SelectItem value="forfeited">Alienato</SelectItem>
               </SelectContent>
             </Select>
