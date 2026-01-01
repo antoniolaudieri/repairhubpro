@@ -281,7 +281,10 @@ export default function CentroLavori() {
 
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <Card className="bg-card/50">
+            <Card 
+              className={`bg-card/50 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${statusFilter === 'all' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setStatusFilter('all')}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-muted">
@@ -294,7 +297,10 @@ export default function CentroLavori() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-card/50">
+            <Card 
+              className={`bg-card/50 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${statusFilter === 'pending' ? 'ring-2 ring-yellow-500' : ''}`}
+              onClick={() => setStatusFilter('pending')}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-yellow-500/10">
@@ -307,7 +313,10 @@ export default function CentroLavori() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-card/50">
+            <Card 
+              className={`bg-card/50 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${statusFilter === 'in_corso' ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setStatusFilter('in_corso')}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/10">
@@ -320,7 +329,10 @@ export default function CentroLavori() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-card/50">
+            <Card 
+              className={`bg-card/50 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${statusFilter === 'completed' ? 'ring-2 ring-green-500' : ''}`}
+              onClick={() => setStatusFilter('completed')}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-green-500/10">
@@ -333,7 +345,10 @@ export default function CentroLavori() {
                 </div>
               </CardContent>
             </Card>
-            <Card className="bg-card/50">
+            <Card 
+              className={`bg-card/50 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${statusFilter === 'delivered' ? 'ring-2 ring-emerald-500' : ''}`}
+              onClick={() => setStatusFilter('delivered')}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-emerald-500/10">
@@ -347,7 +362,10 @@ export default function CentroLavori() {
               </CardContent>
             </Card>
             {forfeitedCount > 0 && (
-              <Card className="bg-card/50 border-rose-500/30">
+              <Card 
+                className={`bg-card/50 border-rose-500/30 cursor-pointer transition-all hover:scale-[1.02] hover:shadow-md ${statusFilter === 'forfeited' ? 'ring-2 ring-rose-500' : ''}`}
+                onClick={() => setStatusFilter('forfeited')}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-rose-500/10">
