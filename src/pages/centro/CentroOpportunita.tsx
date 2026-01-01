@@ -45,6 +45,8 @@ interface OpportunityItem {
   estimatedValue: number;
   status: "pending" | "contacted" | "converted" | "dismissed";
   createdAt: string;
+  deviceInfo?: string;
+  daysOverdue?: number;
 }
 
 interface OpportunitySummary {
@@ -257,6 +259,7 @@ export default function CentroOpportunita() {
           const daysSinceComplete = Math.floor((Date.now() - new Date(repair.updated_at).getTime()) / (1000 * 60 * 60 * 24));
           const customer = repair.devices?.customers;
           const repairValue = repair.estimated_cost || 0;
+          const deviceName = `${repair.devices.brand} ${repair.devices.model}`;
           if (customer) {
             totalExpiringValue += repairValue;
             allOpportunities.push({
@@ -266,10 +269,12 @@ export default function CentroOpportunita() {
               customerPhone: customer.phone,
               customerEmail: customer.email,
               type: "expiring_devices",
-              details: `${repair.devices.brand} ${repair.devices.model} • Pronto da ${daysSinceComplete} giorni`,
+              details: `${deviceName} • Pronto da ${daysSinceComplete} giorni`,
               estimatedValue: repairValue,
               status: "pending",
               createdAt: repair.updated_at,
+              deviceInfo: deviceName,
+              daysOverdue: daysSinceComplete,
             });
           }
         });
@@ -315,29 +320,24 @@ export default function CentroOpportunita() {
       });
     }
 
-    // Generate appropriate message based on opportunity type
-    let message = "";
-    let subject = "Messaggio dal centro assistenza";
+    // Generate appropriate WhatsApp message based on opportunity type
+    let whatsappMessage = "";
     
     if (opportunity.type === "expiring_devices") {
-      message = `Ciao ${opportunity.customerName}! Ti ricordiamo che il tuo dispositivo riparato è pronto per il ritiro presso il nostro centro. Ti aspettiamo!`;
-      subject = "Il tuo dispositivo è pronto per il ritiro";
+      whatsappMessage = `Ciao ${opportunity.customerName}! Ti ricordiamo che il tuo dispositivo ${opportunity.deviceInfo || 'riparato'} è pronto per il ritiro da ${opportunity.daysOverdue || 14} giorni. Come da contratto, i dispositivi non ritirati entro 30 giorni verranno alienati. Ti aspettiamo!`;
     } else if (opportunity.type === "expiring_loyalty") {
-      message = `Ciao ${opportunity.customerName}! La tua tessera fedeltà sta per scadere. Passa a trovarci per rinnovarla e continuare a usufruire dei vantaggi esclusivi!`;
-      subject = "La tua tessera fedeltà sta per scadere";
+      whatsappMessage = `Ciao ${opportunity.customerName}! La tua tessera fedeltà sta per scadere. Passa a trovarci per rinnovarla e continuare a usufruire dei vantaggi esclusivi!`;
     } else if (opportunity.type === "inactive_high_value") {
-      message = `Ciao ${opportunity.customerName}! È da un po' che non ci vediamo. Abbiamo delle novità interessanti per te, passa a trovarci!`;
-      subject = "Ci manchi! Torna a trovarci";
+      whatsappMessage = `Ciao ${opportunity.customerName}! È da un po' che non ci vediamo. Abbiamo delle novità interessanti per te, passa a trovarci!`;
     } else if (opportunity.type === "high_churn_risk") {
-      message = `Ciao ${opportunity.customerName}! Volevamo sapere se è tutto ok. Siamo sempre a disposizione per qualsiasi esigenza!`;
-      subject = "Come stai? Siamo qui per te";
+      whatsappMessage = `Ciao ${opportunity.customerName}! Volevamo sapere se è tutto ok. Siamo sempre a disposizione per qualsiasi esigenza!`;
     } else {
-      message = `Ciao ${opportunity.customerName}! Ti contattiamo dal centro assistenza per un'opportunità speciale.`;
+      whatsappMessage = `Ciao ${opportunity.customerName}! Ti contattiamo dal centro assistenza per un'opportunità speciale.`;
     }
 
     if (method === "whatsapp") {
       const phoneNumber = opportunity.customerPhone.replace(/\D/g, "");
-      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(whatsappMessage)}`;
       window.location.href = whatsappUrl;
       toast.success("Apertura WhatsApp...");
     } else if (method === "email") {
@@ -349,28 +349,16 @@ export default function CentroOpportunita() {
       toast.loading("Invio email in corso...");
       
       try {
-        const htmlContent = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2 style="color: #333;">${subject}</h2>
-            <p style="font-size: 16px; line-height: 1.6; color: #555;">
-              ${message.replace(/\n/g, '<br>')}
-            </p>
-            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
-            <p style="font-size: 12px; color: #999;">
-              Questa email è stata inviata automaticamente dal nostro sistema.
-            </p>
-          </div>
-        `;
-        
-        const { error } = await supabase.functions.invoke("send-email-smtp", {
+        const { error } = await supabase.functions.invoke("send-opportunity-email", {
           body: {
             centro_id: centroId,
-            to: opportunity.customerEmail,
-            subject: subject,
-            html: htmlContent,
             customer_id: opportunity.customerId,
-            template_name: `opportunity_${opportunity.type}`,
-            metadata: { opportunity_type: opportunity.type },
+            customer_name: opportunity.customerName,
+            customer_email: opportunity.customerEmail,
+            opportunity_type: opportunity.type,
+            device_info: opportunity.deviceInfo,
+            days_overdue: opportunity.daysOverdue,
+            repair_cost: opportunity.estimatedValue > 0 ? opportunity.estimatedValue : undefined,
           },
         });
         
