@@ -194,21 +194,22 @@ export function RevenueOpportunitiesWidget({ centroId }: RevenueOpportunitiesWid
       const fourteenDaysAgo = new Date();
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
       
-      const { count: expiringDevices } = await supabase
+      const { data: expiringDevicesData } = await supabase
         .from("repairs")
-        .select("*, devices!inner(customer_id, customers!inner(centro_id))", { count: "exact", head: true })
+        .select("estimated_cost, devices!inner(customer_id, customers!inner(centro_id))")
         .eq("devices.customers.centro_id", centroId)
         .eq("status", "completed")
         .lt("updated_at", fourteenDaysAgo.toISOString());
 
-      if (expiringDevices && expiringDevices > 0) {
+      if (expiringDevicesData && expiringDevicesData.length > 0) {
         const config = OPPORTUNITY_CONFIG.expiring_devices;
+        const totalExpiringValue = expiringDevicesData.reduce((sum, r) => sum + (r.estimated_cost || 0), 0);
         results.push({
           type: "expiring_devices",
           label: config.label,
           icon: config.icon,
-          count: expiringDevices,
-          estimatedValue: expiringDevices * config.unitValue,
+          count: expiringDevicesData.length,
+          estimatedValue: totalExpiringValue,
           color: config.color,
           bgColor: config.bgColor,
         });
