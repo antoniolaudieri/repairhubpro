@@ -19,7 +19,8 @@ import {
   Bell,
   Smartphone,
   Megaphone,
-  Printer
+  Printer,
+  TrendingUp
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -66,6 +67,7 @@ const menuItems = [
   { title: "Accessi Condivisi", url: "/centro/accessi", icon: Share2 },
   { title: "Usato", url: "/centro/usato", icon: Smartphone },
   { title: "Marketing", url: "/centro/marketing", icon: Megaphone },
+  { title: "Opportunità", url: "/centro/opportunita", icon: TrendingUp },
   { title: "Finanza", url: "/centro/finanza", icon: Wallet },
   { title: "Commissioni", url: "/centro/commissioni", icon: DollarSign },
   { title: "Print Agent", url: "/centro/print-agent", icon: Printer },

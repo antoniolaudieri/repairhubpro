@@ -42,6 +42,7 @@ import { GoalsWidget } from "@/components/centro/GoalsWidget";
 import { MaintenanceWidget } from "@/components/centro/MaintenanceWidget";
 import { AppointmentCalendar } from "@/components/corner/AppointmentCalendar";
 import { LoyaltyStatsWidget } from "@/components/centro/LoyaltyStatsWidget";
+import { RevenueOpportunitiesWidget } from "@/components/centro/RevenueOpportunitiesWidget";
 
 interface CentroSettings {
   monthly_goal?: number;
@@ -1137,6 +1138,17 @@ export default function CentroDashboard() {
                     onSelectAppointment={(apt) => navigate("/centro/prenotazioni")}
                   />
                 </div>
+              </motion.div>
+            )}
+
+            {/* Revenue Opportunities Widget */}
+            {centro && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.38 }}
+              >
+                <RevenueOpportunitiesWidget centroId={centro.id} />
               </motion.div>
             )}
 
