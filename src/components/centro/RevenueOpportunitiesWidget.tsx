@@ -13,7 +13,8 @@ import {
   Brain,
   AlertTriangle,
   RefreshCw,
-  Euro
+  Euro,
+  Clock
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,6 +41,7 @@ const OPPORTUNITY_CONFIG: Record<string, { label: string; icon: React.ElementTyp
   critical_storage: { label: "Storage critici", icon: HardDrive, unitValue: 30, color: "text-purple-600", bgColor: "bg-purple-50 dark:bg-purple-950/30" },
   ai_maintenance: { label: "Manutenzioni AI", icon: Brain, unitValue: 40, color: "text-emerald-600", bgColor: "bg-emerald-50 dark:bg-emerald-950/30" },
   high_churn_risk: { label: "Rischio abbandono", icon: AlertTriangle, unitValue: 25, color: "text-orange-600", bgColor: "bg-orange-50 dark:bg-orange-950/30" },
+  expiring_devices: { label: "Dispositivi in scadenza", icon: Clock, unitValue: 45, color: "text-rose-600", bgColor: "bg-rose-50 dark:bg-rose-950/30" },
 };
 
 export function RevenueOpportunitiesWidget({ centroId }: RevenueOpportunitiesWidgetProps) {
@@ -183,6 +185,30 @@ export function RevenueOpportunitiesWidget({ centroId }: RevenueOpportunitiesWid
           icon: config.icon,
           count: churnRisk,
           estimatedValue: churnRisk * config.unitValue,
+          color: config.color,
+          bgColor: config.bgColor,
+        });
+      }
+
+      // 7. Dispositivi in scadenza (completati da >14 giorni, non ritirati)
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      
+      const { count: expiringDevices } = await supabase
+        .from("repairs")
+        .select("*, devices!inner(customer_id, customers!inner(centro_id))", { count: "exact", head: true })
+        .eq("devices.customers.centro_id", centroId)
+        .eq("status", "completed")
+        .lt("updated_at", fourteenDaysAgo.toISOString());
+
+      if (expiringDevices && expiringDevices > 0) {
+        const config = OPPORTUNITY_CONFIG.expiring_devices;
+        results.push({
+          type: "expiring_devices",
+          label: config.label,
+          icon: config.icon,
+          count: expiringDevices,
+          estimatedValue: expiringDevices * config.unitValue,
           color: config.color,
           bgColor: config.bgColor,
         });
