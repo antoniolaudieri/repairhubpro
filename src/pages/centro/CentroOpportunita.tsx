@@ -317,30 +317,75 @@ export default function CentroOpportunita() {
 
     // Generate appropriate message based on opportunity type
     let message = "";
+    let subject = "Messaggio dal centro assistenza";
+    
     if (opportunity.type === "expiring_devices") {
       message = `Ciao ${opportunity.customerName}! Ti ricordiamo che il tuo dispositivo riparato è pronto per il ritiro presso il nostro centro. Ti aspettiamo!`;
+      subject = "Il tuo dispositivo è pronto per il ritiro";
     } else if (opportunity.type === "expiring_loyalty") {
       message = `Ciao ${opportunity.customerName}! La tua tessera fedeltà sta per scadere. Passa a trovarci per rinnovarla e continuare a usufruire dei vantaggi esclusivi!`;
+      subject = "La tua tessera fedeltà sta per scadere";
     } else if (opportunity.type === "inactive_high_value") {
       message = `Ciao ${opportunity.customerName}! È da un po' che non ci vediamo. Abbiamo delle novità interessanti per te, passa a trovarci!`;
+      subject = "Ci manchi! Torna a trovarci";
     } else if (opportunity.type === "high_churn_risk") {
       message = `Ciao ${opportunity.customerName}! Volevamo sapere se è tutto ok. Siamo sempre a disposizione per qualsiasi esigenza!`;
+      subject = "Come stai? Siamo qui per te";
     } else {
       message = `Ciao ${opportunity.customerName}! Ti contattiamo dal centro assistenza per un'opportunità speciale.`;
     }
 
     if (method === "whatsapp") {
-      window.open(`https://wa.me/${opportunity.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`, "_blank");
-    } else if (method === "email" && opportunity.customerEmail) {
-      const subject = opportunity.type === "expiring_devices" 
-        ? "Il tuo dispositivo è pronto per il ritiro" 
-        : "Opportunità speciale per te";
-      window.open(`mailto:${opportunity.customerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`, "_blank");
+      const phoneNumber = opportunity.customerPhone.replace(/\D/g, "");
+      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+      window.location.href = whatsappUrl;
+      toast.success("Apertura WhatsApp...");
+    } else if (method === "email") {
+      if (!opportunity.customerEmail) {
+        toast.error("Nessun indirizzo email disponibile");
+        return;
+      }
+      
+      toast.loading("Invio email in corso...");
+      
+      try {
+        const htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #333;">${subject}</h2>
+            <p style="font-size: 16px; line-height: 1.6; color: #555;">
+              ${message.replace(/\n/g, '<br>')}
+            </p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+            <p style="font-size: 12px; color: #999;">
+              Questa email è stata inviata automaticamente dal nostro sistema.
+            </p>
+          </div>
+        `;
+        
+        const { error } = await supabase.functions.invoke("send-email-smtp", {
+          body: {
+            centro_id: centroId,
+            to: opportunity.customerEmail,
+            subject: subject,
+            html: htmlContent,
+            customer_id: opportunity.customerId,
+            template_name: `opportunity_${opportunity.type}`,
+            metadata: { opportunity_type: opportunity.type },
+          },
+        });
+        
+        if (error) throw error;
+        toast.dismiss();
+        toast.success("Email inviata con successo!");
+      } catch (error: any) {
+        toast.dismiss();
+        console.error("Error sending email:", error);
+        toast.error("Errore nell'invio email: " + (error.message || "Riprova più tardi"));
+      }
     } else if (method === "call") {
-      window.open(`tel:${opportunity.customerPhone}`, "_self");
+      window.location.href = `tel:${opportunity.customerPhone}`;
+      toast.success("Avvio chiamata...");
     }
-    
-    toast.success("Contatto avviato");
   };
 
   const handleDismiss = async (opportunity: OpportunityItem) => {
