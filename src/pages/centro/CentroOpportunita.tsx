@@ -27,7 +27,8 @@ import {
   Euro,
   RefreshCw,
   ChevronRight,
-  Calendar
+  Calendar,
+  Clock
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
@@ -63,6 +64,7 @@ const OPPORTUNITY_CONFIG: Record<string, { label: string; icon: React.ElementTyp
   critical_storage: { label: "Storage critici", icon: HardDrive, unitValue: 30, color: "text-purple-600", bgColor: "bg-purple-50 dark:bg-purple-950/30" },
   ai_maintenance: { label: "Manutenzioni AI", icon: Brain, unitValue: 40, color: "text-emerald-600", bgColor: "bg-emerald-50 dark:bg-emerald-950/30" },
   high_churn_risk: { label: "Rischio abbandono", icon: AlertTriangle, unitValue: 25, color: "text-orange-600", bgColor: "bg-orange-50 dark:bg-orange-950/30" },
+  expiring_devices: { label: "Dispositivi in scadenza", icon: Clock, unitValue: 45, color: "text-rose-600", bgColor: "bg-rose-50 dark:bg-rose-950/30" },
 };
 
 export default function CentroOpportunita() {
@@ -224,6 +226,62 @@ export default function CentroOpportunita() {
           color: config.color,
           bgColor: config.bgColor,
         });
+      }
+
+      // 4. Dispositivi in scadenza (completati da >14 giorni, non ritirati)
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      
+      const { data: expiringDevices } = await supabase
+        .from("repairs")
+        .select(`
+          id,
+          updated_at,
+          estimated_cost,
+          devices!inner(
+            brand,
+            model,
+            customer_id,
+            customers!inner(id, name, phone, email, centro_id)
+          )
+        `)
+        .eq("status", "completed")
+        .lt("updated_at", fourteenDaysAgo.toISOString());
+
+      if (expiringDevices && expiringDevices.length > 0) {
+        const config = OPPORTUNITY_CONFIG.expiring_devices;
+        const filteredDevices = expiringDevices.filter((r: any) => r.devices?.customers?.centro_id === centroId);
+        
+        filteredDevices.forEach((repair: any) => {
+          const daysSinceComplete = Math.floor((Date.now() - new Date(repair.updated_at).getTime()) / (1000 * 60 * 60 * 24));
+          const customer = repair.devices?.customers;
+          if (customer) {
+            allOpportunities.push({
+              id: `expiring_device_${repair.id}`,
+              customerId: customer.id,
+              customerName: customer.name,
+              customerPhone: customer.phone,
+              customerEmail: customer.email,
+              type: "expiring_devices",
+              details: `${repair.devices.brand} ${repair.devices.model} • Pronto da ${daysSinceComplete} giorni`,
+              estimatedValue: config.unitValue,
+              status: "pending",
+              createdAt: repair.updated_at,
+            });
+          }
+        });
+        
+        if (filteredDevices.length > 0) {
+          summaryData.push({
+            type: "expiring_devices",
+            label: config.label,
+            icon: config.icon,
+            count: filteredDevices.length,
+            totalValue: filteredDevices.length * config.unitValue,
+            color: config.color,
+            bgColor: config.bgColor,
+          });
+        }
       }
 
       // Ordina opportunità per valore
