@@ -513,7 +513,7 @@ export default function CentroLavori() {
                                       </Badge>
                                     )}
                                   {/* Forfeiture countdown badge */}
-                                  {repair.status === 'completed' && repair.completed_at && !repair.delivered_at && (() => {
+                                  {repair.status === 'completed' && repair.completed_at && (() => {
                                     const daysRemaining = 30 - differenceInDays(new Date(), new Date(repair.completed_at));
                                     const isExpired = daysRemaining <= 0;
                                     return (
