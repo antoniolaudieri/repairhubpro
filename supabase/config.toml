@@ -134,3 +134,12 @@ verify_jwt = false
 
 [functions.confirm-health-alert]
 verify_jwt = false
+
+[functions.send-opportunity-email]
+verify_jwt = false
+
+[functions.create-corner-loyalty-checkout]
+verify_jwt = false
+
+[functions.send-corner-loyalty-invite]
+verify_jwt = false
