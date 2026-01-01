@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { CentroLayout } from '@/layouts/CentroLayout';
 import { 
   Printer, 
   CheckCircle2, 
@@ -126,8 +127,9 @@ export default function CentroPrintAgent() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-4xl">
-      <div className="mb-6">
+    <CentroLayout>
+      <div className="container mx-auto p-6 max-w-4xl">
+        <div className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Printer className="h-6 w-6 text-primary" />
           Print Agent - Coda di Stampa
@@ -284,7 +286,8 @@ export default function CentroPrintAgent() {
             </ScrollArea>
           )}
         </CardContent>
-      </Card>
-    </div>
+        </Card>
+      </div>
+    </CentroLayout>
   );
 }
