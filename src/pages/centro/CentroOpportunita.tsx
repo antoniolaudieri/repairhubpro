@@ -252,10 +252,13 @@ export default function CentroOpportunita() {
         const config = OPPORTUNITY_CONFIG.expiring_devices;
         const filteredDevices = expiringDevices.filter((r: any) => r.devices?.customers?.centro_id === centroId);
         
+        let totalExpiringValue = 0;
         filteredDevices.forEach((repair: any) => {
           const daysSinceComplete = Math.floor((Date.now() - new Date(repair.updated_at).getTime()) / (1000 * 60 * 60 * 24));
           const customer = repair.devices?.customers;
+          const repairValue = repair.estimated_cost || 0;
           if (customer) {
+            totalExpiringValue += repairValue;
             allOpportunities.push({
               id: `expiring_device_${repair.id}`,
               customerId: customer.id,
@@ -264,7 +267,7 @@ export default function CentroOpportunita() {
               customerEmail: customer.email,
               type: "expiring_devices",
               details: `${repair.devices.brand} ${repair.devices.model} • Pronto da ${daysSinceComplete} giorni`,
-              estimatedValue: config.unitValue,
+              estimatedValue: repairValue,
               status: "pending",
               createdAt: repair.updated_at,
             });
@@ -277,7 +280,7 @@ export default function CentroOpportunita() {
             label: config.label,
             icon: config.icon,
             count: filteredDevices.length,
-            totalValue: filteredDevices.length * config.unitValue,
+            totalValue: totalExpiringValue,
             color: config.color,
             bgColor: config.bgColor,
           });
@@ -312,16 +315,32 @@ export default function CentroOpportunita() {
       });
     }
 
+    // Generate appropriate message based on opportunity type
+    let message = "";
+    if (opportunity.type === "expiring_devices") {
+      message = `Ciao ${opportunity.customerName}! Ti ricordiamo che il tuo dispositivo riparato è pronto per il ritiro presso il nostro centro. Ti aspettiamo!`;
+    } else if (opportunity.type === "expiring_loyalty") {
+      message = `Ciao ${opportunity.customerName}! La tua tessera fedeltà sta per scadere. Passa a trovarci per rinnovarla e continuare a usufruire dei vantaggi esclusivi!`;
+    } else if (opportunity.type === "inactive_high_value") {
+      message = `Ciao ${opportunity.customerName}! È da un po' che non ci vediamo. Abbiamo delle novità interessanti per te, passa a trovarci!`;
+    } else if (opportunity.type === "high_churn_risk") {
+      message = `Ciao ${opportunity.customerName}! Volevamo sapere se è tutto ok. Siamo sempre a disposizione per qualsiasi esigenza!`;
+    } else {
+      message = `Ciao ${opportunity.customerName}! Ti contattiamo dal centro assistenza per un'opportunità speciale.`;
+    }
+
     if (method === "whatsapp") {
-      const message = encodeURIComponent(`Ciao ${opportunity.customerName}! Ti contattiamo dal centro assistenza per un'opportunità speciale.`);
-      window.open(`https://wa.me/${opportunity.customerPhone.replace(/\D/g, "")}?text=${message}`, "_blank");
+      window.open(`https://wa.me/${opportunity.customerPhone.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`, "_blank");
     } else if (method === "email" && opportunity.customerEmail) {
-      window.open(`mailto:${opportunity.customerEmail}?subject=Opportunità speciale per te`, "_blank");
+      const subject = opportunity.type === "expiring_devices" 
+        ? "Il tuo dispositivo è pronto per il ritiro" 
+        : "Opportunità speciale per te";
+      window.open(`mailto:${opportunity.customerEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`, "_blank");
     } else if (method === "call") {
-      window.open(`tel:${opportunity.customerPhone}`, "_blank");
+      window.open(`tel:${opportunity.customerPhone}`, "_self");
     }
     
-    toast.success("Azione registrata");
+    toast.success("Contatto avviato");
   };
 
   const handleDismiss = async (opportunity: OpportunityItem) => {
