@@ -512,6 +512,7 @@ export default function CentroLavori() {
                                   {/* Forfeiture countdown badge */}
                                   {repair.status === 'completed' && repair.completed_at && !repair.delivered_at && (() => {
                                     const daysRemaining = 30 - differenceInDays(new Date(), new Date(repair.completed_at));
+                                    const isExpired = daysRemaining <= 0;
                                     return (
                                       <TooltipProvider>
                                         <Tooltip>
@@ -519,19 +520,20 @@ export default function CentroLavori() {
                                             <Badge 
                                               variant="outline"
                                               className={
+                                                isExpired ? "border-rose-600 text-rose-600 bg-rose-500/10 animate-pulse" :
                                                 daysRemaining <= 3 ? "border-destructive text-destructive bg-destructive/10" :
                                                 daysRemaining <= 7 ? "border-amber-500 text-amber-600 bg-amber-500/10" :
                                                 "border-muted-foreground/30 text-muted-foreground"
                                               }
                                             >
                                               <AlertTriangle className="h-3 w-3 mr-1" />
-                                              {daysRemaining <= 0 ? "SCADUTO" : `${daysRemaining}g`}
+                                              {isExpired ? "DA ALIENARE" : `${daysRemaining}g`}
                                             </Badge>
                                           </TooltipTrigger>
                                           <TooltipContent>
                                             <p className="text-sm">
-                                              {daysRemaining <= 0 
-                                                ? "Dispositivo in alienazione" 
+                                              {isExpired 
+                                                ? "Oltre 30gg - Pronto per alienazione e vendita" 
                                                 : `${daysRemaining} giorni al ritiro (Art. 2756 c.c.)`
                                               }
                                             </p>
@@ -630,6 +632,29 @@ export default function CentroLavori() {
                                 </TooltipProvider>
                               )}
 
+                              {/* Pulsante Aliena per dispositivi scaduti oltre 30gg */}
+                              {repair.status === 'completed' && repair.completed_at && 
+                               differenceInDays(new Date(), new Date(repair.completed_at)) >= 30 && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={() => handleUpdateStatus(repair.id, 'forfeited')}
+                                        className="gap-1"
+                                      >
+                                        <AlertTriangle className="h-4 w-4" />
+                                        Aliena
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Contrassegna come alienato e metti in vendita</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+
                               <Select
                                 value={repair.status}
                                 onValueChange={(value) => handleUpdateStatus(repair.id, value)}
@@ -643,6 +668,7 @@ export default function CentroLavori() {
                                   <SelectItem value="waiting_for_parts">Attesa Ricambi</SelectItem>
                                   <SelectItem value="completed">Completato</SelectItem>
                                   <SelectItem value="delivered">Consegnato</SelectItem>
+                                  <SelectItem value="forfeited">Alienato</SelectItem>
                                 </SelectContent>
                               </Select>
 
