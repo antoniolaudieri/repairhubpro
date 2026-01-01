@@ -12,6 +12,7 @@ import { CustomerDialog } from "@/components/customers/CustomerDialog";
 import { StatusBadge, DIRECT_REPAIR_STATUSES } from "@/components/repair/VisualStatusManager";
 import { DeviceImage } from "@/components/common/DeviceImage";
 import { useStorageSlots } from "@/hooks/useStorageSlots";
+import { ForfeitDeviceDialog } from "@/components/centro/ForfeitDeviceDialog";
 import { 
   Plus, 
   Search, 
@@ -81,6 +82,8 @@ export default function CentroLavori() {
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [isQRScannerOpen, setIsQRScannerOpen] = useState(false);
   const [slotsStats, setSlotsStats] = useState<{ enabled: boolean; total: number; occupied: number; available: number; percentage: number; prefix?: string } | null>(null);
+  const [forfeitDialogOpen, setForfeitDialogOpen] = useState(false);
+  const [selectedRepairForForfeit, setSelectedRepairForForfeit] = useState<DirectRepair | null>(null);
   
   const { getSlotsStats, formatSlotNumber } = useStorageSlots(centro?.id || null);
 
@@ -641,7 +644,10 @@ export default function CentroLavori() {
                                       <Button
                                         variant="destructive"
                                         size="sm"
-                                        onClick={() => handleUpdateStatus(repair.id, 'forfeited')}
+                                        onClick={() => {
+                                          setSelectedRepairForForfeit(repair);
+                                          setForfeitDialogOpen(true);
+                                        }}
                                         className="gap-1"
                                       >
                                         <AlertTriangle className="h-4 w-4" />
@@ -657,7 +663,14 @@ export default function CentroLavori() {
 
                               <Select
                                 value={repair.status}
-                                onValueChange={(value) => handleUpdateStatus(repair.id, value)}
+                                onValueChange={(value) => {
+                                  if (value === 'forfeited') {
+                                    setSelectedRepairForForfeit(repair);
+                                    setForfeitDialogOpen(true);
+                                  } else {
+                                    handleUpdateStatus(repair.id, value);
+                                  }
+                                }}
                               >
                                 <SelectTrigger className="w-32">
                                   <SelectValue />
@@ -706,6 +719,30 @@ export default function CentroLavori() {
         open={isQRScannerOpen}
         onOpenChange={setIsQRScannerOpen}
       />
+
+      {/* Forfeit Device Dialog with Price Estimation */}
+      {centro && selectedRepairForForfeit && (
+        <ForfeitDeviceDialog
+          open={forfeitDialogOpen}
+          onOpenChange={(open) => {
+            setForfeitDialogOpen(open);
+            if (!open) setSelectedRepairForForfeit(null);
+          }}
+          repair={{
+            id: selectedRepairForForfeit.id,
+            device_brand: selectedRepairForForfeit.device.brand,
+            device_model: selectedRepairForForfeit.device.model,
+            device_type: selectedRepairForForfeit.device.device_type,
+            customer_id: selectedRepairForForfeit.device.customer?.id,
+          }}
+          centroId={centro.id}
+          onSuccess={() => {
+            fetchData();
+            setForfeitDialogOpen(false);
+            setSelectedRepairForForfeit(null);
+          }}
+        />
+      )}
     </CentroLayout>
   );
 }
