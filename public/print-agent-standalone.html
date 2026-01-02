@@ -721,56 +721,189 @@
             const dateText = data.date ? ` - ${data.date}` : '';
             const line4 = issueText + dateText;
             
-            // Combina tutto in un unico blocco di testo con markup
+            const trackingUrl = data.trackingUrl || (repairId ? `https://lablinkriparo.lovable.app/centro/lavori/${repairId}` : '');
+            
+            // Combina tutte le righe in LineTextSpan
             const allLines = [line1, line2, line3, line4].filter(l => l);
-            const textContent = allLines.map((line, i) => {
+            const textSpans = allLines.map((line, i) => {
                 const isBold = i < 2;
-                const size = [10, 8, 7, 6][i] || 6;
-                return `<Element><String>${escapeXml(line)}&#13;</String><Attributes><Font Family="Arial" Size="${size}" Bold="${isBold}" Italic="False" Underline="False" Strikeout="False"/><ForeColor Alpha="255" Red="0" Green="0" Blue="0"/></Attributes></Element>`;
+                const size = [12, 10, 9, 8][i] || 8;
+                return `
+              <LineTextSpan>
+                <TextSpan>
+                  <Text>${escapeXml(line)}</Text>
+                  <FontInfo>
+                    <FontName>Arial</FontName>
+                    <FontSize>${size}</FontSize>
+                    <IsBold>${isBold}</IsBold>
+                    <IsItalic>False</IsItalic>
+                    <IsUnderline>False</IsUnderline>
+                    <FontBrush>
+                      <SolidColorBrush>
+                        <Color A="1" R="0" G="0" B="0"></Color>
+                      </SolidColorBrush>
+                    </FontBrush>
+                  </FontInfo>
+                </TextSpan>
+              </LineTextSpan>`;
             }).join('');
             
-            // Formato DesktopLabel minimale che funziona
+            // Layout: testo a sinistra, QR a destra
+            const textWidth = trackingUrl ? 1.25 : 2.10;
+            const qrX = 1.30;
+            const qrSize = 0.90;
+            
+            // QRCodeObject (formato corretto da file .dymo)
+            let qrObject = '';
+            if (trackingUrl) {
+                log('Generazione QR code per: ' + trackingUrl);
+                qrObject = `
+        <QRCodeObject>
+          <Name>QRCodeObject0</Name>
+          <Brushes>
+            <BackgroundBrush>
+              <SolidColorBrush>
+                <Color A="1" R="1" G="1" B="1"></Color>
+              </SolidColorBrush>
+            </BackgroundBrush>
+            <BorderBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </BorderBrush>
+            <StrokeBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </StrokeBrush>
+            <FillBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </FillBrush>
+          </Brushes>
+          <Rotation>Rotation0</Rotation>
+          <OutlineThickness>1</OutlineThickness>
+          <IsOutlined>False</IsOutlined>
+          <BorderStyle>SolidLine</BorderStyle>
+          <Margin>
+            <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
+          </Margin>
+          <BarcodeFormat>QRCode</BarcodeFormat>
+          <Data>
+            <DataString>${escapeXml(trackingUrl)}</DataString>
+          </Data>
+          <HorizontalAlignment>Center</HorizontalAlignment>
+          <VerticalAlignment>Middle</VerticalAlignment>
+          <Size>AutoFit</Size>
+          <EQRCodeType>QRCodeWebPage</EQRCodeType>
+          <WebAddressDataHolder>
+            <DataString>${escapeXml(trackingUrl)}</DataString>
+          </WebAddressDataHolder>
+          <ObjectLayout>
+            <DYMOPoint>
+              <X>${qrX}</X>
+              <Y>0.06</Y>
+            </DYMOPoint>
+            <Size>
+              <Width>${qrSize}</Width>
+              <Height>1.10</Height>
+            </Size>
+          </ObjectLayout>
+        </QRCodeObject>`;
+            }
+            
+            // Formato ESATTO dal file .dymo funzionante
             return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
-  <DYMOLabel Version="3">
-    <Description>Repair Label</Description>
+  <DYMOLabel Version="4">
+    <Description>DYMO Label</Description>
     <Orientation>Landscape</Orientation>
-    <LabelName>Address</LabelName>
+    <LabelName>11354 Multi-Purpose</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
     <DYMORect>
-      <DYMOPoint><X>0</X><Y>0</Y></DYMOPoint>
-      <Size><Width>2.24</Width><Height>1.26</Height></Size>
+      <DYMOPoint>
+        <X>0.04</X>
+        <Y>0.06</Y>
+      </DYMOPoint>
+      <Size>
+        <Width>2.17</Width>
+        <Height>1.13</Height>
+      </Size>
     </DYMORect>
-    <BorderColor><SolidColorBrush><Color Alpha="255" Red="0" Green="0" Blue="0"/></SolidColorBrush></BorderColor>
-    <BorderThickness>0</BorderThickness>
+    <BorderColor>
+      <SolidColorBrush>
+        <Color A="1" R="0" G="0" B="0"></Color>
+      </SolidColorBrush>
+    </BorderColor>
+    <BorderThickness>1</BorderThickness>
     <Show_Border>False</Show_Border>
+    <HasFixedLength>False</HasFixedLength>
+    <FixedLengthValue>0</FixedLengthValue>
     <DynamicLayoutManager>
       <RotationBehavior>ClearObjects</RotationBehavior>
       <LabelObjects>
-        <ObjectInfo>
-          <TextObject>
-            <Name>Text</Name>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-            <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
-            <LinkedObjectName/>
-            <Rotation>Rotation0</Rotation>
-            <IsMirrored>False</IsMirrored>
-            <IsVariable>False</IsVariable>
+        <TextObject>
+          <Name>ITextObject0</Name>
+          <Brushes>
+            <BackgroundBrush>
+              <SolidColorBrush>
+                <Color A="0" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </BackgroundBrush>
+            <BorderBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </BorderBrush>
+            <StrokeBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </StrokeBrush>
+            <FillBrush>
+              <SolidColorBrush>
+                <Color A="0" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </FillBrush>
+          </Brushes>
+          <Rotation>Rotation0</Rotation>
+          <OutlineThickness>1</OutlineThickness>
+          <IsOutlined>False</IsOutlined>
+          <BorderStyle>SolidLine</BorderStyle>
+          <Margin>
+            <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
+          </Margin>
+          <HorizontalAlignment>Left</HorizontalAlignment>
+          <VerticalAlignment>Middle</VerticalAlignment>
+          <FitMode>AlwaysFit</FitMode>
+          <IsVertical>False</IsVertical>
+          <FormattedText>
+            <FitMode>AlwaysFit</FitMode>
             <HorizontalAlignment>Left</HorizontalAlignment>
-            <VerticalAlignment>Top</VerticalAlignment>
-            <TextFitMode>ShrinkToFit</TextFitMode>
-            <UseFullFontHeight>True</UseFullFontHeight>
-            <Verticalized>False</Verticalized>
-            <StyledText>${textContent}</StyledText>
-          </TextObject>
-          <Bounds X="0.05" Y="0.05" Width="2.14" Height="1.16"/>
-        </ObjectInfo>
+            <VerticalAlignment>Middle</VerticalAlignment>
+            <IsVertical>False</IsVertical>${textSpans}
+          </FormattedText>
+          <ObjectLayout>
+            <DYMOPoint>
+              <X>0.04</X>
+              <Y>0.06</Y>
+            </DYMOPoint>
+            <Size>
+              <Width>${textWidth}</Width>
+              <Height>1.10</Height>
+            </Size>
+          </ObjectLayout>
+        </TextObject>${qrObject}
       </LabelObjects>
     </DynamicLayoutManager>
   </DYMOLabel>
   <LabelApplication>Blank</LabelApplication>
-  <DataTable><Columns/><Rows/></DataTable>
+  <DataTable>
+    <Columns></Columns>
+    <Rows></Rows>
+  </DataTable>
 </DesktopLabel>`;
         }
 
