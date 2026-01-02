@@ -80,8 +80,8 @@ function mmToInches(mm: number): number {
 // Per forzare orizzontale su etichette 11354 (57x32mm):
 // - Impostiamo Width = lato CORTO (32mm = 1.26")
 // - Impostiamo Height = lato LUNGO (57mm = 2.24")
-// - Questo forza la stampante a ruotare il contenuto
-function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
+// - Questo forza la stampante a stampare in orizzontale
+function generateDieCutLabel(format: LabelFormat, lines: LabelLine[], qrData?: string): string {
   const { physicalWidth, physicalHeight, labelName } = LABEL_FORMATS[format];
   
   // INVERTITO: Width = lato corto, Height = lato lungo
@@ -89,9 +89,19 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
   const labelWidth = mmToInches(physicalHeight);  // 32mm = 1.26" (lato corto)
   const labelHeight = mmToInches(physicalWidth);  // 57mm = 2.24" (lato lungo)
   
+  // Margini di sicurezza per evitare tagli
+  const marginTop = 0.1;
+  const marginLeft = 0.08;
+  const marginRight = 0.08;
+  
+  // Se c'è QR, riserva spazio a destra
+  const qrSize = qrData ? 0.9 : 0; // QR code ~23mm
+  const textWidth = labelWidth - marginLeft - marginRight - (qrData ? qrSize + 0.05 : 0);
+  const textHeight = labelHeight - marginTop - 0.1;
+  
   // Build FormattedText with LineTextSpan elements
   const lineSpans = lines.map((line) => {
-    const fontSize = line.size === 'large' ? 11 : line.size === 'medium' ? 9 : 7;
+    const fontSize = line.size === 'large' ? 10 : line.size === 'medium' ? 8 : 6;
     const isBold = line.bold ? 'True' : 'False';
     const color = line.color || { r: 0, g: 0, b: 0 };
     
@@ -114,8 +124,52 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
           </LineTextSpan>`;
   }).join('\n');
 
-  const objectWidth = labelWidth - 0.1;
-  const objectHeight = labelHeight - 0.1;
+  // QR Code object (se presente)
+  const qrObject = qrData ? `
+        <QRCodeObject>
+          <Name>QRCode</Name>
+          <Brushes>
+            <BackgroundBrush>
+              <SolidColorBrush>
+                <Color A="1" R="1" G="1" B="1"></Color>
+              </SolidColorBrush>
+            </BackgroundBrush>
+            <BorderBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </BorderBrush>
+            <StrokeBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </StrokeBrush>
+            <FillBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </FillBrush>
+          </Brushes>
+          <Rotation>Rotation0</Rotation>
+          <OutlineThickness>1</OutlineThickness>
+          <IsOutlined>False</IsOutlined>
+          <BorderStyle>SolidLine</BorderStyle>
+          <Margin>
+            <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
+          </Margin>
+          <Data>${escapeXml(qrData)}</Data>
+          <ErrorCorrectionLevel>Medium</ErrorCorrectionLevel>
+          <ObjectLayout>
+            <DYMOPoint>
+              <X>${(labelWidth - qrSize - marginRight).toFixed(2)}</X>
+              <Y>${marginTop.toFixed(2)}</Y>
+            </DYMOPoint>
+            <Size>
+              <Width>${qrSize.toFixed(2)}</Width>
+              <Height>${qrSize.toFixed(2)}</Height>
+            </Size>
+          </ObjectLayout>
+        </QRCodeObject>` : '';
   
   return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
@@ -189,15 +243,15 @@ ${lineSpans}
           </FormattedText>
           <ObjectLayout>
             <DYMOPoint>
-              <X>0.05</X>
-              <Y>0.05</Y>
+              <X>${marginLeft.toFixed(2)}</X>
+              <Y>${marginTop.toFixed(2)}</Y>
             </DYMOPoint>
             <Size>
-              <Width>${objectWidth.toFixed(2)}</Width>
-              <Height>${objectHeight.toFixed(2)}</Height>
+              <Width>${textWidth.toFixed(2)}</Width>
+              <Height>${textHeight.toFixed(2)}</Height>
             </Size>
           </ObjectLayout>
-        </TextObject>
+        </TextObject>${qrObject}
       </LabelObjects>
     </DynamicLayoutManager>
   </DYMOLabel>
@@ -206,9 +260,9 @@ ${lineSpans}
 
 export function generateRepairLabel(data: RepairLabelData, format: LabelFormat = '11354'): string {
   const shortId = data.repairId.slice(0, 8).toUpperCase();
-  const deviceInfo = `${data.deviceBrand} ${data.deviceModel}`.substring(0, 30);
-  const customerInfo = data.customerName.substring(0, 25);
-  const issue = data.issueDescription.substring(0, 40);
+  const deviceInfo = `${data.deviceBrand} ${data.deviceModel}`.substring(0, 25);
+  const customerInfo = data.customerName.substring(0, 20);
+  const issue = data.issueDescription.substring(0, 30);
   const slotInfo = data.storageSlot ? ` [${data.storageSlot}]` : '';
   
   const lines: LabelLine[] = [
@@ -216,15 +270,15 @@ export function generateRepairLabel(data: RepairLabelData, format: LabelFormat =
     { text: customerInfo, size: 'medium', bold: true },
     { text: deviceInfo, size: 'small', bold: false },
     { text: issue, size: 'small', bold: false, color: { r: 80, g: 80, b: 80 } },
-    { text: data.intakeDate, size: 'small', bold: false, color: { r: 128, g: 128, b: 128 } },
   ];
 
-  return generateDieCutLabel(format, lines);
+  // Passa trackingUrl per generare il QR code
+  return generateDieCutLabel(format, lines, data.trackingUrl);
 }
 
 export function generateDeviceLabel(data: DeviceLabelData, format: LabelFormat = '11354'): string {
   const shortId = data.deviceId.slice(0, 8).toUpperCase();
-  const deviceInfo = `${data.brand} ${data.model}`.substring(0, 30);
+  const deviceInfo = `${data.brand} ${data.model}`.substring(0, 25);
   
   const lines: LabelLine[] = [
     { text: deviceInfo, size: 'large', bold: true },
@@ -233,7 +287,7 @@ export function generateDeviceLabel(data: DeviceLabelData, format: LabelFormat =
     { text: `€${data.price.toFixed(2)}`, size: 'large', bold: true, color: { r: 0, g: 128, b: 0 } },
   ];
 
-  return generateDieCutLabel(format, lines);
+  return generateDieCutLabel(format, lines, data.trackingUrl);
 }
 
 export function generateShelfLabel(data: ShelfLabelData, format: LabelFormat = '11354'): string {
