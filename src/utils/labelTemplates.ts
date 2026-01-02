@@ -76,16 +76,13 @@ function mmToInches(mm: number): number {
 }
 
 // Generate DesktopLabel XML for Dymo Connect
-// IMPORTANTE: Per stampare in orizzontale su Dymo LabelWriter, dobbiamo:
-// 1. Impostare le dimensioni del label con Width = lato CORTO, Height = lato LUNGO (come la stampante lo vede)
-// 2. Ruotare il contenuto di 90 gradi per visualizzarlo correttamente
+// Usiamo Landscape con Width = lato lungo, Height = lato corto
 function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
   const { physicalWidth, physicalHeight, labelName } = LABEL_FORMATS[format];
   
-  // La stampante Dymo vede l'etichetta in portrait (il lato corto è la "larghezza" per lei)
-  // Per ottenere output orizzontale, impostiamo le dimensioni "native" della stampante
-  const labelWidth = mmToInches(physicalHeight); // lato corto come width
-  const labelHeight = mmToInches(physicalWidth); // lato lungo come height
+  // Per Landscape: Width = lato lungo (57mm), Height = lato corto (32mm)
+  const labelWidth = mmToInches(physicalWidth);   // 57mm = 2.24"
+  const labelHeight = mmToInches(physicalHeight); // 32mm = 1.26"
   
   // Build FormattedText with LineTextSpan elements
   const lineSpans = lines.map((line) => {
@@ -112,16 +109,14 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
           </LineTextSpan>`;
   }).join('\n');
 
-  // Per ruotare il contenuto usiamo Rotation90 sull'oggetto di testo
-  // Le coordinate dell'oggetto devono essere adattate alla rotazione
-  const objectWidth = labelHeight - 0.1; // occupa quasi tutta l'altezza (che è il lato lungo)
-  const objectHeight = labelWidth - 0.1; // occupa quasi tutta la larghezza (che è il lato corto)
+  const objectWidth = labelWidth - 0.1;
+  const objectHeight = labelHeight - 0.1;
   
   return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>LabLinkRiparo Label</Description>
-    <Orientation>Portrait</Orientation>
+    <Orientation>Landscape</Orientation>
     <LabelName>${labelName}</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -169,7 +164,7 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
               </SolidColorBrush>
             </FillBrush>
           </Brushes>
-          <Rotation>Rotation90</Rotation>
+          <Rotation>Rotation0</Rotation>
           <OutlineThickness>1</OutlineThickness>
           <IsOutlined>False</IsOutlined>
           <BorderStyle>SolidLine</BorderStyle>

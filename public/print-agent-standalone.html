@@ -310,16 +310,15 @@
             }
 
             // Label format: 11354 (57x32mm) - DesktopLabel format for Dymo Connect
-            // La stampante Dymo vede l'etichetta in portrait: Width = 32mm, Height = 57mm
-            // Usiamo Rotation90 sull'oggetto per stampare in orizzontale
-            const labelWidth = 1.26;  // 32mm in pollici (lato corto)
-            const labelHeight = 2.24; // 57mm in pollici (lato lungo)
+            // Landscape: Width = lato lungo (57mm = 2.24"), Height = lato corto (32mm = 1.26")
+            const labelWidth = 2.24;  // 57mm in pollici (lato lungo)
+            const labelHeight = 1.26; // 32mm in pollici (lato corto)
             
             const testLabel = `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>Test Label</Description>
-    <Orientation>Portrait</Orientation>
+    <Orientation>Landscape</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -367,7 +366,7 @@
               </SolidColorBrush>
             </FillBrush>
           </Brushes>
-          <Rotation>Rotation90</Rotation>
+          <Rotation>Rotation0</Rotation>
           <OutlineThickness>1</OutlineThickness>
           <IsOutlined>False</IsOutlined>
           <BorderStyle>SolidLine</BorderStyle>
@@ -441,8 +440,8 @@
               <Y>0.05</Y>
             </DYMOPoint>
             <Size>
-              <Width>${labelHeight - 0.1}</Width>
-              <Height>${labelWidth - 0.1}</Height>
+              <Width>${labelWidth - 0.1}</Width>
+              <Height>${labelHeight - 0.1}</Height>
             </Size>
           </ObjectLayout>
         </TextObject>
@@ -642,16 +641,15 @@
             const line4 = data.issue || data.condition || '';
             
             // Dymo 11354 Multi-Purpose: 57mm x 32mm
-            // La stampante vede in portrait: Width = 32mm (1.26"), Height = 57mm (2.24")
-            // Usiamo Rotation90 sull'oggetto per stampare in orizzontale
-            const labelWidth = 1.26;  // 32mm in pollici (lato corto)
-            const labelHeight = 2.24; // 57mm in pollici (lato lungo)
+            // Landscape: Width = lato lungo (57mm = 2.24"), Height = lato corto (32mm = 1.26")
+            const labelWidth = 2.24;  // 57mm in pollici (lato lungo)
+            const labelHeight = 1.26; // 32mm in pollici (lato corto)
             
             return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>LabLinkRiparo Label</Description>
-    <Orientation>Portrait</Orientation>
+    <Orientation>Landscape</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -699,7 +697,7 @@
               </SolidColorBrush>
             </FillBrush>
           </Brushes>
-          <Rotation>Rotation90</Rotation>
+          <Rotation>Rotation0</Rotation>
           <OutlineThickness>1</OutlineThickness>
           <IsOutlined>False</IsOutlined>
           <BorderStyle>SolidLine</BorderStyle>
@@ -790,8 +788,8 @@
               <Y>0.05</Y>
             </DYMOPoint>
             <Size>
-              <Width>${labelHeight - 0.1}</Width>
-              <Height>${labelWidth - 0.1}</Height>
+              <Width>${labelWidth - 0.1}</Width>
+              <Height>${labelHeight - 0.1}</Height>
             </Size>
           </ObjectLayout>
         </TextObject>
