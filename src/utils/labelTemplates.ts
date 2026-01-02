@@ -31,14 +31,20 @@ export interface ShelfLabelData {
   quantity?: number;
 }
 
-// Label format dimensions in INCHES (for Dymo Connect compatibility)
-// 11354: 57x32mm = 2.24" x 1.26"
-// 30252: 89x28mm = 3.5" x 1.1"
-const LABEL_FORMATS: Record<LabelFormat, { width: number; height: number; name: string }> = {
-  '30252': { width: 3.5, height: 1.1, name: '30252 Address (89x28mm)' },
-  '99012': { width: 3.5, height: 1.4, name: '99012 Large Address (89x36mm)' },
-  '11354': { width: 2.24, height: 1.26, name: '11354 Multi-Purpose (57x32mm)' },
-  '30336': { width: 2.13, height: 0.98, name: '30336 Small (54x25mm)' },
+// Label format dimensions in TWIPS for DieCutLabel format
+// 11354/30332: 57x32mm -> Width=3240 (57mm), Height=1814 (32mm)
+// 30252: 89x28mm -> Width=5040 (89mm), Height=1584 (28mm)
+const LABEL_FORMATS: Record<LabelFormat, { 
+  width: number; 
+  height: number; 
+  name: string;
+  paperId: string;
+  paperName: string;
+}> = {
+  '30252': { width: 5040, height: 1584, name: '30252 Address (89x28mm)', paperId: 'Address', paperName: '30252 Address' },
+  '99012': { width: 5040, height: 2016, name: '99012 Large Address (89x36mm)', paperId: 'LargeAddress', paperName: '99012 Large Address' },
+  '11354': { width: 3240, height: 1814, name: '11354 Multi-Purpose (57x32mm)', paperId: 'Small30332', paperName: '30332 Multipurpose' },
+  '30336': { width: 3024, height: 1386, name: '30336 Small (54x25mm)', paperId: 'Small30336', paperName: '30336 Small Multipurpose' },
 };
 
 export function getLabelFormats(): { value: LabelFormat; label: string }[] {
@@ -57,121 +63,56 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
-// Generate label using DesktopLabel format with inches for Dymo Connect compatibility
-function generateDesktopLabel(
+// Generate label using DieCutLabel format with twips - standard Dymo SDK format
+function generateDieCutLabel(
   format: LabelFormat,
   lines: { text: string; bold?: boolean; size?: 'large' | 'medium' | 'small'; color?: { r: number; g: number; b: number } }[]
 ): string {
-  const { width, height } = LABEL_FORMATS[format];
+  const { width, height, paperId, paperName } = LABEL_FORMATS[format];
   
-  // Generate line text spans
-  const lineSpans = lines.map(line => {
-    const fontSize = line.size === 'large' ? 12 : line.size === 'medium' ? 10 : 8;
+  // Build styled text elements
+  const styledElements = lines.map((line, idx) => {
+    const fontSize = line.size === 'large' ? 14 : line.size === 'medium' ? 10 : 8;
     const color = line.color || { r: 0, g: 0, b: 0 };
+    const prefix = idx === 0 ? '' : '\\n';
     return `
-              <LineTextSpan>
-                <TextSpan>
-                  <Text>${escapeXml(line.text)}</Text>
-                  <FontInfo>
-                    <FontName>Arial</FontName>
-                    <FontSize>${fontSize}</FontSize>
-                    <IsBold>${line.bold ? 'True' : 'False'}</IsBold>
-                    <IsItalic>False</IsItalic>
-                    <IsUnderline>False</IsUnderline>
-                    <FontBrush>
-                      <SolidColorBrush>
-                        <Color A="1" R="${color.r / 255}" G="${color.g / 255}" B="${color.b / 255}"></Color>
-                      </SolidColorBrush>
-                    </FontBrush>
-                  </FontInfo>
-                </TextSpan>
-              </LineTextSpan>`;
+        <Element>
+          <String>${prefix}${escapeXml(line.text)}</String>
+          <Attributes>
+            <Font Family="Arial" Size="${fontSize}" Bold="${line.bold ? 'True' : 'False'}" Italic="False" Underline="False" Strikeout="False"/>
+            <ForeColor Alpha="255" Red="${color.r}" Green="${color.g}" Blue="${color.b}"/>
+          </Attributes>
+        </Element>`;
   }).join('');
 
   return `<?xml version="1.0" encoding="utf-8"?>
-<DesktopLabel Version="1">
-  <DYMOLabel Version="3">
-    <Description>DYMO Label</Description>
-    <Orientation>Landscape</Orientation>
-    <LabelName>${format}</LabelName>
-    <InitialLength>0</InitialLength>
-    <BorderStyle>SolidLine</BorderStyle>
-    <DYMORect>
-      <DYMOPoint>
-        <X>0.05</X>
-        <Y>0.05</Y>
-      </DYMOPoint>
-      <Size>
-        <Width>${width - 0.1}</Width>
-        <Height>${height - 0.1}</Height>
-      </Size>
-    </DYMORect>
-    <BorderColor>
-      <SolidColorBrush>
-        <Color A="1" R="0" G="0" B="0"></Color>
-      </SolidColorBrush>
-    </BorderColor>
-    <BorderThickness>1</BorderThickness>
-    <Show_Border>False</Show_Border>
-    <DynamicLayoutManager>
-      <RotationBehavior>ClearObjects</RotationBehavior>
-      <LabelObjects>
-        <TextObject>
-          <Name>Text</Name>
-          <Brushes>
-            <BackgroundBrush>
-              <SolidColorBrush>
-                <Color A="0" R="0" G="0" B="0"></Color>
-              </SolidColorBrush>
-            </BackgroundBrush>
-            <BorderBrush>
-              <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
-              </SolidColorBrush>
-            </BorderBrush>
-            <StrokeBrush>
-              <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
-              </SolidColorBrush>
-            </StrokeBrush>
-            <FillBrush>
-              <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
-              </SolidColorBrush>
-            </FillBrush>
-          </Brushes>
-          <Rotation>Rotation0</Rotation>
-          <OutlineThickness>1</OutlineThickness>
-          <IsOutlined>False</IsOutlined>
-          <BorderStyle>SolidLine</BorderStyle>
-          <Margin>
-            <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
-          </Margin>
-          <HorizontalAlignment>Left</HorizontalAlignment>
-          <VerticalAlignment>Top</VerticalAlignment>
-          <FitMode>AlwaysFit</FitMode>
-          <IsVertical>False</IsVertical>
-          <FormattedText>
-            <FitMode>AlwaysFit</FitMode>
-            <HorizontalAlignment>Left</HorizontalAlignment>
-            <VerticalAlignment>Top</VerticalAlignment>
-            <IsVertical>False</IsVertical>${lineSpans}
-          </FormattedText>
-          <ObjectLayout>
-            <DYMOPoint>
-              <X>0.05</X>
-              <Y>0.05</Y>
-            </DYMOPoint>
-            <Size>
-              <Width>${width - 0.1}</Width>
-              <Height>${height - 0.1}</Height>
-            </Size>
-          </ObjectLayout>
-        </TextObject>
-      </LabelObjects>
-    </DynamicLayoutManager>
-  </DYMOLabel>
-</DesktopLabel>`;
+<DieCutLabel Version="8.0" Units="twips">
+  <PaperOrientation>Landscape</PaperOrientation>
+  <Id>${paperId}</Id>
+  <PaperName>${paperName}</PaperName>
+  <DrawCommands>
+    <RoundRectangle X="0" Y="0" Width="${height}" Height="${width}" Rx="113" Ry="113"/>
+  </DrawCommands>
+  <ObjectInfo>
+    <TextObject>
+      <Name>TEXT</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <HorizontalAlignment>Left</HorizontalAlignment>
+      <VerticalAlignment>Top</VerticalAlignment>
+      <TextFitMode>ShrinkToFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>${styledElements}
+      </StyledText>
+    </TextObject>
+    <Bounds X="100" Y="100" Width="${width - 200}" Height="${height - 200}"/>
+  </ObjectInfo>
+</DieCutLabel>`;
 }
 
 export function generateRepairLabel(data: RepairLabelData, format: LabelFormat = '11354'): string {
@@ -189,7 +130,7 @@ export function generateRepairLabel(data: RepairLabelData, format: LabelFormat =
     { text: data.intakeDate, size: 'small' as const, bold: false, color: { r: 128, g: 128, b: 128 } },
   ];
 
-  return generateDesktopLabel(format, lines);
+  return generateDieCutLabel(format, lines);
 }
 
 export function generateDeviceLabel(data: DeviceLabelData, format: LabelFormat = '11354'): string {
@@ -203,7 +144,7 @@ export function generateDeviceLabel(data: DeviceLabelData, format: LabelFormat =
     { text: `€${data.price.toFixed(2)}`, size: 'large' as const, bold: true, color: { r: 0, g: 128, b: 0 } },
   ];
 
-  return generateDesktopLabel(format, lines);
+  return generateDieCutLabel(format, lines);
 }
 
 export function generateShelfLabel(data: ShelfLabelData, format: LabelFormat = '11354'): string {
@@ -221,5 +162,5 @@ export function generateShelfLabel(data: ShelfLabelData, format: LabelFormat = '
     lines.push({ text: `Qty: ${data.quantity}`, size: 'small', bold: true, color: { r: 0, g: 0, b: 128 } });
   }
 
-  return generateDesktopLabel(format, lines);
+  return generateDieCutLabel(format, lines);
 }
