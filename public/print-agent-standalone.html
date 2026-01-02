@@ -660,7 +660,7 @@
             const textWidth = labelWidth - marginLeft - marginRight - (trackingUrl ? qrSize + 0.08 : 0);
             const textHeight = labelHeight - marginTop - 0.12;
             
-            // QR Code object (se presente) - usa BarcodeObject con BarcodeFormat QRCode
+            // QR Code object - ordine corretto: BarcodeFormat prima di Text
             const qrObject = trackingUrl ? `
         <BarcodeObject>
           <Name>QRCode</Name>
@@ -693,8 +693,8 @@
           <Margin>
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
-          <Text>${escapeXml(trackingUrl)}</Text>
           <BarcodeFormat>QRCode</BarcodeFormat>
+          <Text>${escapeXml(trackingUrl)}</Text>
           <Size>Medium</Size>
           <TextPosition>None</TextPosition>
           <ObjectLayout>
