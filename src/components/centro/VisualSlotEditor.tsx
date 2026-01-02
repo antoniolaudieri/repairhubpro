@@ -98,13 +98,11 @@ export function VisualSlotEditor({
   // Handle drag over cell
   const handleDragOver = (e: React.DragEvent, row: number, col: number) => {
     e.preventDefault();
-    if (draggedSlot && canMoveTo(draggedSlot, row, col)) {
-      setDragOverCell({ row, col });
-    }
+    setDragOverCell({ row, col });
   };
 
-  // Handle drop
-  const handleDrop = (row: number, col: number) => {
+  // Handle drop on empty cell
+  const handleDropOnEmpty = (row: number, col: number) => {
     if (!draggedSlot) return;
     
     if (canMoveTo(draggedSlot, row, col)) {
@@ -121,6 +119,42 @@ export function VisualSlotEditor({
     setDragOverCell(null);
   };
 
+  // Handle drop on another slot (swap)
+  const handleDropOnSlot = (targetSlot: SlotData) => {
+    if (!draggedSlot || draggedSlot.id === targetSlot.id) {
+      setDraggedSlot(null);
+      setDragOverCell(null);
+      return;
+    }
+    
+    // Swap positions
+    const newSlots = slots.map(s => {
+      if (s.id === draggedSlot.id) {
+        return { 
+          ...s, 
+          row: targetSlot.row, 
+          col: targetSlot.col, 
+          slotNum: targetSlot.slotNum 
+        };
+      }
+      if (s.id === targetSlot.id) {
+        return { 
+          ...s, 
+          row: draggedSlot.row, 
+          col: draggedSlot.col, 
+          slotNum: draggedSlot.slotNum 
+        };
+      }
+      return s;
+    });
+    
+    onChange(newSlots);
+    toast.success("Slot scambiati");
+    
+    setDraggedSlot(null);
+    setDragOverCell(null);
+  };
+
   // Handle resize start
   const handleResizeStart = (e: React.MouseEvent, slot: SlotData) => {
     e.preventDefault();
@@ -129,7 +163,7 @@ export function VisualSlotEditor({
     setResizePreview(slot.span);
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
-      if (!gridRef.current || !resizingSlot) return;
+      if (!gridRef.current) return;
       
       const rect = gridRef.current.getBoundingClientRect();
       const cellWidth = rect.width / columns;
@@ -142,15 +176,17 @@ export function VisualSlotEditor({
     };
 
     const handleMouseUp = () => {
-      if (resizePreview !== null && resizePreview !== slot.span) {
-        const newSlots = slots.map(s =>
-          s.id === slot.id ? { ...s, span: resizePreview } : s
-        );
-        onChange(newSlots);
-        toast.success(`Slot ridimensionato a ${resizePreview} colonne`);
-      }
       setResizingSlot(null);
-      setResizePreview(null);
+      setResizePreview((currentPreview) => {
+        if (currentPreview !== null && currentPreview !== slot.span) {
+          const newSlots = slots.map(s =>
+            s.id === slot.id ? { ...s, span: currentPreview } : s
+          );
+          onChange(newSlots);
+          toast.success(`Slot ridimensionato a ${currentPreview} colonne`);
+        }
+        return null;
+      });
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
@@ -181,6 +217,11 @@ export function VisualSlotEditor({
               key={slot.id}
               draggable
               onDragStart={() => handleDragStart(slot)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverCell({ row: slot.row, col: slot.col });
+              }}
+              onDrop={() => handleDropOnSlot(slot)}
               onDragEnd={() => {
                 setDraggedSlot(null);
                 setDragOverCell(null);
@@ -192,6 +233,7 @@ export function VisualSlotEditor({
                   ? cn("bg-gradient-to-r text-white border-white/30", color)
                   : cn(colorClasses.bg, colorClasses.text, colorClasses.border),
                 isBeingDragged && "opacity-50 scale-95",
+                isDropTarget && draggedSlot && draggedSlot.id !== slot.id && "ring-2 ring-primary ring-offset-2",
                 "cursor-grab active:cursor-grabbing hover:shadow-lg hover:z-10"
               )}
               style={{
@@ -230,7 +272,7 @@ export function VisualSlotEditor({
             <div
               key={`empty-${row}-${col}`}
               onDragOver={(e) => handleDragOver(e, row, col)}
-              onDrop={() => handleDrop(row, col)}
+              onDrop={() => handleDropOnEmpty(row, col)}
               className={cn(
                 "rounded-lg border-2 border-dashed border-border/50 transition-all",
                 "flex items-center justify-center text-[10px] text-muted-foreground/50",
