@@ -124,7 +124,7 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[], qrData?: s
           </LineTextSpan>`;
   }).join('\n');
 
-  // QR Code object (se presente) - usa BarcodeObject con BarcodeFormat QRCode
+  // QR Code object - usa BarcodeObject con ordine corretto: BarcodeFormat prima di Text
   const qrObject = qrData ? `
         <BarcodeObject>
           <Name>QRCode</Name>
@@ -157,8 +157,8 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[], qrData?: s
           <Margin>
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
-          <Text>${escapeXml(qrData)}</Text>
           <BarcodeFormat>QRCode</BarcodeFormat>
+          <Text>${escapeXml(qrData)}</Text>
           <Size>Medium</Size>
           <TextPosition>None</TextPosition>
           <ObjectLayout>
