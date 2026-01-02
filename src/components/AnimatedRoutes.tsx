@@ -84,6 +84,7 @@ import CornerLoyaltyCheckout from "@/pages/corner/CornerLoyaltyCheckout";
 import CornerLoyaltySuccess from "@/pages/corner/CornerLoyaltySuccess";
 // Loyalty
 import LoyaltyCheckoutRedirect from "@/pages/LoyaltyCheckoutRedirect";
+import LoyaltySuccess from "@/pages/LoyaltySuccess";
 // Device Health + PWA Install
 import InstallCentro from "@/pages/InstallCentro";
 import DeviceHealthQuiz from "@/pages/customer/DeviceHealthQuiz";
@@ -108,6 +109,7 @@ export const AnimatedRoutes = () => {
         
         {/* Public Loyalty Checkout Redirect */}
         <Route path="/attiva-tessera" element={<PageTransition><LoyaltyCheckoutRedirect /></PageTransition>} />
+        <Route path="/loyalty-success" element={<PageTransition><LoyaltySuccess /></PageTransition>} />
         
         {/* Public Email Unsubscribe */}
         <Route path="/disiscrizione" element={<PageTransition><Disiscrizione /></PageTransition>} />
