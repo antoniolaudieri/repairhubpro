@@ -644,22 +644,29 @@
             }
         }
 
-        // Genera QR code usando libreria CDN qrcode.js
+        // Genera QR code - verifica che la libreria sia caricata
         async function generateQRCodeDataUrl(text) {
             return new Promise((resolve) => {
+                // Verifica che QRCode sia disponibile
+                if (typeof QRCode === 'undefined') {
+                    log('Libreria QRCode non caricata, provo fallback...', 'warning');
+                    // Fallback: genera un placeholder
+                    resolve(null);
+                    return;
+                }
+                
                 try {
-                    // Usa la libreria QRCode da CDN
                     QRCode.toDataURL(text, {
                         width: 150,
                         margin: 1,
+                        errorCorrectionLevel: 'M',
                         color: { dark: '#000000', light: '#ffffff' }
                     }).then(dataUrl => {
-                        // Estrai solo la parte base64
                         const base64 = dataUrl.split(',')[1];
-                        log('QR generato con successo: ' + base64.substring(0, 30) + '...');
+                        log('QR generato: ' + base64.substring(0, 20) + '... (' + base64.length + ' chars)');
                         resolve(base64);
                     }).catch(err => {
-                        log('Errore QRCode.toDataURL: ' + err.message, 'error');
+                        log('Errore QRCode: ' + err.message, 'error');
                         resolve(null);
                     });
                 } catch (e) {
@@ -680,22 +687,21 @@
             const line4 = (data.issue || data.condition || '').substring(0, 30);
             const trackingUrl = data.trackingUrl || (repairId ? `https://lablinkriparo.lovable.app/centro/lavori/${repairId}` : '');
             
-            // Dymo 11354: 57mm x 32mm - STESSO FORMATO DEL TEST CHE FUNZIONA
-            // INVERTITO: Width = lato CORTO, Height = lato LUNGO (così Dymo stampa orizzontale)
-            const labelWidth = 1.26;  // 32mm in pollici (lato CORTO)
-            const labelHeight = 2.24; // 57mm in pollici (lato LUNGO)
+            // Dymo 11354: 57mm x 32mm
+            // LANDSCAPE: Width = 57mm (lato lungo), Height = 32mm (lato corto)
+            const labelWidth = 2.24;  // 57mm in pollici
+            const labelHeight = 1.26; // 32mm in pollici
             
-            // Margini
-            const marginTop = 0.08;
-            const marginLeft = 0.08;
-            const marginRight = 0.08;
+            // Margini più piccoli
+            const marginLeft = 0.05;
+            const marginTop = 0.05;
             
-            // QR code quadrato in basso (circa 0.8" x 0.8")
-            const qrSize = trackingUrl ? 0.75 : 0;
+            // QR a destra, più piccolo per lasciare spazio al testo
+            const qrSize = trackingUrl ? 0.6 : 0;
             
-            // Area testo: tutta la larghezza, altezza ridotta se c'è QR
-            const textWidth = labelWidth - marginLeft - marginRight;
-            const textHeight = trackingUrl ? (labelHeight - marginTop - qrSize - 0.15) : (labelHeight - marginTop - 0.1);
+            // Area testo: a sinistra del QR
+            const textWidth = trackingUrl ? (labelWidth - qrSize - marginLeft - 0.1) : (labelWidth - marginLeft * 2);
+            const textHeight = labelHeight - marginTop * 2;
             
             // Genera QR code come immagine base64
             let qrObject = '';
@@ -703,10 +709,10 @@
                 log('Generazione QR code per: ' + trackingUrl);
                 const qrBase64 = await generateQRCodeDataUrl(trackingUrl);
                 if (qrBase64) {
-                    log('QR code generato con successo (' + qrBase64.length + ' chars)');
-                    // Posizione QR: centrato orizzontalmente, in basso
-                    const qrX = (labelWidth - qrSize) / 2;
-                    const qrY = labelHeight - qrSize - 0.08;
+                    log('QR code generato con successo');
+                    // Posizione QR: a destra, centrato verticalmente
+                    const qrX = labelWidth - qrSize - 0.05;
+                    const qrY = (labelHeight - qrSize) / 2;
                     
                     qrObject = `
         <ImageObject>
@@ -747,7 +753,7 @@
           </ObjectLayout>
         </ImageObject>`;
                 } else {
-                    log('Errore generazione QR code', 'warning');
+                    log('QR code fallito, stampa senza QR', 'warning');
                 }
             }
             
@@ -755,7 +761,7 @@
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>LabLinkRiparo Label</Description>
-    <Orientation>Portrait</Orientation>
+    <Orientation>Landscape</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -810,13 +816,13 @@
           <Margin>
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
-          <HorizontalAlignment>Center</HorizontalAlignment>
+          <HorizontalAlignment>Left</HorizontalAlignment>
           <VerticalAlignment>Top</VerticalAlignment>
           <FitMode>AlwaysFit</FitMode>
           <IsVertical>False</IsVertical>
           <FormattedText>
             <FitMode>AlwaysFit</FitMode>
-            <HorizontalAlignment>Center</HorizontalAlignment>
+            <HorizontalAlignment>Left</HorizontalAlignment>
             <VerticalAlignment>Top</VerticalAlignment>
             <IsVertical>False</IsVertical>
             <LineTextSpan>
@@ -824,7 +830,7 @@
                 <Text>${escapeXml(line1)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>11</FontSize>
+                  <FontSize>10</FontSize>
                   <IsBold>True</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -841,7 +847,7 @@
                 <Text>${escapeXml(line2)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>9</FontSize>
+                  <FontSize>8</FontSize>
                   <IsBold>True</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
