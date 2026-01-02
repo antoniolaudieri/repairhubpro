@@ -671,29 +671,27 @@
             const shortId = repairId ? repairId.substring(0, 8).toUpperCase() : '';
             const slot = data.storageSlot ? ` [${data.storageSlot}]` : '';
             const line1 = shortId ? `#${shortId}${slot}` : (data.deviceBrand || 'ETICHETTA');
-            const line2 = (data.customerName || '').substring(0, 25);
-            const line3 = data.deviceBrand ? `${data.deviceBrand} ${data.deviceModel || ''}`.trim().substring(0, 30) : '';
-            const line4 = (data.issue || data.condition || '').substring(0, 35);
+            const line2 = (data.customerName || '').substring(0, 20);
+            const line3 = data.deviceBrand ? `${data.deviceBrand} ${data.deviceModel || ''}`.trim().substring(0, 25) : '';
+            const line4 = (data.issue || data.condition || '').substring(0, 30);
             const trackingUrl = data.trackingUrl || (repairId ? `https://lablinkriparo.lovable.app/centro/lavori/${repairId}` : '');
             
-            // Dymo 11354 Multi-Purpose: 57mm x 32mm
-            // CORRETTO: Width = 57mm (2.24"), Height = 32mm (1.26") - orientamento landscape
-            const labelWidth = 2.24;  // 57mm in pollici 
-            const labelHeight = 1.26; // 32mm in pollici
+            // Dymo 11354: 57mm x 32mm - STESSO FORMATO DEL TEST CHE FUNZIONA
+            // INVERTITO: Width = lato CORTO, Height = lato LUNGO (così Dymo stampa orizzontale)
+            const labelWidth = 1.26;  // 32mm in pollici (lato CORTO)
+            const labelHeight = 2.24; // 57mm in pollici (lato LUNGO)
             
-            // Margini di sicurezza
-            const marginTop = 0.06;
-            const marginLeft = 0.06;
-            const marginRight = 0.06;
-            const marginBottom = 0.06;
+            // Margini
+            const marginTop = 0.08;
+            const marginLeft = 0.08;
+            const marginRight = 0.08;
             
-            // QR code a destra (quadrato, quindi usa l'altezza disponibile)
-            const qrSize = trackingUrl ? 0.95 : 0;
-            const qrMargin = trackingUrl ? 0.08 : 0;
+            // QR code quadrato in basso (circa 0.8" x 0.8")
+            const qrSize = trackingUrl ? 0.75 : 0;
             
-            // Testo a sinistra
-            const textWidth = labelWidth - marginLeft - marginRight - (trackingUrl ? qrSize + qrMargin : 0);
-            const textHeight = labelHeight - marginTop - marginBottom;
+            // Area testo: tutta la larghezza, altezza ridotta se c'è QR
+            const textWidth = labelWidth - marginLeft - marginRight;
+            const textHeight = trackingUrl ? (labelHeight - marginTop - qrSize - 0.15) : (labelHeight - marginTop - 0.1);
             
             // Genera QR code come immagine base64
             let qrObject = '';
@@ -701,10 +699,10 @@
                 log('Generazione QR code per: ' + trackingUrl);
                 const qrBase64 = await generateQRCodeDataUrl(trackingUrl);
                 if (qrBase64) {
-                    log('QR code generato con successo');
-                    // Posizione QR: a destra, centrato verticalmente
-                    const qrX = labelWidth - qrSize - marginRight;
-                    const qrY = (labelHeight - qrSize) / 2;
+                    log('QR code generato con successo (' + qrBase64.length + ' chars)');
+                    // Posizione QR: centrato orizzontalmente, in basso
+                    const qrX = (labelWidth - qrSize) / 2;
+                    const qrY = labelHeight - qrSize - 0.08;
                     
                     qrObject = `
         <ImageObject>
@@ -753,7 +751,7 @@
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>LabLinkRiparo Label</Description>
-    <Orientation>Landscape</Orientation>
+    <Orientation>Portrait</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -808,13 +806,13 @@
           <Margin>
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
-          <HorizontalAlignment>Left</HorizontalAlignment>
+          <HorizontalAlignment>Center</HorizontalAlignment>
           <VerticalAlignment>Top</VerticalAlignment>
           <FitMode>AlwaysFit</FitMode>
           <IsVertical>False</IsVertical>
           <FormattedText>
             <FitMode>AlwaysFit</FitMode>
-            <HorizontalAlignment>Left</HorizontalAlignment>
+            <HorizontalAlignment>Center</HorizontalAlignment>
             <VerticalAlignment>Top</VerticalAlignment>
             <IsVertical>False</IsVertical>
             <LineTextSpan>
@@ -822,7 +820,7 @@
                 <Text>${escapeXml(line1)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>12</FontSize>
+                  <FontSize>11</FontSize>
                   <IsBold>True</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -839,7 +837,7 @@
                 <Text>${escapeXml(line2)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>10</FontSize>
+                  <FontSize>9</FontSize>
                   <IsBold>True</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -856,7 +854,7 @@
                 <Text>${escapeXml(line3)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>8</FontSize>
+                  <FontSize>7</FontSize>
                   <IsBold>False</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -873,7 +871,7 @@
                 <Text>${escapeXml(line4)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>7</FontSize>
+                  <FontSize>6</FontSize>
                   <IsBold>False</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
