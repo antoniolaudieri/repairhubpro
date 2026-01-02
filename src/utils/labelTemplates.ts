@@ -158,7 +158,8 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[], qrData?: s
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
           <BarcodeFormat>QRCode</BarcodeFormat>
-          <Text>${escapeXml(qrData)}</Text>
+          <Data>${escapeXml(qrData)}</Data>
+          
           <Size>Medium</Size>
           <TextPosition>None</TextPosition>
           <ObjectLayout>
