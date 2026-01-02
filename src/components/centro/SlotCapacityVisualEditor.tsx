@@ -79,10 +79,15 @@ export function SlotCapacityVisualEditor({ capacity, onChange, shelfColor }: Slo
   const fill = calculateFill();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
+      {/* Header with label */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium">Capacità per tipo dispositivo</span>
+        <span className="text-xs text-muted-foreground">Trascina o usa +/-</span>
+      </div>
+
       {/* Device palette - drag from here */}
       <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-muted/30">
-        <span className="text-xs text-muted-foreground mr-2">Trascina:</span>
         {DEVICE_TYPES.map(device => (
           <motion.div
             key={device.key}
@@ -174,10 +179,17 @@ export function SlotCapacityVisualEditor({ capacity, onChange, shelfColor }: Slo
         )}
       </div>
 
-      {/* Quick controls */}
-      <div className="grid grid-cols-4 gap-2">
+      {/* Quick controls - main interaction */}
+      <div className="grid grid-cols-2 gap-3">
         {DEVICE_TYPES.map(device => (
-          <div key={device.key} className="flex flex-col items-center gap-1">
+          <div key={device.key} className="flex items-center gap-2 p-2 rounded-lg bg-muted/20 border border-border/50">
+            <div className={cn(
+              "flex items-center justify-center rounded-md p-1.5",
+              shelfColor, "text-white"
+            )}>
+              <device.icon className="h-4 w-4" />
+            </div>
+            <span className="text-xs font-medium flex-1">{device.label}</span>
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
@@ -188,7 +200,7 @@ export function SlotCapacityVisualEditor({ capacity, onChange, shelfColor }: Slo
               >
                 <Minus className="h-3 w-3" />
               </Button>
-              <span className="text-sm font-medium w-4 text-center">{capacity[device.key]}</span>
+              <span className="text-sm font-bold w-5 text-center">{capacity[device.key]}</span>
               <Button
                 variant="outline"
                 size="icon"
@@ -198,9 +210,17 @@ export function SlotCapacityVisualEditor({ capacity, onChange, shelfColor }: Slo
                 <Plus className="h-3 w-3" />
               </Button>
             </div>
-            <span className="text-[10px] text-muted-foreground">{device.label}</span>
           </div>
         ))}
+      </div>
+
+      {/* Total capacity summary */}
+      <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-primary/10 text-primary text-sm">
+        <span className="font-medium">Totale:</span>
+        <span>📱{capacity.smartphone}</span>
+        <span>📲{capacity.tablet}</span>
+        <span>💻{capacity.notebook}</span>
+        <span>🖥️{capacity.pc}</span>
       </div>
     </div>
   );
