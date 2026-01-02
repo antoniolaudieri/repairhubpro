@@ -287,11 +287,16 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
   }, [selectedPrinter, serviceUrl, environment]);
 
   const printTestLabel = useCallback(async (): Promise<boolean> => {
+    // Per 11354 (57x32mm): la stampante vede 32mm come width, 57mm come height
+    // Usiamo Rotation90 sull'oggetto per stampare in orizzontale
+    const labelWidth = 1.26;  // 32mm in pollici (lato corto)
+    const labelHeight = 2.24; // 57mm in pollici (lato lungo)
+    
     const testLabelXml = `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>Test Label</Description>
-    <Orientation>Landscape</Orientation>
+    <Orientation>Portrait</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -301,8 +306,8 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
         <Y>0</Y>
       </DYMOPoint>
       <Size>
-        <Width>2.24</Width>
-        <Height>1.26</Height>
+        <Width>${labelWidth}</Width>
+        <Height>${labelHeight}</Height>
       </Size>
     </DYMORect>
     <BorderColor>
@@ -339,7 +344,7 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
               </SolidColorBrush>
             </FillBrush>
           </Brushes>
-          <Rotation>Rotation0</Rotation>
+          <Rotation>Rotation90</Rotation>
           <OutlineThickness>1</OutlineThickness>
           <IsOutlined>False</IsOutlined>
           <BorderStyle>SolidLine</BorderStyle>
@@ -413,8 +418,8 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
               <Y>0.05</Y>
             </DYMOPoint>
             <Size>
-              <Width>2.14</Width>
-              <Height>1.16</Height>
+              <Width>${(labelHeight - 0.1).toFixed(2)}</Width>
+              <Height>${(labelWidth - 0.1).toFixed(2)}</Height>
             </Size>
           </ObjectLayout>
         </TextObject>

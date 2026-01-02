@@ -32,17 +32,19 @@ export interface ShelfLabelData {
 }
 
 // Label dimensions in inches for DesktopLabel format (Dymo Connect)
-// Per landscape: width è il lato lungo (57mm=2.24"), height è il lato corto (32mm=1.26")
+// 11354: 57x32mm - fisicamente largo 57mm, alto 32mm
+// La stampante Dymo tratta le etichette come "portrait" di default
+// quindi dobbiamo scambiare le dimensioni per ottenere l'orientamento corretto
 const LABEL_FORMATS: Record<LabelFormat, { 
-  widthInches: number; 
-  heightInches: number; 
+  physicalWidth: number;  // mm - lato lungo fisico
+  physicalHeight: number; // mm - lato corto fisico
   name: string;
   labelName: string;
 }> = {
-  '30252': { widthInches: 3.5, heightInches: 1.1, name: '30252 Address (89x28mm)', labelName: 'Address' },
-  '99012': { widthInches: 3.5, heightInches: 1.4, name: '99012 Large Address (89x36mm)', labelName: 'LargeAddress' },
-  '11354': { widthInches: 2.24, heightInches: 1.26, name: '11354 Multi-Purpose (57x32mm)', labelName: 'Small30332' },
-  '30336': { widthInches: 2.12, heightInches: 1.0, name: '30336 Small (54x25mm)', labelName: 'ReturnAddress' },
+  '30252': { physicalWidth: 89, physicalHeight: 28, name: '30252 Address (89x28mm)', labelName: 'Address' },
+  '99012': { physicalWidth: 89, physicalHeight: 36, name: '99012 Large Address (89x36mm)', labelName: 'LargeAddress' },
+  '11354': { physicalWidth: 57, physicalHeight: 32, name: '11354 Multi-Purpose (57x32mm)', labelName: 'Small30332' },
+  '30336': { physicalWidth: 54, physicalHeight: 25, name: '30336 Small (54x25mm)', labelName: 'ReturnAddress' },
 };
 
 export function getLabelFormats(): { value: LabelFormat; label: string }[] {
@@ -68,9 +70,22 @@ interface LabelLine {
   color?: { r: number; g: number; b: number };
 }
 
+// Converti mm in pollici
+function mmToInches(mm: number): number {
+  return mm / 25.4;
+}
+
 // Generate DesktopLabel XML for Dymo Connect
+// IMPORTANTE: Per stampare in orizzontale su Dymo LabelWriter, dobbiamo:
+// 1. Impostare le dimensioni del label con Width = lato CORTO, Height = lato LUNGO (come la stampante lo vede)
+// 2. Ruotare il contenuto di 90 gradi per visualizzarlo correttamente
 function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
-  const { widthInches, heightInches, labelName } = LABEL_FORMATS[format];
+  const { physicalWidth, physicalHeight, labelName } = LABEL_FORMATS[format];
+  
+  // La stampante Dymo vede l'etichetta in portrait (il lato corto è la "larghezza" per lei)
+  // Per ottenere output orizzontale, impostiamo le dimensioni "native" della stampante
+  const labelWidth = mmToInches(physicalHeight); // lato corto come width
+  const labelHeight = mmToInches(physicalWidth); // lato lungo come height
   
   // Build FormattedText with LineTextSpan elements
   const lineSpans = lines.map((line) => {
@@ -97,11 +112,16 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
           </LineTextSpan>`;
   }).join('\n');
 
+  // Per ruotare il contenuto usiamo Rotation90 sull'oggetto di testo
+  // Le coordinate dell'oggetto devono essere adattate alla rotazione
+  const objectWidth = labelHeight - 0.1; // occupa quasi tutta l'altezza (che è il lato lungo)
+  const objectHeight = labelWidth - 0.1; // occupa quasi tutta la larghezza (che è il lato corto)
+  
   return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>LabLinkRiparo Label</Description>
-    <Orientation>Landscape</Orientation>
+    <Orientation>Portrait</Orientation>
     <LabelName>${labelName}</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -111,8 +131,8 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
         <Y>0</Y>
       </DYMOPoint>
       <Size>
-        <Width>${widthInches}</Width>
-        <Height>${heightInches}</Height>
+        <Width>${labelWidth.toFixed(2)}</Width>
+        <Height>${labelHeight.toFixed(2)}</Height>
       </Size>
     </DYMORect>
     <BorderColor>
@@ -149,7 +169,7 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
               </SolidColorBrush>
             </FillBrush>
           </Brushes>
-          <Rotation>Rotation0</Rotation>
+          <Rotation>Rotation90</Rotation>
           <OutlineThickness>1</OutlineThickness>
           <IsOutlined>False</IsOutlined>
           <BorderStyle>SolidLine</BorderStyle>
@@ -173,8 +193,8 @@ ${lineSpans}
               <Y>0.05</Y>
             </DYMOPoint>
             <Size>
-              <Width>${(widthInches - 0.1).toFixed(2)}</Width>
-              <Height>${(heightInches - 0.1).toFixed(2)}</Height>
+              <Width>${objectWidth.toFixed(2)}</Width>
+              <Height>${objectHeight.toFixed(2)}</Height>
             </Size>
           </ObjectLayout>
         </TextObject>

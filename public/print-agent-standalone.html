@@ -310,12 +310,16 @@
             }
 
             // Label format: 11354 (57x32mm) - DesktopLabel format for Dymo Connect
-            // Width = 2.24" (57mm), Height = 1.26" (32mm)
+            // La stampante Dymo vede l'etichetta in portrait: Width = 32mm, Height = 57mm
+            // Usiamo Rotation90 sull'oggetto per stampare in orizzontale
+            const labelWidth = 1.26;  // 32mm in pollici (lato corto)
+            const labelHeight = 2.24; // 57mm in pollici (lato lungo)
+            
             const testLabel = `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>Test Label</Description>
-    <Orientation>Landscape</Orientation>
+    <Orientation>Portrait</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -325,8 +329,8 @@
         <Y>0</Y>
       </DYMOPoint>
       <Size>
-        <Width>2.24</Width>
-        <Height>1.26</Height>
+        <Width>${labelWidth}</Width>
+        <Height>${labelHeight}</Height>
       </Size>
     </DYMORect>
     <BorderColor>
@@ -363,7 +367,7 @@
               </SolidColorBrush>
             </FillBrush>
           </Brushes>
-          <Rotation>Rotation0</Rotation>
+          <Rotation>Rotation90</Rotation>
           <OutlineThickness>1</OutlineThickness>
           <IsOutlined>False</IsOutlined>
           <BorderStyle>SolidLine</BorderStyle>
@@ -437,8 +441,8 @@
               <Y>0.05</Y>
             </DYMOPoint>
             <Size>
-              <Width>2.14</Width>
-              <Height>1.16</Height>
+              <Width>${labelHeight - 0.1}</Width>
+              <Height>${labelWidth - 0.1}</Height>
             </Size>
           </ObjectLayout>
         </TextObject>
