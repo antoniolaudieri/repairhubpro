@@ -180,7 +180,7 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
                   </CardHeader>
                   
                   <CardContent className="space-y-3">
-                    {/* Mini Preview Grid */}
+                    {/* Mini Preview Grid with Merged Slots */}
                     <div className="rounded-lg bg-muted/30 p-2">
                       <div 
                         className="grid gap-0.5"
@@ -188,21 +188,53 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
                           gridTemplateColumns: `repeat(${Math.min(shelf.columns, 10)}, 1fr)` 
                         }}
                       >
-                        {Array.from({ length: Math.min(shelf.rows * shelf.columns, 30) }, (_, i) => {
-                          const slotNum = shelf.start_number + i;
-                          const isOccupied = occupiedSlots.some(o => o.shelfId === shelf.id && o.slot === slotNum);
-                          return (
-                            <div
-                              key={i}
-                              className={cn(
-                                "aspect-square rounded-sm transition-colors",
-                                isOccupied 
-                                  ? "bg-destructive/40" 
-                                  : colorClasses.bg
-                              )}
-                            />
-                          );
-                        })}
+                        {(() => {
+                          const elements: JSX.Element[] = [];
+                          const mergedSlots = shelf.mergedSlots || [];
+                          const maxSlots = Math.min(shelf.rows * shelf.columns, 30);
+                          let skipUntil = -1;
+                          
+                          for (let i = 0; i < maxSlots; i++) {
+                            const slotNum = shelf.start_number + i;
+                            
+                            // Skip slots that are part of a merge (not the start)
+                            if (slotNum <= skipUntil) continue;
+                            
+                            // Check if this slot is merged
+                            const mergeInfo = mergedSlots.find(m => m.startSlot === slotNum);
+                            const isOccupied = occupiedSlots.some(o => o.shelfId === shelf.id && o.slot === slotNum);
+                            
+                            if (mergeInfo) {
+                              // This is a merged slot
+                              skipUntil = slotNum + mergeInfo.span - 1;
+                              elements.push(
+                                <div
+                                  key={i}
+                                  className={cn(
+                                    "aspect-[2/1] rounded-sm transition-colors bg-gradient-to-r border border-white/30",
+                                    shelf.color,
+                                    isOccupied && "ring-1 ring-destructive"
+                                  )}
+                                  style={{ gridColumn: `span ${Math.min(mergeInfo.span, 10 - (i % shelf.columns))}` }}
+                                />
+                              );
+                            } else {
+                              // Regular slot
+                              elements.push(
+                                <div
+                                  key={i}
+                                  className={cn(
+                                    "aspect-square rounded-sm transition-colors",
+                                    isOccupied 
+                                      ? "bg-destructive/40" 
+                                      : colorClasses.bg
+                                  )}
+                                />
+                              );
+                            }
+                          }
+                          return elements;
+                        })()}
                       </div>
                       {shelf.rows * shelf.columns > 30 && (
                         <p className="text-[10px] text-muted-foreground text-center mt-1">

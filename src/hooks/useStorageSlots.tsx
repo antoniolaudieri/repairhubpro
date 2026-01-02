@@ -10,6 +10,11 @@ export interface StorageSlotsConfig {
 }
 
 // New multi-shelf config
+export interface MergedSlot {
+  startSlot: number;
+  span: number;
+}
+
 export interface ShelfConfig {
   id: string;
   name: string;
@@ -18,6 +23,7 @@ export interface ShelfConfig {
   columns: number;
   start_number: number;
   color: string;
+  mergedSlots?: MergedSlot[];
 }
 
 export interface MultiShelfConfig {

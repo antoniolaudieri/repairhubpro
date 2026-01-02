@@ -34,11 +34,27 @@ interface SlotData {
   };
 }
 
+interface MergedSlotInfo {
+  startSlot: number;
+  span: number;
+}
+
 interface ShelfMapViewProps {
   centroId: string;
   highlightSlot?: number | null;
   onSlotClick?: (slot: number, repair?: SlotData['repair']) => void;
   compact?: boolean;
+}
+
+interface ShelfConfig {
+  id: string;
+  name: string;
+  prefix: string;
+  rows: number;
+  columns: number;
+  start_number: number;
+  color: string;
+  mergedSlots?: MergedSlotInfo[];
 }
 
 export function ShelfMapView({ 
@@ -48,8 +64,9 @@ export function ShelfMapView({
   compact = false 
 }: ShelfMapViewProps) {
   const navigate = useNavigate();
-  const { getConfig, formatSlotNumber, getSlotsStats } = useStorageSlots(centroId);
+  const { getConfig, getMultiShelfConfig, formatSlotNumber, getSlotsStats } = useStorageSlots(centroId);
   const [config, setConfig] = useState<{ enabled: boolean; max_slots: number; prefix: string } | null>(null);
+  const [multiConfig, setMultiConfig] = useState<{ enabled: boolean; shelves: ShelfConfig[] } | null>(null);
   const [slots, setSlots] = useState<SlotData[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,6 +84,10 @@ export function ShelfMapView({
     setLoading(true);
     const cfg = await getConfig();
     setConfig(cfg);
+    
+    // Also load multi-shelf config for merged slots
+    const mCfg = await getMultiShelfConfig();
+    setMultiConfig(mCfg);
 
     if (cfg?.enabled && cfg.max_slots > 0) {
       // Get devices and repairs - simplified to avoid TS depth issues
@@ -132,6 +153,25 @@ export function ShelfMapView({
       else setColumns(Math.min(15, Math.ceil(Math.sqrt(cfg.max_slots))));
     }
     setLoading(false);
+  };
+
+  // Get merged slot info for a given slot number
+  const getMergedSlotInfo = (slotNum: number): { isMerged: boolean; isStart: boolean; span: number } => {
+    if (!multiConfig?.shelves) return { isMerged: false, isStart: false, span: 1 };
+    
+    // Find merged slots from all shelves
+    for (const shelf of multiConfig.shelves) {
+      const mergedSlots = shelf.mergedSlots || [];
+      for (const merge of mergedSlots) {
+        if (slotNum === merge.startSlot) {
+          return { isMerged: true, isStart: true, span: merge.span };
+        }
+        if (slotNum > merge.startSlot && slotNum < merge.startSlot + merge.span) {
+          return { isMerged: true, isStart: false, span: 0 };
+        }
+      }
+    }
+    return { isMerged: false, isStart: false, span: 1 };
   };
 
   const handleSearch = () => {
@@ -324,75 +364,122 @@ export function ShelfMapView({
         }}
       >
         <AnimatePresence>
-          {slots.map((slotData, index) => {
-            const isHighlighted = highlightSlot === slotData.slot;
-            const isSearchResult = searchResult === slotData.slot;
-            const isOccupied = !!slotData.repair;
+          {(() => {
+            const elements: JSX.Element[] = [];
+            let skipUntil = -1;
+            
+            slots.forEach((slotData, index) => {
+              // Skip slots that are part of a merged group (not the start)
+              if (slotData.slot <= skipUntil) return;
+              
+              const mergeInfo = getMergedSlotInfo(slotData.slot);
+              const isHighlighted = highlightSlot === slotData.slot;
+              const isSearchResult = searchResult === slotData.slot;
+              const isOccupied = !!slotData.repair;
+              
+              // For merged slots, collect repairs from all slots in the merge
+              let mergedRepairs: typeof slotData.repair[] = [];
+              if (mergeInfo.isMerged && mergeInfo.isStart) {
+                skipUntil = slotData.slot + mergeInfo.span - 1;
+                for (let i = 0; i < mergeInfo.span; i++) {
+                  const s = slots.find(s => s.slot === slotData.slot + i);
+                  if (s?.repair) mergedRepairs.push(s.repair);
+                }
+              }
 
-            return (
-              <motion.div
-                key={slotData.slot}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ 
-                  opacity: 1, 
-                  scale: 1,
-                  ...(isHighlighted || isSearchResult ? {
-                    scale: [1, 1.1, 1],
-                    transition: { 
-                      scale: { repeat: Infinity, duration: 1.5 }
+              elements.push(
+                <motion.div
+                  key={slotData.slot}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ 
+                    opacity: 1, 
+                    scale: 1,
+                    ...(isHighlighted || isSearchResult ? {
+                      scale: [1, 1.1, 1],
+                      transition: { 
+                        scale: { repeat: Infinity, duration: 1.5 }
+                      }
+                    } : {})
+                  }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ delay: index * 0.01, duration: 0.2 }}
+                  whileHover={{ scale: 1.02, zIndex: 10 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => handleSlotClick(slotData)}
+                  style={mergeInfo.isMerged && mergeInfo.isStart ? { 
+                    gridColumn: `span ${mergeInfo.span}` 
+                  } : undefined}
+                  className={`
+                    relative rounded-lg cursor-pointer
+                    bg-gradient-to-br ${getSlotColor(slotData, isHighlighted, isSearchResult)}
+                    shadow-md hover:shadow-xl transition-shadow
+                    flex flex-col items-center justify-center
+                    min-w-[40px] min-h-[40px]
+                    ${mergeInfo.isMerged && mergeInfo.isStart ? 'aspect-auto h-full' : 'aspect-square'}
+                    ${isHighlighted || isSearchResult ? 'ring-4 ring-white dark:ring-slate-900 ring-offset-2' : ''}
+                    ${isOccupied || mergedRepairs.length > 0 ? 'text-white' : 'text-slate-600 dark:text-slate-400'}
+                    ${mergeInfo.isMerged && mergeInfo.isStart ? 'border-2 border-dashed border-white/40' : ''}
+                  `}
+                >
+                  {/* Slot number(s) */}
+                  <span className="text-[10px] font-bold opacity-80 absolute top-0.5 left-1">
+                    {mergeInfo.isMerged && mergeInfo.isStart 
+                      ? `${formatSlotNumber(slotData.slot, config.prefix)}-${formatSlotNumber(slotData.slot + mergeInfo.span - 1, config.prefix)}`
+                      : formatSlotNumber(slotData.slot, config.prefix)
                     }
-                  } : {})
-                }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ delay: index * 0.01, duration: 0.2 }}
-                whileHover={{ scale: 1.05, zIndex: 10 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleSlotClick(slotData)}
-                className={`
-                  relative aspect-square rounded-lg cursor-pointer
-                  bg-gradient-to-br ${getSlotColor(slotData, isHighlighted, isSearchResult)}
-                  shadow-md hover:shadow-xl transition-shadow
-                  flex flex-col items-center justify-center
-                  min-w-[40px] min-h-[40px]
-                  ${isHighlighted || isSearchResult ? 'ring-4 ring-white dark:ring-slate-900 ring-offset-2' : ''}
-                  ${isOccupied ? 'text-white' : 'text-slate-600 dark:text-slate-400'}
-                `}
-              >
-                {/* Slot number */}
-                <span className="text-[10px] font-bold opacity-80 absolute top-0.5 left-1">
-                  {formatSlotNumber(slotData.slot, config.prefix)}
-                </span>
+                  </span>
 
-                {/* Content */}
-                {isOccupied ? (
-                  <>
-                    <span className="text-lg sm:text-2xl">
-                      {getDeviceIcon(slotData.repair!.device_type)}
-                    </span>
-                    <span className="text-[8px] sm:text-[10px] font-medium truncate max-w-full px-0.5 text-center leading-tight mt-0.5">
-                      {slotData.repair!.device_brand}
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-lg opacity-30">·</span>
-                )}
+                  {/* Content for merged slots */}
+                  {mergeInfo.isMerged && mergeInfo.isStart ? (
+                    mergedRepairs.length > 0 ? (
+                      <div className="flex items-center gap-1 flex-wrap justify-center">
+                        {mergedRepairs.slice(0, 3).map((r, i) => (
+                          <span key={i} className="text-lg sm:text-xl">
+                            {getDeviceIcon(r?.device_type || '')}
+                          </span>
+                        ))}
+                        {mergedRepairs.length > 3 && (
+                          <span className="text-[10px] font-bold">+{mergedRepairs.length - 3}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-lg opacity-30">⬜</span>
+                    )
+                  ) : (
+                    /* Regular slot content */
+                    isOccupied ? (
+                      <>
+                        <span className="text-lg sm:text-2xl">
+                          {getDeviceIcon(slotData.repair!.device_type)}
+                        </span>
+                        <span className="text-[8px] sm:text-[10px] font-medium truncate max-w-full px-0.5 text-center leading-tight mt-0.5">
+                          {slotData.repair!.device_brand}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-lg opacity-30">·</span>
+                    )
+                  )}
 
-                {/* Highlight pulse effect */}
-                {(isHighlighted || isSearchResult) && (
-                  <motion.div
-                    className="absolute inset-0 rounded-lg bg-white/30"
-                    animate={{ opacity: [0.3, 0, 0.3] }}
-                    transition={{ duration: 1.5, repeat: Infinity }}
-                  />
-                )}
+                  {/* Highlight pulse effect */}
+                  {(isHighlighted || isSearchResult) && (
+                    <motion.div
+                      className="absolute inset-0 rounded-lg bg-white/30"
+                      animate={{ opacity: [0.3, 0, 0.3] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                    />
+                  )}
 
-                {/* Glow effect for occupied slots */}
-                {isOccupied && (
-                  <div className="absolute inset-0 rounded-lg bg-gradient-to-t from-black/20 to-transparent" />
-                )}
-              </motion.div>
-            );
-          })}
+                  {/* Glow effect for occupied slots */}
+                  {(isOccupied || mergedRepairs.length > 0) && (
+                    <div className="absolute inset-0 rounded-lg bg-gradient-to-t from-black/20 to-transparent" />
+                  )}
+                </motion.div>
+              );
+            });
+            
+            return elements;
+          })()}
         </AnimatePresence>
       </div>
 
