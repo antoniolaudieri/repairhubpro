@@ -224,7 +224,7 @@ export function StorageSlotWidget({
                     animate={isCurrentSlot ? { scale: [1, 1.15, 1] } : {}}
                     transition={isCurrentSlot ? { duration: 1.5, repeat: Infinity } : {}}
                     className={cn(
-                      "rounded-sm transition-colors bg-gradient-to-r border border-white/30 flex items-center justify-center",
+                      "rounded-sm transition-colors bg-gradient-to-r border border-white/30 flex items-center justify-center overflow-hidden p-0.5",
                       shelf.color,
                       isCurrentSlot && "ring-2 ring-offset-1 ring-offset-background ring-foreground/50"
                     )}
@@ -234,13 +234,15 @@ export function StorageSlotWidget({
                     }}
                   >
                     {isCurrentSlot && deviceBrand && (
-                      <div className="w-4 h-4 rounded-full overflow-hidden bg-white/30">
-                        <DeviceImage 
-                          brand={deviceBrand}
-                          model={deviceModel}
-                          deviceType={deviceType}
-                          size="sm"
-                          className="w-full h-full object-contain"
+                      <div className="w-full h-full flex items-center justify-center bg-white/20 rounded-sm">
+                        <img 
+                          src={`https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/${deviceBrand.toLowerCase()}.svg`}
+                          alt={deviceBrand}
+                          className="w-3 h-3 opacity-90"
+                          style={{ filter: 'brightness(0) invert(1)' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                       </div>
                     )}
@@ -253,7 +255,7 @@ export function StorageSlotWidget({
                     animate={isCurrentSlot ? { scale: [1, 1.15, 1] } : {}}
                     transition={isCurrentSlot ? { duration: 1.5, repeat: Infinity } : {}}
                     className={cn(
-                      "aspect-square rounded-sm transition-colors flex items-center justify-center",
+                      "aspect-square rounded-sm transition-colors flex items-center justify-center overflow-hidden",
                       isCurrentSlot 
                         ? cn("bg-gradient-to-br ring-2 ring-offset-1 ring-offset-background", shelf.color, "ring-foreground/50")
                         : isOccupied 
@@ -262,13 +264,15 @@ export function StorageSlotWidget({
                     )}
                   >
                     {isCurrentSlot && deviceBrand && (
-                      <div className="w-4 h-4 rounded-full overflow-hidden bg-white/30">
-                        <DeviceImage 
-                          brand={deviceBrand}
-                          model={deviceModel}
-                          deviceType={deviceType}
-                          size="sm"
-                          className="w-full h-full object-contain"
+                      <div className="w-full h-full flex items-center justify-center bg-white/20 rounded-sm p-0.5">
+                        <img 
+                          src={`https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/${deviceBrand.toLowerCase()}.svg`}
+                          alt={deviceBrand}
+                          className="w-3 h-3 opacity-90"
+                          style={{ filter: 'brightness(0) invert(1)' }}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                       </div>
                     )}
