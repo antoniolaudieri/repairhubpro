@@ -309,23 +309,23 @@
                 return;
             }
 
-            // Label format: 57x32mm Address label - formato standard Dymo
+            // Label format: 11354 (57x32mm) - dimensioni in pollici, formato orizzontale
             const testLabel = `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>DYMO Label</Description>
     <Orientation>Landscape</Orientation>
-    <LabelName>Address</LabelName>
+    <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
     <DYMORect>
       <DYMOPoint>
-        <X>0.1</X>
+        <X>0.05</X>
         <Y>0.05</Y>
       </DYMOPoint>
       <Size>
-        <Width>2.1</Width>
-        <Height>1.15</Height>
+        <Width>1.18</Width>
+        <Height>2.15</Height>
       </Size>
     </DYMORect>
     <BorderColor>
@@ -383,7 +383,7 @@
                 <Text>TEST STAMPA</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>14</FontSize>
+                  <FontSize>12</FontSize>
                   <IsBold>True</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -400,7 +400,7 @@
                 <Text>LabLinkRiparo</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>10</FontSize>
+                  <FontSize>9</FontSize>
                   <IsBold>False</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -432,12 +432,12 @@
           </FormattedText>
           <ObjectLayout>
             <DYMOPoint>
-              <X>0.1</X>
+              <X>0.05</X>
               <Y>0.05</Y>
             </DYMOPoint>
             <Size>
-              <Width>2.1</Width>
-              <Height>1.15</Height>
+              <Width>1.18</Width>
+              <Height>2.15</Height>
             </Size>
           </ObjectLayout>
         </TextObject>
