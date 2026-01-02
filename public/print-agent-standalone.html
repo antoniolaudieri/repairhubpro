@@ -720,20 +720,27 @@
             
             // Dymo 11354: 57mm x 32mm
             // TRUCCO: Per stampare orizzontale, usiamo Portrait con dimensioni INVERTITE
-            // Width = lato CORTO (32mm), Height = lato LUNGO (57mm)
-            const labelWidth = 1.26;  // 32mm in pollici (lato CORTO)
-            const labelHeight = 2.24; // 57mm in pollici (lato LUNGO)
+            // Width = lato CORTO (32mm) = altezza fisica quando stampato orizzontale
+            // Height = lato LUNGO (57mm) = larghezza fisica quando stampato orizzontale
+            const labelWidth = 1.26;  // 32mm in pollici - diventa ALTEZZA sul foglio
+            const labelHeight = 2.24; // 57mm in pollici - diventa LARGHEZZA sul foglio
             
-            // Margini
-            const marginLeft = 0.05;
-            const marginTop = 0.05;
+            // Con Portrait + dimensioni invertite:
+            // X controlla posizione VERTICALE (0=alto, 1.26=basso)
+            // Y controlla posizione ORIZZONTALE (0=sinistra, 2.24=destra)
             
-            // QR in basso, più piccolo
-            const qrSize = trackingUrl ? 0.55 : 0;
+            const margin = 0.05;
+            const qrSize = trackingUrl ? 0.95 : 0; // QR più grande per essere visibile
             
-            // Area testo: sopra il QR
-            const textWidth = labelWidth - marginLeft * 2;
-            const textHeight = trackingUrl ? (labelHeight - qrSize - marginTop - 0.1) : (labelHeight - marginTop * 2);
+            // Testo a SINISTRA: Y piccolo, usa gran parte della larghezza
+            const textX = margin;
+            const textY = margin;
+            const textW = labelWidth - margin * 2; // tutta l'altezza
+            const textH = trackingUrl ? (labelHeight - qrSize - margin * 2) : (labelHeight - margin * 2);
+            
+            // QR a DESTRA: Y grande, centrato verticalmente
+            const qrX = (labelWidth - qrSize) / 2; // centrato in altezza
+            const qrY = labelHeight - qrSize - margin; // tutto a destra
             
             // Genera QR code come immagine base64
             let qrObject = '';
@@ -742,9 +749,6 @@
                 const qrBase64 = await generateQRCodeDataUrl(trackingUrl);
                 if (qrBase64) {
                     log('QR code generato con successo');
-                    // Posizione QR: in basso, centrato orizzontalmente
-                    const qrX = (labelWidth - qrSize) / 2;
-                    const qrY = labelHeight - qrSize - 0.05;
                     
                     qrObject = `
         <ImageObject>
@@ -937,12 +941,12 @@
           </FormattedText>
           <ObjectLayout>
             <DYMOPoint>
-              <X>${marginLeft.toFixed(3)}</X>
-              <Y>${marginTop.toFixed(3)}</Y>
+              <X>${textX.toFixed(3)}</X>
+              <Y>${textY.toFixed(3)}</Y>
             </DYMOPoint>
             <Size>
-              <Width>${textWidth.toFixed(3)}</Width>
-              <Height>${textHeight.toFixed(3)}</Height>
+              <Width>${textW.toFixed(3)}</Width>
+              <Height>${textH.toFixed(3)}</Height>
             </Size>
           </ObjectLayout>
         </TextObject>${qrObject}
