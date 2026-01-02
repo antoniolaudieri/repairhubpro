@@ -1171,6 +1171,9 @@ export default function RepairDetail() {
                   centroId={repair.customer.centro_id}
                   currentSlot={repair.storage_slot}
                   onSlotAssigned={(slot) => setRepair({ ...repair, storage_slot: slot || null })}
+                  deviceBrand={repair.device.brand}
+                  deviceModel={repair.device.model}
+                  deviceType={repair.device.device_type}
                 />
               </motion.div>
             )}
