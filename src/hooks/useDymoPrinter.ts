@@ -287,16 +287,17 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
   }, [selectedPrinter, serviceUrl, environment]);
 
   const printTestLabel = useCallback(async (): Promise<boolean> => {
-    // Per 11354 (57x32mm) - Landscape
-    // Width = lato lungo (57mm = 2.24"), Height = lato corto (32mm = 1.26")
-    const labelWidth = 2.24;
-    const labelHeight = 1.26;
+    // Per 11354 (57x32mm)
+    // INVERTITO: Width = lato CORTO (32mm = 1.26"), Height = lato LUNGO (57mm = 2.24")
+    // Questo forza Dymo a stampare in orizzontale!
+    const labelWidth = 1.26;  // 32mm in pollici (lato corto)
+    const labelHeight = 2.24; // 57mm in pollici (lato lungo)
     
     const testLabelXml = `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>Test Label</Description>
-    <Orientation>Landscape</Orientation>
+    <Orientation>Portrait</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -396,7 +397,7 @@ export function useDymoPrinter(): UseDymoPrinterReturn {
             </LineTextSpan>
             <LineTextSpan>
               <TextSpan>
-                <Text>${new Date().toLocaleString('it-IT')}</Text>
+                <Text>ORIZZONTALE</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
                   <FontSize>7</FontSize>
