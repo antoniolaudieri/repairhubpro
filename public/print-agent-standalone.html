@@ -743,16 +743,14 @@
             const qrX = (labelWidth - qrSize) / 2;  // centrato verticalmente
             const qrY = labelHeight - qrSize - margin;  // allineato a destra
             
-            // Genera QR code come immagine base64
+            // Genera QR code come BarcodeObject nativo Dymo
             let qrObject = '';
             if (trackingUrl) {
                 log('Generazione QR code per: ' + trackingUrl);
-                const qrBase64 = await generateQRCodeDataUrl(trackingUrl);
-                if (qrBase64) {
-                    log('QR code generato con successo');
-                    
-                    qrObject = `
-        <ImageObject>
+                
+                // Usa BarcodeObject nativo di Dymo invece di ImageObject
+                qrObject = `
+        <BarcodeObject>
           <Name>QRCode</Name>
           <Brushes>
             <BackgroundBrush>
@@ -767,26 +765,28 @@
             </BorderBrush>
             <StrokeBrush>
               <SolidColorBrush>
-                <Color A="0" R="0" G="0" B="0"></Color>
+                <Color A="1" R="0" G="0" B="0"></Color>
               </SolidColorBrush>
             </StrokeBrush>
             <FillBrush>
               <SolidColorBrush>
-                <Color A="0" R="0" G="0" B="0"></Color>
+                <Color A="1" R="0" G="0" B="0"></Color>
               </SolidColorBrush>
             </FillBrush>
           </Brushes>
           <Rotation>Rotation0</Rotation>
-          <OutlineThickness>0</OutlineThickness>
+          <OutlineThickness>1</OutlineThickness>
           <IsOutlined>False</IsOutlined>
           <BorderStyle>SolidLine</BorderStyle>
           <Margin>
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
-          <Data>${qrBase64}</Data>
-          <ScaleMode>Uniform</ScaleMode>
+          <BarcodeFormat>QRCode</BarcodeFormat>
+          <Data>${escapeXml(trackingUrl)}</Data>
           <HorizontalAlignment>Center</HorizontalAlignment>
           <VerticalAlignment>Middle</VerticalAlignment>
+          <Size>Medium</Size>
+          <TextPosition>None</TextPosition>
           <ObjectLayout>
             <DYMOPoint>
               <X>${qrX.toFixed(3)}</X>
@@ -797,10 +797,9 @@
               <Height>${qrSize.toFixed(3)}</Height>
             </Size>
           </ObjectLayout>
-        </ImageObject>`;
-                } else {
-                    log('QR code fallito, stampa senza QR', 'warning');
-                }
+        </BarcodeObject>`;
+                
+                log('QR code BarcodeObject creato');
             }
             
             return `<?xml version="1.0" encoding="utf-8"?>
