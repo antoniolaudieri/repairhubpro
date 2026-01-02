@@ -719,28 +719,29 @@
             const trackingUrl = data.trackingUrl || (repairId ? `https://lablinkriparo.lovable.app/centro/lavori/${repairId}` : '');
             
             // Dymo 11354: 57mm x 32mm
-            // TRUCCO: Per stampare orizzontale, usiamo Portrait con dimensioni INVERTITE
-            // Width = lato CORTO (32mm) = altezza fisica quando stampato orizzontale
-            // Height = lato LUNGO (57mm) = larghezza fisica quando stampato orizzontale
-            const labelWidth = 1.26;  // 32mm in pollici - diventa ALTEZZA sul foglio
-            const labelHeight = 2.24; // 57mm in pollici - diventa LARGHEZZA sul foglio
+            // Con Portrait + dimensioni invertite per stampare orizzontale:
+            // labelWidth (1.26") = 32mm = ALTEZZA fisica dell'etichetta
+            // labelHeight (2.24") = 57mm = LARGHEZZA fisica dell'etichetta
+            const labelWidth = 1.26;
+            const labelHeight = 2.24;
             
-            // Con Portrait + dimensioni invertite:
-            // X controlla posizione VERTICALE (0=alto, 1.26=basso)
-            // Y controlla posizione ORIZZONTALE (0=sinistra, 2.24=destra)
+            // Sistema coordinate Dymo con Portrait invertito:
+            // X = posizione dall'alto (0 = bordo superiore)
+            // Y = posizione da sinistra (0 = bordo sinistro)
             
-            const margin = 0.05;
-            const qrSize = trackingUrl ? 0.95 : 0; // QR più grande per essere visibile
+            // Layout: Testo a sinistra, QR a destra
+            const qrSize = trackingUrl ? 0.85 : 0;
+            const margin = 0.08;
             
-            // Testo a SINISTRA: Y piccolo, usa gran parte della larghezza
+            // Testo: occupa tutta l'altezza, larghezza = spazio rimanente dopo QR
             const textX = margin;
             const textY = margin;
-            const textW = labelWidth - margin * 2; // tutta l'altezza
-            const textH = trackingUrl ? (labelHeight - qrSize - margin * 2) : (labelHeight - margin * 2);
+            const textW = labelWidth - margin * 2;
+            const textH = trackingUrl ? (labelHeight - qrSize - margin * 3) : (labelHeight - margin * 2);
             
-            // QR a DESTRA: Y grande, centrato verticalmente
-            const qrX = (labelWidth - qrSize) / 2; // centrato in altezza
-            const qrY = labelHeight - qrSize - margin; // tutto a destra
+            // QR: in basso a destra dell'etichetta
+            const qrX = (labelWidth - qrSize) / 2;  // centrato verticalmente
+            const qrY = labelHeight - qrSize - margin;  // allineato a destra
             
             // Genera QR code come immagine base64
             let qrObject = '';
