@@ -10,6 +10,8 @@ interface RepairLabelData {
   deviceType: string;
   issue: string;
   date: string;
+  storageSlot?: string;
+  trackingUrl?: string;
 }
 
 interface DeviceLabelData {
