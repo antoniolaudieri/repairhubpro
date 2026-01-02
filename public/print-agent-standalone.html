@@ -712,10 +712,18 @@
             const repairId = data.repairId || '';
             const shortId = repairId ? repairId.substring(0, 8).toUpperCase() : '';
             const slot = data.storageSlot ? ` [${data.storageSlot}]` : '';
+            
+            // Line1: ID + Slot
             const line1 = shortId ? `#${shortId}${slot}` : (data.deviceBrand || 'ETICHETTA');
-            const line2 = (data.customerName || '').substring(0, 20);
-            const line3 = data.deviceBrand ? `${data.deviceBrand} ${data.deviceModel || ''}`.trim().substring(0, 25) : '';
-            const line4 = (data.issue || data.condition || '').substring(0, 30);
+            // Line2: Nome cliente
+            const line2 = data.customerName || '';
+            // Line3: Brand + Model completo (non troncare!)
+            const line3 = data.deviceBrand ? `${data.deviceBrand} ${data.deviceModel || ''}`.trim() : '';
+            // Line4: Problema + Data
+            const issueText = data.issue || data.condition || '';
+            const dateText = data.date ? ` - ${data.date}` : '';
+            const line4 = issueText + dateText;
+            
             const trackingUrl = data.trackingUrl || (repairId ? `https://lablinkriparo.lovable.app/centro/lavori/${repairId}` : '');
             
             // Dymo 11354: 57mm x 32mm
@@ -743,22 +751,22 @@
             const qrX = (labelWidth - qrSize) / 2;  // centrato verticalmente
             const qrY = labelHeight - qrSize - margin;  // allineato a destra
             
-            // Genera QR code come ImageObject con immagine PNG base64
+            // Genera QR code come ImageObject
             let qrObject = '';
             if (trackingUrl) {
                 log('Generazione QR code per: ' + trackingUrl);
                 const qrBase64 = await generateQRCodeDataUrl(trackingUrl);
                 if (qrBase64) {
-                    log('QR code generato con successo');
+                    log('QR code generato, lunghezza base64: ' + qrBase64.length);
                     
-                    // ImageObject con struttura corretta per Dymo
+                    // ImageObject semplificato basato su esempi funzionanti
                     qrObject = `
         <ImageObject>
           <Name>QRCode</Name>
           <Brushes>
             <BackgroundBrush>
               <SolidColorBrush>
-                <Color A="1" R="1" G="1" B="1"></Color>
+                <Color A="0" R="0" G="0" B="0"></Color>
               </SolidColorBrush>
             </BackgroundBrush>
             <BorderBrush>
@@ -786,6 +794,7 @@
           </Margin>
           <Data>${qrBase64}</Data>
           <ScaleMode>Uniform</ScaleMode>
+          <BorderColor Alpha="0" Red="0" Green="0" Blue="0" />
           <HorizontalAlignment>Center</HorizontalAlignment>
           <VerticalAlignment>Middle</VerticalAlignment>
           <ObjectLayout>
