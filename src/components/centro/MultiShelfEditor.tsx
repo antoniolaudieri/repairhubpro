@@ -18,7 +18,8 @@ import {
   Check,
   X,
   Merge,
-  Unlink
+  Unlink,
+  Copy
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -104,6 +105,20 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
     });
   };
 
+  const handleDuplicateShelf = (shelf: ShelfConfig) => {
+    const newShelf: ShelfConfig = {
+      ...shelf,
+      id: crypto.randomUUID(),
+      name: `${shelf.name} (copia)`,
+      prefix: shelf.prefix.length < 5 ? `${shelf.prefix}2` : shelf.prefix,
+    };
+    onChange({
+      ...config,
+      shelves: [...config.shelves, newShelf],
+    });
+    toast.success("Scaffale duplicato");
+  };
+
   const getShelfOccupancy = (shelfId: string) => {
     const shelf = config.shelves.find(s => s.id === shelfId);
     if (!shelf) return { occupied: 0, total: 0 };
@@ -164,14 +179,25 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
                             setEditingShelf(shelf);
                             setIsCreating(false);
                           }}
+                          title="Modifica"
                         >
                           <Edit3 className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-7 w-7"
+                          onClick={() => handleDuplicateShelf(shelf)}
+                          title="Duplica"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-7 w-7 text-destructive hover:text-destructive"
                           onClick={() => handleDeleteShelf(shelf.id)}
+                          title="Elimina"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
