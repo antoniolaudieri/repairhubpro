@@ -20,19 +20,10 @@ import {
   X,
   Merge,
   Copy,
-  Move,
-  Settings,
-  Play
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
-import { 
-  VisualSlotEditor, 
-  SlotData, 
-  mergedSlotsToSlotData, 
-  slotDataToMergedSlots 
-} from "./VisualSlotEditor";
 import { SlotCapacityVisualEditor } from "./SlotCapacityVisualEditor";
-import { SlotFillSimulator } from "./SlotFillSimulator";
 
 // Merged slot: defines a slot that spans multiple columns
 export interface MergedSlot {
@@ -86,7 +77,6 @@ interface MultiShelfEditorProps {
 export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: MultiShelfEditorProps) {
   const [editingShelf, setEditingShelf] = useState<ShelfConfig | null>(null);
   const [isCreating, setIsCreating] = useState(false);
-  const [simulatingShelf, setSimulatingShelf] = useState<ShelfConfig | null>(null);
 
   const handleAddShelf = () => {
     const newShelf: ShelfConfig = {
@@ -212,15 +202,6 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
                           title="Duplica"
                         >
                           <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-primary hover:text-primary"
-                          onClick={() => setSimulatingShelf(shelf)}
-                          title="Simula riempimento"
-                        >
-                          <Play className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -368,20 +349,6 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
         isCreating={isCreating}
       />
 
-      {/* Simulator Dialog */}
-      <Dialog open={simulatingShelf !== null} onOpenChange={(open) => !open && setSimulatingShelf(null)}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="sr-only">Simulatore Riempimento</DialogTitle>
-          </DialogHeader>
-          {simulatingShelf && (
-            <SlotFillSimulator 
-              shelf={simulatingShelf} 
-              onClose={() => setSimulatingShelf(null)} 
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
@@ -396,55 +363,20 @@ interface ShelfEditorDialogProps {
 
 function ShelfEditorDialog({ shelf, isOpen, onClose, onSave, isCreating }: ShelfEditorDialogProps) {
   const [formData, setFormData] = useState<ShelfConfig | null>(null);
-  const [slotData, setSlotData] = useState<SlotData[]>([]);
-  const [activeTab, setActiveTab] = useState<string>("settings");
 
   // Reset form when shelf changes
   useEffect(() => {
     if (shelf) {
       setFormData({ ...shelf, mergedSlots: shelf.mergedSlots || [] });
-      setSlotData(
-        mergedSlotsToSlotData(
-          shelf.rows,
-          shelf.columns,
-          shelf.start_number,
-          shelf.mergedSlots || []
-        )
-      );
-      setActiveTab("settings");
     } else {
       setFormData(null);
-      setSlotData([]);
     }
   }, [shelf]);
-
-  // Regenerate slot data when grid dimensions change
-  useEffect(() => {
-    if (formData) {
-      const newSlotData = mergedSlotsToSlotData(
-        formData.rows,
-        formData.columns,
-        formData.start_number,
-        formData.mergedSlots || []
-      );
-      setSlotData(newSlotData);
-    }
-  }, [formData?.rows, formData?.columns, formData?.start_number]);
-
-  // Update merged slots when slot data changes
-  const handleSlotDataChange = (newSlotData: SlotData[]) => {
-    setSlotData(newSlotData);
-    if (formData) {
-      const mergedSlots = slotDataToMergedSlots(newSlotData);
-      setFormData({ ...formData, mergedSlots });
-    }
-  };
   
   if (!formData) return null;
 
   const totalSlots = formData.rows * formData.columns;
   const colorClasses = getColorClasses(formData.color);
-  const mergedSlots = formData.mergedSlots || [];
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -560,34 +492,40 @@ function ShelfEditorDialog({ shelf, isOpen, onClose, onSave, isCreating }: Shelf
               </div>
             </div>
 
-            {/* Right Column - Visual Slot Editor */}
+            {/* Right Column - Preview */}
             <div className="space-y-4">
-              <Label className="flex items-center gap-2">
-                <Move className="h-4 w-4" />
-                Editor Visuale Slot
-              </Label>
+              <Label>Anteprima Slot</Label>
               
-              <VisualSlotEditor
-                rows={formData.rows}
-                columns={formData.columns}
-                startNumber={formData.start_number}
-                prefix={formData.prefix}
-                color={formData.color}
-                colorClasses={colorClasses}
-                slots={slotData}
-                onChange={handleSlotDataChange}
-              />
+              <div className="rounded-lg bg-muted/30 p-3">
+                <div 
+                  className="grid gap-1"
+                  style={{ 
+                    gridTemplateColumns: `repeat(${Math.min(formData.columns, 10)}, 1fr)` 
+                  }}
+                >
+                  {Array.from({ length: Math.min(formData.rows * formData.columns, 50) }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "aspect-square rounded-sm bg-gradient-to-br flex items-center justify-center text-[8px] text-white/80 font-mono",
+                        formData.color
+                      )}
+                    >
+                      {formData.prefix}{formData.start_number + i}
+                    </div>
+                  ))}
+                </div>
+                {formData.rows * formData.columns > 50 && (
+                  <p className="text-xs text-muted-foreground text-center mt-2">
+                    +{formData.rows * formData.columns - 50} slot
+                  </p>
+                )}
+              </div>
               
-              <div className="flex items-center justify-center gap-2 flex-wrap">
+              <div className="flex items-center justify-center">
                 <Badge className={cn("bg-gradient-to-r text-white border-0", formData.color)}>
                   {totalSlots} slot totali
                 </Badge>
-                {mergedSlots.length > 0 && (
-                  <Badge variant="secondary" className="text-xs">
-                    <Merge className="h-3 w-3 mr-1" />
-                    {mergedSlots.length} slot uniti
-                  </Badge>
-                )}
               </div>
             </div>
           </div>
