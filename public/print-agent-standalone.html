@@ -599,7 +599,15 @@
             await updateJobStatus(job.id, 'printing');
 
             try {
-                const labelXml = job.label_xml || await generateLabelXml(job);
+                // IMPORTANTE: se c'è label_xml usalo, altrimenti genera
+                let labelXml;
+                if (job.label_xml) {
+                    labelXml = job.label_xml;
+                } else {
+                    labelXml = await generateLabelXml(job);
+                }
+                
+                log('Generato XML etichetta, invio a stampante...');
                 const success = await printLabel(labelXml, job.copies || 1);
 
                 if (success) {
@@ -663,31 +671,41 @@
             const shortId = repairId ? repairId.substring(0, 8).toUpperCase() : '';
             const slot = data.storageSlot ? ` [${data.storageSlot}]` : '';
             const line1 = shortId ? `#${shortId}${slot}` : (data.deviceBrand || 'ETICHETTA');
-            const line2 = (data.customerName || '').substring(0, 20);
-            const line3 = data.deviceBrand ? `${data.deviceBrand} ${data.deviceModel || ''}`.trim().substring(0, 25) : '';
-            const line4 = (data.issue || data.condition || '').substring(0, 30);
+            const line2 = (data.customerName || '').substring(0, 25);
+            const line3 = data.deviceBrand ? `${data.deviceBrand} ${data.deviceModel || ''}`.trim().substring(0, 30) : '';
+            const line4 = (data.issue || data.condition || '').substring(0, 35);
             const trackingUrl = data.trackingUrl || (repairId ? `https://lablinkriparo.lovable.app/centro/lavori/${repairId}` : '');
             
             // Dymo 11354 Multi-Purpose: 57mm x 32mm
-            // INVERTITO: Width = lato CORTO, Height = lato LUNGO
-            const labelWidth = 1.26;  // 32mm in pollici (lato CORTO)
-            const labelHeight = 2.24; // 57mm in pollici (lato LUNGO)
+            // CORRETTO: Width = 57mm (2.24"), Height = 32mm (1.26") - orientamento landscape
+            const labelWidth = 2.24;  // 57mm in pollici 
+            const labelHeight = 1.26; // 32mm in pollici
             
             // Margini di sicurezza
-            const marginTop = 0.12;
-            const marginLeft = 0.1;
-            const marginRight = 0.1;
+            const marginTop = 0.06;
+            const marginLeft = 0.06;
+            const marginRight = 0.06;
+            const marginBottom = 0.06;
             
-            // QR code posizione a destra
-            const qrSize = trackingUrl ? 0.85 : 0;
-            const textWidth = labelWidth - marginLeft - marginRight - (trackingUrl ? qrSize + 0.08 : 0);
-            const textHeight = labelHeight - marginTop - 0.12;
+            // QR code a destra (quadrato, quindi usa l'altezza disponibile)
+            const qrSize = trackingUrl ? 0.95 : 0;
+            const qrMargin = trackingUrl ? 0.08 : 0;
             
-            // Genera QR code come immagine
+            // Testo a sinistra
+            const textWidth = labelWidth - marginLeft - marginRight - (trackingUrl ? qrSize + qrMargin : 0);
+            const textHeight = labelHeight - marginTop - marginBottom;
+            
+            // Genera QR code come immagine base64
             let qrObject = '';
             if (trackingUrl) {
+                log('Generazione QR code per: ' + trackingUrl);
                 const qrBase64 = await generateQRCodeDataUrl(trackingUrl);
                 if (qrBase64) {
+                    log('QR code generato con successo');
+                    // Posizione QR: a destra, centrato verticalmente
+                    const qrX = labelWidth - qrSize - marginRight;
+                    const qrY = (labelHeight - qrSize) / 2;
+                    
                     qrObject = `
         <ImageObject>
           <Name>QRCode</Name>
@@ -699,7 +717,7 @@
             </BackgroundBrush>
             <BorderBrush>
               <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
+                <Color A="0" R="0" G="0" B="0"></Color>
               </SolidColorBrush>
             </BorderBrush>
           </Brushes>
@@ -717,15 +735,17 @@
           <VerticalAlignment>Middle</VerticalAlignment>
           <ObjectLayout>
             <DYMOPoint>
-              <X>${(labelWidth - qrSize - marginRight).toFixed(2)}</X>
-              <Y>${(marginTop + 0.05).toFixed(2)}</Y>
+              <X>${qrX.toFixed(3)}</X>
+              <Y>${qrY.toFixed(3)}</Y>
             </DYMOPoint>
             <Size>
-              <Width>${qrSize.toFixed(2)}</Width>
-              <Height>${qrSize.toFixed(2)}</Height>
+              <Width>${qrSize.toFixed(3)}</Width>
+              <Height>${qrSize.toFixed(3)}</Height>
             </Size>
           </ObjectLayout>
         </ImageObject>`;
+                } else {
+                    log('Errore generazione QR code', 'warning');
                 }
             }
             
@@ -733,7 +753,7 @@
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>LabLinkRiparo Label</Description>
-    <Orientation>Portrait</Orientation>
+    <Orientation>Landscape</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -767,7 +787,7 @@
             </BackgroundBrush>
             <BorderBrush>
               <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
+                <Color A="0" R="0" G="0" B="0"></Color>
               </SolidColorBrush>
             </BorderBrush>
             <StrokeBrush>
@@ -782,7 +802,7 @@
             </FillBrush>
           </Brushes>
           <Rotation>Rotation0</Rotation>
-          <OutlineThickness>1</OutlineThickness>
+          <OutlineThickness>0</OutlineThickness>
           <IsOutlined>False</IsOutlined>
           <BorderStyle>SolidLine</BorderStyle>
           <Margin>
@@ -802,7 +822,7 @@
                 <Text>${escapeXml(line1)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>10</FontSize>
+                  <FontSize>12</FontSize>
                   <IsBold>True</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -819,7 +839,7 @@
                 <Text>${escapeXml(line2)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>8</FontSize>
+                  <FontSize>10</FontSize>
                   <IsBold>True</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -836,13 +856,13 @@
                 <Text>${escapeXml(line3)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>6</FontSize>
+                  <FontSize>8</FontSize>
                   <IsBold>False</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
                   <FontBrush>
                     <SolidColorBrush>
-                      <Color A="1" R="0.31" G="0.31" B="0.31"></Color>
+                      <Color A="1" R="0.3" G="0.3" B="0.3"></Color>
                     </SolidColorBrush>
                   </FontBrush>
                 </FontInfo>
@@ -853,7 +873,7 @@
                 <Text>${escapeXml(line4)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>6</FontSize>
+                  <FontSize>7</FontSize>
                   <IsBold>False</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -868,12 +888,12 @@
           </FormattedText>
           <ObjectLayout>
             <DYMOPoint>
-              <X>${marginLeft.toFixed(2)}</X>
-              <Y>${marginTop.toFixed(2)}</Y>
+              <X>${marginLeft.toFixed(3)}</X>
+              <Y>${marginTop.toFixed(3)}</Y>
             </DYMOPoint>
             <Size>
-              <Width>${textWidth.toFixed(2)}</Width>
-              <Height>${textHeight.toFixed(2)}</Height>
+              <Width>${textWidth.toFixed(3)}</Width>
+              <Height>${textHeight.toFixed(3)}</Height>
             </Size>
           </ObjectLayout>
         </TextObject>${qrObject}
