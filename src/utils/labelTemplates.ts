@@ -124,55 +124,10 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[], qrData?: s
           </LineTextSpan>`;
   }).join('\n');
 
-  // QR Code object - usa BarcodeObject con ordine corretto: BarcodeFormat prima di Text
-  const qrObject = qrData ? `
-        <BarcodeObject>
-          <Name>QRCode</Name>
-          <Brushes>
-            <BackgroundBrush>
-              <SolidColorBrush>
-                <Color A="1" R="1" G="1" B="1"></Color>
-              </SolidColorBrush>
-            </BackgroundBrush>
-            <BorderBrush>
-              <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
-              </SolidColorBrush>
-            </BorderBrush>
-            <StrokeBrush>
-              <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
-              </SolidColorBrush>
-            </StrokeBrush>
-            <FillBrush>
-              <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
-              </SolidColorBrush>
-            </FillBrush>
-          </Brushes>
-          <Rotation>Rotation0</Rotation>
-          <OutlineThickness>1</OutlineThickness>
-          <IsOutlined>False</IsOutlined>
-          <BorderStyle>SolidLine</BorderStyle>
-          <Margin>
-            <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
-          </Margin>
-          <BarcodeFormat>QRCode</BarcodeFormat>
-          <Data>${escapeXml(qrData)}</Data>
-          
-          <Size>Medium</Size>
-          <TextPosition>None</TextPosition>
-          <ObjectLayout>
-            <DYMOPoint>
-              <X>${(labelWidth - qrSize - marginRight).toFixed(2)}</X>
-              <Y>${marginTop.toFixed(2)}</Y>
-            </DYMOPoint>
-            <Size>
-              <Width>${qrSize.toFixed(2)}</Width>
-              <Height>${qrSize.toFixed(2)}</Height>
-            </Size>
-          </ObjectLayout>
-        </BarcodeObject>` : '';
+  // Nota: Il QR code viene generato come immagine dal print agent standalone
+  // Non includiamo BarcodeObject qui perché Dymo non supporta nativamente QRCode
+  // Il print agent gestisce la generazione del QR come ImageObject
+  const qrObject = '';
   
   return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
