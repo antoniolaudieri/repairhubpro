@@ -1,15 +1,11 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Archive, Package, Settings2, Map } from "lucide-react";
+import { Archive, Package } from "lucide-react";
 import { useStorageSlots, MultiShelfConfig } from "@/hooks/useStorageSlots";
 import { MultiShelfEditor } from "./MultiShelfEditor";
-import { ShelfMapView } from "./ShelfMapView";
-import { cn } from "@/lib/utils";
 
 interface StorageSlotsSettingsProps {
   centroId: string | null;
@@ -28,7 +24,7 @@ export function StorageSlotsSettings({ centroId, config, onChange }: StorageSlot
     occupiedSlots?: number[];
     prefix?: string;
   } | null>(null);
-  const [activeTab, setActiveTab] = useState<"settings" | "map">("settings");
+  
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -99,33 +95,11 @@ export function StorageSlotsSettings({ centroId, config, onChange }: StorageSlot
               </div>
             )}
 
-            {/* Tabs for Settings and Map */}
-            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "settings" | "map")}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="settings" className="gap-2">
-                  <Settings2 className="h-4 w-4" />
-                  Configurazione
-                </TabsTrigger>
-                <TabsTrigger value="map" className="gap-2" disabled={config.shelves.length === 0}>
-                  <Map className="h-4 w-4" />
-                  Mappa Visuale
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="settings" className="mt-4">
-                <MultiShelfEditor
-                  config={config}
-                  onChange={onChange}
-                />
-              </TabsContent>
-
-              <TabsContent value="map" className="mt-4">
-                <ShelfMapView 
-                  centroId={centroId} 
-                  compact={true}
-                />
-              </TabsContent>
-            </Tabs>
+            {/* Shelf Editor */}
+            <MultiShelfEditor
+              config={config}
+              onChange={onChange}
+            />
 
             {/* Help Text */}
             {config.shelves.length === 0 && (
