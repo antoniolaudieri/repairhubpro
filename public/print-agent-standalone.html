@@ -648,13 +648,22 @@
         async function generateQRCodeDataUrl(text) {
             return new Promise((resolve) => {
                 try {
-                    // Crea un div temporaneo nascosto
+                    // Verifica che QRCode sia disponibile
+                    if (typeof QRCode === 'undefined') {
+                        log('Libreria QRCode non disponibile', 'error');
+                        resolve(null);
+                        return;
+                    }
+                    
+                    // Crea un div temporaneo - NON nascosto, ma fuori viewport
                     const tempDiv = document.createElement('div');
-                    tempDiv.style.display = 'none';
+                    tempDiv.style.position = 'fixed';
+                    tempDiv.style.left = '-9999px';
+                    tempDiv.style.top = '-9999px';
                     document.body.appendChild(tempDiv);
                     
                     // Genera il QR code
-                    const qr = new QRCode(tempDiv, {
+                    new QRCode(tempDiv, {
                         text: text,
                         width: 150,
                         height: 150,
@@ -663,20 +672,34 @@
                         correctLevel: QRCode.CorrectLevel.M
                     });
                     
-                    // Aspetta che il canvas sia generato
+                    // Aspetta che il canvas sia generato (qrcodejs è sincrono ma ha bisogno di un frame)
                     setTimeout(() => {
                         const canvas = tempDiv.querySelector('canvas');
+                        const img = tempDiv.querySelector('img');
+                        
                         if (canvas) {
                             const base64 = canvas.toDataURL('image/png').split(',')[1];
-                            log('QR generato: ' + base64.substring(0, 20) + '...');
+                            log('QR generato da canvas: ' + base64.substring(0, 30) + '...');
                             document.body.removeChild(tempDiv);
                             resolve(base64);
+                        } else if (img && img.src) {
+                            // Fallback: usa l'immagine se disponibile
+                            const base64 = img.src.split(',')[1];
+                            if (base64) {
+                                log('QR generato da img: ' + base64.substring(0, 30) + '...');
+                                document.body.removeChild(tempDiv);
+                                resolve(base64);
+                            } else {
+                                log('Immagine QR vuota', 'error');
+                                document.body.removeChild(tempDiv);
+                                resolve(null);
+                            }
                         } else {
-                            log('Canvas QR non trovato', 'error');
+                            log('Canvas/Img QR non trovato nel DOM', 'error');
                             document.body.removeChild(tempDiv);
                             resolve(null);
                         }
-                    }, 100);
+                    }, 200);
                 } catch (e) {
                     log('Errore generazione QR: ' + e.message, 'error');
                     resolve(null);
