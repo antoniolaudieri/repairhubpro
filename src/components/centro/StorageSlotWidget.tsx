@@ -24,6 +24,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import { DeviceImage } from "@/components/common/DeviceImage";
 
 // Same color definitions as in MultiShelfEditor for consistency
 const SHELF_COLORS = [
@@ -44,13 +45,19 @@ interface StorageSlotWidgetProps {
   centroId: string | null;
   currentSlot: number | null;
   onSlotAssigned?: (slot: number) => void;
+  deviceBrand?: string;
+  deviceModel?: string;
+  deviceType?: string;
 }
 
 export function StorageSlotWidget({ 
   repairId, 
   centroId, 
   currentSlot,
-  onSlotAssigned 
+  onSlotAssigned,
+  deviceBrand,
+  deviceModel,
+  deviceType
 }: StorageSlotWidgetProps) {
   const { 
     getMultiShelfConfig,
@@ -214,10 +221,10 @@ export function StorageSlotWidget({
                 elements.push(
                   <motion.div
                     key={i}
-                    animate={isCurrentSlot ? { scale: [1, 1.2, 1] } : {}}
-                    transition={isCurrentSlot ? { duration: 2, repeat: Infinity } : {}}
+                    animate={isCurrentSlot ? { scale: [1, 1.15, 1] } : {}}
+                    transition={isCurrentSlot ? { duration: 1.5, repeat: Infinity } : {}}
                     className={cn(
-                      "rounded-sm transition-colors bg-gradient-to-r border border-white/30",
+                      "rounded-sm transition-colors bg-gradient-to-r border border-white/30 flex items-center justify-center",
                       shelf.color,
                       isCurrentSlot && "ring-2 ring-offset-1 ring-offset-background ring-foreground/50"
                     )}
@@ -225,23 +232,47 @@ export function StorageSlotWidget({
                       gridColumn: `span ${actualSpan}`,
                       aspectRatio: `${actualSpan}/1`
                     }}
-                  />
+                  >
+                    {isCurrentSlot && deviceBrand && (
+                      <div className="w-4 h-4 rounded-full overflow-hidden bg-white/30">
+                        <DeviceImage 
+                          brand={deviceBrand}
+                          model={deviceModel}
+                          deviceType={deviceType}
+                          size="sm"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                  </motion.div>
                 );
               } else {
                 elements.push(
                   <motion.div
                     key={i}
-                    animate={isCurrentSlot ? { scale: [1, 1.2, 1] } : {}}
-                    transition={isCurrentSlot ? { duration: 2, repeat: Infinity } : {}}
+                    animate={isCurrentSlot ? { scale: [1, 1.15, 1] } : {}}
+                    transition={isCurrentSlot ? { duration: 1.5, repeat: Infinity } : {}}
                     className={cn(
-                      "aspect-square rounded-sm transition-colors",
+                      "aspect-square rounded-sm transition-colors flex items-center justify-center",
                       isCurrentSlot 
                         ? cn("bg-gradient-to-br ring-2 ring-offset-1 ring-offset-background", shelf.color, "ring-foreground/50")
                         : isOccupied 
                           ? "bg-muted-foreground/30" 
                           : colorClasses.bg
                     )}
-                  />
+                  >
+                    {isCurrentSlot && deviceBrand && (
+                      <div className="w-4 h-4 rounded-full overflow-hidden bg-white/30">
+                        <DeviceImage 
+                          brand={deviceBrand}
+                          model={deviceModel}
+                          deviceType={deviceType}
+                          size="sm"
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    )}
+                  </motion.div>
                 );
               }
             }
