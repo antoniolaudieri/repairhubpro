@@ -16,7 +16,7 @@ import {
   Layers,
   Edit3
 } from "lucide-react";
-import { useStorageSlots, MultiShelfConfig, ShelfConfig } from "@/hooks/useStorageSlots";
+import { useStorageSlots, MultiShelfConfig, ShelfConfig, MergedSlot } from "@/hooks/useStorageSlots";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { toast } from "sonner";
@@ -166,6 +166,20 @@ export function StorageSlotWidget({
   const currentPosition = currentSlot && currentShelf ? getSlotPositionInShelf(currentSlot, currentShelf) : null;
   const currentColorClasses = currentShelf ? getColorClasses(currentShelf.color) : null;
 
+  // Get merged slot info for a given slot number within a shelf
+  const getSlotMergeInfo = (slotNum: number, shelf: ShelfConfig): { isMerged: boolean; isStart: boolean; span: number } => {
+    const mergedSlots = shelf.mergedSlots || [];
+    for (const merge of mergedSlots) {
+      if (slotNum === merge.startSlot) {
+        return { isMerged: true, isStart: true, span: merge.span };
+      }
+      if (slotNum > merge.startSlot && slotNum < merge.startSlot + merge.span) {
+        return { isMerged: true, isStart: false, span: 0 };
+      }
+    }
+    return { isMerged: false, isStart: false, span: 1 };
+  };
+
   // Render mini preview grid (same style as settings)
   const renderMiniPreviewGrid = (shelf: ShelfConfig) => {
     const colorClasses = getColorClasses(shelf.color);
@@ -180,27 +194,55 @@ export function StorageSlotWidget({
             gridTemplateColumns: `repeat(${Math.min(shelf.columns, 10)}, 1fr)` 
           }}
         >
-          {Array.from({ length: maxDisplay }, (_, i) => {
-            const slotNum = shelf.start_number + i;
-            const isCurrentSlot = slotNum === currentSlot;
-            const isOccupied = occupiedSlots.includes(slotNum) && !isCurrentSlot;
+          {(() => {
+            const elements: JSX.Element[] = [];
+            let skipUntil = -1;
             
-            return (
-              <motion.div
-                key={i}
-                animate={isCurrentSlot ? { scale: [1, 1.2, 1] } : {}}
-                transition={isCurrentSlot ? { duration: 2, repeat: Infinity } : {}}
-                className={cn(
-                  "aspect-square rounded-sm transition-colors",
-                  isCurrentSlot 
-                    ? cn("bg-gradient-to-br ring-2 ring-offset-1 ring-offset-background", shelf.color, "ring-foreground/50")
-                    : isOccupied 
-                      ? "bg-muted-foreground/30" 
-                      : colorClasses.bg
-                )}
-              />
-            );
-          })}
+            for (let i = 0; i < maxDisplay; i++) {
+              const slotNum = shelf.start_number + i;
+              
+              // Skip slots that are part of a merge (not the start)
+              if (slotNum <= skipUntil) continue;
+              
+              const mergeInfo = getSlotMergeInfo(slotNum, shelf);
+              const isCurrentSlot = slotNum === currentSlot;
+              const isOccupied = occupiedSlots.includes(slotNum) && !isCurrentSlot;
+              
+              if (mergeInfo.isMerged && mergeInfo.isStart) {
+                skipUntil = slotNum + mergeInfo.span - 1;
+                elements.push(
+                  <motion.div
+                    key={i}
+                    animate={isCurrentSlot ? { scale: [1, 1.2, 1] } : {}}
+                    transition={isCurrentSlot ? { duration: 2, repeat: Infinity } : {}}
+                    className={cn(
+                      "aspect-[2/1] rounded-sm transition-colors bg-gradient-to-r border border-white/30",
+                      shelf.color,
+                      isCurrentSlot && "ring-2 ring-offset-1 ring-offset-background ring-foreground/50"
+                    )}
+                    style={{ gridColumn: `span ${Math.min(mergeInfo.span, 10)}` }}
+                  />
+                );
+              } else {
+                elements.push(
+                  <motion.div
+                    key={i}
+                    animate={isCurrentSlot ? { scale: [1, 1.2, 1] } : {}}
+                    transition={isCurrentSlot ? { duration: 2, repeat: Infinity } : {}}
+                    className={cn(
+                      "aspect-square rounded-sm transition-colors",
+                      isCurrentSlot 
+                        ? cn("bg-gradient-to-br ring-2 ring-offset-1 ring-offset-background", shelf.color, "ring-foreground/50")
+                        : isOccupied 
+                          ? "bg-muted-foreground/30" 
+                          : colorClasses.bg
+                    )}
+                  />
+                );
+              }
+            }
+            return elements;
+          })()}
         </div>
         {totalSlots > 30 && (
           <p className="text-[10px] text-muted-foreground text-center mt-1">
@@ -285,44 +327,94 @@ export function StorageSlotWidget({
                       className="grid gap-1"
                       style={{ gridTemplateColumns: `repeat(${shelf.columns}, minmax(0, 1fr))` }}
                     >
-                      {Array.from({ length: shelf.rows * shelf.columns }, (_, i) => {
-                        const slotNum = shelf.start_number + i;
-                        const row = Math.floor(i / shelf.columns);
-                        const col = i % shelf.columns;
-                        const isCurrentSlot = slotNum === currentSlot;
-                        const isOccupied = occupiedSlots.includes(slotNum) && !isCurrentSlot;
-                        const isSelected = selectedSlot === slotNum;
-                        const isAvailable = !isOccupied;
-                        const label = `${shelf.prefix}${row + 1}-${col + 1}`;
-
-                        return (
-                          <motion.button
-                            key={slotNum}
-                            whileHover={isAvailable ? { scale: 1.05 } : {}}
-                            whileTap={isAvailable ? { scale: 0.95 } : {}}
-                            onClick={() => isAvailable && setSelectedSlot(slotNum)}
-                            disabled={isOccupied}
-                            className={cn(
-                              "aspect-square rounded flex flex-col items-center justify-center text-[8px] sm:text-[10px] font-mono transition-all border",
-                              isCurrentSlot 
-                                ? cn("bg-gradient-to-br text-white border-transparent", shelf.color)
-                                : isSelected
-                                  ? cn("bg-gradient-to-br text-white border-transparent ring-2 ring-offset-2", shelf.color, "ring-foreground/50")
-                                  : isOccupied 
-                                    ? "bg-muted/50 text-muted-foreground/40 cursor-not-allowed border-transparent" 
-                                    : cn("cursor-pointer", colorClasses.bg, colorClasses.border, colorClasses.text, "hover:opacity-80")
-                            )}
-                          >
-                            {isCurrentSlot ? (
-                              <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
-                            ) : isSelected ? (
-                              <Check className="h-3 w-3 sm:h-4 sm:w-4" />
-                            ) : (
-                              <span className="font-medium">{label}</span>
-                            )}
-                          </motion.button>
-                        );
-                      })}
+                      {(() => {
+                        const elements: JSX.Element[] = [];
+                        let skipUntil = -1;
+                        const totalSlots = shelf.rows * shelf.columns;
+                        
+                        for (let i = 0; i < totalSlots; i++) {
+                          const slotNum = shelf.start_number + i;
+                          
+                          // Skip slots that are part of a merge (not the start)
+                          if (slotNum <= skipUntil) continue;
+                          
+                          const mergeInfo = getSlotMergeInfo(slotNum, shelf);
+                          const row = Math.floor(i / shelf.columns);
+                          const col = i % shelf.columns;
+                          const isCurrentSlot = slotNum === currentSlot;
+                          const isOccupied = occupiedSlots.includes(slotNum) && !isCurrentSlot;
+                          const isSelected = selectedSlot === slotNum;
+                          const isAvailable = !isOccupied;
+                          
+                          if (mergeInfo.isMerged && mergeInfo.isStart) {
+                            // Merged slot
+                            skipUntil = slotNum + mergeInfo.span - 1;
+                            const endSlot = slotNum + mergeInfo.span - 1;
+                            const label = `${shelf.prefix}${row + 1}-${col + 1}→${col + mergeInfo.span}`;
+                            
+                            elements.push(
+                              <motion.button
+                                key={slotNum}
+                                whileHover={isAvailable ? { scale: 1.02 } : {}}
+                                whileTap={isAvailable ? { scale: 0.98 } : {}}
+                                onClick={() => isAvailable && setSelectedSlot(slotNum)}
+                                disabled={isOccupied}
+                                style={{ gridColumn: `span ${mergeInfo.span}` }}
+                                className={cn(
+                                  "aspect-auto h-full min-h-[32px] rounded flex flex-col items-center justify-center text-[8px] sm:text-[10px] font-mono transition-all border-2 border-dashed",
+                                  isCurrentSlot 
+                                    ? cn("bg-gradient-to-r text-white border-white/40", shelf.color)
+                                    : isSelected
+                                      ? cn("bg-gradient-to-r text-white border-white/40 ring-2 ring-offset-2", shelf.color, "ring-foreground/50")
+                                      : isOccupied 
+                                        ? "bg-muted/50 text-muted-foreground/40 cursor-not-allowed border-transparent" 
+                                        : cn("cursor-pointer bg-gradient-to-r", shelf.color, "text-white opacity-70 hover:opacity-100")
+                                )}
+                              >
+                                {isCurrentSlot ? (
+                                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+                                ) : isSelected ? (
+                                  <Check className="h-3 w-3 sm:h-4 sm:w-4" />
+                                ) : (
+                                  <span className="font-medium">{label}</span>
+                                )}
+                              </motion.button>
+                            );
+                          } else {
+                            // Regular slot
+                            const label = `${shelf.prefix}${row + 1}-${col + 1}`;
+                            
+                            elements.push(
+                              <motion.button
+                                key={slotNum}
+                                whileHover={isAvailable ? { scale: 1.05 } : {}}
+                                whileTap={isAvailable ? { scale: 0.95 } : {}}
+                                onClick={() => isAvailable && setSelectedSlot(slotNum)}
+                                disabled={isOccupied}
+                                className={cn(
+                                  "aspect-square rounded flex flex-col items-center justify-center text-[8px] sm:text-[10px] font-mono transition-all border",
+                                  isCurrentSlot 
+                                    ? cn("bg-gradient-to-br text-white border-transparent", shelf.color)
+                                    : isSelected
+                                      ? cn("bg-gradient-to-br text-white border-transparent ring-2 ring-offset-2", shelf.color, "ring-foreground/50")
+                                      : isOccupied 
+                                        ? "bg-muted/50 text-muted-foreground/40 cursor-not-allowed border-transparent" 
+                                        : cn("cursor-pointer", colorClasses.bg, colorClasses.border, colorClasses.text, "hover:opacity-80")
+                                )}
+                              >
+                                {isCurrentSlot ? (
+                                  <MapPin className="h-3 w-3 sm:h-4 sm:w-4" />
+                                ) : isSelected ? (
+                                  <Check className="h-3 w-3 sm:h-4 sm:w-4" />
+                                ) : (
+                                  <span className="font-medium">{label}</span>
+                                )}
+                              </motion.button>
+                            );
+                          }
+                        }
+                        return elements;
+                      })()}
                     </div>
                   </ScrollArea>
                 </div>
