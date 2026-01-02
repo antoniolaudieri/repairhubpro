@@ -9,10 +9,20 @@ export interface StorageSlotsConfig {
   prefix: string;
 }
 
+// Device type for slot assignment
+export type DeviceCategory = 'smartphone' | 'tablet' | 'notebook' | 'pc';
+
 // New multi-shelf config
 export interface MergedSlot {
   startSlot: number;
   span: number;
+}
+
+export interface SlotCapacity {
+  smartphone: number;
+  tablet: number;
+  notebook: number;
+  pc: number;
 }
 
 export interface ShelfConfig {
@@ -24,6 +34,7 @@ export interface ShelfConfig {
   start_number: number;
   color: string;
   mergedSlots?: MergedSlot[];
+  slotCapacity?: SlotCapacity; // Max devices per type that can fit in each slot
 }
 
 export interface MultiShelfConfig {

@@ -37,6 +37,13 @@ export interface MergedSlot {
   span: number; // How many columns it spans (2 = double width)
 }
 
+export interface SlotCapacity {
+  smartphone: number;
+  tablet: number;
+  notebook: number;
+  pc: number;
+}
+
 export interface ShelfConfig {
   id: string;
   name: string;
@@ -46,6 +53,7 @@ export interface ShelfConfig {
   start_number: number;
   color: string;
   mergedSlots?: MergedSlot[]; // Optional array of merged slots
+  slotCapacity?: SlotCapacity; // Max devices per type that can fit in each slot
 }
 
 export interface MultiShelfConfig {
@@ -85,6 +93,7 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
       columns: 10,
       start_number: 1,
       color: SHELF_COLORS[config.shelves.length % SHELF_COLORS.length].value,
+      slotCapacity: { smartphone: 3, tablet: 2, notebook: 1, pc: 1 },
     };
     setEditingShelf(newShelf);
     setIsCreating(true);
@@ -299,6 +308,16 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
                     <p className="text-xs text-muted-foreground text-center">
                       Slot: <span className="font-mono">{shelf.prefix}{shelf.start_number}</span> → <span className="font-mono">{shelf.prefix}{shelf.start_number + shelf.rows * shelf.columns - 1}</span>
                     </p>
+
+                    {/* Capacity Info */}
+                    {shelf.slotCapacity && (
+                      <div className="flex items-center justify-center gap-2 text-[10px] text-muted-foreground">
+                        <span title="Smartphone per slot">📱{shelf.slotCapacity.smartphone}</span>
+                        <span title="Tablet per slot">📲{shelf.slotCapacity.tablet}</span>
+                        <span title="Notebook per slot">💻{shelf.slotCapacity.notebook}</span>
+                        <span title="PC per slot">🖥️{shelf.slotCapacity.pc}</span>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -493,6 +512,104 @@ function ShelfEditorDialog({ shelf, isOpen, onClose, onSave, isCreating }: Shelf
                       )}
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Slot Capacity by Device Type */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2">
+                  <Settings className="h-4 w-4" />
+                  Capacità per tipo dispositivo
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Quanti dispositivi per tipo possono stare in ogni slot
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1">
+                      📱 Smartphone
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={formData.slotCapacity?.smartphone ?? 1}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        slotCapacity: { 
+                          ...formData.slotCapacity, 
+                          smartphone: parseInt(e.target.value) || 1,
+                          tablet: formData.slotCapacity?.tablet ?? 1,
+                          notebook: formData.slotCapacity?.notebook ?? 1,
+                          pc: formData.slotCapacity?.pc ?? 1
+                        } 
+                      })}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1">
+                      📲 Tablet
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={formData.slotCapacity?.tablet ?? 1}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        slotCapacity: { 
+                          smartphone: formData.slotCapacity?.smartphone ?? 1,
+                          tablet: parseInt(e.target.value) || 1,
+                          notebook: formData.slotCapacity?.notebook ?? 1,
+                          pc: formData.slotCapacity?.pc ?? 1
+                        } 
+                      })}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1">
+                      💻 Notebook
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={10}
+                      value={formData.slotCapacity?.notebook ?? 1}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        slotCapacity: { 
+                          smartphone: formData.slotCapacity?.smartphone ?? 1,
+                          tablet: formData.slotCapacity?.tablet ?? 1,
+                          notebook: parseInt(e.target.value) || 1,
+                          pc: formData.slotCapacity?.pc ?? 1
+                        } 
+                      })}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs flex items-center gap-1">
+                      🖥️ PC
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={5}
+                      value={formData.slotCapacity?.pc ?? 1}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        slotCapacity: { 
+                          smartphone: formData.slotCapacity?.smartphone ?? 1,
+                          tablet: formData.slotCapacity?.tablet ?? 1,
+                          notebook: formData.slotCapacity?.notebook ?? 1,
+                          pc: parseInt(e.target.value) || 1
+                        } 
+                      })}
+                      className="h-8"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
