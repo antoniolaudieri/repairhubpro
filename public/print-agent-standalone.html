@@ -726,18 +726,19 @@
             
             const trackingUrl = data.trackingUrl || (repairId ? `https://lablinkriparo.lovable.app/centro/lavori/${repairId}` : '');
             
-            // Dymo 11354: 57mm x 32mm = 2.24" x 1.26"
-            const labelWidth = 2.24;
-            const labelHeight = 1.26;
-            const margin = 0.05;
+            // Dymo 11354: 57mm x 32mm in twips (1 inch = 1440 twips)
+            // 57mm = 2.24" = 3226 twips, 32mm = 1.26" = 1814 twips
+            const labelWidthTwips = 3226;
+            const labelHeightTwips = 1814;
+            const marginTwips = 70;
             
             // Layout: QR a destra (se presente), testo a sinistra
-            const qrSize = trackingUrl ? 0.85 : 0;
-            const gap = trackingUrl ? 0.08 : 0;
-            const textAreaWidth = labelWidth - margin * 2 - qrSize - gap;
-            const textAreaX = margin;
-            const qrX = labelWidth - qrSize - margin;
-            const qrY = (labelHeight - qrSize) / 2;
+            const qrSizeTwips = trackingUrl ? 1200 : 0;
+            const gapTwips = trackingUrl ? 100 : 0;
+            const textWidthTwips = labelWidthTwips - marginTwips * 2 - qrSizeTwips - gapTwips;
+            const textXTwips = marginTwips;
+            const qrXTwips = labelWidthTwips - qrSizeTwips - marginTwips;
+            const qrYTwips = (labelHeightTwips - qrSizeTwips) / 2;
             
             // Costruisci le righe di testo
             const lines = [
@@ -747,38 +748,38 @@
                 { text: line4, size: 6, bold: false }
             ].filter(l => l.text);
             
-            const lineHeight = (labelHeight - margin * 2) / Math.max(lines.length, 1);
+            const lineHeightTwips = (labelHeightTwips - marginTwips * 2) / Math.max(lines.length, 1);
             
             let textObjects = '';
             lines.forEach((lineData, index) => {
-                const yPos = margin + (index * lineHeight);
+                const yPosTwips = marginTwips + (index * lineHeightTwips);
                 textObjects += `
-    <ObjectInfo>
-      <TextObject>
-        <Name>Line${index + 1}</Name>
-        <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
-        <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
-        <LinkedObjectName></LinkedObjectName>
-        <Rotation>Rotation0</Rotation>
-        <IsMirrored>False</IsMirrored>
-        <IsVariable>False</IsVariable>
-        <HorizontalAlignment>Left</HorizontalAlignment>
-        <VerticalAlignment>Middle</VerticalAlignment>
-        <TextFitMode>ShrinkToFit</TextFitMode>
-        <UseFullFontHeight>True</UseFullFontHeight>
-        <Verticalized>False</Verticalized>
-        <StyledText>
-          <Element>
-            <String>${escapeXml(lineData.text)}</String>
-            <Attributes>
-              <Font Family="Arial" Size="${lineData.size}" Bold="${lineData.bold}" Italic="False" Underline="False" Strikeout="False" />
-              <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
-            </Attributes>
-          </Element>
-        </StyledText>
-      </TextObject>
-      <Bounds X="${textAreaX}" Y="${yPos}" Width="${textAreaWidth}" Height="${lineHeight}" />
-    </ObjectInfo>`;
+  <ObjectInfo>
+    <TextObject>
+      <Name>Line${index + 1}</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <HorizontalAlignment>Left</HorizontalAlignment>
+      <VerticalAlignment>Middle</VerticalAlignment>
+      <TextFitMode>ShrinkToFit</TextFitMode>
+      <UseFullFontHeight>True</UseFullFontHeight>
+      <Verticalized>False</Verticalized>
+      <StyledText>
+        <Element>
+          <String>${escapeXml(lineData.text)}</String>
+          <Attributes>
+            <Font Family="Arial" Size="${lineData.size}" Bold="${lineData.bold}" Italic="False" Underline="False" Strikeout="False"/>
+            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+          </Attributes>
+        </Element>
+      </StyledText>
+    </TextObject>
+    <Bounds X="${textXTwips}" Y="${yPosTwips}" Width="${textWidthTwips}" Height="${lineHeightTwips}"/>
+  </ObjectInfo>`;
             });
             
             // BarcodeObject per QR code
@@ -786,67 +787,40 @@
             if (trackingUrl) {
                 log('Generazione QR code nativo per: ' + trackingUrl);
                 qrObject = `
-    <ObjectInfo>
-      <BarcodeObject>
-        <Name>QRCode</Name>
-        <ForeColor Alpha="255" Red="0" Green="0" Blue="0" />
-        <BackColor Alpha="0" Red="255" Green="255" Blue="255" />
-        <LinkedObjectName></LinkedObjectName>
-        <Rotation>Rotation0</Rotation>
-        <IsMirrored>False</IsMirrored>
-        <IsVariable>False</IsVariable>
-        <Text>${escapeXml(trackingUrl)}</Text>
-        <Type>QRCode</Type>
-        <Size>Small</Size>
-        <TextPosition>None</TextPosition>
-        <TextFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
-        <CheckSumFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False" />
-        <TextEmbedding>None</TextEmbedding>
-        <ECLevel>0</ECLevel>
-        <HorizontalAlignment>Center</HorizontalAlignment>
-        <QuietZonesPadding Left="0" Top="0" Right="0" Bottom="0" />
-      </BarcodeObject>
-      <Bounds X="${qrX}" Y="${qrY}" Width="${qrSize}" Height="${qrSize}" />
-    </ObjectInfo>`;
+  <ObjectInfo>
+    <BarcodeObject>
+      <Name>QRCODE</Name>
+      <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
+      <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
+      <LinkedObjectName></LinkedObjectName>
+      <Rotation>Rotation0</Rotation>
+      <IsMirrored>False</IsMirrored>
+      <IsVariable>False</IsVariable>
+      <Text>${escapeXml(trackingUrl)}</Text>
+      <Type>QRCode</Type>
+      <Size>Medium</Size>
+      <TextPosition>None</TextPosition>
+      <TextFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False"/>
+      <CheckSumFont Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False"/>
+      <TextEmbedding>None</TextEmbedding>
+      <ECLevel>0</ECLevel>
+      <HorizontalAlignment>Center</HorizontalAlignment>
+      <QuietZonesPadding Left="0" Right="0" Top="0" Bottom="0"/>
+    </BarcodeObject>
+    <Bounds X="${qrXTwips}" Y="${qrYTwips}" Width="${qrSizeTwips}" Height="${qrSizeTwips}"/>
+  </ObjectInfo>`;
             }
             
+            // Usa DieCutLabel che è il formato supportato
             return `<?xml version="1.0" encoding="utf-8"?>
-<DesktopLabel Version="1">
-  <DYMOLabel Version="3">
-    <Description>Repair Label</Description>
-    <Orientation>Landscape</Orientation>
-    <LabelName>Address</LabelName>
-    <InitialLength>0</InitialLength>
-    <BorderStyle>SolidLine</BorderStyle>
-    <DYMORect>
-      <DYMOPoint>
-        <X>0</X>
-        <Y>0</Y>
-      </DYMOPoint>
-      <Size>
-        <Width>${labelWidth}</Width>
-        <Height>${labelHeight}</Height>
-      </Size>
-    </DYMORect>
-    <BorderColor>
-      <SolidColorBrush>
-        <Color Alpha="255" Red="0" Green="0" Blue="0" />
-      </SolidColorBrush>
-    </BorderColor>
-    <BorderThickness>0</BorderThickness>
-    <Show_Border>False</Show_Border>
-    <DynamicLayoutManager>
-      <RotationBehavior>ClearObjects</RotationBehavior>
-      <LabelObjects>${textObjects}${qrObject}
-      </LabelObjects>
-    </DynamicLayoutManager>
-  </DYMOLabel>
-  <LabelApplication>Blank</LabelApplication>
-  <DataTable>
-    <Columns></Columns>
-    <Rows></Rows>
-  </DataTable>
-</DesktopLabel>`;
+<DieCutLabel Version="8.0" Units="twips">
+  <PaperOrientation>Landscape</PaperOrientation>
+  <Id>Address</Id>
+  <PaperName>11354 Multi-Purpose</PaperName>
+  <DrawCommands>
+    <RoundRectangle X="0" Y="0" Width="${labelWidthTwips}" Height="${labelHeightTwips}" Rx="0" Ry="0"/>
+  </DrawCommands>${textObjects}${qrObject}
+</DieCutLabel>`;
         }
 
         function escapeXml(text) {
