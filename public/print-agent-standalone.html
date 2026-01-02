@@ -636,16 +636,76 @@
 
         function generateLabelXml(job) {
             const data = job.label_data || {};
-            const line1 = data.repairId ? `#${data.repairId.substring(0, 8).toUpperCase()}` : (data.deviceBrand || 'ETICHETTA');
-            const line2 = data.customerName || data.model || '';
-            const line3 = data.deviceBrand ? `${data.deviceBrand} ${data.deviceModel || ''}`.trim() : '';
-            const line4 = data.issue || data.condition || '';
+            const repairId = data.repairId || '';
+            const shortId = repairId ? repairId.substring(0, 8).toUpperCase() : '';
+            const slot = data.storageSlot ? ` [${data.storageSlot}]` : '';
+            const line1 = shortId ? `#${shortId}${slot}` : (data.deviceBrand || 'ETICHETTA');
+            const line2 = (data.customerName || '').substring(0, 20);
+            const line3 = data.deviceBrand ? `${data.deviceBrand} ${data.deviceModel || ''}`.trim().substring(0, 25) : '';
+            const line4 = (data.issue || data.condition || '').substring(0, 30);
+            const trackingUrl = data.trackingUrl || (repairId ? `https://lablinkriparo.lovable.app/centro/lavori/${repairId}` : '');
             
             // Dymo 11354 Multi-Purpose: 57mm x 32mm
             // INVERTITO: Width = lato CORTO, Height = lato LUNGO
-            // Questo forza Dymo a stampare in orizzontale!
             const labelWidth = 1.26;  // 32mm in pollici (lato CORTO)
             const labelHeight = 2.24; // 57mm in pollici (lato LUNGO)
+            
+            // Margini di sicurezza
+            const marginTop = 0.12;
+            const marginLeft = 0.1;
+            const marginRight = 0.1;
+            
+            // QR code posizione a destra
+            const qrSize = trackingUrl ? 0.85 : 0;
+            const textWidth = labelWidth - marginLeft - marginRight - (trackingUrl ? qrSize + 0.08 : 0);
+            const textHeight = labelHeight - marginTop - 0.12;
+            
+            // QR Code object (se presente)
+            const qrObject = trackingUrl ? `
+        <QRCodeObject>
+          <Name>QRCode</Name>
+          <Brushes>
+            <BackgroundBrush>
+              <SolidColorBrush>
+                <Color A="1" R="1" G="1" B="1"></Color>
+              </SolidColorBrush>
+            </BackgroundBrush>
+            <BorderBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </BorderBrush>
+            <StrokeBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </StrokeBrush>
+            <FillBrush>
+              <SolidColorBrush>
+                <Color A="1" R="0" G="0" B="0"></Color>
+              </SolidColorBrush>
+            </FillBrush>
+          </Brushes>
+          <Rotation>Rotation0</Rotation>
+          <OutlineThickness>1</OutlineThickness>
+          <IsOutlined>False</IsOutlined>
+          <BorderStyle>SolidLine</BorderStyle>
+          <Margin>
+            <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
+          </Margin>
+          <Data>${escapeXml(trackingUrl)}</Data>
+          <ErrorCorrectionLevel>Medium</ErrorCorrectionLevel>
+          <ObjectLayout>
+            <DYMOPoint>
+              <X>${(labelWidth - qrSize - marginRight).toFixed(2)}</X>
+              <Y>${(marginTop + 0.05).toFixed(2)}</Y>
+            </DYMOPoint>
+            <Size>
+              <Width>${qrSize.toFixed(2)}</Width>
+              <Height>${qrSize.toFixed(2)}</Height>
+            </Size>
+          </ObjectLayout>
+        </QRCodeObject>` : '';
             
             return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
@@ -720,7 +780,7 @@
                 <Text>${escapeXml(line1)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>11</FontSize>
+                  <FontSize>10</FontSize>
                   <IsBold>True</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -737,7 +797,7 @@
                 <Text>${escapeXml(line2)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>9</FontSize>
+                  <FontSize>8</FontSize>
                   <IsBold>True</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -754,7 +814,7 @@
                 <Text>${escapeXml(line3)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>7</FontSize>
+                  <FontSize>6</FontSize>
                   <IsBold>False</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -771,7 +831,7 @@
                 <Text>${escapeXml(line4)}</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
-                  <FontSize>7</FontSize>
+                  <FontSize>6</FontSize>
                   <IsBold>False</IsBold>
                   <IsItalic>False</IsItalic>
                   <IsUnderline>False</IsUnderline>
@@ -786,15 +846,15 @@
           </FormattedText>
           <ObjectLayout>
             <DYMOPoint>
-              <X>0.05</X>
-              <Y>0.05</Y>
+              <X>${marginLeft.toFixed(2)}</X>
+              <Y>${marginTop.toFixed(2)}</Y>
             </DYMOPoint>
             <Size>
-              <Width>${labelWidth - 0.1}</Width>
-              <Height>${labelHeight - 0.1}</Height>
+              <Width>${textWidth.toFixed(2)}</Width>
+              <Height>${textHeight.toFixed(2)}</Height>
             </Size>
           </ObjectLayout>
-        </TextObject>
+        </TextObject>${qrObject}
       </LabelObjects>
     </DynamicLayoutManager>
   </DYMOLabel>
