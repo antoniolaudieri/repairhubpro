@@ -218,22 +218,26 @@ export function StorageSlotWidget({
               if (mergeInfo.isMerged && mergeInfo.isStart) {
                 skipUntil = slotNum + mergeInfo.span - 1;
                 const actualSpan = Math.min(mergeInfo.span, 10);
+                // Check if currentSlot is within this merged slot range
+                const isMergedSlotCurrent = currentSlot !== null && 
+                  currentSlot >= slotNum && 
+                  currentSlot <= skipUntil;
                 elements.push(
                   <motion.div
                     key={i}
-                    animate={isCurrentSlot ? { scale: [1, 1.15, 1] } : {}}
-                    transition={isCurrentSlot ? { duration: 1.5, repeat: Infinity } : {}}
+                    animate={isMergedSlotCurrent ? { scale: [1, 1.15, 1] } : {}}
+                    transition={isMergedSlotCurrent ? { duration: 1.5, repeat: Infinity } : {}}
                     className={cn(
                       "rounded-sm transition-colors bg-gradient-to-r border border-white/30 flex items-center justify-center overflow-hidden p-0.5",
                       shelf.color,
-                      isCurrentSlot && "ring-2 ring-offset-1 ring-offset-background ring-foreground/50"
+                      isMergedSlotCurrent && "ring-2 ring-offset-1 ring-offset-background ring-foreground/50"
                     )}
                     style={{ 
                       gridColumn: `span ${actualSpan}`,
                       aspectRatio: `${actualSpan}/1`
                     }}
                   >
-                    {isCurrentSlot && deviceBrand && (
+                    {isMergedSlotCurrent && deviceBrand && (
                       <div className="w-full h-full flex items-center justify-center bg-white/20 rounded-sm">
                         <img 
                           src={`https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/${deviceBrand.toLowerCase()}.svg`}
