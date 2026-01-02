@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStorageSlots } from "@/hooks/useStorageSlots";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
+import { DeviceImage } from "@/components/common/DeviceImage";
 
 interface SlotData {
   slot: number;
@@ -450,9 +451,22 @@ export function ShelfMapView({
                     /* Regular slot content */
                     isOccupied ? (
                       <>
-                        <span className="text-lg sm:text-2xl">
-                          {getDeviceIcon(slotData.repair!.device_type)}
-                        </span>
+                        {/* Show brand logo for highlighted slot, otherwise show emoji */}
+                        {isHighlighted ? (
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
+                            <DeviceImage 
+                              brand={slotData.repair!.device_brand}
+                              model={slotData.repair!.device_model}
+                              deviceType={slotData.repair!.device_type}
+                              size="sm"
+                              className="rounded-full"
+                            />
+                          </div>
+                        ) : (
+                          <span className="text-lg sm:text-2xl">
+                            {getDeviceIcon(slotData.repair!.device_type)}
+                          </span>
+                        )}
                         <span className="text-[8px] sm:text-[10px] font-medium truncate max-w-full px-0.5 text-center leading-tight mt-0.5">
                           {slotData.repair!.device_brand}
                         </span>
