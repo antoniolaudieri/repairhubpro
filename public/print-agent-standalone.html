@@ -743,14 +743,17 @@
             const qrX = (labelWidth - qrSize) / 2;  // centrato verticalmente
             const qrY = labelHeight - qrSize - margin;  // allineato a destra
             
-            // Genera QR code come QRCodeObject nativo Dymo
+            // Genera QR code come ImageObject con immagine PNG base64
             let qrObject = '';
             if (trackingUrl) {
                 log('Generazione QR code per: ' + trackingUrl);
-                
-                // Usa QRCodeObject nativo di Dymo
-                qrObject = `
-        <QRCodeObject>
+                const qrBase64 = await generateQRCodeDataUrl(trackingUrl);
+                if (qrBase64) {
+                    log('QR code generato con successo');
+                    
+                    // ImageObject con struttura corretta per Dymo
+                    qrObject = `
+        <ImageObject>
           <Name>QRCode</Name>
           <Brushes>
             <BackgroundBrush>
@@ -765,12 +768,12 @@
             </BorderBrush>
             <StrokeBrush>
               <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
+                <Color A="0" R="0" G="0" B="0"></Color>
               </SolidColorBrush>
             </StrokeBrush>
             <FillBrush>
               <SolidColorBrush>
-                <Color A="1" R="0" G="0" B="0"></Color>
+                <Color A="0" R="0" G="0" B="0"></Color>
               </SolidColorBrush>
             </FillBrush>
           </Brushes>
@@ -781,8 +784,10 @@
           <Margin>
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
-          <Code>${escapeXml(trackingUrl)}</Code>
-          <ErrorCorrectionLevel>Medium</ErrorCorrectionLevel>
+          <Data>${qrBase64}</Data>
+          <ScaleMode>Uniform</ScaleMode>
+          <HorizontalAlignment>Center</HorizontalAlignment>
+          <VerticalAlignment>Middle</VerticalAlignment>
           <ObjectLayout>
             <DYMOPoint>
               <X>${qrX.toFixed(3)}</X>
@@ -793,9 +798,10 @@
               <Height>${qrSize.toFixed(3)}</Height>
             </Size>
           </ObjectLayout>
-        </QRCodeObject>`;
-                
-                log('QRCodeObject creato');
+        </ImageObject>`;
+                } else {
+                    log('QR code generazione fallita', 'warning');
+                }
             }
             
             return `<?xml version="1.0" encoding="utf-8"?>
