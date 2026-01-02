@@ -407,7 +407,8 @@ export function ShelfMapView({
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleSlotClick(slotData)}
                   style={mergeInfo.isMerged && mergeInfo.isStart ? { 
-                    gridColumn: `span ${mergeInfo.span}` 
+                    gridColumn: `span ${mergeInfo.span}`,
+                    aspectRatio: `${mergeInfo.span}/1`
                   } : undefined}
                   className={`
                     relative rounded-lg cursor-pointer
@@ -415,7 +416,7 @@ export function ShelfMapView({
                     shadow-md hover:shadow-xl transition-shadow
                     flex flex-col items-center justify-center
                     min-w-[40px] min-h-[40px]
-                    ${mergeInfo.isMerged && mergeInfo.isStart ? 'aspect-auto h-full' : 'aspect-square'}
+                    ${mergeInfo.isMerged && mergeInfo.isStart ? '' : 'aspect-square'}
                     ${isHighlighted || isSearchResult ? 'ring-4 ring-white dark:ring-slate-900 ring-offset-2' : ''}
                     ${isOccupied || mergedRepairs.length > 0 ? 'text-white' : 'text-slate-600 dark:text-slate-400'}
                     ${mergeInfo.isMerged && mergeInfo.isStart ? 'border-2 border-dashed border-white/40' : ''}

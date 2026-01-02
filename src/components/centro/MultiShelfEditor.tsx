@@ -207,15 +207,19 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
                             if (mergeInfo) {
                               // This is a merged slot
                               skipUntil = slotNum + mergeInfo.span - 1;
+                              const actualSpan = Math.min(mergeInfo.span, 10 - (i % shelf.columns));
                               elements.push(
                                 <div
                                   key={i}
                                   className={cn(
-                                    "aspect-[2/1] rounded-sm transition-colors bg-gradient-to-r border border-white/30",
+                                    "rounded-sm transition-colors bg-gradient-to-r border border-white/30",
                                     shelf.color,
                                     isOccupied && "ring-1 ring-destructive"
                                   )}
-                                  style={{ gridColumn: `span ${Math.min(mergeInfo.span, 10 - (i % shelf.columns))}` }}
+                                  style={{ 
+                                    gridColumn: `span ${actualSpan}`,
+                                    aspectRatio: `${actualSpan}/1`
+                                  }}
                                 />
                               );
                             } else {
@@ -594,7 +598,7 @@ function ShelfEditorDialog({ shelf, isOpen, onClose, onSave, isCreating }: Shelf
                             transition={{ delay: i * 0.005 }}
                             onClick={() => handleSlotClick(slotNum)}
                             className={cn(
-                              "aspect-[2/1] rounded flex items-center justify-center text-[8px] font-mono font-medium relative",
+                              "rounded flex items-center justify-center text-[8px] font-mono font-medium relative",
                               "bg-gradient-to-r",
                               formData.color,
                               "text-white border-2 border-white/30",
@@ -602,7 +606,8 @@ function ShelfEditorDialog({ shelf, isOpen, onClose, onSave, isCreating }: Shelf
                               mergeMode && "ring-2 ring-offset-1 ring-primary/50"
                             )}
                             style={{ 
-                              gridColumn: `span ${mergeInfo.span}` 
+                              gridColumn: `span ${mergeInfo.span}`,
+                              aspectRatio: `${mergeInfo.span}/1`
                             }}
                           >
                             <Merge className="h-2.5 w-2.5 absolute top-0.5 right-0.5 opacity-60" />
