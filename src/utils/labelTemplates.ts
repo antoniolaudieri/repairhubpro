@@ -31,18 +31,19 @@ export interface ShelfLabelData {
   quantity?: number;
 }
 
-// Label dimensions in inches - Width is the shorter side (32mm = 1.26"), Height is the longer side (57mm = 2.24")
-// For Dymo Landscape mode: Width = 32mm = 1.26", Height = 57mm = 2.24"
+// Label dimensions in inches for LANDSCAPE orientation
+// Width = lato lungo (direzione stampa), Height = lato corto
+// 11354: 57mm x 32mm → Width=2.24", Height=1.26"
 const LABEL_FORMATS: Record<LabelFormat, { 
   width: number; 
   height: number; 
   name: string;
   labelName: string;
 }> = {
-  '30252': { width: 1.125, height: 3.5, name: '30252 Address (89x28mm)', labelName: 'Address' },
-  '99012': { width: 1.4, height: 3.5, name: '99012 Large Address (89x36mm)', labelName: 'LargeAddress' },
-  '11354': { width: 1.18, height: 2.15, name: '11354 Multi-Purpose (57x32mm)', labelName: 'Small30332' },
-  '30336': { width: 1.0, height: 2.125, name: '30336 Small (54x25mm)', labelName: 'ReturnAddress' },
+  '30252': { width: 3.5, height: 1.125, name: '30252 Address (89x28mm)', labelName: 'Address' },
+  '99012': { width: 3.5, height: 1.4, name: '99012 Large Address (89x36mm)', labelName: 'LargeAddress' },
+  '11354': { width: 2.24, height: 1.26, name: '11354 Multi-Purpose (57x32mm)', labelName: 'Small30332' },
+  '30336': { width: 2.125, height: 1.0, name: '30336 Small (54x25mm)', labelName: 'ReturnAddress' },
 };
 
 export function getLabelFormats(): { value: LabelFormat; label: string }[] {
