@@ -77,18 +77,27 @@ export function VisualSlotEditor({
     return true;
   }, [columns, rows, isCellAvailable]);
 
-  // Calculate max possible span at position
-  const getMaxSpan = useCallback((row: number, startCol: number, excludeSlotId?: string): number => {
-    let maxSpan = 0;
-    for (let c = startCol; c < columns; c++) {
-      if (isCellAvailable(row, c, excludeSlotId)) {
-        maxSpan++;
-      } else {
-        break;
+  // Calculate max possible span at position (now can merge with adjacent slots)
+  const getMaxSpanWithMerge = useCallback((row: number, startCol: number, currentSlotId: string): number => {
+    // Can extend up to the end of the row
+    return columns - startCol;
+  }, [columns]);
+
+  // Get slots that would be absorbed by extending to newSpan
+  const getSlotsToAbsorb = useCallback((slot: SlotData, newSpan: number): SlotData[] => {
+    const absorbed: SlotData[] = [];
+    for (let c = slot.col + slot.span; c < slot.col + newSpan; c++) {
+      const slotAtCol = slots.find(s => 
+        s.id !== slot.id && 
+        s.row === slot.row && 
+        c >= s.col && c < s.col + s.span
+      );
+      if (slotAtCol && !absorbed.find(a => a.id === slotAtCol.id)) {
+        absorbed.push(slotAtCol);
       }
     }
-    return Math.max(1, maxSpan);
-  }, [columns, isCellAvailable]);
+    return absorbed;
+  }, [slots]);
 
   // Handle drag start
   const handleDragStart = (slot: SlotData) => {
@@ -155,7 +164,7 @@ export function VisualSlotEditor({
     setDragOverCell(null);
   };
 
-  // Handle resize start
+  // Handle resize start - now can merge with adjacent slots
   const handleResizeStart = (e: React.MouseEvent, slot: SlotData) => {
     e.preventDefault();
     e.stopPropagation();
@@ -170,7 +179,7 @@ export function VisualSlotEditor({
       const mouseX = moveEvent.clientX - rect.left;
       const slotStartX = slot.col * cellWidth;
       const newSpan = Math.max(1, Math.round((mouseX - slotStartX) / cellWidth));
-      const maxSpan = getMaxSpan(slot.row, slot.col, slot.id);
+      const maxSpan = getMaxSpanWithMerge(slot.row, slot.col, slot.id);
       
       setResizePreview(Math.min(newSpan, maxSpan));
     };
@@ -179,11 +188,43 @@ export function VisualSlotEditor({
       setResizingSlot(null);
       setResizePreview((currentPreview) => {
         if (currentPreview !== null && currentPreview !== slot.span) {
-          const newSlots = slots.map(s =>
-            s.id === slot.id ? { ...s, span: currentPreview } : s
-          );
+          let newSlots: SlotData[];
+          
+          if (currentPreview > slot.span) {
+            // Expanding: absorb adjacent slots
+            const slotsToAbsorb = getSlotsToAbsorb(slot, currentPreview);
+            newSlots = slots
+              .filter(s => !slotsToAbsorb.find(a => a.id === s.id))
+              .map(s => s.id === slot.id ? { ...s, span: currentPreview } : s);
+            
+            if (slotsToAbsorb.length > 0) {
+              toast.success(`Uniti ${slotsToAbsorb.length + 1} slot`);
+            } else {
+              toast.success(`Slot allargato a ${currentPreview} colonne`);
+            }
+          } else {
+            // Shrinking: create new slots for freed space
+            const freedSlots: SlotData[] = [];
+            for (let c = slot.col + currentPreview; c < slot.col + slot.span; c++) {
+              const newSlotNum = startNumber + slot.row * columns + c;
+              freedSlots.push({
+                id: `slot-${newSlotNum}-${Date.now()}`,
+                slotNum: newSlotNum,
+                row: slot.row,
+                col: c,
+                span: 1,
+              });
+            }
+            
+            newSlots = [
+              ...slots.map(s => s.id === slot.id ? { ...s, span: currentPreview } : s),
+              ...freedSlots
+            ];
+            
+            toast.success(`Slot separati (${freedSlots.length} nuovi slot creati)`);
+          }
+          
           onChange(newSlots);
-          toast.success(`Slot ridimensionato a ${currentPreview} colonne`);
         }
         return null;
       });
@@ -298,8 +339,9 @@ export function VisualSlotEditor({
   return (
     <div className="space-y-3">
       <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 space-y-1">
-        <p>• <strong>Trascina</strong> gli slot per spostarli tra le celle</p>
-        <p>• <strong>Trascina il bordo destro</strong> per ridimensionare</p>
+        <p>• <strong>Trascina il bordo destro</strong> per unire slot adiacenti</p>
+        <p>• <strong>Trascina</strong> uno slot su un altro per scambiarli</p>
+        <p>• <strong>Riduci la larghezza</strong> per separare gli slot uniti</p>
       </div>
       
       <div
