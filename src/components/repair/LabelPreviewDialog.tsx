@@ -147,16 +147,22 @@ export function LabelPreviewDialog({ open, onOpenChange, data }: LabelPreviewDia
 
     setIsPrinting(true);
     try {
+      // Genera trackingUrl per QR code
+      const trackingUrl = labelStyle === 'qrcode' 
+        ? `${window.location.origin}/centro/lavori/${data.repairId || ''}`
+        : undefined;
+      
       const labelXml = generateRepairLabel({
         repairId: data.repairId || '',
-        customerName: customerName.substring(0, 25),
+        customerName: customerName.substring(0, 20),
         phone: data.customerPhone || '',
         deviceBrand: data.deviceBrand || '',
         deviceModel: data.deviceModel || '',
         deviceType: data.deviceType || '',
-        issueDescription: issue.substring(0, 40),
+        issueDescription: issue.substring(0, 30),
         intakeDate,
         storageSlot: data.storageSlot,
+        trackingUrl,
       }, labelFormat);
 
       await printLabel(labelXml);
