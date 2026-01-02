@@ -21,7 +21,8 @@ import {
   Merge,
   Copy,
   Move,
-  Settings
+  Settings,
+  Play
 } from "lucide-react";
 import { toast } from "sonner";
 import { 
@@ -31,6 +32,7 @@ import {
   slotDataToMergedSlots 
 } from "./VisualSlotEditor";
 import { SlotCapacityVisualEditor } from "./SlotCapacityVisualEditor";
+import { SlotFillSimulator } from "./SlotFillSimulator";
 
 // Merged slot: defines a slot that spans multiple columns
 export interface MergedSlot {
@@ -84,6 +86,7 @@ interface MultiShelfEditorProps {
 export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: MultiShelfEditorProps) {
   const [editingShelf, setEditingShelf] = useState<ShelfConfig | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [simulatingShelf, setSimulatingShelf] = useState<ShelfConfig | null>(null);
 
   const handleAddShelf = () => {
     const newShelf: ShelfConfig = {
@@ -209,6 +212,15 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
                           title="Duplica"
                         >
                           <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-primary hover:text-primary"
+                          onClick={() => setSimulatingShelf(shelf)}
+                          title="Simula riempimento"
+                        >
+                          <Play className="h-3.5 w-3.5" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -355,6 +367,21 @@ export function MultiShelfEditor({ config, onChange, occupiedSlots = [] }: Multi
         onSave={handleSaveShelf}
         isCreating={isCreating}
       />
+
+      {/* Simulator Dialog */}
+      <Dialog open={simulatingShelf !== null} onOpenChange={(open) => !open && setSimulatingShelf(null)}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="sr-only">Simulatore Riempimento</DialogTitle>
+          </DialogHeader>
+          {simulatingShelf && (
+            <SlotFillSimulator 
+              shelf={simulatingShelf} 
+              onClose={() => setSimulatingShelf(null)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
