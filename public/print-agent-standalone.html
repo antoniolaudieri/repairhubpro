@@ -743,14 +743,14 @@
             const qrX = (labelWidth - qrSize) / 2;  // centrato verticalmente
             const qrY = labelHeight - qrSize - margin;  // allineato a destra
             
-            // Genera QR code come BarcodeObject nativo Dymo
+            // Genera QR code come QRCodeObject nativo Dymo
             let qrObject = '';
             if (trackingUrl) {
                 log('Generazione QR code per: ' + trackingUrl);
                 
-                // Usa BarcodeObject nativo di Dymo invece di ImageObject
+                // Usa QRCodeObject nativo di Dymo
                 qrObject = `
-        <BarcodeObject>
+        <QRCodeObject>
           <Name>QRCode</Name>
           <Brushes>
             <BackgroundBrush>
@@ -781,12 +781,8 @@
           <Margin>
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
-          <BarcodeFormat>QRCode</BarcodeFormat>
-          <Data>${escapeXml(trackingUrl)}</Data>
-          <HorizontalAlignment>Center</HorizontalAlignment>
-          <VerticalAlignment>Middle</VerticalAlignment>
-          <Size>Medium</Size>
-          <TextPosition>None</TextPosition>
+          <Code>${escapeXml(trackingUrl)}</Code>
+          <ErrorCorrectionLevel>Medium</ErrorCorrectionLevel>
           <ObjectLayout>
             <DYMOPoint>
               <X>${qrX.toFixed(3)}</X>
@@ -797,9 +793,9 @@
               <Height>${qrSize.toFixed(3)}</Height>
             </Size>
           </ObjectLayout>
-        </BarcodeObject>`;
+        </QRCodeObject>`;
                 
-                log('QR code BarcodeObject creato');
+                log('QRCodeObject creato');
             }
             
             return `<?xml version="1.0" encoding="utf-8"?>
