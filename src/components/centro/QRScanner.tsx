@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Camera, X, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
+import { Camera, X, CheckCircle2, AlertTriangle, Loader2, Flashlight, FlashlightOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface QRScannerProps {
@@ -21,6 +21,8 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
   const [scannedId, setScannedId] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
   const stopScanner = useCallback(async () => {
@@ -112,6 +114,18 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
       
       setIsScanning(true);
       setIsStarting(false);
+      
+      // Check if torch is supported
+      try {
+        const capabilities = html5QrCode.getRunningTrackCameraCapabilities();
+        if (capabilities.torchFeature().isSupported()) {
+          setTorchSupported(true);
+        }
+      } catch (e) {
+        console.log('Torch not supported:', e);
+        setTorchSupported(false);
+      }
+      
       return true;
     } catch (err: any) {
       console.error('Scanner error:', err);
@@ -181,7 +195,26 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
 
   const handleRetry = async () => {
     setError(null);
+    setTorchOn(false);
+    setTorchSupported(false);
     await startScanner();
+  };
+
+  const toggleTorch = async () => {
+    if (!scannerRef.current) return;
+    
+    try {
+      const capabilities = scannerRef.current.getRunningTrackCameraCapabilities();
+      const torchFeature = capabilities.torchFeature();
+      
+      if (torchFeature.isSupported()) {
+        await torchFeature.apply(!torchOn);
+        setTorchOn(!torchOn);
+      }
+    } catch (e) {
+      console.error('Error toggling torch:', e);
+      toast.error('Impossibile attivare la torcia');
+    }
   };
 
   if (!open) return null;
@@ -227,6 +260,22 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
                   <p className="text-sm text-muted-foreground">Avvio fotocamera...</p>
                 </div>
               </div>
+            )}
+            
+            {/* Torch button */}
+            {isScanning && torchSupported && (
+              <Button
+                variant={torchOn ? "default" : "secondary"}
+                size="icon"
+                className="absolute bottom-4 right-4 z-20 rounded-full shadow-lg"
+                onClick={toggleTorch}
+              >
+                {torchOn ? (
+                  <Flashlight className="h-5 w-5" />
+                ) : (
+                  <FlashlightOff className="h-5 w-5" />
+                )}
+              </Button>
             )}
           </div>
 
