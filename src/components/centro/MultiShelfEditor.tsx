@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,18 @@ import {
   Archive, 
   Grid3X3, 
   Palette,
-  GripVertical,
   Check,
-  X
+  X,
+  Merge,
+  Unlink
 } from "lucide-react";
+import { toast } from "sonner";
+
+// Merged slot: defines a slot that spans multiple columns
+export interface MergedSlot {
+  startSlot: number; // Starting slot number
+  span: number; // How many columns it spans (2 = double width)
+}
 
 export interface ShelfConfig {
   id: string;
@@ -28,6 +36,7 @@ export interface ShelfConfig {
   columns: number;
   start_number: number;
   color: string;
+  mergedSlots?: MergedSlot[]; // Optional array of merged slots
 }
 
 export interface MultiShelfConfig {
@@ -270,23 +279,109 @@ interface ShelfEditorDialogProps {
 
 function ShelfEditorDialog({ shelf, isOpen, onClose, onSave, isCreating }: ShelfEditorDialogProps) {
   const [formData, setFormData] = useState<ShelfConfig | null>(null);
+  const [selectedSlots, setSelectedSlots] = useState<number[]>([]);
+  const [mergeMode, setMergeMode] = useState(false);
 
   // Reset form when shelf changes
   useState(() => {
     if (shelf) {
-      setFormData({ ...shelf });
+      setFormData({ ...shelf, mergedSlots: shelf.mergedSlots || [] });
     }
   });
 
   // Update form when dialog opens
   if (shelf && !formData) {
-    setFormData({ ...shelf });
+    setFormData({ ...shelf, mergedSlots: shelf.mergedSlots || [] });
   }
   
   if (!formData) return null;
 
   const totalSlots = formData.rows * formData.columns;
   const colorClasses = getColorClasses(formData.color);
+  const mergedSlots = formData.mergedSlots || [];
+
+  // Check if a slot is part of a merged group
+  const getSlotMergeInfo = (slotNum: number): { isMerged: boolean; isStart: boolean; span: number; mergeGroup?: MergedSlot } => {
+    for (const merge of mergedSlots) {
+      if (slotNum === merge.startSlot) {
+        return { isMerged: true, isStart: true, span: merge.span, mergeGroup: merge };
+      }
+      if (slotNum > merge.startSlot && slotNum < merge.startSlot + merge.span) {
+        return { isMerged: true, isStart: false, span: 0, mergeGroup: merge };
+      }
+    }
+    return { isMerged: false, isStart: false, span: 1 };
+  };
+
+  // Check if slots can be merged (must be adjacent horizontally in same row)
+  const canMergeSelected = (): boolean => {
+    if (selectedSlots.length < 2) return false;
+    
+    const sorted = [...selectedSlots].sort((a, b) => a - b);
+    
+    // Check if all in same row
+    const firstRow = Math.floor((sorted[0] - formData.start_number) / formData.columns);
+    for (const slot of sorted) {
+      const row = Math.floor((slot - formData.start_number) / formData.columns);
+      if (row !== firstRow) return false;
+    }
+    
+    // Check if consecutive
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i] !== sorted[i - 1] + 1) return false;
+    }
+    
+    // Check none are already merged
+    for (const slot of sorted) {
+      const info = getSlotMergeInfo(slot);
+      if (info.isMerged) return false;
+    }
+    
+    return true;
+  };
+
+  const handleSlotClick = (slotNum: number) => {
+    if (!mergeMode) return;
+    
+    const info = getSlotMergeInfo(slotNum);
+    
+    // If clicking on a merged slot, unmerge it
+    if (info.isMerged && info.mergeGroup) {
+      const newMerged = mergedSlots.filter(m => m.startSlot !== info.mergeGroup!.startSlot);
+      setFormData({ ...formData, mergedSlots: newMerged });
+      toast.success("Slot separati");
+      return;
+    }
+    
+    // Toggle selection
+    if (selectedSlots.includes(slotNum)) {
+      setSelectedSlots(selectedSlots.filter(s => s !== slotNum));
+    } else {
+      setSelectedSlots([...selectedSlots, slotNum]);
+    }
+  };
+
+  const handleMergeSelected = () => {
+    if (!canMergeSelected()) return;
+    
+    const sorted = [...selectedSlots].sort((a, b) => a - b);
+    const newMerge: MergedSlot = {
+      startSlot: sorted[0],
+      span: sorted.length
+    };
+    
+    setFormData({
+      ...formData,
+      mergedSlots: [...mergedSlots, newMerge]
+    });
+    setSelectedSlots([]);
+    toast.success(`${sorted.length} slot uniti`);
+  };
+
+  const toggleMergeMode = () => {
+    setMergeMode(!mergeMode);
+    setSelectedSlots([]);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -386,9 +481,51 @@ function ShelfEditorDialog({ shelf, isOpen, onClose, onSave, isCreating }: Shelf
               </div>
             </div>
 
-            {/* Right Column - Visual Preview */}
+            {/* Right Column - Visual Preview with Merge */}
             <div className="space-y-4">
-              <Label>Anteprima Scaffalatura</Label>
+              <div className="flex items-center justify-between">
+                <Label>Anteprima Scaffalatura</Label>
+                <Button
+                  variant={mergeMode ? "default" : "outline"}
+                  size="sm"
+                  onClick={toggleMergeMode}
+                  className="h-7 text-xs"
+                >
+                  {mergeMode ? (
+                    <>
+                      <X className="h-3 w-3 mr-1" />
+                      Esci
+                    </>
+                  ) : (
+                    <>
+                      <Merge className="h-3 w-3 mr-1" />
+                      Unisci Slot
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {mergeMode && (
+                <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 space-y-1">
+                  <p>• Clicca sugli slot adiacenti per selezionarli</p>
+                  <p>• Clicca su uno slot unito per separarlo</p>
+                  {selectedSlots.length > 0 && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t">
+                      <span>{selectedSlots.length} slot selezionati</span>
+                      <Button
+                        size="sm"
+                        className="h-6 text-xs"
+                        disabled={!canMergeSelected()}
+                        onClick={handleMergeSelected}
+                      >
+                        <Merge className="h-3 w-3 mr-1" />
+                        Unisci
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+              
               <div className={cn(
                 "rounded-xl border-2 p-4 overflow-hidden",
                 colorClasses.border
@@ -396,31 +533,76 @@ function ShelfEditorDialog({ shelf, isOpen, onClose, onSave, isCreating }: Shelf
                 <div className={cn("h-1.5 -mx-4 -mt-4 mb-4 bg-gradient-to-r", formData.color)} />
                 
                 <div 
-                  className="grid gap-1 max-h-[200px] overflow-auto"
+                  className="grid gap-1 max-h-[250px] overflow-auto"
                   style={{ 
                     gridTemplateColumns: `repeat(${formData.columns}, 1fr)` 
                   }}
                 >
-                  {Array.from({ length: Math.min(totalSlots, 100) }, (_, i) => {
-                    const slotNum = formData.start_number + i;
-                    return (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: i * 0.005 }}
-                        className={cn(
-                          "aspect-square rounded flex items-center justify-center text-[8px] font-mono font-medium",
-                          colorClasses.bg,
-                          colorClasses.text,
-                          colorClasses.border,
-                          "border"
-                        )}
-                      >
-                        {formData.prefix}{slotNum}
-                      </motion.div>
-                    );
-                  })}
+                  {(() => {
+                    const slots: JSX.Element[] = [];
+                    let skipUntil = -1;
+                    
+                    for (let i = 0; i < Math.min(totalSlots, 100); i++) {
+                      const slotNum = formData.start_number + i;
+                      
+                      // Skip slots that are part of a merge (not the start)
+                      if (slotNum <= skipUntil) continue;
+                      
+                      const mergeInfo = getSlotMergeInfo(slotNum);
+                      const isSelected = selectedSlots.includes(slotNum);
+                      
+                      if (mergeInfo.isMerged && mergeInfo.isStart) {
+                        // This is a merged slot start
+                        skipUntil = slotNum + mergeInfo.span - 1;
+                        slots.push(
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.005 }}
+                            onClick={() => handleSlotClick(slotNum)}
+                            className={cn(
+                              "aspect-[2/1] rounded flex items-center justify-center text-[8px] font-mono font-medium relative",
+                              "bg-gradient-to-r",
+                              formData.color,
+                              "text-white border-2 border-white/30",
+                              mergeMode && "cursor-pointer hover:opacity-80",
+                              mergeMode && "ring-2 ring-offset-1 ring-primary/50"
+                            )}
+                            style={{ 
+                              gridColumn: `span ${mergeInfo.span}` 
+                            }}
+                          >
+                            <Merge className="h-2.5 w-2.5 absolute top-0.5 right-0.5 opacity-60" />
+                            {formData.prefix}{slotNum}-{slotNum + mergeInfo.span - 1}
+                          </motion.div>
+                        );
+                      } else if (!mergeInfo.isMerged) {
+                        // Regular slot
+                        slots.push(
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: i * 0.005 }}
+                            onClick={() => handleSlotClick(slotNum)}
+                            className={cn(
+                              "aspect-square rounded flex items-center justify-center text-[8px] font-mono font-medium transition-all",
+                              colorClasses.bg,
+                              colorClasses.text,
+                              colorClasses.border,
+                              "border",
+                              mergeMode && "cursor-pointer hover:ring-2 hover:ring-primary/50",
+                              isSelected && "ring-2 ring-primary bg-primary/20"
+                            )}
+                          >
+                            {formData.prefix}{slotNum}
+                          </motion.div>
+                        );
+                      }
+                    }
+                    return slots;
+                  })()}
                 </div>
                 
                 {totalSlots > 100 && (
@@ -429,10 +611,16 @@ function ShelfEditorDialog({ shelf, isOpen, onClose, onSave, isCreating }: Shelf
                   </p>
                 )}
                 
-                <div className="mt-4 pt-3 border-t text-center">
+                <div className="mt-4 pt-3 border-t flex items-center justify-center gap-2 flex-wrap">
                   <Badge className={cn("bg-gradient-to-r text-white border-0", formData.color)}>
                     {totalSlots} slot totali
                   </Badge>
+                  {mergedSlots.length > 0 && (
+                    <Badge variant="secondary" className="text-xs">
+                      <Merge className="h-3 w-3 mr-1" />
+                      {mergedSlots.length} unioni
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
