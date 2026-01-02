@@ -76,13 +76,18 @@ function mmToInches(mm: number): number {
 }
 
 // Generate DesktopLabel XML for Dymo Connect
-// Usiamo Landscape con Width = lato lungo, Height = lato corto
+// IMPORTANTE: Dymo ignora il tag Orientation!
+// Per forzare orizzontale su etichette 11354 (57x32mm):
+// - Impostiamo Width = lato CORTO (32mm = 1.26")
+// - Impostiamo Height = lato LUNGO (57mm = 2.24")
+// - Questo forza la stampante a ruotare il contenuto
 function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
   const { physicalWidth, physicalHeight, labelName } = LABEL_FORMATS[format];
   
-  // Per Landscape: Width = lato lungo (57mm), Height = lato corto (32mm)
-  const labelWidth = mmToInches(physicalWidth);   // 57mm = 2.24"
-  const labelHeight = mmToInches(physicalHeight); // 32mm = 1.26"
+  // INVERTITO: Width = lato corto, Height = lato lungo
+  // Questo forza Dymo a stampare in orizzontale
+  const labelWidth = mmToInches(physicalHeight);  // 32mm = 1.26" (lato corto)
+  const labelHeight = mmToInches(physicalWidth);  // 57mm = 2.24" (lato lungo)
   
   // Build FormattedText with LineTextSpan elements
   const lineSpans = lines.map((line) => {
@@ -116,7 +121,7 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[]): string {
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>LabLinkRiparo Label</Description>
-    <Orientation>Landscape</Orientation>
+    <Orientation>Portrait</Orientation>
     <LabelName>${labelName}</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>

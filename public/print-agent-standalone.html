@@ -310,15 +310,16 @@
             }
 
             // Label format: 11354 (57x32mm) - DesktopLabel format for Dymo Connect
-            // Landscape: Width = lato lungo (57mm = 2.24"), Height = lato corto (32mm = 1.26")
-            const labelWidth = 2.24;  // 57mm in pollici (lato lungo)
-            const labelHeight = 1.26; // 32mm in pollici (lato corto)
+            // INVERTITO: Width = lato CORTO, Height = lato LUNGO
+            // Questo forza Dymo a stampare in orizzontale!
+            const labelWidth = 1.26;  // 32mm in pollici (lato CORTO)
+            const labelHeight = 2.24; // 57mm in pollici (lato LUNGO)
             
             const testLabel = `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>Test Label</Description>
-    <Orientation>Landscape</Orientation>
+    <Orientation>Portrait</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
@@ -418,7 +419,7 @@
             </LineTextSpan>
             <LineTextSpan>
               <TextSpan>
-                <Text>57x32mm</Text>
+                <Text>ORIZZONTALE</Text>
                 <FontInfo>
                   <FontName>Arial</FontName>
                   <FontSize>7</FontSize>
@@ -641,15 +642,16 @@
             const line4 = data.issue || data.condition || '';
             
             // Dymo 11354 Multi-Purpose: 57mm x 32mm
-            // Landscape: Width = lato lungo (57mm = 2.24"), Height = lato corto (32mm = 1.26")
-            const labelWidth = 2.24;  // 57mm in pollici (lato lungo)
-            const labelHeight = 1.26; // 32mm in pollici (lato corto)
+            // INVERTITO: Width = lato CORTO, Height = lato LUNGO
+            // Questo forza Dymo a stampare in orizzontale!
+            const labelWidth = 1.26;  // 32mm in pollici (lato CORTO)
+            const labelHeight = 2.24; // 57mm in pollici (lato LUNGO)
             
             return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>LabLinkRiparo Label</Description>
-    <Orientation>Landscape</Orientation>
+    <Orientation>Portrait</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
