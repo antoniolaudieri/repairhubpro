@@ -180,34 +180,34 @@ export function SlotCapacityVisualEditor({ capacity, onChange, shelfColor }: Slo
       </div>
 
       {/* Quick controls - main interaction */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-2">
         {DEVICE_TYPES.map(device => (
-          <div key={device.key} className="flex items-center gap-2 p-2 rounded-lg bg-muted/20 border border-border/50">
+          <div key={device.key} className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/50">
             <div className={cn(
-              "flex items-center justify-center rounded-md p-1.5",
+              "flex-shrink-0 flex items-center justify-center rounded-md p-2",
               shelfColor, "text-white"
             )}>
               <device.icon className="h-4 w-4" />
             </div>
-            <span className="text-xs font-medium flex-1">{device.label}</span>
-            <div className="flex items-center gap-1">
+            <span className="text-sm font-medium flex-1 min-w-0">{device.label}</span>
+            <div className="flex-shrink-0 flex items-center gap-2">
               <Button
                 variant="outline"
                 size="icon"
-                className="h-6 w-6"
+                className="h-8 w-8"
                 onClick={() => handleRemove(device.key)}
                 disabled={capacity[device.key] === 0}
               >
-                <Minus className="h-3 w-3" />
+                <Minus className="h-4 w-4" />
               </Button>
-              <span className="text-sm font-bold w-5 text-center">{capacity[device.key]}</span>
+              <span className="text-base font-bold w-6 text-center">{capacity[device.key]}</span>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-6 w-6"
+                className="h-8 w-8"
                 onClick={() => handleAdd(device.key)}
               >
-                <Plus className="h-3 w-3" />
+                <Plus className="h-4 w-4" />
               </Button>
             </div>
           </div>
