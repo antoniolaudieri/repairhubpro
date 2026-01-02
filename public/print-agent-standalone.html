@@ -660,9 +660,9 @@
             const textWidth = labelWidth - marginLeft - marginRight - (trackingUrl ? qrSize + 0.08 : 0);
             const textHeight = labelHeight - marginTop - 0.12;
             
-            // QR Code object (se presente)
+            // QR Code object (se presente) - usa BarcodeObject con BarcodeFormat QRCode
             const qrObject = trackingUrl ? `
-        <QRCodeObject>
+        <BarcodeObject>
           <Name>QRCode</Name>
           <Brushes>
             <BackgroundBrush>
@@ -693,8 +693,10 @@
           <Margin>
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
-          <Data>${escapeXml(trackingUrl)}</Data>
-          <ErrorCorrectionLevel>Medium</ErrorCorrectionLevel>
+          <Text>${escapeXml(trackingUrl)}</Text>
+          <BarcodeFormat>QRCode</BarcodeFormat>
+          <Size>Medium</Size>
+          <TextPosition>None</TextPosition>
           <ObjectLayout>
             <DYMOPoint>
               <X>${(labelWidth - qrSize - marginRight).toFixed(2)}</X>
@@ -705,7 +707,7 @@
               <Height>${qrSize.toFixed(2)}</Height>
             </Size>
           </ObjectLayout>
-        </QRCodeObject>` : '';
+        </BarcodeObject>` : '';
             
             return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">

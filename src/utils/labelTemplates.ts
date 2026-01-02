@@ -124,9 +124,9 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[], qrData?: s
           </LineTextSpan>`;
   }).join('\n');
 
-  // QR Code object (se presente)
+  // QR Code object (se presente) - usa BarcodeObject con BarcodeFormat QRCode
   const qrObject = qrData ? `
-        <QRCodeObject>
+        <BarcodeObject>
           <Name>QRCode</Name>
           <Brushes>
             <BackgroundBrush>
@@ -157,8 +157,10 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[], qrData?: s
           <Margin>
             <DYMOThickness Left="0" Top="0" Right="0" Bottom="0" />
           </Margin>
-          <Data>${escapeXml(qrData)}</Data>
-          <ErrorCorrectionLevel>Medium</ErrorCorrectionLevel>
+          <Text>${escapeXml(qrData)}</Text>
+          <BarcodeFormat>QRCode</BarcodeFormat>
+          <Size>Medium</Size>
+          <TextPosition>None</TextPosition>
           <ObjectLayout>
             <DYMOPoint>
               <X>${(labelWidth - qrSize - marginRight).toFixed(2)}</X>
@@ -169,7 +171,7 @@ function generateDieCutLabel(format: LabelFormat, lines: LabelLine[], qrData?: s
               <Height>${qrSize.toFixed(2)}</Height>
             </Size>
           </ObjectLayout>
-        </QRCodeObject>` : '';
+        </BarcodeObject>` : '';
   
   return `<?xml version="1.0" encoding="utf-8"?>
 <DesktopLabel Version="1">
