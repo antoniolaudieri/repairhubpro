@@ -719,20 +719,21 @@
             const trackingUrl = data.trackingUrl || (repairId ? `https://lablinkriparo.lovable.app/centro/lavori/${repairId}` : '');
             
             // Dymo 11354: 57mm x 32mm
-            // LANDSCAPE: Width = 57mm (lato lungo), Height = 32mm (lato corto)
-            const labelWidth = 2.24;  // 57mm in pollici
-            const labelHeight = 1.26; // 32mm in pollici
+            // TRUCCO: Per stampare orizzontale, usiamo Portrait con dimensioni INVERTITE
+            // Width = lato CORTO (32mm), Height = lato LUNGO (57mm)
+            const labelWidth = 1.26;  // 32mm in pollici (lato CORTO)
+            const labelHeight = 2.24; // 57mm in pollici (lato LUNGO)
             
-            // Margini più piccoli
+            // Margini
             const marginLeft = 0.05;
             const marginTop = 0.05;
             
-            // QR a destra, più piccolo per lasciare spazio al testo
-            const qrSize = trackingUrl ? 0.6 : 0;
+            // QR in basso, più piccolo
+            const qrSize = trackingUrl ? 0.55 : 0;
             
-            // Area testo: a sinistra del QR
-            const textWidth = trackingUrl ? (labelWidth - qrSize - marginLeft - 0.1) : (labelWidth - marginLeft * 2);
-            const textHeight = labelHeight - marginTop * 2;
+            // Area testo: sopra il QR
+            const textWidth = labelWidth - marginLeft * 2;
+            const textHeight = trackingUrl ? (labelHeight - qrSize - marginTop - 0.1) : (labelHeight - marginTop * 2);
             
             // Genera QR code come immagine base64
             let qrObject = '';
@@ -741,9 +742,9 @@
                 const qrBase64 = await generateQRCodeDataUrl(trackingUrl);
                 if (qrBase64) {
                     log('QR code generato con successo');
-                    // Posizione QR: a destra, centrato verticalmente
-                    const qrX = labelWidth - qrSize - 0.05;
-                    const qrY = (labelHeight - qrSize) / 2;
+                    // Posizione QR: in basso, centrato orizzontalmente
+                    const qrX = (labelWidth - qrSize) / 2;
+                    const qrY = labelHeight - qrSize - 0.05;
                     
                     qrObject = `
         <ImageObject>
@@ -801,7 +802,7 @@
 <DesktopLabel Version="1">
   <DYMOLabel Version="3">
     <Description>LabLinkRiparo Label</Description>
-    <Orientation>Landscape</Orientation>
+    <Orientation>Portrait</Orientation>
     <LabelName>Small30332</LabelName>
     <InitialLength>0</InitialLength>
     <BorderStyle>SolidLine</BorderStyle>
