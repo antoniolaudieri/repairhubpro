@@ -124,8 +124,8 @@
         .config-section { margin-bottom: 16px; }
         .config-section label { display: block; margin-bottom: 8px; color: #888; font-size: 14px; }
     </style>
-    <!-- QRCode library CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <!-- QRCode library CDN - caricamento sincrono -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -644,31 +644,39 @@
             }
         }
 
-        // Genera QR code - verifica che la libreria sia caricata
+        // Genera QR code usando qrcodejs library
         async function generateQRCodeDataUrl(text) {
             return new Promise((resolve) => {
-                // Verifica che QRCode sia disponibile
-                if (typeof QRCode === 'undefined') {
-                    log('Libreria QRCode non caricata, provo fallback...', 'warning');
-                    // Fallback: genera un placeholder
-                    resolve(null);
-                    return;
-                }
-                
                 try {
-                    QRCode.toDataURL(text, {
+                    // Crea un div temporaneo nascosto
+                    const tempDiv = document.createElement('div');
+                    tempDiv.style.display = 'none';
+                    document.body.appendChild(tempDiv);
+                    
+                    // Genera il QR code
+                    const qr = new QRCode(tempDiv, {
+                        text: text,
                         width: 150,
-                        margin: 1,
-                        errorCorrectionLevel: 'M',
-                        color: { dark: '#000000', light: '#ffffff' }
-                    }).then(dataUrl => {
-                        const base64 = dataUrl.split(',')[1];
-                        log('QR generato: ' + base64.substring(0, 20) + '... (' + base64.length + ' chars)');
-                        resolve(base64);
-                    }).catch(err => {
-                        log('Errore QRCode: ' + err.message, 'error');
-                        resolve(null);
+                        height: 150,
+                        colorDark: '#000000',
+                        colorLight: '#ffffff',
+                        correctLevel: QRCode.CorrectLevel.M
                     });
+                    
+                    // Aspetta che il canvas sia generato
+                    setTimeout(() => {
+                        const canvas = tempDiv.querySelector('canvas');
+                        if (canvas) {
+                            const base64 = canvas.toDataURL('image/png').split(',')[1];
+                            log('QR generato: ' + base64.substring(0, 20) + '...');
+                            document.body.removeChild(tempDiv);
+                            resolve(base64);
+                        } else {
+                            log('Canvas QR non trovato', 'error');
+                            document.body.removeChild(tempDiv);
+                            resolve(null);
+                        }
+                    }, 100);
                 } catch (e) {
                     log('Errore generazione QR: ' + e.message, 'error');
                     resolve(null);
