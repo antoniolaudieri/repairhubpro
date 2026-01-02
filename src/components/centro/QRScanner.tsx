@@ -68,17 +68,23 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
       await html5QrCode.start(
         { facingMode: 'environment' },
         {
-          fps: 10,
-          qrbox: { width: 200, height: 200 },
+          fps: 15,
+          qrbox: { width: 280, height: 280 },
+          aspectRatio: 1.0,
+          disableFlip: false,
         },
         (decodedText) => {
-          // Check if it's a valid repair URL
+          console.log('QR Scansionato:', decodedText);
+          
+          // Check if it's a valid repair URL or UUID
           const repairIdMatch = decodedText.match(/\/centro\/lavori\/([a-f0-9-]+)/i) ||
                                 decodedText.match(/\/repair\/([a-f0-9-]+)/i) ||
-                                decodedText.match(/^([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i);
+                                decodedText.match(/lavori\/([a-f0-9-]+)/i) ||
+                                decodedText.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})/i);
           
           if (repairIdMatch) {
             const repairId = repairIdMatch[1];
+            console.log('ID Riparazione trovato:', repairId);
             setScannedId(repairId);
             
             // Stop scanner before navigating
@@ -90,7 +96,8 @@ export function QRScanner({ open, onOpenChange }: QRScannerProps) {
               }, 300);
             });
           } else {
-            setError('QR code non valido per una riparazione');
+            console.log('QR non valido:', decodedText);
+            setError(`QR code non valido: ${decodedText.substring(0, 50)}...`);
           }
         },
         () => {
