@@ -748,15 +748,23 @@
               </LineTextSpan>`;
             }).join('');
             
-            // Layout: testo a sinistra, QR a destra
-            const textWidth = trackingUrl ? 1.25 : 2.10;
-            const qrX = 1.30;
-            const qrSize = 0.90;
+            // Layout: testo a sinistra, QR a destra (QR più grande per migliore lettura)
+            const textWidth = trackingUrl ? 1.10 : 2.10;
+            const qrX = 1.15;
+            const qrSize = 1.00;
+            
+            // Estrai solo l'ID dalla URL per un QR più semplice da scansionare
+            let qrData = trackingUrl;
+            const idMatch = trackingUrl.match(/\/centro\/lavori\/([a-f0-9-]+)/i);
+            if (idMatch) {
+                // Usa URL completo ma abbreviato
+                qrData = trackingUrl;
+            }
             
             // QRCodeObject (formato corretto da file .dymo)
             let qrObject = '';
             if (trackingUrl) {
-                log('Generazione QR code per: ' + trackingUrl);
+                log('Generazione QR code per: ' + qrData);
                 qrObject = `
         <QRCodeObject>
           <Name>QRCodeObject0</Name>
@@ -791,23 +799,23 @@
           </Margin>
           <BarcodeFormat>QRCode</BarcodeFormat>
           <Data>
-            <DataString>${escapeXml(trackingUrl)}</DataString>
+            <DataString>${escapeXml(qrData)}</DataString>
           </Data>
           <HorizontalAlignment>Center</HorizontalAlignment>
           <VerticalAlignment>Middle</VerticalAlignment>
           <Size>AutoFit</Size>
           <EQRCodeType>QRCodeWebPage</EQRCodeType>
           <WebAddressDataHolder>
-            <DataString>${escapeXml(trackingUrl)}</DataString>
+            <DataString>${escapeXml(qrData)}</DataString>
           </WebAddressDataHolder>
           <ObjectLayout>
             <DYMOPoint>
               <X>${qrX}</X>
-              <Y>0.06</Y>
+              <Y>0.03</Y>
             </DYMOPoint>
             <Size>
               <Width>${qrSize}</Width>
-              <Height>1.10</Height>
+              <Height>1.15</Height>
             </Size>
           </ObjectLayout>
         </QRCodeObject>`;
