@@ -210,17 +210,21 @@ export function StorageSlotWidget({
               
               if (mergeInfo.isMerged && mergeInfo.isStart) {
                 skipUntil = slotNum + mergeInfo.span - 1;
+                const actualSpan = Math.min(mergeInfo.span, 10);
                 elements.push(
                   <motion.div
                     key={i}
                     animate={isCurrentSlot ? { scale: [1, 1.2, 1] } : {}}
                     transition={isCurrentSlot ? { duration: 2, repeat: Infinity } : {}}
                     className={cn(
-                      "aspect-[2/1] rounded-sm transition-colors bg-gradient-to-r border border-white/30",
+                      "rounded-sm transition-colors bg-gradient-to-r border border-white/30",
                       shelf.color,
                       isCurrentSlot && "ring-2 ring-offset-1 ring-offset-background ring-foreground/50"
                     )}
-                    style={{ gridColumn: `span ${Math.min(mergeInfo.span, 10)}` }}
+                    style={{ 
+                      gridColumn: `span ${actualSpan}`,
+                      aspectRatio: `${actualSpan}/1`
+                    }}
                   />
                 );
               } else {
@@ -359,9 +363,12 @@ export function StorageSlotWidget({
                                 whileTap={isAvailable ? { scale: 0.98 } : {}}
                                 onClick={() => isAvailable && setSelectedSlot(slotNum)}
                                 disabled={isOccupied}
-                                style={{ gridColumn: `span ${mergeInfo.span}` }}
+                                style={{ 
+                                  gridColumn: `span ${mergeInfo.span}`,
+                                  aspectRatio: `${mergeInfo.span}/1`
+                                }}
                                 className={cn(
-                                  "aspect-auto h-full min-h-[32px] rounded flex flex-col items-center justify-center text-[8px] sm:text-[10px] font-mono transition-all border-2 border-dashed",
+                                  "min-h-[32px] rounded flex flex-col items-center justify-center text-[8px] sm:text-[10px] font-mono transition-all border-2 border-dashed",
                                   isCurrentSlot 
                                     ? cn("bg-gradient-to-r text-white border-white/40", shelf.color)
                                     : isSelected
