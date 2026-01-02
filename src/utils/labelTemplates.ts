@@ -31,11 +31,12 @@ export interface ShelfLabelData {
   quantity?: number;
 }
 
-// Label format dimensions (twips: 1/1440 inch)
+// Label format dimensions (twips: 1/1440 inch, 1mm ≈ 56.7 twips)
+// 11354: 57x32mm -> 3232x1814 twips
 const LABEL_FORMATS: Record<LabelFormat, { width: number; height: number; name: string }> = {
   '30252': { width: 5040, height: 1581, name: '30252 Address (89x28mm)' },
   '99012': { width: 5102, height: 2268, name: '99012 Large Address (89x36mm)' },
-  '11354': { width: 3240, height: 1602, name: '11354 Multi-Purpose (57x32mm)' },
+  '11354': { width: 3232, height: 1814, name: '11354 Multi-Purpose (57x32mm)' },
   '30336': { width: 3060, height: 1417, name: '30336 Small (54x25mm)' },
 };
 
@@ -55,200 +56,140 @@ function escapeXml(text: string): string {
     .replace(/'/g, '&apos;');
 }
 
-export function generateRepairLabel(data: RepairLabelData, format: LabelFormat = '30252'): string {
+// Generate label using DesktopLabel format for better Dymo Connect compatibility
+function generateDesktopLabel(
+  format: LabelFormat,
+  lines: { text: string; fontSize: number; bold: boolean; color?: { r: number; g: number; b: number } }[]
+): string {
   const { width, height } = LABEL_FORMATS[format];
+  
+  let yPosition = 100;
+  const lineHeight = Math.floor((height - 200) / Math.max(lines.length, 1));
+  
+  let textObjects = '';
+  lines.forEach((line, index) => {
+    const color = line.color || { r: 0, g: 0, b: 0 };
+    textObjects += `
+      <TextObject>
+        <Name>Line${index + 1}</Name>
+        <ForeColor Alpha="255" Red="${color.r}" Green="${color.g}" Blue="${color.b}"/>
+        <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
+        <LinkedObjectName/>
+        <Rotation>Rotation0</Rotation>
+        <IsMirrored>False</IsMirrored>
+        <IsVariable>False</IsVariable>
+        <GroupID>-1</GroupID>
+        <IsOutlined>False</IsOutlined>
+        <HorizontalAlignment>Left</HorizontalAlignment>
+        <VerticalAlignment>Top</VerticalAlignment>
+        <TextFitMode>ShrinkToFit</TextFitMode>
+        <UseFullFontHeight>True</UseFullFontHeight>
+        <Verticalized>False</Verticalized>
+        <StyledText>
+          <Element>
+            <String xml:space="preserve">${escapeXml(line.text)}</String>
+            <Attributes>
+              <Font Family="Arial" Size="${line.fontSize}" Bold="${line.bold}" Italic="False" Underline="False" Strikeout="False"/>
+              <ForeColor Alpha="255" Red="${color.r}" Green="${color.g}" Blue="${color.b}"/>
+            </Attributes>
+          </Element>
+        </StyledText>
+        <ShowBarcodeFor9702>False</ShowBarcodeFor9702>
+        <ObjectLayout>
+          <DYMOPoint>
+            <X>100</X>
+            <Y>${yPosition}</Y>
+          </DYMOPoint>
+          <Size>
+            <Width>${width - 200}</Width>
+            <Height>${lineHeight}</Height>
+          </Size>
+        </ObjectLayout>
+      </TextObject>`;
+    yPosition += lineHeight;
+  });
+
+  return `<?xml version="1.0" encoding="utf-8"?>
+<DesktopLabel Version="1">
+  <DYMOLabel Version="3">
+    <Description>DYMO Label</Description>
+    <Orientation>Landscape</Orientation>
+    <LabelName>${format}</LabelName>
+    <InitialLength>0</InitialLength>
+    <BorderStyle>SolidLine</BorderStyle>
+    <DYMORect>
+      <DYMOPoint>
+        <X>0</X>
+        <Y>0</Y>
+      </DYMOPoint>
+      <Size>
+        <Width>${width}</Width>
+        <Height>${height}</Height>
+      </Size>
+    </DYMORect>
+    <BorderColor Alpha="255" Red="0" Green="0" Blue="0"/>
+    <BorderThickness>1</BorderThickness>
+    <Show_Border>False</Show_Border>
+    <DynamicLayoutManager>
+      <RotationBehavior>ClearObjects</RotationBehavior>
+      <LabelObjects>${textObjects}
+      </LabelObjects>
+    </DynamicLayoutManager>
+  </DYMOLabel>
+  <LabelApplication>Blank</LabelApplication>
+  <DataTable>
+    <Columns></Columns>
+    <Rows></Rows>
+  </DataTable>
+</DesktopLabel>`;
+}
+
+export function generateRepairLabel(data: RepairLabelData, format: LabelFormat = '11354'): string {
   const shortId = data.repairId.slice(0, 8).toUpperCase();
   const deviceInfo = `${data.deviceBrand} ${data.deviceModel}`.substring(0, 30);
   const customerInfo = data.customerName.substring(0, 25);
   const issue = data.issueDescription.substring(0, 40);
   const slotInfo = data.storageSlot ? ` [${data.storageSlot}]` : '';
   
-  return `<?xml version="1.0" encoding="utf-8"?>
-<DieCutLabel Version="8.0" Units="twips">
-  <PaperOrientation>Landscape</PaperOrientation>
-  <Id>Address</Id>
-  <PaperName>${format} Address</PaperName>
-  <DrawCommands>
-    <RoundRectangle X="0" Y="0" Width="${height}" Height="${width}" Rx="270" Ry="270"/>
-  </DrawCommands>
-  <ObjectInfo>
-    <TextObject>
-      <Name>RepairInfo</Name>
-      <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-      <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
-      <LinkedObjectName></LinkedObjectName>
-      <Rotation>Rotation0</Rotation>
-      <IsMirrored>False</IsMirrored>
-      <IsVariable>True</IsVariable>
-      <HorizontalAlignment>Left</HorizontalAlignment>
-      <VerticalAlignment>Top</VerticalAlignment>
-      <TextFitMode>ShrinkToFit</TextFitMode>
-      <UseFullFontHeight>True</UseFullFontHeight>
-      <Verticalized>False</Verticalized>
-      <StyledText>
-        <Element>
-          <String>#${escapeXml(shortId)}${escapeXml(slotInfo)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="12" Bold="True" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-          </Attributes>
-        </Element>
-        <Element>
-          <String>&#13;&#10;${escapeXml(customerInfo)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="9" Bold="True" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-          </Attributes>
-        </Element>
-        <Element>
-          <String>&#13;&#10;${escapeXml(deviceInfo)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-          </Attributes>
-        </Element>
-        <Element>
-          <String>&#13;&#10;${escapeXml(issue)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="7" Bold="False" Italic="True" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="80" Green="80" Blue="80"/>
-          </Attributes>
-        </Element>
-        <Element>
-          <String>&#13;&#10;${escapeXml(data.intakeDate)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="7" Bold="False" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="128" Green="128" Blue="128"/>
-          </Attributes>
-        </Element>
-      </StyledText>
-    </TextObject>
-    <Bounds X="200" Y="100" Width="${width - 400}" Height="${height - 200}"/>
-  </ObjectInfo>
-</DieCutLabel>`;
+  const lines = [
+    { text: `#${shortId}${slotInfo}`, fontSize: 12, bold: true },
+    { text: customerInfo, fontSize: 9, bold: true },
+    { text: deviceInfo, fontSize: 8, bold: false },
+    { text: issue, fontSize: 7, bold: false, color: { r: 80, g: 80, b: 80 } },
+    { text: data.intakeDate, fontSize: 7, bold: false, color: { r: 128, g: 128, b: 128 } },
+  ];
+
+  return generateDesktopLabel(format, lines);
 }
 
-export function generateDeviceLabel(data: DeviceLabelData, format: LabelFormat = '30252'): string {
-  const { width, height } = LABEL_FORMATS[format];
+export function generateDeviceLabel(data: DeviceLabelData, format: LabelFormat = '11354'): string {
   const shortId = data.deviceId.slice(0, 8).toUpperCase();
   const deviceInfo = `${data.brand} ${data.model}`.substring(0, 30);
   
-  return `<?xml version="1.0" encoding="utf-8"?>
-<DieCutLabel Version="8.0" Units="twips">
-  <PaperOrientation>Landscape</PaperOrientation>
-  <Id>Address</Id>
-  <PaperName>${format} Address</PaperName>
-  <DrawCommands>
-    <RoundRectangle X="0" Y="0" Width="${height}" Height="${width}" Rx="270" Ry="270"/>
-  </DrawCommands>
-  <ObjectInfo>
-    <TextObject>
-      <Name>DeviceInfo</Name>
-      <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-      <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
-      <LinkedObjectName></LinkedObjectName>
-      <Rotation>Rotation0</Rotation>
-      <IsMirrored>False</IsMirrored>
-      <IsVariable>True</IsVariable>
-      <HorizontalAlignment>Left</HorizontalAlignment>
-      <VerticalAlignment>Top</VerticalAlignment>
-      <TextFitMode>ShrinkToFit</TextFitMode>
-      <UseFullFontHeight>True</UseFullFontHeight>
-      <Verticalized>False</Verticalized>
-      <StyledText>
-        <Element>
-          <String>${escapeXml(deviceInfo)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="11" Bold="True" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-          </Attributes>
-        </Element>
-        <Element>
-          <String>&#13;&#10;ID: ${escapeXml(shortId)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-          </Attributes>
-        </Element>
-        <Element>
-          <String>&#13;&#10;${escapeXml(data.condition)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="80" Green="80" Blue="80"/>
-          </Attributes>
-        </Element>
-        <Element>
-          <String>&#13;&#10;€${data.price.toFixed(2)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="12" Bold="True" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="0" Green="128" Blue="0"/>
-          </Attributes>
-        </Element>
-      </StyledText>
-    </TextObject>
-    <Bounds X="200" Y="100" Width="${width - 400}" Height="${height - 200}"/>
-  </ObjectInfo>
-</DieCutLabel>`;
+  const lines = [
+    { text: deviceInfo, fontSize: 11, bold: true },
+    { text: `ID: ${shortId}`, fontSize: 8, bold: false },
+    { text: data.condition, fontSize: 8, bold: false, color: { r: 80, g: 80, b: 80 } },
+    { text: `€${data.price.toFixed(2)}`, fontSize: 12, bold: true, color: { r: 0, g: 128, b: 0 } },
+  ];
+
+  return generateDesktopLabel(format, lines);
 }
 
-export function generateShelfLabel(data: ShelfLabelData, format: LabelFormat = '30336'): string {
-  const { width, height } = LABEL_FORMATS[format];
+export function generateShelfLabel(data: ShelfLabelData, format: LabelFormat = '11354'): string {
   const partName = data.partName.substring(0, 35);
   
-  return `<?xml version="1.0" encoding="utf-8"?>
-<DieCutLabel Version="8.0" Units="twips">
-  <PaperOrientation>Landscape</PaperOrientation>
-  <Id>Multipurpose</Id>
-  <PaperName>${format} Multipurpose</PaperName>
-  <DrawCommands>
-    <RoundRectangle X="0" Y="0" Width="${height}" Height="${width}" Rx="180" Ry="180"/>
-  </DrawCommands>
-  <ObjectInfo>
-    <TextObject>
-      <Name>ShelfInfo</Name>
-      <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-      <BackColor Alpha="0" Red="255" Green="255" Blue="255"/>
-      <LinkedObjectName></LinkedObjectName>
-      <Rotation>Rotation0</Rotation>
-      <IsMirrored>False</IsMirrored>
-      <IsVariable>True</IsVariable>
-      <HorizontalAlignment>Center</HorizontalAlignment>
-      <VerticalAlignment>Middle</VerticalAlignment>
-      <TextFitMode>ShrinkToFit</TextFitMode>
-      <UseFullFontHeight>True</UseFullFontHeight>
-      <Verticalized>False</Verticalized>
-      <StyledText>
-        <Element>
-          <String>${escapeXml(partName)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="9" Bold="True" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-          </Attributes>
-        </Element>
-        <Element>
-          <String>&#13;&#10;${escapeXml(data.partCode)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="8" Bold="False" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="0"/>
-          </Attributes>
-        </Element>
-        ${data.location ? `<Element>
-          <String>&#13;&#10;Pos: ${escapeXml(data.location)}</String>
-          <Attributes>
-            <Font Family="Arial" Size="7" Bold="False" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="128" Green="128" Blue="128"/>
-          </Attributes>
-        </Element>` : ''}
-        ${data.quantity !== undefined ? `<Element>
-          <String>&#13;&#10;Qty: ${data.quantity}</String>
-          <Attributes>
-            <Font Family="Arial" Size="7" Bold="True" Italic="False" Underline="False" Strikeout="False"/>
-            <ForeColor Alpha="255" Red="0" Green="0" Blue="128"/>
-          </Attributes>
-        </Element>` : ''}
-      </StyledText>
-    </TextObject>
-    <Bounds X="100" Y="80" Width="${width - 200}" Height="${height - 160}"/>
-  </ObjectInfo>
-</DieCutLabel>`;
+  const lines: { text: string; fontSize: number; bold: boolean; color?: { r: number; g: number; b: number } }[] = [
+    { text: partName, fontSize: 9, bold: true },
+    { text: data.partCode, fontSize: 8, bold: false },
+  ];
+  
+  if (data.location) {
+    lines.push({ text: `Pos: ${data.location}`, fontSize: 7, bold: false, color: { r: 128, g: 128, b: 128 } });
+  }
+  if (data.quantity !== undefined) {
+    lines.push({ text: `Qty: ${data.quantity}`, fontSize: 7, bold: true, color: { r: 0, g: 0, b: 128 } });
+  }
+
+  return generateDesktopLabel(format, lines);
 }
