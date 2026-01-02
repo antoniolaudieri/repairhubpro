@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { GripVertical, Maximize2 } from "lucide-react";
+import { GripVertical, Plus, Minus } from "lucide-react";
 import { toast } from "sonner";
 
 export interface SlotData {
@@ -98,6 +98,50 @@ export function VisualSlotEditor({
     }
     return absorbed;
   }, [slots]);
+
+  // Handle expand slot (merge with next)
+  const handleExpandSlot = useCallback((slot: SlotData) => {
+    const newSpan = slot.span + 1;
+    if (slot.col + newSpan > columns) {
+      toast.error("Non puoi allargare oltre la riga");
+      return;
+    }
+    
+    const slotsToAbsorb = getSlotsToAbsorb(slot, newSpan);
+    const newSlots = slots
+      .filter(s => !slotsToAbsorb.find(a => a.id === s.id))
+      .map(s => s.id === slot.id ? { ...s, span: newSpan } : s);
+    
+    onChange(newSlots);
+    if (slotsToAbsorb.length > 0) {
+      toast.success(`Slot unito con ${slotsToAbsorb.length} adiacente`);
+    } else {
+      toast.success(`Slot allargato`);
+    }
+  }, [slots, columns, getSlotsToAbsorb, onChange]);
+
+  // Handle shrink slot (split off last column)
+  const handleShrinkSlot = useCallback((slot: SlotData) => {
+    if (slot.span <= 1) return;
+    
+    const newSpan = slot.span - 1;
+    const newSlotNum = slot.slotNum + newSpan;
+    const newSlot: SlotData = {
+      id: `slot-${newSlotNum}-${Date.now()}`,
+      slotNum: newSlotNum,
+      row: slot.row,
+      col: slot.col + newSpan,
+      span: 1,
+    };
+    
+    const newSlots = [
+      ...slots.map(s => s.id === slot.id ? { ...s, span: newSpan } : s),
+      newSlot
+    ];
+    
+    onChange(newSlots);
+    toast.success(`Slot separato`);
+  }, [slots, onChange, startNumber, columns]);
 
   // Handle drag start
   const handleDragStart = (slot: SlotData) => {
@@ -293,17 +337,32 @@ export function VisualSlotEditor({
                 {currentSpan > 1 && `-${slot.slotNum + currentSpan - 1}`}
               </span>
               
-              {/* Resize handle */}
-              <div
-                onMouseDown={(e) => handleResizeStart(e, slot)}
-                className={cn(
-                  "absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize",
-                  "flex items-center justify-center",
-                  "opacity-0 group-hover:opacity-100 transition-opacity",
-                  "hover:bg-white/20 rounded-r-lg"
+              {/* Expand/Shrink buttons */}
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                {currentSpan > 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleShrinkSlot(slot);
+                    }}
+                    className="p-0.5 rounded bg-white/20 hover:bg-white/40 transition-colors"
+                    title="Riduci slot"
+                  >
+                    <Minus className="h-3 w-3" />
+                  </button>
                 )}
-              >
-                <Maximize2 className="h-3 w-3 rotate-45" />
+                {slot.col + currentSpan < columns && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleExpandSlot(slot);
+                    }}
+                    className="p-0.5 rounded bg-white/20 hover:bg-white/40 transition-colors"
+                    title="Allarga slot (unisci con adiacente)"
+                  >
+                    <Plus className="h-3 w-3" />
+                  </button>
+                )}
               </div>
             </motion.div>
           );
@@ -339,9 +398,9 @@ export function VisualSlotEditor({
   return (
     <div className="space-y-3">
       <div className="text-xs text-muted-foreground bg-muted/50 rounded-lg p-2 space-y-1">
-        <p>• <strong>Trascina il bordo destro</strong> per unire slot adiacenti</p>
+        <p>• <strong>Clicca +</strong> su uno slot per unirlo con quello adiacente</p>
+        <p>• <strong>Clicca -</strong> per separare uno slot unito</p>
         <p>• <strong>Trascina</strong> uno slot su un altro per scambiarli</p>
-        <p>• <strong>Riduci la larghezza</strong> per separare gli slot uniti</p>
       </div>
       
       <div
