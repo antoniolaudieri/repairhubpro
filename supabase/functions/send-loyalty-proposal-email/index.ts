@@ -152,123 +152,99 @@ serve(async (req) => {
 
     console.log("[SEND-LOYALTY-PROPOSAL] Created checkout session:", session.id);
 
-    // Build email HTML - table-based layout for better email client compatibility
-    const emailHtml = `
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tessera Fedelta - ${centro.business_name}</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f5f5f5; font-family: Arial, Helvetica, sans-serif;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f5f5f5;">
+    // Build email HTML - using same professional template style as marketing emails
+    const emailHtml = `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f4f4f5;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
     <tr>
-      <td align="center" style="padding: 20px 10px;">
-        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 8px; overflow: hidden;">
-          
-          <!-- Header -->
+      <td align="center">
+        <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; max-width: 600px;">
           <tr>
-            <td style="background-color: #f59e0b; padding: 30px 20px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: bold;">Tessera Fedelta</h1>
-              <p style="margin: 10px 0 0 0; color: #ffffff; font-size: 16px;">${centro.business_name}</p>
+            <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 32px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">${centro.business_name}</h1>
+              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Proposta Tessera Fedeltà</p>
             </td>
           </tr>
-          
-          <!-- Content -->
           <tr>
-            <td style="padding: 30px 25px;">
-              <p style="margin: 0 0 20px 0; font-size: 16px; color: #333333; line-height: 1.5;">
-                Ciao <strong>${customer_name || 'Cliente'}</strong>,
+            <td style="padding: 32px;">
+              <h2 style="color: #18181b; margin: 0 0 16px 0; font-size: 22px;">Ciao ${customer_name || 'Cliente'}!</h2>
+              <p style="color: #52525b; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">
+                Ti proponiamo la nostra <strong>Tessera Fedeltà</strong> con vantaggi esclusivi per i tuoi dispositivi. 
+                Con un piccolo investimento annuale, risparmi su ogni riparazione!
               </p>
+
+              <!-- LOYALTY CARD PROMOTION BOX -->
+              <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); padding: 24px; border-radius: 12px; margin: 0 0 24px 0;">
+                <h3 style="margin: 0 0 16px 0; font-size: 20px; color: #78350f;">🎉 I tuoi vantaggi esclusivi</h3>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
+                      ✓ <strong>Diagnosi a €${diagnosticFee}</strong> invece di €15
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
+                      ✓ <strong>${repairDiscount}% di sconto</strong> su tutte le riparazioni
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
+                      ✓ Fino a <strong>${maxDevices} dispositivi</strong> coperti
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
+                      ✓ Validità <strong>12 mesi</strong> con rinnovo automatico
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
+                      ✓ <strong>Priorità</strong> nelle prenotazioni
+                    </td>
+                  </tr>
+                </table>
+              </div>
               
-              <p style="margin: 0 0 25px 0; font-size: 16px; color: #333333; line-height: 1.5;">
-                Ti proponiamo la nostra <strong>Tessera Fedelta</strong> con vantaggi esclusivi per i tuoi dispositivi!
-              </p>
+              <!-- PRICE BOX -->
+              <div style="background-color: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
+                <p style="color: #0369a1; margin: 0 0 8px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Prezzo annuale</p>
+                <p style="color: #0c4a6e; margin: 0 0 8px 0; font-size: 48px; font-weight: 700;">€${annualPrice}</p>
+                <p style="color: #0369a1; margin: 0; font-size: 13px;">Pagamento sicuro con carta</p>
+              </div>
               
-              <!-- Benefits Box -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #fef3c7; border-radius: 8px; margin-bottom: 25px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td style="padding: 20px;">
-                    <p style="margin: 0 0 15px 0; font-size: 18px; font-weight: bold; color: #92400e;">I tuoi vantaggi:</p>
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                      <tr>
-                        <td style="padding: 8px 0; font-size: 15px; color: #333333;">
-                          &#10003; Diagnosi a soli <strong style="color: #16a34a;">EUR ${diagnosticFee}</strong> (invece di EUR 15)
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; font-size: 15px; color: #333333;">
-                          &#10003; <strong style="color: #16a34a;">${repairDiscount}% di sconto</strong> su ogni riparazione
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; font-size: 15px; color: #333333;">
-                          &#10003; Fino a <strong>${maxDevices} dispositivi</strong> coperti
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; font-size: 15px; color: #333333;">
-                          &#10003; Validita <strong>12 mesi</strong>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0; font-size: 15px; color: #333333;">
-                          &#10003; Priorita nelle prenotazioni
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- Price Box -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; margin-bottom: 25px;">
-                <tr>
-                  <td style="padding: 25px; text-align: center;">
-                    <p style="margin: 0; font-size: 14px; color: #64748b;">Prezzo annuale</p>
-                    <p style="margin: 10px 0; font-size: 42px; font-weight: bold; color: #1e293b;">EUR ${annualPrice}</p>
-                    <p style="margin: 0; font-size: 14px; color: #64748b;">Abbonamento con rinnovo automatico</p>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- CTA Button -->
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-                <tr>
-                  <td align="center" style="padding: 10px 0 25px 0;">
-                    <a href="${session.url}" style="display: inline-block; background-color: #f59e0b; color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-size: 18px; font-weight: bold;">
-                      ATTIVA ORA
+                  <td align="center">
+                    <a href="${session.url}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                      💳 Attiva Ora - €${annualPrice}/anno
                     </a>
                   </td>
                 </tr>
               </table>
               
-              <p style="margin: 0; text-align: center; font-size: 13px; color: #64748b;">
-                Pagamento sicuro con carta di credito
+              <p style="color: #71717a; font-size: 13px; margin: 24px 0 0 0; text-align: center;">
+                Clicca il pulsante per procedere al pagamento sicuro.
               </p>
             </td>
           </tr>
-          
-          <!-- Footer -->
           <tr>
-            <td style="background-color: #f8fafc; padding: 25px; text-align: center; border-top: 1px solid #e2e8f0;">
-              <p style="margin: 0 0 10px 0; font-size: 16px; font-weight: bold; color: #333333;">${centro.business_name}</p>
-              <p style="margin: 0 0 5px 0; font-size: 14px; color: #64748b;">Tel: ${centro.phone || 'N/A'}</p>
-              <p style="margin: 0 0 15px 0; font-size: 14px; color: #64748b;">Email: ${centro.email || 'N/A'}</p>
-              <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                Se non hai richiesto questa email, puoi ignorarla.
-              </p>
+            <td style="background: #f8fafc; padding: 24px 32px; text-align: center; border-top: 1px solid #e4e4e7;">
+              <p style="color: #18181b; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">${centro.business_name}</p>
+              <p style="color: #71717a; margin: 0 0 4px 0; font-size: 13px;">📞 ${centro.phone || 'N/A'}</p>
+              <p style="color: #71717a; margin: 0; font-size: 13px;">✉️ ${centro.email || 'N/A'}</p>
             </td>
           </tr>
-          
         </table>
+        <p style="color: #a1a1aa; font-size: 11px; margin: 16px 0 0 0; text-align: center;">
+          Se non hai richiesto questa email, puoi ignorarla.
+        </p>
       </td>
     </tr>
   </table>
 </body>
-</html>
-    `;
+</html>`;
 
     // Send email using send-email-smtp function (uses Centro's SMTP settings)
     const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-smtp`, {
