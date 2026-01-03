@@ -152,99 +152,11 @@ serve(async (req) => {
 
     console.log("[SEND-LOYALTY-PROPOSAL] Created checkout session:", session.id);
 
-    // Build email HTML - using same professional template style as marketing emails
-    const emailHtml = `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background-color: #f4f4f5;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f4f5; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; max-width: 600px;">
-          <tr>
-            <td style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); padding: 32px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">${centro.business_name}</h1>
-              <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Proposta Tessera Fedeltà</p>
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 32px;">
-              <h2 style="color: #18181b; margin: 0 0 16px 0; font-size: 22px;">Ciao ${customer_name || 'Cliente'}!</h2>
-              <p style="color: #52525b; font-size: 15px; line-height: 1.6; margin: 0 0 24px 0;">
-                Ti proponiamo la nostra <strong>Tessera Fedeltà</strong> con vantaggi esclusivi per i tuoi dispositivi. 
-                Con un piccolo investimento annuale, risparmi su ogni riparazione!
-              </p>
-
-              <!-- LOYALTY CARD PROMOTION BOX -->
-              <div style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); padding: 24px; border-radius: 12px; margin: 0 0 24px 0;">
-                <h3 style="margin: 0 0 16px 0; font-size: 20px; color: #78350f;">🎉 I tuoi vantaggi esclusivi</h3>
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
-                      ✓ <strong>Diagnosi a €${diagnosticFee}</strong> invece di €15
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
-                      ✓ <strong>${repairDiscount}% di sconto</strong> su tutte le riparazioni
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
-                      ✓ Fino a <strong>${maxDevices} dispositivi</strong> coperti
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
-                      ✓ Validità <strong>12 mesi</strong> con rinnovo automatico
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #78350f; font-size: 15px;">
-                      ✓ <strong>Priorità</strong> nelle prenotazioni
-                    </td>
-                  </tr>
-                </table>
-              </div>
-              
-              <!-- PRICE BOX -->
-              <div style="background-color: #f0f9ff; border: 2px solid #0ea5e9; border-radius: 12px; padding: 24px; margin-bottom: 24px; text-align: center;">
-                <p style="color: #0369a1; margin: 0 0 8px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">Prezzo annuale</p>
-                <p style="color: #0c4a6e; margin: 0 0 8px 0; font-size: 48px; font-weight: 700;">€${annualPrice}</p>
-                <p style="color: #0369a1; margin: 0; font-size: 13px;">Pagamento sicuro con carta</p>
-              </div>
-              
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center">
-                    <a href="${session.url}" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                      💳 Attiva Ora - €${annualPrice}/anno
-                    </a>
-                  </td>
-                </tr>
-              </table>
-              
-              <p style="color: #71717a; font-size: 13px; margin: 24px 0 0 0; text-align: center;">
-                Clicca il pulsante per procedere al pagamento sicuro.
-              </p>
-            </td>
-          </tr>
-          <tr>
-            <td style="background: #f8fafc; padding: 24px 32px; text-align: center; border-top: 1px solid #e4e4e7;">
-              <p style="color: #18181b; margin: 0 0 8px 0; font-size: 14px; font-weight: 600;">${centro.business_name}</p>
-              <p style="color: #71717a; margin: 0 0 4px 0; font-size: 13px;">📞 ${centro.phone || 'N/A'}</p>
-              <p style="color: #71717a; margin: 0; font-size: 13px;">✉️ ${centro.email || 'N/A'}</p>
-            </td>
-          </tr>
-        </table>
-        <p style="color: #a1a1aa; font-size: 11px; margin: 16px 0 0 0; text-align: center;">
-          Se non hai richiesto questa email, puoi ignorarla.
-        </p>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>`;
+    // Build email HTML - compact to avoid =20 encoding issues
+    const centroNameSafe = centro.business_name.replace(/'/g, "&#39;");
+    const customerNameSafe = (customer_name || 'Cliente').replace(/'/g, "&#39;");
+    
+    const emailHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background-color:#f4f4f5;"><table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;"><tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;"><tr><td style="background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);padding:32px;text-align:center;"><h1 style="color:#ffffff;margin:0;font-size:24px;font-weight:600;">${centroNameSafe}</h1><p style="color:rgba(255,255,255,0.9);margin:8px 0 0 0;font-size:14px;">Proposta Tessera Fedelta</p></td></tr><tr><td style="padding:32px;"><h2 style="color:#18181b;margin:0 0 16px 0;font-size:22px;">Ciao ${customerNameSafe}!</h2><p style="color:#52525b;font-size:15px;line-height:1.6;margin:0 0 24px 0;">Ti proponiamo la nostra <strong>Tessera Fedelta</strong> con vantaggi esclusivi per i tuoi dispositivi. Con un piccolo investimento annuale, risparmi su ogni riparazione!</p><div style="background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%);padding:24px;border-radius:12px;margin:0 0 24px 0;"><h3 style="margin:0 0 16px 0;font-size:20px;color:#78350f;">I tuoi vantaggi esclusivi</h3><table width="100%" cellpadding="0" cellspacing="0"><tr><td style="padding:8px 0;color:#78350f;font-size:15px;">&#10003; <strong>Diagnosi a ${diagnosticFee}€</strong> invece di 15€</td></tr><tr><td style="padding:8px 0;color:#78350f;font-size:15px;">&#10003; <strong>${repairDiscount}% di sconto</strong> su tutte le riparazioni</td></tr><tr><td style="padding:8px 0;color:#78350f;font-size:15px;">&#10003; Fino a <strong>${maxDevices} dispositivi</strong> coperti</td></tr><tr><td style="padding:8px 0;color:#78350f;font-size:15px;">&#10003; Validita <strong>12 mesi</strong> con rinnovo automatico</td></tr><tr><td style="padding:8px 0;color:#78350f;font-size:15px;">&#10003; <strong>Priorita</strong> nelle prenotazioni</td></tr></table></div><div style="background-color:#f0f9ff;border:2px solid #0ea5e9;border-radius:12px;padding:24px;margin-bottom:24px;text-align:center;"><p style="color:#0369a1;margin:0 0 8px 0;font-size:14px;text-transform:uppercase;letter-spacing:0.5px;">Prezzo annuale</p><p style="color:#0c4a6e;margin:0 0 8px 0;font-size:48px;font-weight:700;">${annualPrice}€</p><p style="color:#0369a1;margin:0;font-size:13px;">Pagamento sicuro con carta</p></div><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center"><a href="${session.url}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:8px;font-weight:600;font-size:16px;">Attiva Ora - ${annualPrice}€/anno</a></td></tr></table><p style="color:#71717a;font-size:13px;margin:24px 0 0 0;text-align:center;">Clicca il pulsante per procedere al pagamento sicuro.</p></td></tr><tr><td style="background:#f8fafc;padding:24px 32px;text-align:center;border-top:1px solid #e4e4e7;"><p style="color:#18181b;margin:0 0 8px 0;font-size:14px;font-weight:600;">${centroNameSafe}</p><p style="color:#71717a;margin:0 0 4px 0;font-size:13px;">Tel: ${centro.phone || 'N/A'}</p><p style="color:#71717a;margin:0;font-size:13px;">Email: ${centro.email || 'N/A'}</p></td></tr></table><p style="color:#a1a1aa;font-size:11px;margin:16px 0 0 0;text-align:center;">Se non hai richiesto questa email, puoi ignorarla.</p></td></tr></table></body></html>`;
 
     // Send email using send-email-smtp function (uses Centro's SMTP settings)
     const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-smtp`, {
