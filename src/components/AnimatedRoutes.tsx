@@ -90,6 +90,8 @@ import InstallCentro from "@/pages/InstallCentro";
 import DeviceHealthQuiz from "@/pages/customer/DeviceHealthQuiz";
 import Disiscrizione from "@/pages/Disiscrizione";
 import DeviceMonitor from "@/pages/DeviceMonitor";
+import SoftwareProtection from "@/pages/SoftwareProtection";
+
 export const AnimatedRoutes = () => {
   return (
     <Routes>
@@ -121,6 +123,9 @@ export const AnimatedRoutes = () => {
         {/* Device Health Quiz - iOS WebApp */}
         <Route path="/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />
         <Route path="/customer/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />
+        
+        {/* Software Protection Subscription */}
+        <Route path="/software-protection" element={<PageTransition><SoftwareProtection /></PageTransition>} />
         
         {/* Root Route */}
         <Route path="/" element={<PageTransition><CustomerHome /></PageTransition>} />
