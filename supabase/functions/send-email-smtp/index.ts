@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import nodemailer from "https://esm.sh/nodemailer@6.9.9";
 import { decode as decodeBase64 } from "https://deno.land/std@0.190.0/encoding/base64.ts";
 
 const corsHeaders = {
@@ -102,8 +102,11 @@ const handler = async (req: Request): Promise<Response> => {
       }
     };
 
-    // Prepare attachments for SMTP - decode base64 efficiently
-    const smtpAttachments = attachments?.map(att => ({
+    // Clean subject - remove emojis for better compatibility
+    const cleanSubject = subject.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+
+    // Prepare attachments - decode base64 to Uint8Array
+    const mailAttachments = attachments?.map(att => ({
       filename: att.filename,
       content: decodeBase64(att.content),
       contentType: att.contentType || "application/pdf",
@@ -118,15 +121,14 @@ const handler = async (req: Request): Promise<Response> => {
         
         console.log("send-email-smtp: Connecting to SMTP", trimmedHost, smtpConfig.port);
         
-        const client = new SMTPClient({
-          connection: {
-            hostname: trimmedHost,
-            port: smtpConfig.port,
-            tls: smtpConfig.secure,
-            auth: {
-              username: trimmedUser,
-              password: smtpConfig.password,
-            },
+        // Create nodemailer transporter
+        const transporter = nodemailer.createTransport({
+          host: trimmedHost,
+          port: smtpConfig.port,
+          secure: smtpConfig.secure,
+          auth: {
+            user: trimmedUser,
+            pass: smtpConfig.password,
           },
         });
 
@@ -137,30 +139,24 @@ const handler = async (req: Request): Promise<Response> => {
           .replace(/\s+/g, ' ')
           .trim();
 
-        // Encode subject for proper UTF-8 handling (avoid emoji issues)
-        const cleanSubject = subject.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
-        
-        const sendOptions: any = {
+        const mailOptions: any = {
           from: `${fromName} <${trimmedFromEmail}>`,
-          to: recipients,
+          to: recipients.join(', '),
           subject: cleanSubject,
-          content: plainText,
+          text: plainText,
           html: html,
           headers: {
             "X-Priority": "3",
             "X-Mailer": "LabLinkRiparo",
-            "List-Unsubscribe": `<mailto:${trimmedFromEmail}?subject=unsubscribe>`,
-            "Content-Type": "text/html; charset=UTF-8",
           },
         };
 
         // Add attachments if present
-        if (smtpAttachments.length > 0) {
-          sendOptions.attachments = smtpAttachments;
+        if (mailAttachments.length > 0) {
+          mailOptions.attachments = mailAttachments;
         }
 
-        await client.send(sendOptions);
-        await client.close();
+        await transporter.sendMail(mailOptions);
 
         console.log("send-email-smtp: Email sent via Centro SMTP");
         
@@ -194,7 +190,7 @@ const handler = async (req: Request): Promise<Response> => {
     const resendBody: any = {
       from: `${fromName} <onboarding@resend.dev>`,
       to: recipients,
-      subject: subject,
+      subject: cleanSubject,
       html: html,
     };
 
