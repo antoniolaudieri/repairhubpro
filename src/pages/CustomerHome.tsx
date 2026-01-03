@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/dialog";
 import { BookingWizard, CustomerData } from "@/components/booking/BookingWizard";
 import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
+import { ScrollingBrandLogos } from "@/components/display/ScrollingBrandLogos";
 import { format } from "date-fns";
 
 // Floating device icons component
@@ -768,60 +769,19 @@ export default function CustomerHome() {
       </section>
 
       {/* Trusted Brands Section */}
-      <section className="py-12 sm:py-16 relative overflow-hidden border-y border-border/30 bg-muted/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.4 }}
-            className="text-center mb-8"
-          >
-            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-              Ripariamo tutti i principali marchi
-            </p>
-          </motion.div>
-          
-          {/* Brands grid */}
-          <motion.div 
-            className="flex items-center justify-center gap-6 sm:gap-10 lg:gap-14 flex-wrap"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            {[
-              { name: "Apple", fontClass: "font-sans" },
-              { name: "Samsung", fontClass: "font-sans" },
-              { name: "Huawei", fontClass: "font-sans" },
-              { name: "Xiaomi", fontClass: "font-sans" },
-              { name: "OPPO", fontClass: "font-sans" },
-              { name: "OnePlus", fontClass: "font-sans" },
-              { name: "Google", fontClass: "font-sans" },
-              { name: "Motorola", fontClass: "font-sans" },
-              { name: "Sony", fontClass: "font-sans" },
-              { name: "Nokia", fontClass: "font-sans" },
-              { name: "Realme", fontClass: "font-sans" },
-              { name: "Honor", fontClass: "font-sans" },
-            ].map((brand, idx) => (
-              <motion.div
-                key={brand.name}
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.3, delay: idx * 0.04 }}
-                whileHover={{ scale: 1.05, y: -2 }}
-                className="px-4 py-2"
-              >
-                <span 
-                  className={`text-lg sm:text-xl font-semibold text-muted-foreground/60 hover:text-foreground transition-colors ${brand.fontClass}`}
-                >
-                  {brand.name}
-                </span>
-              </motion.div>
-            ))}
-          </motion.div>
-        </div>
+      <section className="relative overflow-hidden border-y border-border/30">
+        <motion.div
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.4 }}
+          className="text-center py-6"
+        >
+          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
+            Ripariamo tutti i principali marchi
+          </p>
+        </motion.div>
+        <ScrollingBrandLogos speed={35} />
       </section>
 
       {/* Partners Map Section */}
