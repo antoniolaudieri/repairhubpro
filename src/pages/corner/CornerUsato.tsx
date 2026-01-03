@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CornerLayout } from "@/layouts/CornerLayout";
 import { supabase } from "@/integrations/supabase/client";
 import MarketPriceHistory from "@/components/centro/MarketPriceHistory";
-import { UsatoInterestStats } from "@/components/centro/UsatoInterestStats";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,7 +67,10 @@ import {
   Percent,
   Calculator,
   DollarSign,
+  Bell,
+  Users,
 } from "lucide-react";
+import { useDeviceInterestCounts } from "@/hooks/useDeviceInterestCount";
 import { Slider } from "@/components/ui/slider";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -774,6 +776,9 @@ export default function CornerUsato() {
   };
 
   const splitPreview = calculateSplitPreview();
+  
+  // Get interest counts for all devices
+  const interestCounts = useDeviceInterestCounts(devices);
 
   return (
     <CornerLayout>
@@ -793,9 +798,6 @@ export default function CornerUsato() {
                 Pubblica e gestisci dispositivi usati e ricondizionati
               </p>
             </div>
-            
-            {/* Interest Stats in header area for Corner */}
-            <UsatoInterestStats />
             <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button className="gap-2 w-full md:w-auto shadow-lg">
@@ -1521,6 +1523,19 @@ export default function CornerUsato() {
                               <div className="flex items-center gap-1">
                                 <Handshake className="h-3 w-3 text-primary" />
                                 <span>C/V</span>
+                              </div>
+                            )}
+                            {/* Interest notifications - Only for published devices */}
+                            {device.status === "published" && interestCounts[device.id]?.matchingInterests > 0 && (
+                              <div className="flex items-center gap-1">
+                                <Users className="h-3 w-3 text-violet-500" />
+                                <span className="text-violet-600">{interestCounts[device.id].matchingInterests}</span>
+                                {interestCounts[device.id]?.notifiedCount > 0 && (
+                                  <Badge variant="secondary" className="text-[8px] px-1 py-0 gap-0.5 bg-emerald-500/10 text-emerald-600 ml-0.5">
+                                    <Bell className="h-2 w-2" />
+                                    {interestCounts[device.id].notifiedCount}
+                                  </Badge>
+                                )}
                               </div>
                             )}
                           </div>

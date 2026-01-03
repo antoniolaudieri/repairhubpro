@@ -3,9 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { 
   Eye, Edit, Trash2, DollarSign, Smartphone, Tablet, Laptop, 
-  Monitor, Watch, HelpCircle, Handshake, ShoppingCart, Clock 
+  Monitor, Watch, HelpCircle, Handshake, ShoppingCart, Clock, Bell, Users 
 } from "lucide-react";
-
+import { useDeviceInterestCount } from "@/hooks/useDeviceInterestCount";
 interface UsatoDeviceCardProps {
   device: {
     id: string;
@@ -71,10 +71,16 @@ export function UsatoDeviceCard({ device, onEdit, onPublish, onDelete, onMarkAsS
   const SaleIcon = saleType?.icon || ShoppingCart;
   const statusConfig = getStatusConfig(device.status);
   
+  const { matchingInterests, notifiedCount } = useDeviceInterestCount(
+    device.device_type,
+    device.brand,
+    device.price,
+    device.status
+  );
+  
   const discount = device.original_price && device.original_price > device.price
     ? Math.round(((device.original_price - device.price) / device.original_price) * 100)
     : null;
-
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
@@ -144,6 +150,25 @@ export function UsatoDeviceCard({ device, onEdit, onPublish, onDelete, onMarkAsS
             <span className="text-xs text-muted-foreground line-through">€{device.original_price}</span>
           )}
         </div>
+
+        {/* Interest notifications badge - Only for published devices */}
+        {device.status === 'published' && matchingInterests > 0 && (
+          <div className="flex items-center justify-between text-xs p-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+            <div className="flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-violet-500" />
+              <span className="text-muted-foreground">Interessati:</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-violet-600">{matchingInterests}</span>
+              {notifiedCount > 0 && (
+                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 gap-0.5 bg-emerald-500/10 text-emerald-600">
+                  <Bell className="h-2.5 w-2.5" />
+                  {notifiedCount} raggiunti
+                </Badge>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Sold margin info */}
         {device.status === 'sold' && device.centro_net_margin && device.centro_net_margin > 0 && (
