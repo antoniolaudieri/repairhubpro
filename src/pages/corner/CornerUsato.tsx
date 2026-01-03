@@ -1531,14 +1531,14 @@ export default function CornerUsato() {
                               </div>
                             )}
                             {/* Interest notifications - Only for published devices */}
-                            {device.status === "published" && interestCounts[device.id]?.matchingInterests > 0 && (
+                            {device.status === "published" && (
                               <div className="flex items-center gap-1">
                                 <Users className="h-3 w-3 text-violet-500" />
-                                <span className="text-violet-600">{interestCounts[device.id].matchingInterests}</span>
-                                {interestCounts[device.id]?.notifiedCount > 0 && (
+                                <span className="text-violet-600">{interestCounts[device.id]?.matchingInterests || 0}</span>
+                                {(interestCounts[device.id]?.notifiedCount || 0) > 0 && (
                                   <Badge variant="secondary" className="text-[8px] px-1 py-0 gap-0.5 bg-emerald-500/10 text-emerald-600 ml-0.5">
                                     <Bell className="h-2 w-2" />
-                                    {interestCounts[device.id].notifiedCount}
+                                    {interestCounts[device.id]?.notifiedCount}
                                   </Badge>
                                 )}
                               </div>
@@ -1564,7 +1564,7 @@ export default function CornerUsato() {
                               Pubblica
                             </Button>
                           )}
-                          {device.status === "published" && interestCounts[device.id]?.matchingInterests > 0 && (
+                          {device.status === "published" && (
                             <Button 
                               size="sm" 
                               variant="ghost" 
@@ -1575,7 +1575,7 @@ export default function CornerUsato() {
                               }}
                             >
                               <Bell className="h-3 w-3" />
-                              Notifica ({interestCounts[device.id].matchingInterests})
+                              Notifica ({interestCounts[device.id]?.matchingInterests || 0})
                             </Button>
                           )}
                           {(device.status === "published" || device.status === "reserved") && (
