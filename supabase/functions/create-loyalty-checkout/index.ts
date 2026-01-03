@@ -68,12 +68,13 @@ serve(async (req) => {
     // Use custom settings or defaults
     const annualPrice = loyaltySettings?.annual_price ?? 30;
     const maxDevices = loyaltySettings?.max_devices ?? 3;
-    const validityMonths = loyaltySettings?.validity_months ?? 12;
+    const repairDiscount = loyaltySettings?.repair_discount ?? 10;
+    const diagnosticPrice = loyaltySettings?.diagnostic_price ?? 10;
     const platformCommissionRate = 0.05; // 5%
     const platformCommission = annualPrice * platformCommissionRate;
     const centroRevenue = annualPrice - platformCommission;
 
-    console.log("[CREATE-LOYALTY-CHECKOUT] Using price:", annualPrice, "€");
+    console.log("[CREATE-LOYALTY-CHECKOUT] Using price:", annualPrice, "€ - Mode: SUBSCRIPTION YEARLY");
 
     // Create pending loyalty card record with correct amounts
     const { data: loyaltyCard, error: insertError } = await supabaseClient
@@ -98,7 +99,7 @@ serve(async (req) => {
 
     console.log("[CREATE-LOYALTY-CHECKOUT] Created pending card:", loyaltyCard.id);
 
-    // Create Stripe checkout session with dynamic price
+    // Create Stripe checkout session with SUBSCRIPTION mode (yearly recurring)
     const session = await stripe.checkout.sessions.create({
       customer_email: customer_email || undefined,
       line_items: [
@@ -107,24 +108,34 @@ serve(async (req) => {
             currency: "eur",
             product_data: {
               name: `Tessera Fedeltà - ${centro?.business_name || "Centro"}`,
-              description: `Validità ${validityMonths} mesi - Fino a ${maxDevices} dispositivi`,
+              description: `Abbonamento annuale - ${repairDiscount}% sconto riparazioni - Fino a ${maxDevices} dispositivi`,
             },
             unit_amount: Math.round(annualPrice * 100), // Convert to cents
+            recurring: {
+              interval: "year",
+            },
           },
           quantity: 1,
         },
       ],
-      mode: "payment",
+      mode: "subscription",
       success_url: `${req.headers.get("origin")}/loyalty-success?card_id=${loyaltyCard.id}`,
       cancel_url: `${req.headers.get("origin")}/loyalty-cancelled`,
       metadata: {
-        type: "loyalty_card",
+        type: "loyalty_card_subscription",
         loyalty_card_id: loyaltyCard.id,
         customer_id,
         centro_id,
         centro_name: centro?.business_name || "Centro",
         annual_price: annualPrice.toString(),
         tracking_id: tracking_id || "",
+      },
+      subscription_data: {
+        metadata: {
+          type: "loyalty_card",
+          loyalty_card_id: loyaltyCard.id,
+          centro_id,
+        },
       },
     });
 
@@ -134,12 +145,15 @@ serve(async (req) => {
       .update({ stripe_session_id: session.id })
       .eq("id", loyaltyCard.id);
 
-    console.log("[CREATE-LOYALTY-CHECKOUT] Created checkout session:", session.id);
+    console.log("[CREATE-LOYALTY-CHECKOUT] Created SUBSCRIPTION checkout session:", session.id);
 
     return new Response(JSON.stringify({ 
       url: session.url,
       loyalty_card_id: loyaltyCard.id,
       annual_price: annualPrice,
+      repair_discount: repairDiscount,
+      diagnostic_price: diagnosticPrice,
+      max_devices: maxDevices,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
