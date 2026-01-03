@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CornerLayout } from "@/layouts/CornerLayout";
 import { supabase } from "@/integrations/supabase/client";
 import MarketPriceHistory from "@/components/centro/MarketPriceHistory";
+import { UsatoInterestStats } from "@/components/centro/UsatoInterestStats";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -792,6 +793,9 @@ export default function CornerUsato() {
                 Pubblica e gestisci dispositivi usati e ricondizionati
               </p>
             </div>
+            
+            {/* Interest Stats in header area for Corner */}
+            <UsatoInterestStats />
             <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button className="gap-2 w-full md:w-auto shadow-lg">
