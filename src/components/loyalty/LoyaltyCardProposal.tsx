@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, Gift, Percent, Smartphone, Check, Copy, ExternalLink, Loader2 } from 'lucide-react';
+import { CreditCard, Gift, Percent, Smartphone, Check, Copy, ExternalLink, Loader2, Mail, Send } from 'lucide-react';
 import { useLoyaltyCard } from '@/hooks/useLoyaltyCard';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 interface LoyaltyCardProposalProps {
   customerId: string;
@@ -27,22 +28,37 @@ export function LoyaltyCardProposal({
 }: LoyaltyCardProposalProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { benefits, createCheckout, activateWithBonifico } = useLoyaltyCard(customerId, centroId);
+  const { benefits, programSettings, activateWithBonifico } = useLoyaltyCard(customerId, centroId);
 
-  const handleStripeCheckout = async () => {
+  const handleStripeEmailProposal = async () => {
+    if (!customerEmail) {
+      toast.error('Il cliente non ha un indirizzo email');
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await createCheckout(customerEmail);
-      if (result?.url) {
-        window.open(result.url, '_blank');
-        toast.success('Link pagamento generato! Il cliente può completare il pagamento.');
+      const { data, error } = await supabase.functions.invoke('send-loyalty-proposal-email', {
+        body: { 
+          customer_id: customerId, 
+          centro_id: centroId, 
+          customer_email: customerEmail,
+          customer_name: customerName,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`Email inviata a ${customerEmail} con il link di pagamento!`);
         setOpen(false);
         onSuccess?.();
       } else {
-        toast.error('Errore nella creazione del pagamento');
+        toast.error(data?.error || 'Errore nell\'invio dell\'email');
       }
-    } catch (error) {
-      toast.error('Errore durante la creazione del checkout');
+    } catch (error: any) {
+      console.error('Error sending loyalty proposal email:', error);
+      toast.error(error?.message || 'Errore durante l\'invio dell\'email');
     } finally {
       setLoading(false);
     }
@@ -70,6 +86,11 @@ export function LoyaltyCardProposal({
     navigator.clipboard.writeText(text);
     toast.success('Copiato negli appunti!');
   };
+
+  // Calculate commission (5% platform)
+  const platformCommissionRate = 0.05;
+  const platformCommission = programSettings.annual_price * platformCommissionRate;
+  const centroNetRevenue = programSettings.annual_price - platformCommission;
 
   if (benefits.hasActiveCard) {
     return (
@@ -112,18 +133,20 @@ export function LoyaltyCardProposal({
               <div className="flex items-start gap-2">
                 <Smartphone className="h-5 w-5 text-green-600 mt-0.5" />
                 <div>
-                  <p className="font-semibold text-green-800">Diagnosi GRATUITA per 3 dispositivi</p>
+                  <p className="font-semibold text-green-800">
+                    Diagnosi a €{programSettings.diagnostic_fee} per {programSettings.max_devices} dispositivi
+                  </p>
                   <p className="text-xs text-green-700">Controllo completo dello stato di salute del dispositivo</p>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-              <span><strong>10% di sconto</strong> su ogni riparazione</span>
+              <span><strong>{programSettings.repair_discount_percent}% di sconto</strong> su ogni riparazione</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
-              <span>Validità <strong>12 mesi</strong> dalla data di attivazione</span>
+              <span>Validità <strong>{programSettings.validity_months} mesi</strong> dalla data di attivazione</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
               <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
@@ -133,7 +156,7 @@ export function LoyaltyCardProposal({
         </Card>
 
         <div className="flex items-center justify-center gap-2 py-2">
-          <span className="text-2xl font-bold text-foreground">€30</span>
+          <span className="text-2xl font-bold text-foreground">€{programSettings.annual_price}</span>
           <span className="text-muted-foreground">/anno</span>
         </div>
 
@@ -144,28 +167,46 @@ export function LoyaltyCardProposal({
           </TabsList>
           
           <TabsContent value="stripe" className="space-y-4 mt-4">
-            <p className="text-sm text-muted-foreground">
-              Genera un link di pagamento sicuro che il cliente può utilizzare per pagare con carta.
-            </p>
-            <Button 
-              onClick={handleStripeCheckout} 
-              disabled={loading}
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <ExternalLink className="h-4 w-4 mr-2" />
-              )}
-              Genera Link Pagamento
-            </Button>
+            {customerEmail ? (
+              <>
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 text-blue-800">
+                    <Mail className="h-4 w-4" />
+                    <span className="text-sm font-medium">Email al cliente:</span>
+                  </div>
+                  <p className="text-sm text-blue-700 mt-1">{customerEmail}</p>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Invia un'email al cliente con il link di pagamento sicuro per l'abbonamento annuale.
+                </p>
+                <Button 
+                  onClick={handleStripeEmailProposal} 
+                  disabled={loading}
+                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Invia Email con Link Pagamento
+                </Button>
+              </>
+            ) : (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                <p className="text-sm text-yellow-800">
+                  ⚠️ Il cliente non ha un indirizzo email registrato. 
+                  Aggiungi l'email al profilo cliente per inviare la proposta.
+                </p>
+              </div>
+            )}
           </TabsContent>
           
           <TabsContent value="bonifico" className="space-y-4 mt-4">
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Importo</p>
-                <p className="font-mono font-bold">€30,00</p>
+                <p className="font-mono font-bold">€{programSettings.annual_price.toFixed(2)}</p>
               </div>
               {centroIban && (
                 <div>
@@ -220,7 +261,7 @@ export function LoyaltyCardProposal({
         </Tabs>
 
         <p className="text-xs text-muted-foreground text-center">
-          Commissione piattaforma: 5% (€1,50) • Tuo guadagno netto: €28,50
+          Commissione piattaforma: 5% (€{platformCommission.toFixed(2)}) • Tuo guadagno netto: €{centroNetRevenue.toFixed(2)}
         </p>
       </DialogContent>
     </Dialog>
