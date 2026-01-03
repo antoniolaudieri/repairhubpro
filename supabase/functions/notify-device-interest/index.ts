@@ -8,6 +8,7 @@ const corsHeaders = {
 
 interface NotifyRequest {
   device_id?: string;
+  custom_message?: string;
   record?: {
     id: string;
     device_type: string;
@@ -56,7 +57,8 @@ const handler = async (req: Request): Promise<Response> => {
     const body: NotifyRequest = await req.json();
     // Support both direct device_id and trigger record format
     const device_id = body.device_id || body.record?.id;
-    console.log("notify-device-interest: Processing device", device_id);
+    const customMessage = body.custom_message || null;
+    console.log("notify-device-interest: Processing device", device_id, "with custom message:", customMessage ? "yes" : "no");
 
     // Fetch the published device
     const { data: device, error: deviceError } = await supabase
@@ -163,6 +165,13 @@ const handler = async (req: Request): Promise<Response> => {
               </div>
               
               <div style="padding: 30px;">
+                ${customMessage ? `
+                <div style="background: #fef3c7; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
+                  <p style="font-size: 14px; color: #92400e; margin: 0; font-style: italic;">
+                    "${customMessage}"
+                  </p>
+                </div>
+                ` : ''}
                 <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
                   Ciao! Abbiamo un nuovo dispositivo che corrisponde alle tue preferenze:
                 </p>

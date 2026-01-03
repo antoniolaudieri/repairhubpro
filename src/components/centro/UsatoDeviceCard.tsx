@@ -27,6 +27,7 @@ interface UsatoDeviceCardProps {
   onPublish: (id: string) => void;
   onDelete: (id: string) => void;
   onMarkAsSold: (id: string) => void;
+  onNotifyInterested?: (device: any, matchingInterests: number) => void;
 }
 
 const conditionLabels: Record<string, { label: string; color: string }> = {
@@ -64,7 +65,7 @@ const getStatusConfig = (status: string) => {
   }
 };
 
-export function UsatoDeviceCard({ device, onEdit, onPublish, onDelete, onMarkAsSold }: UsatoDeviceCardProps) {
+export function UsatoDeviceCard({ device, onEdit, onPublish, onDelete, onMarkAsSold, onNotifyInterested }: UsatoDeviceCardProps) {
   const DeviceIcon = getDeviceIcon(device.device_type);
   const conditionConfig = conditionLabels[device.condition] || { label: device.condition, color: 'bg-muted' };
   const saleType = saleTypeLabels[device.sale_type || 'acquistato'];
@@ -157,14 +158,25 @@ export function UsatoDeviceCard({ device, onEdit, onPublish, onDelete, onMarkAsS
             <div className="flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5 text-violet-500" />
               <span className="text-muted-foreground">Interessati:</span>
+              <span className="font-semibold text-violet-600">{matchingInterests}</span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-violet-600">{matchingInterests}</span>
               {notifiedCount > 0 && (
                 <Badge variant="secondary" className="text-[9px] px-1.5 py-0 gap-0.5 bg-emerald-500/10 text-emerald-600">
                   <Bell className="h-2.5 w-2.5" />
-                  {notifiedCount} raggiunti
+                  {notifiedCount}
                 </Badge>
+              )}
+              {onNotifyInterested && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-[10px] text-violet-600 hover:text-violet-700 hover:bg-violet-500/20"
+                  onClick={() => onNotifyInterested(device, matchingInterests)}
+                >
+                  <Bell className="h-3 w-3 mr-1" />
+                  Notifica
+                </Button>
               )}
             </div>
           </div>

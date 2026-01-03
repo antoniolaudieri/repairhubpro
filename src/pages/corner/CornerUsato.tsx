@@ -71,6 +71,7 @@ import {
   Users,
 } from "lucide-react";
 import { useDeviceInterestCounts } from "@/hooks/useDeviceInterestCount";
+import { NotifyInterestedDialog } from "@/components/usato/NotifyInterestedDialog";
 import { Slider } from "@/components/ui/slider";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -201,6 +202,10 @@ export default function CornerUsato() {
   const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [searchingCustomers, setSearchingCustomers] = useState(false);
+  
+  // Notify interested dialog state
+  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
+  const [selectedDeviceForNotify, setSelectedDeviceForNotify] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     device_type: "Smartphone",
@@ -1559,6 +1564,20 @@ export default function CornerUsato() {
                               Pubblica
                             </Button>
                           )}
+                          {device.status === "published" && interestCounts[device.id]?.matchingInterests > 0 && (
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              className="h-7 px-2 text-xs gap-1 text-violet-600 hover:text-violet-700 hover:bg-violet-500/10"
+                              onClick={() => {
+                                setSelectedDeviceForNotify(device);
+                                setNotifyDialogOpen(true);
+                              }}
+                            >
+                              <Bell className="h-3 w-3" />
+                              Notifica ({interestCounts[device.id].matchingInterests})
+                            </Button>
+                          )}
                           {(device.status === "published" || device.status === "reserved") && (
                             <Button 
                               size="sm" 
@@ -1701,6 +1720,19 @@ export default function CornerUsato() {
             <MarketPriceHistory />
           </TabsContent>
         </Tabs>
+        
+        {/* Notify Interested Dialog */}
+        {selectedDeviceForNotify && (
+          <NotifyInterestedDialog
+            open={notifyDialogOpen}
+            onOpenChange={(open) => {
+              setNotifyDialogOpen(open);
+              if (!open) setSelectedDeviceForNotify(null);
+            }}
+            device={selectedDeviceForNotify}
+            matchingInterests={interestCounts[selectedDeviceForNotify.id]?.matchingInterests || 0}
+          />
+        )}
       </div>
     </CornerLayout>
   );
