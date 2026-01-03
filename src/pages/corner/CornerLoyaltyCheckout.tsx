@@ -167,15 +167,32 @@ export default function CornerLoyaltyCheckout() {
         }
       });
 
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      // Handle edge function error - extract message from response
+      if (error) {
+        // Try to parse error context for actual message
+        const errorMsg = (error as any)?.context?.body 
+          ? JSON.parse((error as any).context.body)?.error 
+          : null;
+        throw new Error(errorMsg || error.message || "Errore nel checkout");
+      }
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
 
       if (data?.url) {
         window.location.href = data.url;
       }
     } catch (err) {
       console.error("Checkout error:", err);
-      toast.error(err instanceof Error ? err.message : "Errore nel checkout");
+      const errorMessage = err instanceof Error ? err.message : "Errore nel checkout";
+      
+      // Show user-friendly error
+      if (errorMessage.includes("tessera attiva")) {
+        setError("Hai già una tessera fedeltà attiva per questo centro. Non è necessario acquistarne un'altra.");
+      } else {
+        toast.error(errorMessage);
+      }
       setProcessing(false);
     }
   };
