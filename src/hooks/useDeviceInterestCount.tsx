@@ -103,11 +103,12 @@ export function useDeviceInterestCounts(
   }
 ): Record<string, DeviceInterestCount> {
   const [counts, setCounts] = useState<Record<string, DeviceInterestCount>>({});
-  const [partnerCentroIds, setPartnerCentroIds] = useState<string[]>([]);
+  const [partnerCentroIds, setPartnerCentroIds] = useState<string[] | null>(null);
 
   // Memoize device IDs to prevent infinite loops
   const deviceIds = devices.map(d => d.id).join(",");
   const centroIdsStr = options?.centroIds?.join(",") || "";
+  const partnerCentroIdsStr = partnerCentroIds?.join(",") || "";
 
   // Fetch partner centro IDs for corner
   useEffect(() => {
@@ -122,9 +123,14 @@ export function useDeviceInterestCounts(
         
         if (partnerships) {
           setPartnerCentroIds(partnerships.map(p => p.provider_id));
+        } else {
+          setPartnerCentroIds([]);
         }
       } else if (options?.centroIds) {
         setPartnerCentroIds(options.centroIds);
+      } else {
+        // No filtering needed - set empty array to indicate "loaded"
+        setPartnerCentroIds([]);
       }
     };
 
@@ -132,6 +138,11 @@ export function useDeviceInterestCounts(
   }, [options?.cornerId, centroIdsStr]);
 
   useEffect(() => {
+    // Wait for partnerCentroIds to be loaded (not null)
+    if (partnerCentroIds === null) {
+      return;
+    }
+
     const fetchAllInterests = async () => {
       try {
         // Fetch all enabled interests with customer info
@@ -199,7 +210,7 @@ export function useDeviceInterestCounts(
     if (devices.length > 0) {
       fetchAllInterests();
     }
-  }, [deviceIds, partnerCentroIds.join(",")]); // Use stable dependencies
+  }, [deviceIds, partnerCentroIdsStr, partnerCentroIds]);
 
   return counts;
 }
