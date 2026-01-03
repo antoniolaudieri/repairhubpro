@@ -695,22 +695,22 @@ export default function CustomerHome() {
               <div className="relative grid gap-4">
                 {[
                   {
-                    icon: Shield,
-                    title: "Garanzia 90 Giorni",
-                    desc: "Su tutti i componenti e manodopera",
+                    icon: Smartphone,
+                    title: "Monitora il Tuo Dispositivo",
+                    desc: "App esclusiva per controllo salute e prestazioni",
                     color: "primary",
                   },
                   {
-                    icon: Zap,
-                    title: "Riparazione Express",
-                    desc: "Servizio stesso giorno disponibile",
-                    color: "warning",
+                    icon: Shield,
+                    title: "Antivirus Integrato",
+                    desc: "Protezione avanzata contro malware e minacce",
+                    color: "accent",
                   },
                   {
-                    icon: Award,
-                    title: "Tecnici Certificati",
-                    desc: "Formazione continua e certificazioni",
-                    color: "accent",
+                    icon: Sparkles,
+                    title: "Prenota e Risparmia 10%",
+                    desc: "Prenota in-app e ottieni sconto sulle riparazioni",
+                    color: "warning",
                   },
                 ].map((feature, idx) => (
                   <motion.div
