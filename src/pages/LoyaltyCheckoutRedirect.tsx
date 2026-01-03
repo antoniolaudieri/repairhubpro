@@ -1,9 +1,23 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, CreditCard, AlertCircle, CheckCircle2, Gift, Shield } from "lucide-react";
+import { Loader2, AlertCircle, CheckCircle2, Gift, Shield, Percent, Smartphone } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+
+interface LoyaltySettings {
+  annual_price: number;
+  repair_discount: number;
+  diagnostic_price: number;
+  max_devices: number;
+}
+
+const DEFAULT_SETTINGS: LoyaltySettings = {
+  annual_price: 30,
+  repair_discount: 10,
+  diagnostic_price: 10,
+  max_devices: 3,
+};
 
 export default function LoyaltyCheckoutRedirect() {
   const [searchParams] = useSearchParams();
@@ -15,6 +29,7 @@ export default function LoyaltyCheckoutRedirect() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<LoyaltySettings>(DEFAULT_SETTINGS);
 
   useEffect(() => {
     const initCheckout = async () => {
@@ -44,6 +59,16 @@ export default function LoyaltyCheckoutRedirect() {
 
         if (fnError) throw fnError;
 
+        // Update settings from response if available
+        if (data) {
+          setSettings({
+            annual_price: data.annual_price ?? DEFAULT_SETTINGS.annual_price,
+            repair_discount: data.repair_discount ?? DEFAULT_SETTINGS.repair_discount,
+            diagnostic_price: data.diagnostic_price ?? DEFAULT_SETTINGS.diagnostic_price,
+            max_devices: data.max_devices ?? DEFAULT_SETTINGS.max_devices,
+          });
+        }
+
         if (data?.url) {
           window.location.href = data.url;
         } else {
@@ -70,7 +95,7 @@ export default function LoyaltyCheckoutRedirect() {
         <Card className="w-full max-w-md">
           <CardContent className="pt-8 pb-8 text-center">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Preparazione Pagamento...</h2>
+            <h2 className="text-xl font-semibold mb-2">Preparazione Abbonamento...</h2>
             <p className="text-muted-foreground">Stai per essere reindirizzato alla pagina di pagamento sicuro.</p>
           </CardContent>
         </Card>
@@ -116,23 +141,31 @@ export default function LoyaltyCheckoutRedirect() {
               <Shield className="h-5 w-5 text-green-600 mt-0.5" />
               <div>
                 <p className="font-medium">Diagnostica Ridotta</p>
-                <p className="text-sm text-muted-foreground">€10 invece di €15 (-€5)</p>
+                <p className="text-sm text-muted-foreground">€{settings.diagnostic_price} invece di €15 (-€{15 - settings.diagnostic_price})</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Gift className="h-5 w-5 text-blue-600 mt-0.5" />
+              <Percent className="h-5 w-5 text-blue-600 mt-0.5" />
               <div>
-                <p className="font-medium">10% Sconto Riparazioni</p>
-                <p className="text-sm text-muted-foreground">Su manodopera e servizi (max 3 dispositivi/anno)</p>
+                <p className="font-medium">{settings.repair_discount}% Sconto Riparazioni</p>
+                <p className="text-sm text-muted-foreground">Su manodopera e servizi</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-3">
+              <Smartphone className="h-5 w-5 text-purple-600 mt-0.5" />
+              <div>
+                <p className="font-medium">Fino a {settings.max_devices} dispositivi</p>
+                <p className="text-sm text-muted-foreground">Copre tutta la famiglia</p>
               </div>
             </div>
           </div>
           <div className="text-center p-4 bg-primary/5 rounded-lg mb-4">
-            <p className="text-sm text-muted-foreground">Costo annuale</p>
-            <p className="text-3xl font-bold text-primary">€30</p>
+            <p className="text-sm text-muted-foreground">Abbonamento annuale</p>
+            <p className="text-3xl font-bold text-primary">€{settings.annual_price}</p>
+            <p className="text-xs text-muted-foreground mt-1">Rinnovo automatico ogni anno</p>
           </div>
           <p className="text-xs text-center text-muted-foreground">
-            Pagamento sicuro tramite Stripe
+            Pagamento sicuro tramite Stripe - Puoi disdire in qualsiasi momento
           </p>
         </CardContent>
       </Card>
