@@ -54,6 +54,13 @@ interface LoyaltyCardWithCorner {
   } | null;
 }
 
+interface LoyaltySettings {
+  annual_price: number;
+  max_devices: number;
+  repair_discount_percent: number;
+  diagnostic_fee: number;
+}
+
 export default function CornerTesseraFedelta() {
   const { user } = useAuth();
   const [cornerId, setCornerId] = useState<string | null>(null);
@@ -63,6 +70,7 @@ export default function CornerTesseraFedelta() {
   const [soldCards, setSoldCards] = useState<LoyaltyCardWithCorner[]>([]);
   const [totalEarnings, setTotalEarnings] = useState(0);
   const [pendingEarnings, setPendingEarnings] = useState(0);
+  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings | null>(null);
 
   // Form state
   const [customerName, setCustomerName] = useState("");
@@ -90,6 +98,29 @@ export default function CornerTesseraFedelta() {
       }
 
       setCornerId(corner.id);
+
+      // Get centro partnership to find loyalty settings
+      const { data: partnership } = await supabase
+        .from("corner_partnerships")
+        .select("provider_id")
+        .eq("corner_id", corner.id)
+        .eq("provider_type", "centro")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (partnership?.provider_id) {
+        // Load loyalty program settings from the partner centro
+        const { data: settings } = await supabase
+          .from("loyalty_program_settings")
+          .select("annual_price, max_devices, repair_discount_percent, diagnostic_fee")
+          .eq("centro_id", partnership.provider_id)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (settings) {
+          setLoyaltySettings(settings);
+        }
+      }
 
       // Load invitations
       const { data: invitationsData } = await supabase
@@ -284,6 +315,78 @@ export default function CornerTesseraFedelta() {
         </CardContent>
       </Card>
 
+      {/* Vantaggi Tessera - Dinamici dal Centro */}
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="w-5 h-5 text-primary" />
+            Vantaggi Tessera Fedeltà con Antivirus
+          </CardTitle>
+          <CardDescription>
+            Proponi questi vantaggi ai tuoi clienti - Prezzo: <span className="font-bold text-primary">€{loyaltySettings?.annual_price || 30}/anno</span>
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div className="p-4 rounded-lg bg-background border">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-full bg-green-100">
+                  <TrendingUp className="w-5 h-5 text-green-600" />
+                </div>
+                <h4 className="font-semibold">{loyaltySettings?.repair_discount_percent || 10}% Sconto</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">Su tutte le riparazioni presso i centri convenzionati</p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-background border">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-full bg-blue-100">
+                  <Smartphone className="w-5 h-5 text-blue-600" />
+                </div>
+                <h4 className="font-semibold">Fino a {loyaltySettings?.max_devices || 3} Dispositivi</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">Proteggi smartphone, tablet e laptop con un solo abbonamento</p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-background border">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-full bg-purple-100">
+                  <Shield className="w-5 h-5 text-purple-600" />
+                </div>
+                <h4 className="font-semibold">Antivirus Premium</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">Scanner malware avanzato e protezione in tempo reale</p>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-background border">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 rounded-full bg-orange-100">
+                  <CreditCard className="w-5 h-5 text-orange-600" />
+                </div>
+                <h4 className="font-semibold">Diagnostica €{loyaltySettings?.diagnostic_fee || 5}</h4>
+              </div>
+              <p className="text-sm text-muted-foreground">Controllo completo stato batteria, memoria e prestazioni</p>
+            </div>
+          </div>
+
+          <Separator className="my-4" />
+
+          <div className="bg-muted/50 rounded-lg p-4">
+            <h4 className="font-medium mb-3 flex items-center gap-2">
+              <Gift className="w-4 h-4" />
+              Cosa Dire al Cliente
+            </h4>
+            <p className="text-sm text-muted-foreground italic">
+              "Con soli <span className="font-semibold text-primary">€{loyaltySettings?.annual_price || 30} all'anno</span> hai: 
+              protezione antivirus per {loyaltySettings?.max_devices || 3} dispositivi, 
+              {loyaltySettings?.repair_discount_percent || 10}% di sconto su tutte le riparazioni, 
+              diagnostica completa a soli €{loyaltySettings?.diagnostic_fee || 5}, 
+              e monitoraggio continuo della salute del tuo smartphone!"
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* How it works */}
       <Card>
         <CardHeader>
@@ -312,7 +415,7 @@ export default function CornerTesseraFedelta() {
               <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
                 <span className="text-xl font-bold text-primary">3</span>
               </div>
-              <h4 className="font-medium mb-1">Abbonamento Annuale</h4>
+              <h4 className="font-medium mb-1">Paga €{loyaltySettings?.annual_price || 30}/anno</h4>
               <p className="text-sm text-muted-foreground">Il cliente paga con Stripe</p>
             </div>
             <div className="text-center p-4">
@@ -321,23 +424,6 @@ export default function CornerTesseraFedelta() {
               </div>
               <h4 className="font-medium mb-1">Guadagni €10</h4>
               <p className="text-sm text-muted-foreground">Commissione versata dal Centro</p>
-            </div>
-          </div>
-          
-          <Separator className="my-4" />
-          
-          <div className="flex flex-wrap gap-4 justify-center">
-            <div className="flex items-center gap-2 text-sm">
-              <Smartphone className="w-4 h-4 text-primary" />
-              <span>App Diagnostica Android</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <Shield className="w-4 h-4 text-primary" />
-              <span>Scanner Malware</span>
-            </div>
-            <div className="flex items-center gap-2 text-sm">
-              <TrendingUp className="w-4 h-4 text-primary" />
-              <span>Sconti Riparazioni</span>
             </div>
           </div>
         </CardContent>
