@@ -42,15 +42,7 @@ serve(async (req) => {
       throw new Error("Invitation not found");
     }
 
-    // Build checkout URL with invitation token - use production domain
-    const baseUrl = Deno.env.get("SITE_URL") || "https://lablinkriparo.com";
-    const checkoutUrl = baseUrl + "/corner-loyalty-checkout?token=" + invitation.invitation_token;
-    const cornerName = corner?.business_name || "Corner";
-
-    // Build simple HTML email content (no line breaks to avoid =20 encoding issues)
-    const emailHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;"><div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 40px; border-radius: 16px 16px 0 0; text-align: center;"><h1 style="color: white; margin: 0; font-size: 28px;">Tessera Fedelta</h1><p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">LabLink Riparo</p></div><div style="background: white; padding: 40px; border-radius: 0 0 16px 16px;"><p style="font-size: 18px; color: #333; margin: 0 0 20px 0;">Ciao <strong>${customer_name}</strong>,</p><p style="color: #666; line-height: 1.6; margin: 0 0 20px 0;"><strong>${cornerName}</strong> ti invita ad attivare la Tessera Fedelta per accedere a vantaggi esclusivi!</p><div style="background: #f8f9fa; padding: 24px; border-radius: 12px; margin: 20px 0;"><h3 style="margin: 0 0 16px 0; color: #333;">Cosa include:</h3><ul style="margin: 0; padding: 0 0 0 20px; color: #666; line-height: 1.8;"><li>App Android di Diagnostica - Scanner malware</li><li>Sconti sulle riparazioni</li><li>Priorita nelle code</li><li>Fino a 3 dispositivi protetti</li></ul></div><div style="text-align: center; margin: 30px 0;"><p style="font-size: 32px; font-weight: bold; color: #6366f1; margin: 0;">30 Euro/anno</p></div><a href="${checkoutUrl}" style="display: block; background: #6366f1; color: white; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-weight: bold; font-size: 18px; text-align: center; margin: 20px 0;">Attiva Ora la Tessera</a><p style="color: #999; font-size: 14px; text-align: center; margin: 20px 0 0 0;">Questo link e valido per 30 giorni</p></div><p style="color: #999; font-size: 12px; text-align: center; margin: 20px 0 0 0;">${cornerName}</p></div></body></html>`;
-
-    // Find the centro associated with corner
+    // Find the centro associated with corner FIRST (before using centroId)
     const { data: partnership } = await supabaseClient
       .from("corner_partnerships")
       .select("provider_id")
@@ -78,8 +70,40 @@ serve(async (req) => {
       throw new Error("No centro found for sending email");
     }
 
+    // Get loyalty program settings from the associated centro
+    let annualPrice = 30;
+    let maxDevices = 3;
+    let repairDiscount = 10;
+    let diagnosticPrice = 0;
+
+    const { data: loyaltySettings } = await supabaseClient
+      .from("loyalty_program_settings")
+      .select("annual_price, max_devices, repair_discount_percent, diagnostic_fee")
+      .eq("centro_id", centroId)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (loyaltySettings) {
+      annualPrice = loyaltySettings.annual_price || 30;
+      maxDevices = loyaltySettings.max_devices || 3;
+      repairDiscount = loyaltySettings.repair_discount_percent || 10;
+      diagnosticPrice = loyaltySettings.diagnostic_fee ?? 0;
+    }
+
+    // Build checkout URL with invitation token - use production domain
+    const baseUrl = Deno.env.get("SITE_URL") || "https://lablinkriparo.com";
+    const checkoutUrl = baseUrl + "/corner-loyalty-checkout?token=" + invitation.invitation_token;
+    const cornerName = corner?.business_name || "Corner";
+
+    // Build benefits list dynamically
+    const diagnosticText = diagnosticPrice === 0 ? "Diagnostica gratuita" : `Diagnostica a ${diagnosticPrice} Euro`;
+
+    // Build simple HTML email content with dynamic pricing (no line breaks to avoid =20 encoding issues)
+    const emailHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head><body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f5f5;"><div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;"><div style="background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 40px; border-radius: 16px 16px 0 0; text-align: center;"><h1 style="color: white; margin: 0; font-size: 28px;">Tessera Fedelta</h1><p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">LabLink Riparo</p></div><div style="background: white; padding: 40px; border-radius: 0 0 16px 16px;"><p style="font-size: 18px; color: #333; margin: 0 0 20px 0;">Ciao <strong>${customer_name}</strong>,</p><p style="color: #666; line-height: 1.6; margin: 0 0 20px 0;"><strong>${cornerName}</strong> ti invita ad attivare la Tessera Fedelta per accedere a vantaggi esclusivi!</p><div style="background: #f8f9fa; padding: 24px; border-radius: 12px; margin: 20px 0;"><h3 style="margin: 0 0 16px 0; color: #333;">Cosa include:</h3><ul style="margin: 0; padding: 0 0 0 20px; color: #666; line-height: 1.8;"><li>App Android di Diagnostica - Scanner malware</li><li>${repairDiscount}% sconto sulle riparazioni</li><li>Priorita nelle code</li><li>Fino a ${maxDevices} dispositivi protetti</li><li>${diagnosticText}</li></ul></div><div style="text-align: center; margin: 30px 0;"><p style="font-size: 32px; font-weight: bold; color: #6366f1; margin: 0;">${annualPrice} Euro/anno</p></div><a href="${checkoutUrl}" style="display: block; background: #6366f1; color: white; text-decoration: none; padding: 16px 32px; border-radius: 12px; font-weight: bold; font-size: 18px; text-align: center; margin: 20px 0;">Attiva Ora la Tessera</a><p style="color: #999; font-size: 14px; text-align: center; margin: 20px 0 0 0;">Questo link e valido per 30 giorni</p></div><p style="color: #999; font-size: 12px; text-align: center; margin: 20px 0 0 0;">${cornerName}</p></div></body></html>`;
+
     console.log("[SEND-CORNER-LOYALTY-INVITE] Sending via centro:", centroId);
     console.log("[SEND-CORNER-LOYALTY-INVITE] Checkout URL:", checkoutUrl);
+    console.log("[SEND-CORNER-LOYALTY-INVITE] Dynamic pricing:", { annualPrice, repairDiscount, maxDevices, diagnosticPrice });
 
     // Send email via send-email-smtp function
     const { error: emailError } = await supabaseClient.functions.invoke("send-email-smtp", {
