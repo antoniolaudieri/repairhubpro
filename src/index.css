@@ -272,6 +272,20 @@ All colors MUST be HSL.
     animation: scroll-ticker linear infinite;
   }
 
+  /* Scrolling brands animation */
+  @keyframes scroll-brands {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-scroll-brands {
+    animation: scroll-brands linear infinite;
+  }
+
   /* Score ring animation */
   @keyframes score-ring-draw {
     from {
