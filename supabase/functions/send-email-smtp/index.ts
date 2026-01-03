@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import nodemailer from "https://esm.sh/nodemailer@6.9.9";
-import { decode as decodeBase64 } from "https://deno.land/std@0.190.0/encoding/base64.ts";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,7 +31,6 @@ interface EmailRequest {
   html: string;
   from_name_override?: string;
   attachments?: Attachment[];
-  // For logging communications
   customer_id?: string;
   template_name?: string;
   metadata?: Record<string, any>;
@@ -49,9 +47,6 @@ const handler = async (req: Request): Promise<Response> => {
     const { centro_id, to, subject, html, from_name_override, attachments, customer_id, template_name, metadata }: EmailRequest = await req.json();
     
     console.log("send-email-smtp: Sending email to", to, "for centro", centro_id);
-    if (attachments?.length) {
-      console.log("send-email-smtp: With", attachments.length, "attachment(s)");
-    }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -90,27 +85,26 @@ const handler = async (req: Request): Promise<Response> => {
             centro_id,
             type: "email",
             subject,
-            content: html.substring(0, 5000), // Limit content size
+            content: html.substring(0, 5000),
             template_name: template_name || null,
             status,
             metadata: metadata || {},
           });
-          console.log("send-email-smtp: Communication logged for customer", customer_id);
         } catch (logError) {
           console.error("send-email-smtp: Failed to log communication:", logError);
         }
       }
     };
 
-    // Clean subject - remove emojis for better compatibility
-    const cleanSubject = subject.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
-
-    // Prepare attachments - decode base64 to Uint8Array
-    const mailAttachments = attachments?.map(att => ({
-      filename: att.filename,
-      content: decodeBase64(att.content),
-      contentType: att.contentType || "application/pdf",
-    })) || [];
+    // Clean subject - remove emojis and normalize
+    const cleanSubject = subject
+      .replace(/[\u{1F300}-\u{1F9FF}]/gu, '')
+      .replace(/[àáâãäå]/g, 'a')
+      .replace(/[èéêë]/g, 'e')
+      .replace(/[ìíîï]/g, 'i')
+      .replace(/[òóôõö]/g, 'o')
+      .replace(/[ùúûü]/g, 'u')
+      .trim();
 
     // Try SMTP if configured
     if (smtpConfig) {
@@ -121,14 +115,15 @@ const handler = async (req: Request): Promise<Response> => {
         
         console.log("send-email-smtp: Connecting to SMTP", trimmedHost, smtpConfig.port);
         
-        // Create nodemailer transporter
-        const transporter = nodemailer.createTransport({
-          host: trimmedHost,
-          port: smtpConfig.port,
-          secure: smtpConfig.secure,
-          auth: {
-            user: trimmedUser,
-            pass: smtpConfig.password,
+        const client = new SMTPClient({
+          connection: {
+            hostname: trimmedHost,
+            port: smtpConfig.port,
+            tls: smtpConfig.secure,
+            auth: {
+              username: trimmedUser,
+              password: smtpConfig.password,
+            },
           },
         });
 
@@ -139,28 +134,18 @@ const handler = async (req: Request): Promise<Response> => {
           .replace(/\s+/g, ' ')
           .trim();
 
-        const mailOptions: any = {
+        await client.send({
           from: `${fromName} <${trimmedFromEmail}>`,
-          to: recipients.join(', '),
+          to: recipients,
           subject: cleanSubject,
-          text: plainText,
+          content: plainText,
           html: html,
-          headers: {
-            "X-Priority": "3",
-            "X-Mailer": "LabLinkRiparo",
-          },
-        };
+        });
 
-        // Add attachments if present
-        if (mailAttachments.length > 0) {
-          mailOptions.attachments = mailAttachments;
-        }
-
-        await transporter.sendMail(mailOptions);
+        await client.close();
 
         console.log("send-email-smtp: Email sent via Centro SMTP");
         
-        // Log communication
         await logCommunication("sent");
         
         return new Response(
@@ -169,16 +154,17 @@ const handler = async (req: Request): Promise<Response> => {
             method: "smtp",
             from: `${fromName} <${trimmedFromEmail}>`,
             to: recipients,
-            attachments: attachments?.length || 0
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       } catch (smtpError: any) {
-        console.error("send-email-smtp: SMTP error, falling back to Resend:", smtpError.message);
+        console.error("send-email-smtp: SMTP error:", smtpError.message);
+        // Don't fallback to Resend - throw the actual error
+        throw new Error(`SMTP error: ${smtpError.message}`);
       }
     }
 
-    // Fallback to Resend
+    // Fallback to Resend only if no SMTP config
     const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
     if (!RESEND_API_KEY) {
       throw new Error("No SMTP config and RESEND_API_KEY not configured");
@@ -186,7 +172,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("send-email-smtp: Using Resend fallback");
 
-    // Prepare Resend request body
     const resendBody: any = {
       from: `${fromName} <onboarding@resend.dev>`,
       to: recipients,
@@ -194,7 +179,6 @@ const handler = async (req: Request): Promise<Response> => {
       html: html,
     };
 
-    // Add attachments for Resend if present
     if (attachments?.length) {
       resendBody.attachments = attachments.map(att => ({
         filename: att.filename,
@@ -220,7 +204,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("send-email-smtp: Email sent via Resend:", emailResult.id);
     
-    // Log communication
     await logCommunication("sent");
     
     return new Response(
@@ -228,9 +211,6 @@ const handler = async (req: Request): Promise<Response> => {
         success: true, 
         method: "resend",
         emailId: emailResult.id,
-        from: `${fromName} <onboarding@resend.dev>`,
-        to: recipients,
-        attachments: attachments?.length || 0
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
