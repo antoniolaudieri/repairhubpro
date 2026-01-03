@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +22,7 @@ const NewRepair = () => {
   const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
@@ -413,6 +414,13 @@ const NewRepair = () => {
   };
 
   const handleSubmit = async () => {
+    // Previeni submit multipli
+    if (isSubmittingRef.current || loading) {
+      console.log("Submit già in corso, ignorato");
+      return;
+    }
+    
+    isSubmittingRef.current = true;
     setLoading(true);
 
     try {
@@ -618,10 +626,13 @@ const NewRepair = () => {
       }
 
       toast.success("Dispositivo registrato con successo!");
-      navigate("/dashboard");
+      // Naviga immediatamente per evitare doppi submit
+      navigate("/dashboard", { replace: true });
     } catch (error: any) {
       console.error("Error:", error);
       toast.error(error.message || "Errore durante la registrazione");
+      // Reset ref solo in caso di errore per permettere retry
+      isSubmittingRef.current = false;
     } finally {
       setLoading(false);
     }
