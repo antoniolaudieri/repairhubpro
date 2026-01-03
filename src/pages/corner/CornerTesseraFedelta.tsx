@@ -283,7 +283,7 @@ export default function CornerTesseraFedelta() {
             <div>
               <CardTitle className="text-2xl">Tessera Fedeltà</CardTitle>
               <CardDescription className="text-base">
-                Vendi tessere fedeltà ai tuoi clienti e guadagna €10 per ogni attivazione
+                Vendi tessere fedeltà ai tuoi clienti e guadagna €{((loyaltySettings?.annual_price || 30) * 0.33).toFixed(2)} per ogni attivazione (33%)
               </CardDescription>
             </div>
           </div>
@@ -422,8 +422,8 @@ export default function CornerTesseraFedelta() {
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-3">
                 <Euro className="w-6 h-6 text-green-600" />
               </div>
-              <h4 className="font-medium mb-1">Guadagni €10</h4>
-              <p className="text-sm text-muted-foreground">Commissione versata dal Centro</p>
+              <h4 className="font-medium mb-1">Guadagni €{((loyaltySettings?.annual_price || 30) * 0.33).toFixed(2)}</h4>
+              <p className="text-sm text-muted-foreground">Commissione 33% versata dal Centro</p>
             </div>
           </div>
         </CardContent>
