@@ -4,7 +4,6 @@ import { CentroLayout } from "@/layouts/CentroLayout";
 import { supabase } from "@/integrations/supabase/client";
 import MarketPriceHistory from "@/components/centro/MarketPriceHistory";
 import { UsatoHeroStats } from "@/components/centro/UsatoHeroStats";
-import { UsatoInterestStats } from "@/components/centro/UsatoInterestStats";
 import { UsatoDeviceCard } from "@/components/centro/UsatoDeviceCard";
 import { UsatoReservationCard } from "@/components/centro/UsatoReservationCard";
 import { useAuth } from "@/hooks/useAuth";
@@ -797,9 +796,6 @@ export default function CentroUsato() {
       <div className="p-4 md:p-6 space-y-6">
         {/* Hero Stats */}
         <UsatoHeroStats stats={stats} />
-        
-        {/* Interest Stats */}
-        <UsatoInterestStats />
         
         {/* Action Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
