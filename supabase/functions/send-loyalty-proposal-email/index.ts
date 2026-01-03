@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 
@@ -25,12 +24,9 @@ serve(async (req) => {
       apiVersion: "2025-08-27.basil",
     });
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
-
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
 
     // Check if customer already has an active loyalty card
     const { data: existingCard } = await supabaseClient
@@ -104,14 +100,12 @@ serve(async (req) => {
       throw new Error("Errore nella creazione della tessera");
     }
 
-    // Create Stripe checkout session with subscription
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    // Build success/cancel URLs
     const baseUrl = supabaseUrl.replace('.supabase.co', '.lovable.app').replace('https://', 'https://');
-    
-    // Use a simple success/cancel URL structure
     const successUrl = `${baseUrl}/loyalty-success?card_id=${loyaltyCard.id}`;
     const cancelUrl = `${baseUrl}/loyalty-cancelled`;
 
+    // Create Stripe checkout session with subscription
     const session = await stripe.checkout.sessions.create({
       customer_email: customer_email,
       line_items: [
@@ -158,7 +152,7 @@ serve(async (req) => {
 
     console.log("[SEND-LOYALTY-PROPOSAL] Created checkout session:", session.id);
 
-    // Send email to customer
+    // Build email HTML
     const emailHtml = `
 <!DOCTYPE html>
 <html>
@@ -172,13 +166,10 @@ serve(async (req) => {
     .header h1 { color: white; margin: 0; font-size: 24px; }
     .content { padding: 30px 20px; }
     .benefit-card { background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border-radius: 12px; padding: 20px; margin: 20px 0; }
-    .benefit-item { display: flex; align-items: center; margin: 10px 0; }
-    .benefit-icon { width: 24px; height: 24px; margin-right: 12px; color: #16a34a; }
     .price-box { background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 12px; padding: 20px; text-align: center; margin: 20px 0; }
     .price { font-size: 36px; font-weight: bold; color: #1e293b; }
     .price-suffix { font-size: 18px; color: #64748b; }
     .cta-button { display: block; background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); color: white; text-decoration: none; padding: 16px 32px; border-radius: 8px; text-align: center; font-weight: bold; font-size: 16px; margin: 25px auto; max-width: 300px; }
-    .cta-button:hover { opacity: 0.9; }
     .footer { background: #f8fafc; padding: 20px; text-align: center; font-size: 14px; color: #64748b; }
     .highlight { color: #16a34a; font-weight: bold; }
     ul { padding-left: 20px; }
@@ -234,25 +225,19 @@ serve(async (req) => {
 </html>
     `;
 
-    const emailResponse = await resend.emails.send({
-      from: `${centro.business_name} <onboarding@resend.dev>`,
-      to: [customer_email],
-      subject: `🎁 La tua Tessera Fedeltà ti aspetta - ${centro.business_name}`,
-      html: emailHtml,
-    });
-
-    console.log("[SEND-LOYALTY-PROPOSAL] Email sent:", emailResponse);
-
-    // Log the communication
-    await supabaseClient
-      .from("customer_communications")
-      .insert({
+    // Send email using send-email-smtp function (uses Centro's SMTP settings)
+    const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-smtp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${supabaseServiceKey}`,
+      },
+      body: JSON.stringify({
         centro_id,
+        to: customer_email,
+        subject: `🎁 La tua Tessera Fedeltà ti aspetta - ${centro.business_name}`,
+        html: emailHtml,
         customer_id,
-        type: "email",
-        subject: `Proposta Tessera Fedeltà`,
-        content: `Email inviata con link di pagamento Stripe per tessera fedeltà €${annualPrice}/anno`,
-        status: "sent",
         template_name: "loyalty_proposal",
         metadata: {
           loyalty_card_id: loyaltyCard.id,
@@ -260,13 +245,23 @@ serve(async (req) => {
           payment_url: session.url,
           annual_price: annualPrice,
         },
-      });
+      }),
+    });
+
+    const emailResult = await emailResponse.json();
+    console.log("[SEND-LOYALTY-PROPOSAL] Email result:", emailResult);
+
+    if (!emailResponse.ok || emailResult.error) {
+      console.error("[SEND-LOYALTY-PROPOSAL] Email error:", emailResult);
+      throw new Error(emailResult.error || "Errore nell'invio dell'email");
+    }
 
     return new Response(JSON.stringify({ 
       success: true,
       message: `Email inviata a ${customer_email}`,
       loyalty_card_id: loyaltyCard.id,
       payment_url: session.url,
+      email_method: emailResult.method,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
