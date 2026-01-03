@@ -23,6 +23,7 @@ interface UsatoDeviceCardProps {
     owner_payout?: number;
     centro_net_margin?: number;
   };
+  centroId?: string;
   onEdit: (device: any) => void;
   onPublish: (id: string) => void;
   onDelete: (id: string) => void;
@@ -65,7 +66,7 @@ const getStatusConfig = (status: string) => {
   }
 };
 
-export function UsatoDeviceCard({ device, onEdit, onPublish, onDelete, onMarkAsSold, onNotifyInterested }: UsatoDeviceCardProps) {
+export function UsatoDeviceCard({ device, centroId, onEdit, onPublish, onDelete, onMarkAsSold, onNotifyInterested }: UsatoDeviceCardProps) {
   const DeviceIcon = getDeviceIcon(device.device_type);
   const conditionConfig = conditionLabels[device.condition] || { label: device.condition, color: 'bg-muted' };
   const saleType = saleTypeLabels[device.sale_type || 'acquistato'];
@@ -76,7 +77,8 @@ export function UsatoDeviceCard({ device, onEdit, onPublish, onDelete, onMarkAsS
     device.device_type,
     device.brand,
     device.price,
-    device.status
+    device.status,
+    centroId
   );
   
   const discount = device.original_price && device.original_price > device.price

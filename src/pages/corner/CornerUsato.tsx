@@ -782,8 +782,8 @@ export default function CornerUsato() {
 
   const splitPreview = calculateSplitPreview();
   
-  // Get interest counts for all devices
-  const interestCounts = useDeviceInterestCounts(devices);
+  // Get interest counts for all devices - filter by partner centros
+  const interestCounts = useDeviceInterestCounts(devices, { cornerId: cornerId || undefined });
 
   return (
     <CornerLayout>

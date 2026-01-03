@@ -1572,6 +1572,7 @@ export default function CentroUsato() {
                   <UsatoDeviceCard
                     key={device.id}
                     device={device}
+                    centroId={centroId || undefined}
                     onEdit={handleEdit}
                     onPublish={handlePublish}
                     onDelete={handleDelete}
