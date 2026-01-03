@@ -143,3 +143,12 @@ verify_jwt = false
 
 [functions.send-corner-loyalty-invite]
 verify_jwt = false
+
+[functions.send-loyalty-proposal-email]
+verify_jwt = false
+
+[functions.check-software-subscription]
+verify_jwt = false
+
+[functions.create-software-checkout]
+verify_jwt = false
