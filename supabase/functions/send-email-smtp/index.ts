@@ -137,16 +137,20 @@ const handler = async (req: Request): Promise<Response> => {
           .replace(/\s+/g, ' ')
           .trim();
 
+        // Encode subject for proper UTF-8 handling (avoid emoji issues)
+        const cleanSubject = subject.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+        
         const sendOptions: any = {
           from: `${fromName} <${trimmedFromEmail}>`,
           to: recipients,
-          subject: subject,
+          subject: cleanSubject,
           content: plainText,
           html: html,
           headers: {
             "X-Priority": "3",
             "X-Mailer": "LabLinkRiparo",
             "List-Unsubscribe": `<mailto:${trimmedFromEmail}?subject=unsubscribe>`,
+            "Content-Type": "text/html; charset=UTF-8",
           },
         };
 
