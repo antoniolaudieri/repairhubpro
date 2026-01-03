@@ -355,9 +355,10 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>Data Preferita *</Label>
-                  <Popover>
+                  <Popover modal={true}>
                     <PopoverTrigger asChild>
                       <Button
+                        type="button"
                         variant="outline"
                         className={cn(
                           "w-full justify-start text-left font-normal",
@@ -372,7 +373,7 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
                         )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0 z-[100]" align="start">
                       <CalendarComponent
                         mode="single"
                         selected={form.watch("preferredDate")}
