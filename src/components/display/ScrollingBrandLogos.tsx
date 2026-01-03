@@ -25,30 +25,32 @@ export function ScrollingBrandLogos({
   speed = 30,
   className = "" 
 }: ScrollingBrandLogosProps) {
-  // Double the items for seamless loop
-  const scrollItems = [...BRANDS, ...BRANDS];
+  // Triple the items for seamless loop
+  const scrollItems = [...BRANDS, ...BRANDS, ...BRANDS];
 
   return (
-    <div className={`overflow-hidden py-6 ${className}`}>
-      <div className="relative">
-        <div 
-          className="flex items-center gap-10 sm:gap-14 animate-scroll-brands whitespace-nowrap"
-          style={{ animationDuration: `${speed}s` }}
-        >
-          {scrollItems.map((brand, index) => (
-            <div 
-              key={`${brand.name}-${index}`}
-              className="flex items-center justify-center px-4"
-            >
-              <img 
-                src={brand.logo} 
-                alt={brand.name}
-                className="h-6 sm:h-8 w-auto object-contain opacity-40 hover:opacity-80 transition-opacity"
-                loading="lazy"
-              />
-            </div>
-          ))}
-        </div>
+    <div className={`w-full overflow-hidden py-6 ${className}`}>
+      <div 
+        className="inline-flex items-center gap-16 animate-scroll-brands"
+        style={{ 
+          animationDuration: `${speed}s`,
+        }}
+      >
+        {scrollItems.map((brand, index) => (
+          <div 
+            key={`${brand.name}-${index}`}
+            className="flex-shrink-0"
+          >
+            <img 
+              src={brand.logo} 
+              alt={brand.name}
+              title={brand.name}
+              width={80}
+              height={32}
+              className="h-8 w-auto opacity-50 hover:opacity-100 transition-opacity"
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
