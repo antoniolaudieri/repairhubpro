@@ -1,20 +1,19 @@
 const BRANDS = [
-  "Apple",
-  "Samsung", 
-  "Huawei",
-  "Xiaomi",
-  "OnePlus",
-  "Google",
-  "OPPO",
-  "Realme",
-  "Motorola",
-  "Sony",
-  "Nokia",
-  "Honor",
-  "ASUS",
-  "Lenovo",
-  "HP",
-  "Dell",
+  { name: "Apple", logo: "/brand-logos/apple.svg" },
+  { name: "Samsung", logo: "/brand-logos/samsung.svg" },
+  { name: "Huawei", logo: "/brand-logos/huawei.svg" },
+  { name: "Xiaomi", logo: "/brand-logos/xiaomi.svg" },
+  { name: "OnePlus", logo: "/brand-logos/oneplus.svg" },
+  { name: "Google", logo: "/brand-logos/google.svg" },
+  { name: "OPPO", logo: "/brand-logos/oppo.svg" },
+  { name: "Motorola", logo: "/brand-logos/motorola.svg" },
+  { name: "Sony", logo: "/brand-logos/sony.svg" },
+  { name: "Nokia", logo: "/brand-logos/nokia.svg" },
+  { name: "Honor", logo: "/brand-logos/honor.svg" },
+  { name: "ASUS", logo: "/brand-logos/asus.svg" },
+  { name: "Lenovo", logo: "/brand-logos/lenovo.svg" },
+  { name: "HP", logo: "/brand-logos/hp.svg" },
+  { name: "Dell", logo: "/brand-logos/dell.svg" },
 ];
 
 interface ScrollingBrandLogosProps {
@@ -33,16 +32,21 @@ export function ScrollingBrandLogos({
     <div className={`overflow-hidden py-6 ${className}`}>
       <div className="relative">
         <div 
-          className="flex items-center gap-8 sm:gap-12 animate-scroll-brands whitespace-nowrap"
+          className="flex items-center gap-10 sm:gap-14 animate-scroll-brands whitespace-nowrap"
           style={{ animationDuration: `${speed}s` }}
         >
           {scrollItems.map((brand, index) => (
-            <span 
-              key={`${brand}-${index}`}
-              className="text-lg sm:text-xl font-semibold text-muted-foreground/50 hover:text-foreground transition-colors tracking-wide px-2"
+            <div 
+              key={`${brand.name}-${index}`}
+              className="flex items-center justify-center px-4"
             >
-              {brand}
-            </span>
+              <img 
+                src={brand.logo} 
+                alt={brand.name}
+                className="h-6 sm:h-8 w-auto object-contain opacity-40 hover:opacity-80 transition-opacity"
+                loading="lazy"
+              />
+            </div>
           ))}
         </div>
       </div>
