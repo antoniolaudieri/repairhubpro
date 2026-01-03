@@ -27,6 +27,20 @@ interface Centro {
   phone: string;
 }
 
+interface LoyaltySettings {
+  annual_price: number;
+  max_devices: number;
+  repair_discount: number;
+  diagnostic_price: number;
+}
+
+const DEFAULT_SETTINGS: LoyaltySettings = {
+  annual_price: 30,
+  max_devices: 3,
+  repair_discount: 10,
+  diagnostic_price: 0,
+};
+
 export default function CornerLoyaltyCheckout() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -39,6 +53,8 @@ export default function CornerLoyaltyCheckout() {
   const [invitation, setInvitation] = useState<any>(null);
   const [centri, setCentri] = useState<Centro[]>([]);
   const [selectedCentroId, setSelectedCentroId] = useState<string>("");
+  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings>(DEFAULT_SETTINGS);
+  const [loadingSettings, setLoadingSettings] = useState(false);
 
   useEffect(() => {
     if (token) {
@@ -54,6 +70,41 @@ export default function CornerLoyaltyCheckout() {
       toast.error("Pagamento annullato");
     }
   }, [cancelled]);
+
+  // Load loyalty settings when centro is selected
+  useEffect(() => {
+    if (selectedCentroId) {
+      loadCentroSettings(selectedCentroId);
+    }
+  }, [selectedCentroId]);
+
+  const loadCentroSettings = async (centroId: string) => {
+    setLoadingSettings(true);
+    try {
+      const { data } = await supabase
+        .from("loyalty_program_settings")
+        .select("annual_price, max_devices, repair_discount_percent, diagnostic_fee")
+        .eq("centro_id", centroId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (data) {
+        setLoyaltySettings({
+          annual_price: data.annual_price || DEFAULT_SETTINGS.annual_price,
+          max_devices: data.max_devices || DEFAULT_SETTINGS.max_devices,
+          repair_discount: data.repair_discount_percent || DEFAULT_SETTINGS.repair_discount,
+          diagnostic_price: data.diagnostic_fee ?? DEFAULT_SETTINGS.diagnostic_price,
+        });
+      } else {
+        setLoyaltySettings(DEFAULT_SETTINGS);
+      }
+    } catch (err) {
+      console.error("Error loading centro settings:", err);
+      setLoyaltySettings(DEFAULT_SETTINGS);
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
 
   const loadInvitation = async () => {
     try {
@@ -217,7 +268,11 @@ export default function CornerLoyaltyCheckout() {
                 </div>
                 <div>
                   <p className="font-medium">Sconti Riparazioni</p>
-                  <p className="text-sm text-muted-foreground">Risparmia su ogni intervento</p>
+                  <p className="text-sm text-muted-foreground">
+                    {loyaltySettings.repair_discount > 0 
+                      ? `${loyaltySettings.repair_discount}% di sconto`
+                      : "Risparmia su ogni intervento"}
+                  </p>
                 </div>
               </div>
               
@@ -226,7 +281,7 @@ export default function CornerLoyaltyCheckout() {
                   <Users className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="font-medium">Fino a 3 Dispositivi</p>
+                  <p className="font-medium">Fino a {loyaltySettings.max_devices} Dispositivi</p>
                   <p className="text-sm text-muted-foreground">Proteggi tutta la famiglia</p>
                 </div>
               </div>
@@ -246,8 +301,12 @@ export default function CornerLoyaltyCheckout() {
                   <Wrench className="w-5 h-5 text-purple-600" />
                 </div>
                 <div>
-                  <p className="font-medium">Check-up Gratuiti</p>
-                  <p className="text-sm text-muted-foreground">Diagnosi periodiche incluse</p>
+                  <p className="font-medium">Check-up</p>
+                  <p className="text-sm text-muted-foreground">
+                    {loyaltySettings.diagnostic_price === 0 
+                      ? "Diagnosi gratuite" 
+                      : `Diagnosi a €${loyaltySettings.diagnostic_price}`}
+                  </p>
                 </div>
               </div>
             </div>
@@ -291,15 +350,19 @@ export default function CornerLoyaltyCheckout() {
         <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
           <CardContent className="pt-6">
             <div className="text-center mb-6">
-              <p className="text-sm text-muted-foreground mb-2">Prezzo annuale</p>
-              <p className="text-5xl font-bold text-primary">€30</p>
-              <Badge variant="outline" className="mt-2">Validità 12 mesi</Badge>
+              <p className="text-sm text-muted-foreground mb-2">Abbonamento annuale</p>
+              {loadingSettings ? (
+                <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+              ) : (
+                <p className="text-5xl font-bold text-primary">€{loyaltySettings.annual_price}</p>
+              )}
+              <Badge variant="outline" className="mt-2">Rinnovo automatico annuale</Badge>
             </div>
 
             <Button 
               onClick={handleCheckout} 
               className="w-full h-14 text-lg"
-              disabled={!selectedCentroId || processing}
+              disabled={!selectedCentroId || processing || loadingSettings}
             >
               {processing ? (
                 <>
@@ -309,13 +372,13 @@ export default function CornerLoyaltyCheckout() {
               ) : (
                 <>
                   <CreditCard className="w-5 h-5 mr-2" />
-                  Paga con Stripe
+                  Abbonati con Stripe
                 </>
               )}
             </Button>
 
             <p className="text-xs text-muted-foreground text-center mt-4">
-              Pagamento sicuro tramite Stripe. Nessun dato della carta viene salvato sui nostri server.
+              Pagamento sicuro tramite Stripe. Puoi annullare in qualsiasi momento.
             </p>
           </CardContent>
         </Card>
