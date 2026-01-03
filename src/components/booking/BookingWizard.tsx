@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion, AnimatePresence } from "framer-motion";
-import { Calendar, Smartphone, Tablet, Laptop, Monitor, ChevronRight, ChevronLeft, Check, Store } from "lucide-react";
+import { Calendar, Smartphone, Tablet, Laptop, Monitor, ChevronRight, ChevronLeft, Check, Store, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,8 +11,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
+import { it } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { CornerSelector } from "./CornerSelector";
+import { supabase } from "@/integrations/supabase/client";
 
 const bookingSchema = z.object({
   customerName: z.string().min(2, "Nome deve essere almeno 2 caratteri"),
@@ -43,6 +45,24 @@ interface BookingWizardProps {
   initialCustomerData?: CustomerData | null;
 }
 
+interface OpeningHours {
+  [key: string]: {
+    open_am?: string;
+    close_am?: string;
+    open_pm?: string;
+    close_pm?: string;
+    morning_closed?: boolean;
+    afternoon_closed?: boolean;
+    closed?: boolean;
+  };
+}
+
+interface CornerData {
+  id: string;
+  business_name: string;
+  opening_hours: OpeningHours | null;
+}
+
 const DEVICE_TYPES = [
   { value: "smartphone", label: "Smartphone", icon: Smartphone },
   { value: "tablet", label: "Tablet", icon: Tablet },
@@ -50,13 +70,78 @@ const DEVICE_TYPES = [
   { value: "desktop", label: "PC Desktop", icon: Monitor },
 ];
 
-const TIME_SLOTS = [
-  "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
-];
+// Generate time slots based on opening hours
+function generateTimeSlots(openingHours: OpeningHours | null, date: Date): string[] {
+  if (!openingHours) {
+    // Default time slots if no opening hours
+    return [
+      "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+      "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00"
+    ];
+  }
+
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayName = dayNames[date.getDay()];
+  const dayHours = openingHours[dayName];
+
+  if (!dayHours || dayHours.closed) {
+    return [];
+  }
+
+  const slots: string[] = [];
+
+  // Morning slots
+  if (!dayHours.morning_closed && dayHours.open_am && dayHours.close_am) {
+    const [startH, startM] = dayHours.open_am.split(':').map(Number);
+    const [endH, endM] = dayHours.close_am.split(':').map(Number);
+    let current = startH * 60 + startM;
+    const end = endH * 60 + endM;
+    
+    while (current < end) {
+      const h = Math.floor(current / 60);
+      const m = current % 60;
+      slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+      current += 30;
+    }
+  }
+
+  // Afternoon slots
+  if (!dayHours.afternoon_closed && dayHours.open_pm && dayHours.close_pm) {
+    const [startH, startM] = dayHours.open_pm.split(':').map(Number);
+    const [endH, endM] = dayHours.close_pm.split(':').map(Number);
+    let current = startH * 60 + startM;
+    const end = endH * 60 + endM;
+    
+    while (current < end) {
+      const h = Math.floor(current / 60);
+      const m = current % 60;
+      slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`);
+      current += 30;
+    }
+  }
+
+  return slots;
+}
+
+// Check if a day is open
+function isDayOpen(openingHours: OpeningHours | null, date: Date): boolean {
+  if (!openingHours) return true;
+  
+  const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+  const dayName = dayNames[date.getDay()];
+  const dayHours = openingHours[dayName];
+
+  if (!dayHours) return true;
+  if (dayHours.closed) return false;
+  if (dayHours.morning_closed && dayHours.afternoon_closed) return false;
+  
+  return true;
+}
 
 export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: BookingWizardProps) {
   const [step, setStep] = useState(1);
+  const [selectedCorner, setSelectedCorner] = useState<CornerData | null>(null);
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
   const totalSteps = 4;
 
   const form = useForm<BookingFormData>({
@@ -84,6 +169,21 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
     }
   }, [initialCustomerData, form]);
 
+  // Update time slots when date changes
+  useEffect(() => {
+    const date = form.watch("preferredDate");
+    if (date && selectedCorner) {
+      const slots = generateTimeSlots(selectedCorner.opening_hours, date);
+      setAvailableTimeSlots(slots);
+      // Reset time if current selection is not available
+      const currentTime = form.watch("preferredTime");
+      if (currentTime && !slots.includes(currentTime)) {
+        form.setValue("preferredTime", "");
+      }
+    }
+  }, [form.watch("preferredDate"), selectedCorner]);
+
+  // Validation order: Step 3 = Corner, Step 4 = Date/Time
   const validateStep = async (currentStep: number): Promise<boolean> => {
     let fieldsToValidate: (keyof BookingFormData)[] = [];
 
@@ -95,10 +195,10 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
         fieldsToValidate = ["deviceType", "issueDescription"];
         break;
       case 3:
-        fieldsToValidate = ["preferredDate", "preferredTime"];
+        fieldsToValidate = ["cornerId"];
         break;
       case 4:
-        fieldsToValidate = ["cornerId"];
+        fieldsToValidate = ["preferredDate", "preferredTime"];
         break;
     }
 
@@ -123,11 +223,26 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
     await onSubmit(data);
   };
 
-  const handleCornerSelect = (cornerId: string, customerCoords?: { lat: number; lng: number }) => {
+  const handleCornerSelect = async (cornerId: string, customerCoords?: { lat: number; lng: number }) => {
     form.setValue("cornerId", cornerId);
     if (customerCoords) {
       form.setValue("customerLatitude", customerCoords.lat);
       form.setValue("customerLongitude", customerCoords.lng);
+    }
+
+    // Fetch corner details for opening hours
+    const { data } = await supabase
+      .from("corners")
+      .select("id, business_name, opening_hours")
+      .eq("id", cornerId)
+      .single();
+
+    if (data) {
+      setSelectedCorner({
+        id: data.id,
+        business_name: data.business_name,
+        opening_hours: data.opening_hours as unknown as OpeningHours | null,
+      });
     }
   };
 
@@ -164,8 +279,8 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
         <div className="flex justify-between text-xs text-muted-foreground mt-2">
           <span>Dati</span>
           <span>Dispositivo</span>
-          <span>Data</span>
           <span>Corner</span>
+          <span>Data</span>
         </div>
       </div>
 
@@ -334,83 +449,10 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
             </motion.div>
           )}
 
-          {/* Step 3: Appointment */}
+          {/* Step 3: Corner Selection (moved from step 4) */}
           {step === 3 && (
             <motion.div
               key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className="space-y-6"
-            >
-              <div className="space-y-2">
-                <h3 className="text-2xl font-semibold">Quando preferisci?</h3>
-                <p className="text-muted-foreground">
-                  Scegli la data e l'orario per l'appuntamento
-                </p>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-3">
-                  <Label>Data Preferita *</Label>
-                  <div className="border rounded-lg p-3 bg-card">
-                    <CalendarComponent
-                      mode="single"
-                      selected={form.watch("preferredDate")}
-                      onSelect={(date) => form.setValue("preferredDate", date as Date)}
-                      disabled={(date) => {
-                        const today = new Date();
-                        today.setHours(0, 0, 0, 0);
-                        return date < today;
-                      }}
-                      className="mx-auto"
-                    />
-                  </div>
-                  {form.watch("preferredDate") && (
-                    <p className="text-sm text-primary font-medium flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Data selezionata: {format(form.watch("preferredDate"), "PPP", { locale: undefined })}
-                    </p>
-                  )}
-                  {form.formState.errors.preferredDate && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.preferredDate.message}
-                    </p>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="preferredTime">Orario Preferito *</Label>
-                  <Select
-                    onValueChange={(value) => form.setValue("preferredTime", value)}
-                    value={form.watch("preferredTime")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Seleziona un orario" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIME_SLOTS.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {form.formState.errors.preferredTime && (
-                    <p className="text-sm text-destructive">
-                      {form.formState.errors.preferredTime.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Step 4: Corner Selection */}
-          {step === 4 && (
-            <motion.div
-              key="step4"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
@@ -437,34 +479,131 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
                   {form.formState.errors.cornerId.message}
                 </p>
               )}
+            </motion.div>
+          )}
 
-              {/* Summary */}
-              {form.watch("cornerId") && (
-                <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
-                  <h4 className="font-medium">Riepilogo Prenotazione</h4>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <p>
-                      <span className="font-medium text-foreground">Cliente:</span>{" "}
-                      {form.watch("customerName")}
-                    </p>
-                    <p>
-                      <span className="font-medium text-foreground">Dispositivo:</span>{" "}
-                      {DEVICE_TYPES.find((d) => d.value === form.watch("deviceType"))
-                        ?.label || "Non specificato"}{" "}
-                      {form.watch("deviceBrand")} {form.watch("deviceModel")}
-                    </p>
-                    <p>
-                      <span className="font-medium text-foreground">Data:</span>{" "}
-                      {form.watch("preferredDate") && format(form.watch("preferredDate"), "PPP")} alle {form.watch("preferredTime")}
-                    </p>
-                    <p>
-                      <span className="font-medium text-foreground">Problema:</span>{" "}
-                      {form.watch("issueDescription")?.substring(0, 60)}
-                      {(form.watch("issueDescription")?.length || 0) > 60 ? "..." : ""}
-                    </p>
+          {/* Step 4: Appointment (moved from step 3) */}
+          {step === 4 && (
+            <motion.div
+              key="step4"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className="space-y-6"
+            >
+              <div className="space-y-2">
+                <h3 className="text-2xl font-semibold">Quando preferisci?</h3>
+                <p className="text-muted-foreground">
+                  Scegli data e orario in base alla disponibilità di {selectedCorner?.business_name || "questo Corner"}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-3">
+                  <Label>Data Preferita *</Label>
+                  <div className="border rounded-lg p-3 bg-card">
+                    <CalendarComponent
+                      mode="single"
+                      selected={form.watch("preferredDate")}
+                      onSelect={(date) => {
+                        form.setValue("preferredDate", date as Date);
+                        form.setValue("preferredTime", ""); // Reset time when date changes
+                      }}
+                      disabled={(date) => {
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        if (date < today) return true;
+                        // Disable days when corner is closed
+                        if (selectedCorner?.opening_hours) {
+                          return !isDayOpen(selectedCorner.opening_hours, date);
+                        }
+                        return false;
+                      }}
+                      locale={it}
+                      className="mx-auto"
+                    />
                   </div>
+                  {form.watch("preferredDate") && (
+                    <p className="text-sm text-primary font-medium flex items-center gap-2">
+                      <Calendar className="h-4 w-4" />
+                      Data selezionata: {format(form.watch("preferredDate"), "EEEE d MMMM yyyy", { locale: it })}
+                    </p>
+                  )}
+                  {form.formState.errors.preferredDate && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.preferredDate.message}
+                    </p>
+                  )}
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="preferredTime">Orario Preferito *</Label>
+                  {!form.watch("preferredDate") ? (
+                    <p className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Seleziona prima una data per vedere gli orari disponibili
+                    </p>
+                  ) : availableTimeSlots.length === 0 ? (
+                    <p className="text-sm text-destructive">
+                      Nessun orario disponibile per questa data. Il Corner è chiuso.
+                    </p>
+                  ) : (
+                    <Select
+                      onValueChange={(value) => form.setValue("preferredTime", value)}
+                      value={form.watch("preferredTime")}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleziona un orario" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTimeSlots.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {form.formState.errors.preferredTime && (
+                    <p className="text-sm text-destructive">
+                      {form.formState.errors.preferredTime.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Summary */}
+                {form.watch("preferredDate") && form.watch("preferredTime") && (
+                  <div className="rounded-lg border bg-muted/50 p-4 space-y-2">
+                    <h4 className="font-medium">Riepilogo Prenotazione</h4>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <p>
+                        <span className="font-medium text-foreground">Cliente:</span>{" "}
+                        {form.watch("customerName")}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Dispositivo:</span>{" "}
+                        {DEVICE_TYPES.find((d) => d.value === form.watch("deviceType"))
+                          ?.label || "Non specificato"}{" "}
+                        {form.watch("deviceBrand")} {form.watch("deviceModel")}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Corner:</span>{" "}
+                        {selectedCorner?.business_name}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Data:</span>{" "}
+                        {format(form.watch("preferredDate"), "EEEE d MMMM yyyy", { locale: it })} alle {form.watch("preferredTime")}
+                      </p>
+                      <p>
+                        <span className="font-medium text-foreground">Problema:</span>{" "}
+                        {form.watch("issueDescription")?.substring(0, 60)}
+                        {(form.watch("issueDescription")?.length || 0) > 60 ? "..." : ""}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -487,7 +626,7 @@ export function BookingWizard({ onSubmit, isSubmitting, initialCustomerData }: B
               <ChevronRight className="w-4 h-4 ml-2" />
             </Button>
           ) : (
-            <Button type="submit" disabled={isSubmitting || !form.watch("cornerId")}>
+            <Button type="submit" disabled={isSubmitting || !form.watch("preferredDate") || !form.watch("preferredTime")}>
               {isSubmitting ? "Invio..." : "Conferma Prenotazione"}
             </Button>
           )}
