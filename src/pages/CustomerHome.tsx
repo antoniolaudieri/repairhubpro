@@ -719,7 +719,8 @@ export default function CustomerHome() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.4 + idx * 0.15 }}
                     whileHover={{ scale: 1.02, x: -5 }}
-                    className="group"
+                    className="group cursor-pointer"
+                    onClick={() => navigate("/software-protection")}
                   >
                     <Card className="p-5 glass-card-strong border-border/50 hover:border-primary/30 transition-all duration-300 hover:shadow-lg">
                       <div className="flex items-start gap-4">
