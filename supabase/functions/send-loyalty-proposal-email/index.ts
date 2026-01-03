@@ -256,7 +256,7 @@ serve(async (req) => {
       body: JSON.stringify({
         centro_id,
         to: customer_email,
-        subject: `🎁 La tua Tessera Fedeltà ti aspetta - ${centro.business_name}`,
+        subject: `La tua Tessera Fedelta ti aspetta - ${centro.business_name}`,
         html: emailHtml,
         customer_id,
         template_name: "loyalty_proposal",
