@@ -85,6 +85,9 @@ export function useDeviceInterestCounts(devices: Array<{
 }>): Record<string, DeviceInterestCount> {
   const [counts, setCounts] = useState<Record<string, DeviceInterestCount>>({});
 
+  // Memoize device IDs to prevent infinite loops
+  const deviceIds = devices.map(d => d.id).join(",");
+
   useEffect(() => {
     const fetchAllInterests = async () => {
       try {
@@ -139,7 +142,7 @@ export function useDeviceInterestCounts(devices: Array<{
     if (devices.length > 0) {
       fetchAllInterests();
     }
-  }, [devices]);
+  }, [deviceIds]); // Use stable dependency
 
   return counts;
 }

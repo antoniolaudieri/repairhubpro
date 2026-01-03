@@ -66,6 +66,7 @@ import {
   Filter,
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { NotifyInterestedDialog } from "@/components/usato/NotifyInterestedDialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -198,6 +199,11 @@ export default function CentroUsato() {
   const [customerSearchResults, setCustomerSearchResults] = useState<any[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [searchingCustomers, setSearchingCustomers] = useState(false);
+
+  // Notify interested dialog state
+  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
+  const [selectedDeviceForNotify, setSelectedDeviceForNotify] = useState<any>(null);
+  const [selectedDeviceInterests, setSelectedDeviceInterests] = useState(0);
 
   const [formData, setFormData] = useState({
     device_type: "Smartphone",
@@ -1570,6 +1576,11 @@ export default function CentroUsato() {
                     onPublish={handlePublish}
                     onDelete={handleDelete}
                     onMarkAsSold={handleMarkAsSold}
+                    onNotifyInterested={(device, matchingInterests) => {
+                      setSelectedDeviceForNotify(device);
+                      setSelectedDeviceInterests(matchingInterests);
+                      setNotifyDialogOpen(true);
+                    }}
                   />
                 ))}
               </div>
@@ -1612,6 +1623,22 @@ export default function CentroUsato() {
             <MarketPriceHistory />
           </TabsContent>
         </Tabs>
+
+        {/* Notify Interested Dialog */}
+        {selectedDeviceForNotify && (
+          <NotifyInterestedDialog
+            open={notifyDialogOpen}
+            onOpenChange={(open) => {
+              setNotifyDialogOpen(open);
+              if (!open) {
+                setSelectedDeviceForNotify(null);
+                setSelectedDeviceInterests(0);
+              }
+            }}
+            device={selectedDeviceForNotify}
+            matchingInterests={selectedDeviceInterests}
+          />
+        )}
       </div>
     </CentroLayout>
   );
