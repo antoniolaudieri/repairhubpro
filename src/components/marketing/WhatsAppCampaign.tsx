@@ -120,10 +120,16 @@ export default function WhatsAppCampaign() {
   const [showSaveTemplate, setShowSaveTemplate] = useState(false);
   
   // Generate dynamic payment link based on centro's loyalty settings
-  const getPaymentLink = () => {
+  const getPaymentLink = (customerId?: string, customerEmail?: string) => {
     if (!centroId) return "";
     const baseUrl = window.location.origin;
-    return `${baseUrl}/loyalty-checkout?centro=${centroId}`;
+    const params = new URLSearchParams({
+      centro_id: centroId,
+      centro: encodeURIComponent(centroName),
+    });
+    if (customerId) params.set("customer_id", customerId);
+    if (customerEmail) params.set("email", customerEmail);
+    return `${baseUrl}/loyalty-checkout?${params.toString()}`;
   };
 
   useEffect(() => {
@@ -246,7 +252,7 @@ export default function WhatsAppCampaign() {
       .replace(/\{\{centro\}\}/g, centroName)
       .replace(/\{\{dispositivo\}\}/g, "dispositivo") // TODO: get last device
       .replace(/\{\{data\}\}/g, format(new Date(), "d MMMM yyyy", { locale: it }))
-      .replace(/\{\{link_pagamento\}\}/g, getPaymentLink())
+      .replace(/\{\{link_pagamento\}\}/g, getPaymentLink(customer.id, customer.email || undefined))
       .replace(/\{\{prezzo_annuale\}\}/g, `${loyaltySettings.annual_price}€`);
   };
 
