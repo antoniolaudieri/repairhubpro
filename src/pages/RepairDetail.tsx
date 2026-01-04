@@ -1099,6 +1099,20 @@ export default function RepairDetail() {
                   €{repair.acconto?.toFixed(2) || "0.00"}
                 </p>
               </motion.div>
+              {repair.acconto && repair.acconto > 0 && (repair.final_cost || repair.estimated_cost) && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.19 }}
+                  className="rounded-xl border p-4 text-center bg-amber-500/10 border-amber-500/30"
+                >
+                  <Euro className="h-5 w-5 text-amber-600 mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Saldo Dovuto</p>
+                  <p className="text-lg font-bold text-amber-600">
+                    €{((repair.final_cost || repair.estimated_cost || 0) - (repair.acconto || 0)).toFixed(2)}
+                  </p>
+                </motion.div>
+              )}
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
