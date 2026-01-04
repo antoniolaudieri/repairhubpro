@@ -272,7 +272,7 @@ export const NativeHome = ({
 
   return (
     <ScrollArea className="h-full">
-      <div className="p-4 pb-24 space-y-6">
+      <div className="p-3 sm:p-4 pb-28 space-y-4 sm:space-y-6">
         {/* Centro info */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}

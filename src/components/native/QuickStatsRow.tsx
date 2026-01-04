@@ -60,19 +60,19 @@ export const QuickStatsRow = ({
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
       {stats.map((stat, index) => (
         <motion.div
           key={stat.label}
-          className={`flex flex-col items-center p-3 rounded-xl ${stat.colorClass}`}
+          className={`flex flex-col items-center p-2 sm:p-3 rounded-xl min-w-0 ${stat.colorClass}`}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.1 }}
           whileTap={{ scale: 0.95 }}
         >
-          <stat.icon className="h-5 w-5 mb-1" />
-          <span className="text-sm font-bold">{stat.value}</span>
-          <span className="text-[10px] opacity-70">{stat.label}</span>
+          <stat.icon className="h-4 w-4 sm:h-5 sm:w-5 mb-1 shrink-0" />
+          <span className="text-xs sm:text-sm font-bold truncate w-full text-center leading-tight">{stat.value}</span>
+          <span className="text-[9px] sm:text-xs opacity-70 truncate w-full text-center leading-tight">{stat.label}</span>
         </motion.div>
       ))}
     </div>

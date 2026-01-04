@@ -112,44 +112,44 @@ export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetPro
 
   return (
     <Card className={showWarning ? "border-yellow-500/30 bg-yellow-500/5" : ""}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Trash2 className="h-4 w-4 text-primary" />
-          Pulizia Rapida
+      <CardHeader className="pb-2 px-3 sm:px-6">
+        <CardTitle className="text-xs sm:text-sm flex items-center gap-2">
+          <Trash2 className="h-4 w-4 text-primary shrink-0" />
+          <span className="truncate">Pulizia Rapida</span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-3 px-3 sm:px-6">
         {/* Own App Cache Info */}
-        <div className="flex items-center justify-between p-2 rounded-md bg-primary/5 border border-primary/10">
-          <div className="flex items-center gap-2">
-            <Smartphone className="h-4 w-4 text-primary" />
-            <span className="text-sm font-medium">Cache di questa app</span>
+        <div className="flex items-center justify-between p-2 rounded-md bg-primary/5 border border-primary/10 gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Smartphone className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-xs sm:text-sm font-medium truncate">Cache app</span>
           </div>
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
           ) : (
-            <span className="text-sm font-bold text-primary">
+            <span className="text-xs sm:text-sm font-bold text-primary shrink-0">
               {formatSize(ownAppCacheSize)}
             </span>
           )}
         </div>
 
         {/* Total System Cache Info */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">Cache sistema (tutte le app)</span>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <HardDrive className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="text-xs sm:text-sm text-muted-foreground truncate">Cache sistema</span>
           </div>
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
           ) : (
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+              <span className="text-xs sm:text-sm font-medium">
                 {formatSize(totalCacheSize)}
               </span>
               {appsScanned > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  ({appsScanned} app)
+                <span className="text-[10px] sm:text-xs text-muted-foreground">
+                  ({appsScanned})
                 </span>
               )}
             </div>
@@ -184,34 +184,34 @@ export const CacheCleanerWidget = ({ storagePercentUsed }: CacheCleanerWidgetPro
         )}
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button
             variant="outline"
             size="sm"
-            className="flex-1"
+            className="flex-1 text-xs sm:text-sm h-9 sm:h-10"
             onClick={handleClearAppCache}
             disabled={isClearing || (ownAppCacheSize !== null && ownAppCacheSize < 0.01)}
           >
             {isClearing ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
             ) : (
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-4 w-4 mr-1.5 shrink-0" />
             )}
-            Pulisci App
+            <span className="truncate">Pulisci App</span>
           </Button>
           <Button
             variant="default"
             size="sm"
-            className="flex-1"
+            className="flex-1 text-xs sm:text-sm h-9 sm:h-10"
             onClick={handleOpenStorageSettings}
           >
-            <Settings className="h-4 w-4 mr-2" />
-            Pulisci Tutto
+            <Settings className="h-4 w-4 mr-1.5 shrink-0" />
+            <span className="truncate">Tutte le App</span>
           </Button>
         </div>
 
-        <p className="text-xs text-muted-foreground text-center">
-          "Pulisci App" svuota solo la cache di questa app. Per liberare la cache di tutte le app usa "Pulisci Tutto".
+        <p className="text-[10px] sm:text-xs text-muted-foreground text-center leading-tight">
+          "Pulisci App" svuota solo questa app. "Tutte le App" apre le impostazioni per liberare spazio.
         </p>
       </CardContent>
     </Card>

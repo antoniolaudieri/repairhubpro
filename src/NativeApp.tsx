@@ -239,7 +239,7 @@ const NativeApp = () => {
   return (
     <div className="min-h-screen bg-background">
       <Toaster />
-      <div className="h-screen pb-16">
+      <div className="min-h-screen pb-20">
         {renderContent()}
       </div>
       <BottomNavBar currentView={currentView} onNavigate={setCurrentView} />

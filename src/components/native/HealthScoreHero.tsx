@@ -42,10 +42,10 @@ export const HealthScoreHero = ({ score, lastSyncAt, isLoading = false }: Health
   const strokeDashoffset = strokeDasharray - (strokeDasharray * score) / 100;
 
   return (
-    <div className="relative flex flex-col items-center justify-center py-4">
+    <div className="relative flex flex-col items-center justify-center py-3 sm:py-4">
       {/* Glow effect */}
       <motion.div
-        className={`absolute w-40 h-40 rounded-full bg-gradient-to-br ${getScoreGradient()} blur-3xl opacity-30`}
+        className={`absolute w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-br ${getScoreGradient()} blur-3xl opacity-30`}
         animate={{
           scale: [1, 1.1, 1],
           opacity: [0.2, 0.35, 0.2],
@@ -59,7 +59,7 @@ export const HealthScoreHero = ({ score, lastSyncAt, isLoading = false }: Health
 
       {/* Score circle */}
       <motion.div 
-        className="relative w-44 h-44"
+        className="relative w-36 h-36 sm:w-44 sm:h-44"
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 20 }}
@@ -130,7 +130,7 @@ export const HealthScoreHero = ({ score, lastSyncAt, isLoading = false }: Health
           ) : (
             <>
               <motion.span
-                className={`text-5xl font-bold ${getScoreColor()}`}
+                className={`text-4xl sm:text-5xl font-bold ${getScoreColor()}`}
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
@@ -138,13 +138,13 @@ export const HealthScoreHero = ({ score, lastSyncAt, isLoading = false }: Health
                 {Math.round(score)}
               </motion.span>
               <motion.div
-                className={`flex items-center gap-1 mt-1 ${getScoreColor()}`}
+                className={`flex items-center gap-1 mt-0.5 sm:mt-1 ${getScoreColor()}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
               >
                 {getScoreIcon()}
-                <span className="text-sm font-medium">{getScoreLabel()}</span>
+                <span className="text-xs sm:text-sm font-medium">{getScoreLabel()}</span>
               </motion.div>
             </>
           )}
@@ -153,21 +153,21 @@ export const HealthScoreHero = ({ score, lastSyncAt, isLoading = false }: Health
 
       {/* Health label */}
       <motion.div
-        className="mt-4 text-center"
+        className="mt-3 sm:mt-4 text-center px-2"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
       >
-        <h2 className="text-lg font-semibold text-foreground">Salute Dispositivo</h2>
+        <h2 className="text-base sm:text-lg font-semibold text-foreground">Salute Dispositivo</h2>
         {lastSyncAt && (
-          <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-1">
-            <Zap className="h-3 w-3" />
-            Ultimo sync: {lastSyncAt.toLocaleDateString("it-IT", { 
+          <p className="text-[10px] sm:text-xs text-muted-foreground flex items-center justify-center gap-1 mt-1 flex-wrap">
+            <Zap className="h-3 w-3 shrink-0" />
+            <span className="truncate">Ultimo sync: {lastSyncAt.toLocaleDateString("it-IT", { 
               day: "numeric", 
               month: "short",
               hour: "2-digit",
               minute: "2-digit"
-            })}
+            })}</span>
           </p>
         )}
       </motion.div>
