@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { getStatusMessage, openWhatsApp, openEmail, callPhone } from "@/utils/repairMessages";
 import { StorageSlotWidget } from "@/components/centro/StorageSlotWidget";
 import { useStorageSlots } from "@/hooks/useStorageSlots";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { UnsavedChangesDialog } from "@/components/settings/UnsavedChangesDialog";
 
 interface RepairGuideData {
   diagnosis: {
@@ -235,6 +237,25 @@ export default function RepairDetail() {
     new_value: string | null;
     changed_at: string;
   }>>([]);
+  const [originalRepair, setOriginalRepair] = useState<RepairDetail | null>(null);
+
+  // Track unsaved changes
+  const hasChanges = useMemo(() => {
+    if (!repair || !originalRepair) return false;
+    return (
+      repair.status !== originalRepair.status ||
+      repair.priority !== originalRepair.priority ||
+      repair.diagnosis !== originalRepair.diagnosis ||
+      repair.repair_notes !== originalRepair.repair_notes ||
+      repair.estimated_cost !== originalRepair.estimated_cost ||
+      repair.final_cost !== originalRepair.final_cost ||
+      repair.acconto !== originalRepair.acconto ||
+      repair.diagnostic_fee_paid !== originalRepair.diagnostic_fee_paid
+    );
+  }, [repair, originalRepair]);
+
+  const { showDialog: showUnsavedDialog, setShowDialog: setShowUnsavedDialog, promptIfUnsaved } = useUnsavedChanges(hasChanges);
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
 
   // Determine back route based on current path
   const isCentroContext = location.pathname.startsWith("/centro");
@@ -276,11 +297,95 @@ export default function RepairDetail() {
     formatSlot();
   }, [repair?.storage_slot, centroId, getMultiShelfConfig]);
 
+  // Load repair detail
   useEffect(() => {
     if (id) {
       loadRepairDetail();
     }
   }, [id]);
+
+  // Real-time subscription for repairs and repair_history
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`repair-detail-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'repairs',
+          filter: `id=eq.${id}`
+        },
+        (payload) => {
+          // Only update if we don't have unsaved changes to avoid overwriting user edits
+          if (!hasChanges) {
+            loadRepairDetail();
+            toast({
+              title: "Aggiornamento",
+              description: "La riparazione è stata aggiornata",
+            });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'repair_history',
+          filter: `repair_id=eq.${id}`
+        },
+        (payload) => {
+          // Add new history entry to the list
+          const newEntry = payload.new as {
+            id: string;
+            field_changed: string;
+            old_value: string | null;
+            new_value: string | null;
+            changed_at: string;
+          };
+          setRepairHistory(prev => [newEntry, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, hasChanges]);
+
+  // Handle navigation with unsaved changes check
+  const handleNavigation = useCallback((path: string) => {
+    if (promptIfUnsaved()) {
+      setPendingNavigation(path);
+    } else {
+      navigate(path);
+    }
+  }, [promptIfUnsaved, navigate]);
+
+  const handleSaveAndNavigate = async () => {
+    await saveChanges(true);
+    setShowUnsavedDialog(false);
+    if (pendingNavigation) {
+      navigate(pendingNavigation);
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleDiscardAndNavigate = () => {
+    setShowUnsavedDialog(false);
+    if (pendingNavigation) {
+      navigate(pendingNavigation);
+      setPendingNavigation(null);
+    }
+  };
+
+  const handleCancelNavigation = () => {
+    setShowUnsavedDialog(false);
+    setPendingNavigation(null);
+  };
 
   const loadRepairDetail = async () => {
     try {
@@ -382,6 +487,7 @@ export default function RepairDetail() {
         centro: centroData,
       };
       setRepair(repairData);
+      setOriginalRepair(repairData);
       setPreviousStatus(data.status);
       
       // Load repair history
@@ -555,6 +661,7 @@ export default function RepairDetail() {
       }
 
       setPreviousStatus(repair.status);
+      setOriginalRepair(repair);
     } catch (error) {
       console.error("Error saving changes:", error);
       toast({
@@ -887,7 +994,7 @@ export default function RepairDetail() {
           </div>
           <h2 className="text-xl font-semibold mb-2">Riparazione non trovata</h2>
           <p className="text-muted-foreground mb-6">La riparazione richiesta non esiste o è stata rimossa.</p>
-          <Button onClick={() => navigate(backRoute)} className="gap-2">
+          <Button onClick={() => handleNavigation(backRoute)} className="gap-2">
             <ArrowLeft className="h-4 w-4" />
             Torna alle riparazioni
           </Button>
@@ -997,7 +1104,7 @@ export default function RepairDetail() {
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <Button 
                 variant="outline" 
-                onClick={() => navigate(backRoute)}
+                onClick={() => handleNavigation(backRoute)}
                 className="gap-2"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -2168,6 +2275,15 @@ export default function RepairDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Unsaved Changes Dialog */}
+      <UnsavedChangesDialog
+        open={showUnsavedDialog}
+        onSave={handleSaveAndNavigate}
+        onDiscard={handleDiscardAndNavigate}
+        onCancel={handleCancelNavigation}
+        isSaving={saving}
+      />
     </div>
   );
 }
