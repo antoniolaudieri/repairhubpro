@@ -32,6 +32,7 @@ import { CustomerIntelligenceCard } from "@/components/customers/CustomerIntelli
 import { CustomerDeviceHealth } from "@/components/centro/CustomerDeviceHealth";
 import { CustomerGamificationBadge } from "@/components/centro/CustomerGamificationBadge";
 import { CustomerVisitTracker } from "@/components/customers/CustomerVisitTracker";
+import { DeviceImage } from "@/components/common/DeviceImage";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -760,22 +761,18 @@ export default function CentroClienteDetail() {
                   </div>
                 ) : (
                   <div className="space-y-1.5">
-                    {devices.map((device) => (
+                      {devices.map((device) => (
                       <div 
                         key={device.id} 
-                        className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted/30 transition-colors"
+                        className="flex items-center gap-2 p-2 rounded-lg border hover:bg-muted/30 transition-colors group"
                       >
-                        {device.photo_url ? (
-                          <img
-                            src={device.photo_url}
-                            alt={`${device.brand} ${device.model}`}
-                            className="h-10 w-10 object-contain rounded-lg border bg-background"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 flex items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground">
-                            {getDeviceIcon(device.device_type)}
-                          </div>
-                        )}
+                        <DeviceImage
+                          photoUrl={device.photo_url}
+                          brand={device.brand}
+                          model={device.model}
+                          deviceType={device.device_type}
+                          size="sm"
+                        />
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm truncate">{device.brand} {device.model}</p>
                           <p className="text-[10px] text-muted-foreground capitalize">{device.device_type}</p>
