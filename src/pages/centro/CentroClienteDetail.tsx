@@ -866,12 +866,16 @@ export default function CentroClienteDetail() {
                         return (
                           <div
                             key={repair.id}
-                            className="flex items-center gap-2 p-2.5 border rounded-lg hover:bg-muted/30 cursor-pointer transition-colors"
+                            className="flex items-center gap-2 p-2.5 border rounded-lg hover:bg-muted/30 cursor-pointer transition-colors group"
                             onClick={() => navigate(`/centro/lavori/${repair.id}`)}
                           >
-                            <div className="h-10 w-10 flex items-center justify-center rounded-lg border bg-muted/50 text-muted-foreground">
-                              {device ? getDeviceIcon(device.device_type) : <Smartphone className="h-4 w-4" />}
-                            </div>
+                            <DeviceImage
+                              photoUrl={device?.photo_url}
+                              brand={device?.brand}
+                              model={device?.model}
+                              deviceType={device?.device_type || 'smartphone'}
+                              size="sm"
+                            />
                             
                             <div className="flex-1 min-w-0">
                               <p className="font-medium text-sm truncate">
