@@ -402,7 +402,32 @@ export default function CentroPrenotazioni() {
                                   if (customer) {
                                     navigate(`/centro/clienti/${customer.id}`);
                                   } else {
-                                    toast.info("Cliente non ancora registrato nel sistema");
+                                    // Create customer automatically from appointment data
+                                    toast.info("Cliente non ancora registrato. Vuoi crearlo?", {
+                                      action: {
+                                        label: "Crea cliente",
+                                        onClick: async () => {
+                                          const { data: newCustomer, error } = await supabase
+                                            .from("customers")
+                                            .insert({
+                                              name: appointment.customer_name,
+                                              email: appointment.customer_email,
+                                              phone: appointment.customer_phone,
+                                              centro_id: centroId,
+                                            })
+                                            .select("id")
+                                            .single();
+                                          
+                                          if (error) {
+                                            toast.error("Errore nella creazione del cliente");
+                                          } else if (newCustomer) {
+                                            toast.success("Cliente creato con successo");
+                                            navigate(`/centro/clienti/${newCustomer.id}`);
+                                          }
+                                        }
+                                      },
+                                      duration: 10000,
+                                    });
                                   }
                                 }}
                                 className="text-left hover:text-primary hover:underline transition-colors flex items-center gap-1"
