@@ -391,16 +391,22 @@ export default function CentroPrenotazioni() {
                               <User className="h-4 w-4" />
                               <button
                                 onClick={async () => {
-                                  // Find customer by email or phone
-                                  const { data: customer } = await supabase
+                                  // Find customer by email or phone - use limit(1) to handle duplicates
+                                  const { data: customers, error } = await supabase
                                     .from("customers")
                                     .select("id")
                                     .eq("centro_id", centroId)
                                     .or(`email.eq.${appointment.customer_email},phone.eq.${appointment.customer_phone}`)
-                                    .maybeSingle();
+                                    .limit(1);
                                   
-                                  if (customer) {
-                                    navigate(`/centro/clienti/${customer.id}`);
+                                  if (error) {
+                                    console.error("Error finding customer:", error);
+                                    toast.error("Errore nella ricerca del cliente");
+                                    return;
+                                  }
+                                  
+                                  if (customers && customers.length > 0) {
+                                    navigate(`/centro/clienti/${customers[0].id}`);
                                   } else {
                                     // Create customer automatically from appointment data
                                     toast.info("Cliente non ancora registrato. Vuoi crearlo?", {
