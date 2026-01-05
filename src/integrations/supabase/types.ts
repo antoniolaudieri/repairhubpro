@@ -3675,6 +3675,44 @@ export type Database = {
         }
         Relationships: []
       }
+      repair_history: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          field_changed: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          repair_id: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          field_changed: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          repair_id: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          field_changed?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          repair_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repair_history_repair_id_fkey"
+            columns: ["repair_id"]
+            isOneToOne: false
+            referencedRelation: "repairs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       repair_parts: {
         Row: {
           created_at: string
