@@ -101,115 +101,128 @@ export const DashboardProvider = ({ children }: DashboardProviderProps) => {
   };
 
   const loadWeeklyData = async () => {
-    const days = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
-    const today = new Date();
-    const weekAgo = new Date(today);
-    weekAgo.setDate(today.getDate() - 6);
+    try {
+      const days = ['Dom', 'Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab'];
+      const today = new Date();
+      const weekAgo = new Date(today);
+      weekAgo.setDate(today.getDate() - 6);
 
-    const { data: repairs } = await supabase
-      .from("repairs")
-      .select("created_at, status, completed_at")
-      .gte("created_at", weekAgo.toISOString());
+      const { data: repairs } = await supabase
+        .from("repairs")
+        .select("created_at, status, completed_at")
+        .gte("created_at", weekAgo.toISOString());
 
-    const weekData: WeeklyData[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      const dateStr = date.toISOString().split('T')[0];
-      const dayName = days[date.getDay()];
-      
-      const created = repairs?.filter(r => r.created_at.startsWith(dateStr)).length || 0;
-      const completed = repairs?.filter(r => r.completed_at?.startsWith(dateStr)).length || 0;
-      
-      weekData.push({
-        day: dayName,
-        riparazioni: created,
-        completate: completed
-      });
+      const weekData: WeeklyData[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        const dayName = days[date.getDay()];
+        
+        const created = repairs?.filter(r => r.created_at.startsWith(dateStr)).length || 0;
+        const completed = repairs?.filter(r => r.completed_at?.startsWith(dateStr)).length || 0;
+        
+        weekData.push({
+          day: dayName,
+          riparazioni: created,
+          completate: completed
+        });
+      }
+      setWeeklyData(weekData);
+    } catch (error) {
+      console.error("Error loading weekly data:", error);
     }
-    setWeeklyData(weekData);
   };
 
   const loadForfeitureWarnings = async () => {
-    const { data } = await supabase
-      .from("repairs")
-      .select(`
-        id,
-        completed_at,
-        delivered_at,
-        status,
-        device:devices (
-          brand,
-          model,
-          customer:customers (
-            name,
-            phone
+    try {
+      const { data } = await supabase
+        .from("repairs")
+        .select(`
+          id,
+          completed_at,
+          delivered_at,
+          status,
+          device:devices (
+            brand,
+            model,
+            customer:customers (
+              name,
+              phone
+            )
           )
-        )
-      `)
-      .eq("status", "completed")
-      .is("delivered_at", null)
-      .not("completed_at", "is", null)
-      .order("completed_at", { ascending: true });
+        `)
+        .eq("status", "completed")
+        .is("delivered_at", null)
+        .not("completed_at", "is", null)
+        .order("completed_at", { ascending: true });
 
-    if (data) {
-      const now = new Date();
-      const warnings = data
-        .map((r: any) => {
-          const completedAt = new Date(r.completed_at);
-          const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
-          const daysLeft = 30 - daysSinceCompletion;
-          return {
-            id: r.id,
-            completed_at: r.completed_at,
-            daysLeft,
-            device: {
-              brand: r.device.brand,
-              model: r.device.model,
-            },
-            customer: r.device.customer,
-          };
-        })
-        .filter((r: ForfeitureWarning) => r.daysLeft <= 7 && r.daysLeft > 0)
-        .sort((a: ForfeitureWarning, b: ForfeitureWarning) => a.daysLeft - b.daysLeft);
+      if (data) {
+        const now = new Date();
+        const warnings = data
+          .map((r: any) => {
+            if (!r.device) return null;
+            const completedAt = new Date(r.completed_at);
+            const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
+            const daysLeft = 30 - daysSinceCompletion;
+            return {
+              id: r.id,
+              completed_at: r.completed_at,
+              daysLeft,
+              device: {
+                brand: r.device.brand,
+                model: r.device.model,
+              },
+              customer: r.device.customer,
+            };
+          })
+          .filter((r: ForfeitureWarning | null): r is ForfeitureWarning => r !== null && r.daysLeft <= 7 && r.daysLeft > 0)
+          .sort((a: ForfeitureWarning, b: ForfeitureWarning) => a.daysLeft - b.daysLeft);
 
-      setForfeitureWarnings(warnings);
+        setForfeitureWarnings(warnings);
+      }
+    } catch (error) {
+      console.error("Error loading forfeiture warnings:", error);
     }
   };
 
   const loadRecentRepairs = async () => {
-    const { data } = await supabase
-      .from("repairs")
-      .select(`
-        id,
-        status,
-        created_at,
-        device:devices (
-          brand,
-          model,
-          photo_url,
-          device_type,
-          customer:customers (
-            name
+    try {
+      const { data } = await supabase
+        .from("repairs")
+        .select(`
+          id,
+          status,
+          created_at,
+          device:devices (
+            brand,
+            model,
+            photo_url,
+            device_type,
+            customer:customers (
+              name
+            )
           )
-        )
-      `)
-      .order("created_at", { ascending: false })
-      .limit(5);
+        `)
+        .order("created_at", { ascending: false })
+        .limit(5);
 
-    if (data) {
-      setRecentRepairs(data.map((r: any) => ({
-        id: r.id,
-        status: r.status,
-        created_at: r.created_at,
-        device: {
-          brand: r.device.brand,
-          model: r.device.model,
-          photo_url: r.device.photo_url,
-          device_type: r.device.device_type,
-        },
-        customer: r.device.customer,
-      })));
+      if (data) {
+        setRecentRepairs(data.map((r: any) => ({
+          id: r.id,
+          status: r.status,
+          created_at: r.created_at,
+          device: r.device ? {
+            brand: r.device.brand,
+            model: r.device.model,
+            photo_url: r.device.photo_url,
+            device_type: r.device.device_type,
+          } : { brand: "N/A", model: "N/A", photo_url: null, device_type: "smartphone" },
+          customer: r.device?.customer || { name: "N/A" },
+        })));
+      }
+    } catch (error) {
+      console.error("Error loading recent repairs:", error);
     }
   };
 

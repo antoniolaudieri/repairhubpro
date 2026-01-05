@@ -1,5 +1,4 @@
-import GridLayout from "react-grid-layout";
-const { Responsive, WidthProvider } = GridLayout as any;
+import { Responsive, WidthProvider } from "react-grid-layout";
 import { DashboardWidget, Layouts, Layout } from "./types";
 import { widgetRegistry } from "./WidgetRegistry";
 import { StatWidget } from "./widgets/StatWidget";
