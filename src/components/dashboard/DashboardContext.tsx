@@ -33,57 +33,71 @@ export const DashboardProvider = ({ children }: DashboardProviderProps) => {
   const [isEditMode, setIsEditMode] = useState(false);
 
   useEffect(() => {
-    loadStats();
-    loadRecentRepairs();
-    loadForfeitureWarnings();
-    loadWeeklyData();
+    const loadAll = async () => {
+      try {
+        await Promise.all([
+          loadStats(),
+          loadRecentRepairs(),
+          loadForfeitureWarnings(),
+          loadWeeklyData(),
+        ]);
+      } catch (error) {
+        console.error("Error loading dashboard data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadAll();
   }, []);
 
   const loadStats = async () => {
-    const { data: repairs } = await supabase
-      .from("repairs")
-      .select("status, created_at, final_cost, completed_at, delivered_at");
+    try {
+      const { data: repairs } = await supabase
+        .from("repairs")
+        .select("status, created_at, final_cost, completed_at, delivered_at");
 
-    const { data: spareParts } = await supabase
-      .from("spare_parts")
-      .select("stock_quantity, minimum_stock");
+      const { data: spareParts } = await supabase
+        .from("spare_parts")
+        .select("stock_quantity, minimum_stock");
 
-    const { count: customerCount } = await supabase
-      .from("customers")
-      .select("*", { count: "exact", head: true });
+      const { count: customerCount } = await supabase
+        .from("customers")
+        .select("*", { count: "exact", head: true });
 
-    const pending = repairs?.filter((r) => r.status === "pending").length || 0;
-    const inProgress = repairs?.filter((r) => r.status === "in_progress").length || 0;
-    
-    const today = new Date().toISOString().split("T")[0];
-    const completedToday = repairs?.filter(
-      (r) => r.status === "completed" && r.created_at?.startsWith(today)
-    ).length || 0;
+      const pending = repairs?.filter((r) => r.status === "pending").length || 0;
+      const inProgress = repairs?.filter((r) => r.status === "in_progress").length || 0;
+      
+      const today = new Date().toISOString().split("T")[0];
+      const completedToday = repairs?.filter(
+        (r) => r.status === "completed" && r.created_at?.startsWith(today)
+      ).length || 0;
 
-    const lowStock = spareParts?.filter(
-      (sp) => sp.stock_quantity <= sp.minimum_stock
-    ).length || 0;
+      const lowStock = spareParts?.filter(
+        (sp) => sp.stock_quantity <= sp.minimum_stock
+      ).length || 0;
 
-    const totalRevenue = repairs?.reduce((sum, r) => sum + (r.final_cost || 0), 0) || 0;
+      const totalRevenue = repairs?.reduce((sum, r) => sum + (r.final_cost || 0), 0) || 0;
 
-    const now = new Date();
-    const forfeitureCount = repairs?.filter((r) => {
-      if (r.status !== "completed" || r.delivered_at || !r.completed_at) return false;
-      const completedAt = new Date(r.completed_at);
-      const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
-      return daysSinceCompletion >= 23;
-    }).length || 0;
+      const now = new Date();
+      const forfeitureCount = repairs?.filter((r) => {
+        if (r.status !== "completed" || r.delivered_at || !r.completed_at) return false;
+        const completedAt = new Date(r.completed_at);
+        const daysSinceCompletion = Math.floor((now.getTime() - completedAt.getTime()) / (1000 * 60 * 60 * 24));
+        return daysSinceCompletion >= 23;
+      }).length || 0;
 
-    setStats({
-      pendingRepairs: pending,
-      inProgressRepairs: inProgress,
-      completedToday,
-      lowStockItems: lowStock,
-      totalCustomers: customerCount || 0,
-      totalRevenue,
-      forfeitureWarnings: forfeitureCount,
-    });
-    setLoading(false);
+      setStats({
+        pendingRepairs: pending,
+        inProgressRepairs: inProgress,
+        completedToday,
+        lowStockItems: lowStock,
+        totalCustomers: customerCount || 0,
+        totalRevenue,
+        forfeitureWarnings: forfeitureCount,
+      });
+    } catch (error) {
+      console.error("Error loading stats:", error);
+    }
   };
 
   const loadWeeklyData = async () => {
