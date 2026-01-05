@@ -1,7 +1,5 @@
-// @ts-ignore - react-grid-layout types are not fully compatible
 import GridLayout from "react-grid-layout";
-// @ts-ignore
-const { Responsive, WidthProvider } = GridLayout;
+const { Responsive, WidthProvider } = GridLayout as any;
 import { DashboardWidget, Layouts, Layout } from "./types";
 import { widgetRegistry } from "./WidgetRegistry";
 import { StatWidget } from "./widgets/StatWidget";
