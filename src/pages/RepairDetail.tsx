@@ -228,6 +228,13 @@ export default function RepairDetail() {
   const [sendingFinalCostEmail, setSendingFinalCostEmail] = useState(false);
   const [acceptingByPhone, setAcceptingByPhone] = useState(false);
   const [formattedStorageSlot, setFormattedStorageSlot] = useState<string | undefined>();
+  const [repairHistory, setRepairHistory] = useState<Array<{
+    id: string;
+    field_changed: string;
+    old_value: string | null;
+    new_value: string | null;
+    changed_at: string;
+  }>>([]);
 
   // Determine back route based on current path
   const isCentroContext = location.pathname.startsWith("/centro");
@@ -376,6 +383,17 @@ export default function RepairDetail() {
       };
       setRepair(repairData);
       setPreviousStatus(data.status);
+      
+      // Load repair history
+      const { data: historyData } = await supabase
+        .from("repair_history")
+        .select("id, field_changed, old_value, new_value, changed_at")
+        .eq("repair_id", id)
+        .order("changed_at", { ascending: false });
+      
+      if (historyData) {
+        setRepairHistory(historyData);
+      }
       
       // Try to parse stored guide JSON
       if (data.ai_suggestions) {
@@ -1950,17 +1968,26 @@ export default function RepairDetail() {
                       <Clock className="h-3.5 w-3.5 text-slate-600" />
                     </div>
                     Timeline
+                    {repairHistory.length > 0 && (
+                      <Badge variant="secondary" className="text-xs ml-auto">
+                        {repairHistory.length}
+                      </Badge>
+                    )}
                   </h3>
                 </div>
-                <div className="p-5">
-                  <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-primary" />
-                    <div className="flex-1">
-                      <p className="text-xs text-muted-foreground">Creata il</p>
-                      <p className="font-medium text-sm">
+                <div className="p-5 space-y-3 max-h-[400px] overflow-y-auto">
+                  {/* Creation event */}
+                  <div className="flex items-start gap-3">
+                    <div className="flex flex-col items-center">
+                      <div className="h-2.5 w-2.5 rounded-full bg-primary ring-4 ring-primary/20" />
+                      {repairHistory.length > 0 && <div className="w-0.5 h-full bg-border flex-1 mt-1" />}
+                    </div>
+                    <div className="flex-1 pb-3">
+                      <p className="text-xs font-medium text-primary">Riparazione creata</p>
+                      <p className="text-[11px] text-muted-foreground">
                         {new Date(repair.created_at).toLocaleString("it-IT", {
                           day: "2-digit",
-                          month: "long",
+                          month: "short",
                           year: "numeric",
                           hour: "2-digit",
                           minute: "2-digit"
@@ -1968,6 +1995,87 @@ export default function RepairDetail() {
                       </p>
                     </div>
                   </div>
+                  
+                  {/* History events */}
+                  {repairHistory
+                    .slice()
+                    .reverse()
+                    .map((event, index) => {
+                      const isLast = index === repairHistory.length - 1;
+                      const fieldLabels: Record<string, string> = {
+                        status: "Stato",
+                        priority: "Priorità",
+                        estimated_cost: "Costo stimato",
+                        final_cost: "Costo finale",
+                        diagnosis: "Diagnosi",
+                        repair_notes: "Note riparazione",
+                        assigned_to: "Assegnato a",
+                        acconto: "Acconto",
+                        device_location: "Posizione dispositivo",
+                        storage_slot: "Slot stoccaggio",
+                        shipping_cost: "Costo spedizione",
+                        intake_signature: "Firma accettazione",
+                        final_cost_signature: "Firma costo finale",
+                        diagnostic_fee_paid: "Quota diagnosi pagata",
+                        created: "Creazione"
+                      };
+                      
+                      const statusLabels: Record<string, string> = {
+                        pending: "In attesa",
+                        in_progress: "In corso",
+                        waiting_parts: "Attesa ricambi",
+                        waiting_for_parts: "Attesa ricambi",
+                        parts_arrived: "Ricambi arrivati",
+                        completed: "Completata",
+                        delivered: "Consegnato",
+                        cancelled: "Annullata",
+                        forfeited: "Alienato"
+                      };
+                      
+                      const formatValue = (field: string, value: string | null) => {
+                        if (!value) return "—";
+                        if (field === "status") return statusLabels[value] || value;
+                        if (field === "estimated_cost" || field === "final_cost" || field === "acconto" || field === "shipping_cost") {
+                          return `€${parseFloat(value).toFixed(2)}`;
+                        }
+                        if (field === "diagnostic_fee_paid") return value === "true" ? "Sì" : "No";
+                        if (value.length > 50) return value.substring(0, 50) + "...";
+                        return value;
+                      };
+                      
+                      return (
+                        <div key={event.id} className="flex items-start gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className="h-2 w-2 rounded-full bg-muted-foreground/40" />
+                            {!isLast && <div className="w-0.5 h-full bg-border flex-1 mt-1" />}
+                          </div>
+                          <div className="flex-1 pb-3">
+                            <p className="text-xs font-medium">
+                              {fieldLabels[event.field_changed] || event.field_changed}
+                            </p>
+                            {event.field_changed !== "created" && (
+                              <p className="text-[11px] text-muted-foreground">
+                                {formatValue(event.field_changed, event.old_value)} → <span className="text-foreground font-medium">{formatValue(event.field_changed, event.new_value)}</span>
+                              </p>
+                            )}
+                            <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                              {new Date(event.changed_at).toLocaleString("it-IT", {
+                                day: "2-digit",
+                                month: "short",
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  
+                  {repairHistory.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">
+                      Nessuna modifica registrata
+                    </p>
+                  )}
                 </div>
               </Card>
             </motion.div>
