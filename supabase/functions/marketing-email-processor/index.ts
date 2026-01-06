@@ -252,8 +252,8 @@ const handler = async (req: Request): Promise<Response> => {
         // Build tracking URLs
         const trackingPixelUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=open`;
         const clickTrackingBase = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=click&url=`;
-        const demoTrackingUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=demo&url=${encodeURIComponent('https://linkriparo.it/auth?trial=true')}`;
-        const interestTrackingUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=interest&url=${encodeURIComponent('https://linkriparo.it')}`;
+        const demoTrackingUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=demo&url=${encodeURIComponent('https://lablinkriparo.com/auth?trial=true')}`;
+        const interestTrackingUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=interest&url=${encodeURIComponent('https://lablinkriparo.com')}`;
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/marketing-unsubscribe?email=${encodeURIComponent(typedLead.email)}&lead_id=${email.lead_id}`;
 
         // Replace variables in template (including new tracking URL placeholders)
