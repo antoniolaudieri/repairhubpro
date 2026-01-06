@@ -9,6 +9,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { 
   Building2, 
   Store, 
@@ -17,7 +28,8 @@ import {
   MapPin, 
   Calendar,
   ChevronRight,
-  Filter
+  Filter,
+  Trash2
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -32,6 +44,8 @@ interface LeadsListProps {
   onTypeFilterChange: (type: string) => void;
   onSelectLead: (lead: MarketingLead) => void;
   onUpdateStatus: (id: string, status: string) => void;
+  onDeleteAll?: () => void;
+  isDeletingAll?: boolean;
 }
 
 const statusLabels: Record<string, { label: string; color: string }> = {
@@ -61,6 +75,8 @@ export function LeadsList({
   onTypeFilterChange,
   onSelectLead,
   onUpdateStatus,
+  onDeleteAll,
+  isDeletingAll,
 }: LeadsListProps) {
   if (isLoading) {
     return (
@@ -108,9 +124,46 @@ export function LeadsList({
             <SelectItem value="altro">Altro</SelectItem>
           </SelectContent>
         </Select>
-        <span className="text-sm text-muted-foreground ml-auto">
-          {leads.length} lead
-        </span>
+        
+        <div className="flex items-center gap-2 ml-auto">
+          <span className="text-sm text-muted-foreground">
+            {leads.length} lead
+          </span>
+          
+          {leads.length > 0 && onDeleteAll && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  className="gap-1"
+                  disabled={isDeletingAll}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Elimina tutti
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Eliminare tutti i lead?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Questa azione eliminerà permanentemente tutti i {leads.length} lead.
+                    Non sarà possibile annullare questa operazione.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Annulla</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={onDeleteAll}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Elimina tutti
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
       </div>
 
       {/* Lead cards */}

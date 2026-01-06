@@ -117,6 +117,24 @@ export default function AdminMarketing() {
     },
   });
 
+  // Delete all leads mutation
+  const deleteAllLeadsMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("marketing_leads")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000"); // Delete all rows
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
+      toast.success("Tutti i lead sono stati eliminati");
+    },
+    onError: () => {
+      toast.error("Errore nell'eliminazione dei lead");
+    },
+  });
+
   return (
     <PlatformAdminLayout>
       <div className="space-y-6">
@@ -207,6 +225,8 @@ export default function AdminMarketing() {
               onTypeFilterChange={setTypeFilter}
               onSelectLead={setSelectedLead}
               onUpdateStatus={(id, status) => updateLeadMutation.mutate({ id, updates: { status } })}
+              onDeleteAll={() => deleteAllLeadsMutation.mutate()}
+              isDeletingAll={deleteAllLeadsMutation.isPending}
             />
           </TabsContent>
 

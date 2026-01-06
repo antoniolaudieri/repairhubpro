@@ -189,11 +189,58 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Extract contact info from markdown if available
-        const contactInfo = extractContactInfo(result.markdown || result.description || '');
+        let contactInfo = extractContactInfo(result.markdown || result.description || '');
 
-        // Skip if no email AND no phone
+        // If no email found, do a deep scrape of the website
+        if (!contactInfo.email && result.url) {
+          console.log(`marketing-lead-finder: No email in search results for "${businessName}", doing deep scrape of ${result.url}`);
+          
+          try {
+            const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${firecrawlApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                url: result.url,
+                formats: ['markdown'],
+                onlyMainContent: false, // Get everything including header/footer with contacts
+              }),
+            });
+
+            if (scrapeResponse.ok) {
+              const scrapeData = await scrapeResponse.json();
+              const pageContent = scrapeData.data?.markdown || scrapeData.markdown || '';
+              
+              if (pageContent) {
+                console.log(`marketing-lead-finder: Deep scrape successful for "${businessName}", content length: ${pageContent.length}`);
+                const deepContactInfo = extractContactInfo(pageContent);
+                
+                // Update contact info if found in deep scrape
+                if (deepContactInfo.email) {
+                  contactInfo.email = deepContactInfo.email;
+                  console.log(`marketing-lead-finder: Found email via deep scrape: ${deepContactInfo.email}`);
+                }
+                if (deepContactInfo.phone && !contactInfo.phone) {
+                  contactInfo.phone = deepContactInfo.phone;
+                  console.log(`marketing-lead-finder: Found phone via deep scrape: ${deepContactInfo.phone}`);
+                }
+                if (deepContactInfo.address && !contactInfo.address) {
+                  contactInfo.address = deepContactInfo.address;
+                }
+              }
+            } else {
+              console.log(`marketing-lead-finder: Deep scrape failed for "${businessName}": ${scrapeResponse.status}`);
+            }
+          } catch (scrapeError) {
+            console.error(`marketing-lead-finder: Error deep scraping ${result.url}:`, scrapeError);
+          }
+        }
+
+        // Skip if still no email AND no phone after deep scrape
         if (!contactInfo.email && !contactInfo.phone) {
-          console.log(`marketing-lead-finder: Skipping "${businessName}" - no email or phone found`);
+          console.log(`marketing-lead-finder: Skipping "${businessName}" - no email or phone found even after deep scrape`);
           continue;
         }
 
@@ -217,7 +264,7 @@ const handler = async (req: Request): Promise<Response> => {
             funnel_stage_id: defaultStage?.id || null,
             current_sequence_id: sequence?.id || null,
             current_step: 0,
-            notes: `Trovato cercando: ${result.title}\nURL: ${result.url}`,
+            notes: `Trovato cercando: ${result.title}\nURL: ${result.url}${contactInfo.email ? '\nEmail trovata via scraping' : ''}`,
           })
           .select()
           .single();
@@ -229,7 +276,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         leadsCreated++;
         createdLeads.push(businessName);
-        console.log(`marketing-lead-finder: Created lead "${businessName}"`);
+        console.log(`marketing-lead-finder: Created lead "${businessName}" with email: ${contactInfo.email || 'N/A'}, phone: ${contactInfo.phone || 'N/A'}`);
 
         // Schedule first email if sequence exists and email found
         if (sequence?.id && newLead && contactInfo.email) {
