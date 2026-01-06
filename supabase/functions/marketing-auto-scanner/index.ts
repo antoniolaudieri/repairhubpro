@@ -96,45 +96,51 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         console.log(`marketing-auto-scanner: Scanning zone "${zone.name}"`);
 
-        // Call Overpass API to find shops
-        const radiusMeters = zone.radius_km * 1000;
-        const overpassQuery = `[out:json][timeout:60];
+        // Call Overpass API to find shops - use simpler query
+        const radiusMeters = Math.min(zone.radius_km * 1000, 15000); // Max 15km to avoid timeout
+        const overpassQuery = `[out:json][timeout:25];
 (
-  node["shop"="mobile_phone"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  way["shop"="mobile_phone"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  node["shop"="electronics"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  way["shop"="electronics"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  node["shop"="computer"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  way["shop"="computer"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  node["shop"="telecommunication"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  way["shop"="telecommunication"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  node["craft"="electronics_repair"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  way["craft"="electronics_repair"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  node["amenity"="telephone"](around:${radiusMeters},${zone.latitude},${zone.longitude});
-  node["office"="telecommunication"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  nwr["shop"~"mobile_phone|electronics|computer"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  nwr["craft"="electronics_repair"](around:${radiusMeters},${zone.latitude},${zone.longitude});
 );
-out body center;`;
+out center;`;
 
-        console.log(`marketing-auto-scanner: Overpass query for ${zone.name} - radius: ${radiusMeters}m, lat: ${zone.latitude}, lon: ${zone.longitude}`);
+        console.log(`marketing-auto-scanner: Querying Overpass for ${zone.name} - radius: ${radiusMeters}m`);
 
-        const overpassResponse = await fetch('https://overpass-api.de/api/interpreter', {
-          method: 'POST',
-          body: `data=${encodeURIComponent(overpassQuery)}`,
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        });
+        // Try multiple Overpass servers
+        const overpassServers = [
+          'https://overpass.kumi.systems/api/interpreter',
+          'https://overpass-api.de/api/interpreter',
+          'https://z.overpass-api.de/api/interpreter'
+        ];
 
-        const responseText = await overpassResponse.text();
+        let overpassData = null;
         
-        if (!overpassResponse.ok) {
-          console.error(`marketing-auto-scanner: Overpass HTTP error for zone ${zone.name}: ${overpassResponse.status} - ${responseText.substring(0, 200)}`);
-          continue;
+        for (const server of overpassServers) {
+          try {
+            console.log(`marketing-auto-scanner: Trying server ${server}`);
+            
+            const overpassResponse = await fetch(server, {
+              method: 'POST',
+              body: `data=${encodeURIComponent(overpassQuery)}`,
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            });
+
+            if (overpassResponse.ok) {
+              const responseText = await overpassResponse.text();
+              overpassData = JSON.parse(responseText);
+              console.log(`marketing-auto-scanner: Success with server ${server}`);
+              break;
+            } else {
+              console.log(`marketing-auto-scanner: Server ${server} returned ${overpassResponse.status}`);
+            }
+          } catch (serverError) {
+            console.log(`marketing-auto-scanner: Server ${server} failed: ${serverError}`);
+          }
         }
 
-        let overpassData;
-        try {
-          overpassData = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error(`marketing-auto-scanner: Failed to parse Overpass response for zone ${zone.name}: ${responseText.substring(0, 200)}`);
+        if (!overpassData) {
+          console.error(`marketing-auto-scanner: All Overpass servers failed for zone ${zone.name}`);
           continue;
         }
 
@@ -143,7 +149,35 @@ out body center;`;
         console.log(`marketing-auto-scanner: Found ${elements.length} shops in zone "${zone.name}"`);
         
         if (elements.length === 0) {
-          console.log(`marketing-auto-scanner: No shops found in zone "${zone.name}" - this could be normal for smaller areas`);
+          console.log(`marketing-auto-scanner: No shops found - trying broader search...`);
+          
+          // Try a broader search with any shop tag
+          const broadQuery = `[out:json][timeout:25];
+node["shop"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+out;`;
+          
+          try {
+            const broadResponse = await fetch(overpassServers[0], {
+              method: 'POST',
+              body: `data=${encodeURIComponent(broadQuery)}`,
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            });
+            
+            if (broadResponse.ok) {
+              const broadData = await broadResponse.json();
+              // Filter for relevant shops
+              const relevantShops = (broadData.elements || []).filter((el: any) => {
+                const shop = el.tags?.shop || '';
+                return ['mobile_phone', 'electronics', 'computer', 'telecommunication', 'hifi', 'appliance'].includes(shop);
+              });
+              console.log(`marketing-auto-scanner: Broad search found ${relevantShops.length} relevant shops`);
+              if (relevantShops.length > 0) {
+                overpassData.elements = relevantShops;
+              }
+            }
+          } catch (broadError) {
+            console.log(`marketing-auto-scanner: Broad search failed: ${broadError}`);
+          }
         }
 
         let zoneNewLeads = 0;
