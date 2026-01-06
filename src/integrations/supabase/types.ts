@@ -3236,8 +3236,12 @@ export type Database = {
           email_send_hours_start: number
           id: string
           is_enabled: boolean
+          marketing_sender_email: string | null
+          marketing_sender_name: string | null
           max_emails_per_day: number
           min_delay_between_emails_hours: number
+          physical_address: string | null
+          smtp_config: Json | null
           updated_at: string
         }
         Insert: {
@@ -3252,8 +3256,12 @@ export type Database = {
           email_send_hours_start?: number
           id?: string
           is_enabled?: boolean
+          marketing_sender_email?: string | null
+          marketing_sender_name?: string | null
           max_emails_per_day?: number
           min_delay_between_emails_hours?: number
+          physical_address?: string | null
+          smtp_config?: Json | null
           updated_at?: string
         }
         Update: {
@@ -3268,8 +3276,12 @@ export type Database = {
           email_send_hours_start?: number
           id?: string
           is_enabled?: boolean
+          marketing_sender_email?: string | null
+          marketing_sender_name?: string | null
           max_emails_per_day?: number
           min_delay_between_emails_hours?: number
+          physical_address?: string | null
+          smtp_config?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -3517,6 +3529,8 @@ export type Database = {
           sequence_started_at: string | null
           source: string
           status: Database["public"]["Enums"]["marketing_lead_status"]
+          unsubscribed_at: string | null
+          unsubscribed_reason: string | null
           updated_at: string
           website: string | null
         }
@@ -3550,6 +3564,8 @@ export type Database = {
           sequence_started_at?: string | null
           source?: string
           status?: Database["public"]["Enums"]["marketing_lead_status"]
+          unsubscribed_at?: string | null
+          unsubscribed_reason?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -3583,6 +3599,8 @@ export type Database = {
           sequence_started_at?: string | null
           source?: string
           status?: Database["public"]["Enums"]["marketing_lead_status"]
+          unsubscribed_at?: string | null
+          unsubscribed_reason?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -3753,6 +3771,41 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      marketing_unsubscribes: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          lead_id: string | null
+          reason: string | null
+          unsubscribed_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          lead_id?: string | null
+          reason?: string | null
+          unsubscribed_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          lead_id?: string | null
+          reason?: string | null
+          unsubscribed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_unsubscribes_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {

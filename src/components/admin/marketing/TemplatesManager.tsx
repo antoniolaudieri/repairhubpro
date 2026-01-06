@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +30,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Edit, Copy, Plus, Trash2, Mail, MessageSquare, Eye } from "lucide-react";
+import { Edit, Copy, Plus, Trash2, Mail, MessageSquare, Eye, Code, FileText, Sparkles } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Template {
@@ -42,12 +44,82 @@ interface Template {
   sort_order: number;
 }
 
+// Sample HTML template for free trial CTA
+const TRIAL_CTA_HTML = `
+<div style="text-align:center;margin:30px 0;">
+  <a href="https://linkriparo.it/auth?trial=true" 
+     style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px 32px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;font-size:16px;box-shadow:0 4px 14px rgba(37,99,235,0.4);">
+    🚀 Inizia la Prova Gratuita
+  </a>
+</div>`;
+
+// Sample professional HTML template
+const PROFESSIONAL_HTML_TEMPLATE = `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333;margin:0;padding:0;background-color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;background-color:#ffffff;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:30px;text-align:center;">
+      <h1 style="color:#ffffff;margin:0;font-size:28px;">LinkRiparo</h1>
+      <p style="color:rgba(255,255,255,0.9);margin:10px 0 0;">Sistema di Gestione Riparazioni</p>
+    </div>
+    
+    <!-- Content -->
+    <div style="padding:40px 30px;">
+      <h2 style="color:#1a1a1a;margin:0 0 20px;">Ciao {{business_name}},</h2>
+      
+      <p style="color:#555;margin:0 0 20px;">
+        Sono Riccardo, fondatore di LinkRiparo. Ho notato che gestisci un'attività di riparazioni e volevo presentarti la nostra piattaforma.
+      </p>
+      
+      <p style="color:#555;margin:0 0 20px;">
+        LinkRiparo ti permette di:
+      </p>
+      
+      <ul style="color:#555;padding-left:20px;margin:0 0 30px;">
+        <li style="margin-bottom:10px;">📱 Gestire le riparazioni in modo digitale</li>
+        <li style="margin-bottom:10px;">👥 Fidelizzare i clienti con il sistema loyalty</li>
+        <li style="margin-bottom:10px;">📊 Monitorare le statistiche del tuo business</li>
+        <li style="margin-bottom:10px;">🔔 Comunicare automaticamente con i clienti</li>
+      </ul>
+      
+      <!-- CTA Button -->
+      <div style="text-align:center;margin:30px 0;">
+        <a href="https://linkriparo.it/auth?trial=true" 
+           style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px 32px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;font-size:16px;box-shadow:0 4px 14px rgba(37,99,235,0.4);">
+          Inizia la Prova Gratuita
+        </a>
+      </div>
+      
+      <p style="color:#555;margin:30px 0 0;">
+        Resto a disposizione per qualsiasi domanda.<br><br>
+        A presto,<br>
+        <strong>Riccardo C.</strong><br>
+        <span style="color:#888;">Fondatore LinkRiparo</span>
+      </p>
+    </div>
+    
+    <!-- Footer with logo -->
+    <div style="background:#f8f9fa;padding:20px;text-align:center;border-top:1px solid #e0e0e0;">
+      <p style="color:#888;margin:0;font-size:12px;">
+        © 2024 LinkRiparo - Sistema di Gestione Riparazioni
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+
 export function TemplatesManager() {
   const queryClient = useQueryClient();
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isViewing, setIsViewing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isHtmlMode, setIsHtmlMode] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",
     type: "email",
@@ -139,6 +211,7 @@ export function TemplatesManager() {
       content: "",
       target_type: "centro",
     });
+    setIsHtmlMode(false);
   };
 
   const handleEdit = (template: Template) => {
@@ -150,6 +223,8 @@ export function TemplatesManager() {
       content: template.content,
       target_type: template.target_type || "centro",
     });
+    // Check if content is HTML
+    setIsHtmlMode(template.content.includes('<') && template.content.includes('>'));
     setIsEditing(true);
   };
 
@@ -177,6 +252,23 @@ export function TemplatesManager() {
     });
   };
 
+  const insertTrialCta = () => {
+    setEditForm({
+      ...editForm,
+      content: editForm.content + TRIAL_CTA_HTML,
+    });
+    toast.success("CTA Prova Gratuita inserito!");
+  };
+
+  const useHtmlTemplate = () => {
+    setEditForm({
+      ...editForm,
+      content: PROFESSIONAL_HTML_TEMPLATE,
+    });
+    setIsHtmlMode(true);
+    toast.success("Template HTML professionale caricato!");
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "email":
@@ -199,6 +291,10 @@ export function TemplatesManager() {
     }
   };
 
+  const isContentHtml = (content: string) => {
+    return content.includes('<') && content.includes('>');
+  };
+
   if (isLoading) {
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -215,7 +311,7 @@ export function TemplatesManager() {
         <div>
           <h2 className="text-xl font-semibold">Template Email & WhatsApp</h2>
           <p className="text-sm text-muted-foreground">
-            Gestisci i template per le comunicazioni automatiche
+            Gestisci i template per le comunicazioni automatiche. Usa HTML per evitare lo spam.
           </p>
         </div>
         <Button onClick={() => { resetForm(); setIsCreating(true); }}>
@@ -233,7 +329,15 @@ export function TemplatesManager() {
                   {getTypeIcon(template.type)}
                   <CardTitle className="text-base">{template.name}</CardTitle>
                 </div>
-                {getTargetBadge(template.target_type)}
+                <div className="flex items-center gap-1">
+                  {isContentHtml(template.content) && (
+                    <Badge variant="outline" className="text-xs">
+                      <Code className="h-3 w-3 mr-1" />
+                      HTML
+                    </Badge>
+                  )}
+                  {getTargetBadge(template.target_type)}
+                </div>
               </div>
               {template.subject && (
                 <CardDescription className="mt-2">
@@ -243,7 +347,7 @@ export function TemplatesManager() {
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
               <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap flex-1">
-                {template.content.substring(0, 150)}...
+                {template.content.replace(/<[^>]+>/g, ' ').substring(0, 150)}...
               </p>
               <div className="flex gap-2 mt-4">
                 <Button
@@ -292,7 +396,7 @@ export function TemplatesManager() {
 
       {/* View Dialog */}
       <Dialog open={isViewing} onOpenChange={setIsViewing}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {selectedTemplate && getTypeIcon(selectedTemplate.type)}
@@ -300,22 +404,36 @@ export function TemplatesManager() {
               {selectedTemplate && getTargetBadge(selectedTemplate.target_type)}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-4 pr-4">
-              {selectedTemplate?.subject && (
-                <div>
-                  <Label className="text-muted-foreground">Oggetto</Label>
-                  <p className="mt-1 font-medium">{selectedTemplate.subject}</p>
+          <Tabs defaultValue={isContentHtml(selectedTemplate?.content || '') ? 'preview' : 'source'}>
+            <TabsList>
+              <TabsTrigger value="preview">Anteprima</TabsTrigger>
+              <TabsTrigger value="source">Codice Sorgente</TabsTrigger>
+            </TabsList>
+            <TabsContent value="preview">
+              <ScrollArea className="max-h-[60vh]">
+                {selectedTemplate?.subject && (
+                  <div className="mb-4">
+                    <Label className="text-muted-foreground">Oggetto</Label>
+                    <p className="mt-1 font-medium">{selectedTemplate.subject}</p>
+                  </div>
+                )}
+                <div className="border rounded-lg overflow-hidden">
+                  <iframe
+                    srcDoc={selectedTemplate?.content || ''}
+                    className="w-full min-h-[400px] bg-white"
+                    title="Email Preview"
+                  />
                 </div>
-              )}
-              <div>
-                <Label className="text-muted-foreground">Contenuto</Label>
-                <div className="mt-2 p-4 bg-muted/50 rounded-lg whitespace-pre-wrap text-sm">
+              </ScrollArea>
+            </TabsContent>
+            <TabsContent value="source">
+              <ScrollArea className="max-h-[60vh]">
+                <pre className="p-4 bg-muted/50 rounded-lg text-sm font-mono whitespace-pre-wrap overflow-x-auto">
                   {selectedTemplate?.content}
-                </div>
-              </div>
-            </div>
-          </ScrollArea>
+                </pre>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsViewing(false)}>
               Chiudi
@@ -330,7 +448,7 @@ export function TemplatesManager() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Modifica Template</DialogTitle>
           </DialogHeader>
@@ -385,19 +503,53 @@ export function TemplatesManager() {
                   />
                 </div>
               )}
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={isHtmlMode}
+                    onCheckedChange={setIsHtmlMode}
+                  />
+                  <Label>Modalità HTML</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={useHtmlTemplate}>
+                    <FileText className="h-4 w-4 mr-1" />
+                    Template HTML
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={insertTrialCta}>
+                    <Sparkles className="h-4 w-4 mr-1" />
+                    Inserisci CTA
+                  </Button>
+                </div>
+              </div>
+
               <div>
                 <Label>Contenuto</Label>
                 <Textarea
                   value={editForm.content}
                   onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
-                  rows={12}
-                  className="font-mono text-sm"
-                  placeholder="Scrivi il contenuto del template..."
+                  rows={16}
+                  className={`font-mono text-sm ${isHtmlMode ? 'bg-slate-950 text-green-400' : ''}`}
+                  placeholder={isHtmlMode ? "<!DOCTYPE html>..." : "Scrivi il contenuto del template..."}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Variabili disponibili: {"{{business_name}}"}, {"{{email}}"}, {"{{phone}}"}
+                  Variabili: {"{{business_name}}"}, {"{{email}}"}, {"{{phone}}"}, {"{{address}}"}, {"{{website}}"}
                 </p>
               </div>
+
+              {isHtmlMode && editForm.content && (
+                <div>
+                  <Label>Anteprima</Label>
+                  <div className="border rounded-lg overflow-hidden mt-2">
+                    <iframe
+                      srcDoc={editForm.content}
+                      className="w-full min-h-[300px] bg-white"
+                      title="Email Preview"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
           <DialogFooter>
@@ -413,7 +565,7 @@ export function TemplatesManager() {
 
       {/* Create Dialog */}
       <Dialog open={isCreating} onOpenChange={setIsCreating}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
+        <DialogContent className="max-w-3xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Nuovo Template</DialogTitle>
           </DialogHeader>
@@ -469,19 +621,53 @@ export function TemplatesManager() {
                   />
                 </div>
               )}
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    checked={isHtmlMode}
+                    onCheckedChange={setIsHtmlMode}
+                  />
+                  <Label>Modalità HTML</Label>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={useHtmlTemplate}>
+                    <FileText className="h-4 w-4 mr-1" />
+                    Template HTML
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={insertTrialCta}>
+                    <Sparkles className="h-4 w-4 mr-1" />
+                    Inserisci CTA
+                  </Button>
+                </div>
+              </div>
+
               <div>
                 <Label>Contenuto</Label>
                 <Textarea
                   value={editForm.content}
                   onChange={(e) => setEditForm({ ...editForm, content: e.target.value })}
-                  rows={12}
-                  className="font-mono text-sm"
-                  placeholder="Scrivi il contenuto del template..."
+                  rows={16}
+                  className={`font-mono text-sm ${isHtmlMode ? 'bg-slate-950 text-green-400' : ''}`}
+                  placeholder={isHtmlMode ? "<!DOCTYPE html>..." : "Scrivi il contenuto del template..."}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Variabili disponibili: {"{{business_name}}"}, {"{{email}}"}, {"{{phone}}"}
+                  Variabili: {"{{business_name}}"}, {"{{email}}"}, {"{{phone}}"}, {"{{address}}"}, {"{{website}}"}
                 </p>
               </div>
+
+              {isHtmlMode && editForm.content && (
+                <div>
+                  <Label>Anteprima</Label>
+                  <div className="border rounded-lg overflow-hidden mt-2">
+                    <iframe
+                      srcDoc={editForm.content}
+                      className="w-full min-h-[300px] bg-white"
+                      title="Email Preview"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
           </ScrollArea>
           <DialogFooter>

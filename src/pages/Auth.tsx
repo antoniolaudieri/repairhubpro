@@ -7,23 +7,72 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Wrench, Mail, Lock, User, Phone, ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { Wrench, Mail, Lock, User, Phone, ArrowLeft, Sparkles, Loader2, Gift } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const redirectPath = searchParams.get("redirect");
+  const isTrial = searchParams.get("trial") === "true";
+  const leadId = searchParams.get("lead");
+  const prefilledEmail = searchParams.get("email");
+  
   const { user, signIn, signUp, userRoles, loading: authLoading, isPlatformAdmin, isTechnician, isAdmin, isCentroAdmin, isCentroTech, isRiparatore, isCorner } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("signin");
+  const [activeTab, setActiveTab] = useState(isTrial ? "signup" : "signin");
   const [waitingForRoles, setWaitingForRoles] = useState(false);
   const hasRedirected = useRef(false);
   
   // Form states
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(prefilledEmail || "");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
+
+  // Update lead status after successful registration
+  const updateLeadAfterRegistration = async () => {
+    if (leadId) {
+      try {
+        // Update lead status to converted
+        await supabase
+          .from("marketing_leads")
+          .update({ 
+            status: 'converted',
+            converted_at: new Date().toISOString(),
+          })
+          .eq("id", leadId);
+
+        // Move to "Converted" funnel stage
+        const { data: convertedStage } = await supabase
+          .from("marketing_funnel_stages")
+          .select("id")
+          .eq("stage_order", 5)
+          .single();
+
+        if (convertedStage) {
+          await supabase
+            .from("marketing_leads")
+            .update({ funnel_stage_id: convertedStage.id })
+            .eq("id", leadId);
+        }
+
+        // Log conversion
+        await supabase
+          .from("marketing_automation_logs")
+          .insert({
+            log_type: 'conversion',
+            message: `Lead convertito - registrazione completata`,
+            details: { lead_id: leadId, email },
+            lead_id: leadId,
+          });
+
+        console.log("Lead updated to converted:", leadId);
+      } catch (error) {
+        console.error("Error updating lead after registration:", error);
+      }
+    }
+  };
 
   // Handle redirect after login with roles loaded - only once
   useEffect(() => {
@@ -79,6 +128,12 @@ const Auth = () => {
     try {
       const { error } = await signUp(email, password, fullName, phone);
       if (error) throw error;
+      
+      // Update lead if this is a trial registration
+      if (isTrial && leadId) {
+        await updateLeadAfterRegistration();
+      }
+      
       toast.success("Registrazione completata! Verifica la tua email.");
     } catch (error: any) {
       toast.error(error.message || "Errore durante la registrazione");
@@ -125,6 +180,23 @@ const Auth = () => {
             Sistema di gestione riparazioni
           </p>
         </div>
+
+        {/* Trial Banner */}
+        {isTrial && (
+          <div className="mb-6 p-4 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary/20 p-2 rounded-lg">
+                <Gift className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <p className="font-semibold text-foreground">Prova Gratuita</p>
+                <p className="text-sm text-muted-foreground">
+                  Registrati per iniziare la tua prova gratuita di LinkRiparo
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Auth Card */}
         <Card className="p-8 shadow-2xl border-border/50 backdrop-blur-sm bg-card/95">
@@ -278,6 +350,8 @@ const Auth = () => {
                       <Loader2 className="w-5 h-5 animate-spin" />
                       Registrazione...
                     </span>
+                  ) : isTrial ? (
+                    "Inizia la Prova Gratuita"
                   ) : (
                     "Registrati"
                   )}

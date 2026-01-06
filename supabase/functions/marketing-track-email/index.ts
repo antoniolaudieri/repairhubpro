@@ -54,7 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
           })
           .eq("id", emailItem.id);
 
-        // Update lead stats - get current count first
+        // Update lead stats
         const { data: lead } = await supabase
           .from("marketing_leads")
           .select("email_opens_count, funnel_stage_id")
@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
         await supabase
           .from("marketing_email_queue")
           .update({
-            clicked_at: emailItem.opened_at || now,
+            clicked_at: now,
             click_count: (emailItem.click_count || 0) + 1,
           })
           .eq("id", emailItem.id);
@@ -100,7 +100,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Update lead stats
         const { data: lead } = await supabase
           .from("marketing_leads")
-          .select("email_clicks_count, funnel_stage_id")
+          .select("email_clicks_count, funnel_stage_id, email")
           .eq("id", emailItem.lead_id)
           .single();
 
@@ -114,18 +114,78 @@ const handler = async (req: Request): Promise<Response> => {
             })
             .eq("id", emailItem.lead_id);
 
-          // Move to "Demo Requested" funnel stage if clicked a CTA
-          const { data: demoStage } = await supabase
-            .from("marketing_funnel_stages")
-            .select("id")
-            .eq("stage_order", 4)
-            .single();
+          // Check if this is a free trial link
+          const decodedUrl = decodeURIComponent(redirectUrl).toLowerCase();
+          const isFreeTrialLink = 
+            decodedUrl.includes('prova') || 
+            decodedUrl.includes('trial') || 
+            decodedUrl.includes('registra') ||
+            decodedUrl.includes('/auth');
 
-          if (demoStage) {
+          if (isFreeTrialLink) {
+            // Move to "Demo Requested" funnel stage
+            const { data: demoStage } = await supabase
+              .from("marketing_funnel_stages")
+              .select("id")
+              .eq("stage_order", 4)
+              .single();
+
+            if (demoStage) {
+              await supabase
+                .from("marketing_leads")
+                .update({ funnel_stage_id: demoStage.id })
+                .eq("id", emailItem.lead_id);
+            }
+
+            // Log the free trial click
             await supabase
-              .from("marketing_leads")
-              .update({ funnel_stage_id: demoStage.id })
-              .eq("id", emailItem.lead_id);
+              .from("marketing_automation_logs")
+              .insert({
+                log_type: 'conversion',
+                message: `Lead ha cliccato link prova gratuita`,
+                details: { 
+                  lead_id: emailItem.lead_id, 
+                  email: lead.email,
+                  original_url: redirectUrl 
+                },
+                lead_id: emailItem.lead_id,
+              });
+
+            // Redirect to auth page with lead info
+            const leadEmail = lead.email || '';
+            const authUrl = new URL(decodeURIComponent(redirectUrl));
+            
+            // If the URL is already an auth page, add lead parameters
+            if (authUrl.pathname.includes('/auth') || isFreeTrialLink) {
+              authUrl.searchParams.set('trial', 'true');
+              authUrl.searchParams.set('lead', emailItem.lead_id);
+              if (leadEmail) {
+                authUrl.searchParams.set('email', leadEmail);
+              }
+              
+              console.log(`marketing-track-email: Redirecting to auth with trial params: ${authUrl.toString()}`);
+              return new Response(null, {
+                status: 302,
+                headers: {
+                  "Location": authUrl.toString(),
+                  "Cache-Control": "no-cache, no-store, must-revalidate",
+                },
+              });
+            }
+          } else {
+            // Regular click - just move to interested stage
+            const { data: interestedStage } = await supabase
+              .from("marketing_funnel_stages")
+              .select("id")
+              .eq("stage_order", 3)
+              .single();
+
+            if (interestedStage && lead.funnel_stage_id !== interestedStage.id) {
+              await supabase
+                .from("marketing_leads")
+                .update({ funnel_stage_id: interestedStage.id })
+                .eq("id", emailItem.lead_id);
+            }
           }
         }
 
