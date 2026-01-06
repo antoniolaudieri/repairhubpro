@@ -16,7 +16,8 @@ import {
   FileText,
   Megaphone,
   BookOpen,
-  Calendar
+  Calendar,
+  Target
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -46,6 +47,7 @@ const adminMenuItems = [
   { title: "Corner", url: "/admin/corners", icon: Store, countKey: "corners" as const },
   { title: "Riparatori", url: "/admin/riparatori", icon: Wrench, countKey: "riparatori" as const },
   { title: "Centri", url: "/admin/centri", icon: Building2, countKey: "centri" as const },
+  { title: "Marketing", url: "/admin/marketing", icon: Target },
   { title: "Crediti", url: "/admin/crediti", icon: Euro },
   { title: "Commissioni", url: "/admin/commissioni", icon: Settings2 },
   { title: "Fatturazione", url: "/admin/fatturazione", icon: Receipt },

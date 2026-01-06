@@ -3168,6 +3168,167 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_interactions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          interaction_type: Database["public"]["Enums"]["marketing_interaction_type"]
+          lead_id: string
+          notes: string | null
+          outcome:
+            | Database["public"]["Enums"]["marketing_interaction_outcome"]
+            | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          interaction_type: Database["public"]["Enums"]["marketing_interaction_type"]
+          lead_id: string
+          notes?: string | null
+          outcome?:
+            | Database["public"]["Enums"]["marketing_interaction_outcome"]
+            | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          interaction_type?: Database["public"]["Enums"]["marketing_interaction_type"]
+          lead_id?: string
+          notes?: string | null
+          outcome?:
+            | Database["public"]["Enums"]["marketing_interaction_outcome"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_interactions_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_leads: {
+        Row: {
+          address: string | null
+          assigned_to: string | null
+          business_name: string
+          business_type: Database["public"]["Enums"]["marketing_business_type"]
+          contacted_at: string | null
+          conversion_date: string | null
+          converted_entity_id: string | null
+          converted_entity_type: string | null
+          created_at: string
+          email: string | null
+          id: string
+          last_interaction_at: string | null
+          latitude: number | null
+          longitude: number | null
+          next_followup_at: string | null
+          notes: string | null
+          phone: string | null
+          source: string
+          status: Database["public"]["Enums"]["marketing_lead_status"]
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          assigned_to?: string | null
+          business_name: string
+          business_type?: Database["public"]["Enums"]["marketing_business_type"]
+          contacted_at?: string | null
+          conversion_date?: string | null
+          converted_entity_id?: string | null
+          converted_entity_type?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          next_followup_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["marketing_lead_status"]
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          assigned_to?: string | null
+          business_name?: string
+          business_type?: Database["public"]["Enums"]["marketing_business_type"]
+          contacted_at?: string | null
+          conversion_date?: string | null
+          converted_entity_id?: string | null
+          converted_entity_type?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_interaction_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          next_followup_at?: string | null
+          notes?: string | null
+          phone?: string | null
+          source?: string
+          status?: Database["public"]["Enums"]["marketing_lead_status"]
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: []
+      }
+      marketing_templates: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number | null
+          subject: string | null
+          target_type:
+            | Database["public"]["Enums"]["marketing_business_type"]
+            | null
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number | null
+          subject?: string | null
+          target_type?:
+            | Database["public"]["Enums"]["marketing_business_type"]
+            | null
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number | null
+          subject?: string | null
+          target_type?:
+            | Database["public"]["Enums"]["marketing_business_type"]
+            | null
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string
@@ -4887,6 +5048,32 @@ export type Database = {
         | "acquisto"
         | "ricondizionato"
       financial_movement_type: "income" | "expense"
+      marketing_business_type:
+        | "centro"
+        | "corner"
+        | "telefonia"
+        | "elettronica"
+        | "computer"
+        | "altro"
+      marketing_interaction_outcome:
+        | "positive"
+        | "neutral"
+        | "negative"
+        | "no_response"
+      marketing_interaction_type:
+        | "call"
+        | "email"
+        | "whatsapp"
+        | "meeting"
+        | "demo"
+        | "note"
+      marketing_lead_status:
+        | "new"
+        | "contacted"
+        | "interested"
+        | "demo_scheduled"
+        | "converted"
+        | "rejected"
       used_device_sale_type: "alienato" | "conto_vendita" | "acquistato"
     }
     CompositeTypes: {
@@ -5039,6 +5226,36 @@ export const Constants = {
         "ricondizionato",
       ],
       financial_movement_type: ["income", "expense"],
+      marketing_business_type: [
+        "centro",
+        "corner",
+        "telefonia",
+        "elettronica",
+        "computer",
+        "altro",
+      ],
+      marketing_interaction_outcome: [
+        "positive",
+        "neutral",
+        "negative",
+        "no_response",
+      ],
+      marketing_interaction_type: [
+        "call",
+        "email",
+        "whatsapp",
+        "meeting",
+        "demo",
+        "note",
+      ],
+      marketing_lead_status: [
+        "new",
+        "contacted",
+        "interested",
+        "demo_scheduled",
+        "converted",
+        "rejected",
+      ],
       used_device_sale_type: ["alienato", "conto_vendita", "acquistato"],
     },
   },

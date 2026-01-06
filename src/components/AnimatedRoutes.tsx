@@ -67,6 +67,7 @@ import AdminCommissioni from "@/pages/admin/AdminCommissioni";
 import AdminFatturazione from "@/pages/admin/AdminFatturazione";
 import AdminAnalytics from "@/pages/admin/AdminAnalytics";
 import AdminPubblicita from "@/pages/admin/AdminPubblicita";
+import AdminMarketing from "@/pages/admin/AdminMarketing";
 import NotFound from "@/pages/NotFound";
 import RemoteSignature from "@/pages/RemoteSignature";
 import CustomerDisplay from "@/pages/CustomerDisplay";
@@ -225,6 +226,14 @@ export const AnimatedRoutes = () => {
           element={
             <ProtectedRoute>
               <AdminPubblicita />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/marketing"
+          element={
+            <ProtectedRoute>
+              <AdminMarketing />
             </ProtectedRoute>
           }
         />
