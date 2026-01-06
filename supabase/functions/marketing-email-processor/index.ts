@@ -252,35 +252,53 @@ const handler = async (req: Request): Promise<Response> => {
         // Build tracking URLs
         const trackingPixelUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=open`;
         const clickTrackingBase = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=click&url=`;
+        const demoTrackingUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=demo&url=${encodeURIComponent('https://linkriparo.it/auth?trial=true')}`;
+        const interestTrackingUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=interest&url=${encodeURIComponent('https://linkriparo.it')}`;
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/marketing-unsubscribe?email=${encodeURIComponent(typedLead.email)}&lead_id=${email.lead_id}`;
 
-        // Replace variables in template
+        // Replace variables in template (including new tracking URL placeholders)
         let emailContent = typedTemplate.content
           .replace(/\{\{business_name\}\}/g, typedLead.business_name)
           .replace(/\{\{address\}\}/g, typedLead.address || '')
           .replace(/\{\{phone\}\}/g, typedLead.phone || '')
           .replace(/\{\{website\}\}/g, typedLead.website || '')
-          .replace(/\{\{email\}\}/g, typedLead.email);
+          .replace(/\{\{email\}\}/g, typedLead.email)
+          .replace(/\{\{tracking_url_demo\}\}/g, demoTrackingUrl)
+          .replace(/\{\{tracking_url_interest\}\}/g, interestTrackingUrl)
+          .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl);
 
         // Check if content is already HTML or plain text
         const isHtml = emailContent.includes('<') && emailContent.includes('>');
         
         if (!isHtml) {
-          // Wrap plain text in HTML structure
+          // Wrap plain text in HTML structure with CTA buttons
           emailContent = `<!DOCTYPE html>
 <html lang="it">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333;margin:0;padding:0;">
   <div style="max-width:600px;margin:0 auto;padding:20px;">
     ${emailContent.replace(/\n/g, '<br>')}
+    
+    <!-- CTA Buttons -->
+    <div style="text-align:center;margin:30px 0;">
+      <a href="${demoTrackingUrl}" 
+         style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:14px 28px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;">
+        🚀 Prova Gratuita
+      </a>
+    </div>
+    <p style="text-align:center;margin:15px 0;">
+      <a href="${interestTrackingUrl}" style="color:#2563eb;text-decoration:underline;font-size:14px;">
+        Sono interessato, maggiori info
+      </a>
+    </p>
   </div>
 </body>
 </html>`;
         }
 
-        // Replace links with tracked versions
+        // Replace remaining links with tracked versions (except already tracked ones)
         emailContent = emailContent.replace(
-          /href="(https?:\/\/[^"]+)"/g, 
+          /href="(https?:\/\/(?!.*marketing-track-email)[^"]+)"/g, 
           (match, url) => `href="${clickTrackingBase}${encodeURIComponent(url)}"`
         );
 

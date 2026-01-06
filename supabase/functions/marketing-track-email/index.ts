@@ -11,16 +11,55 @@ const TRACKING_PIXEL = new Uint8Array([
   0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82
 ]);
 
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+// Helper to detect demo/trial intent from URL
+const isDemoOrTrialLink = (url: string): boolean => {
+  const lowerUrl = url.toLowerCase();
+  return (
+    lowerUrl.includes('demo') ||
+    lowerUrl.includes('prova') ||
+    lowerUrl.includes('trial') ||
+    lowerUrl.includes('registra') ||
+    lowerUrl.includes('/auth') ||
+    lowerUrl.includes('prenota') ||
+    lowerUrl.includes('interessato') ||
+    lowerUrl.includes('contatta')
+  );
+};
+
+// Helper to detect interest from URL
+const isInterestLink = (url: string): boolean => {
+  const lowerUrl = url.toLowerCase();
+  return (
+    lowerUrl.includes('interessato') ||
+    lowerUrl.includes('info') ||
+    lowerUrl.includes('scopri') ||
+    lowerUrl.includes('contatta')
+  );
+};
+
 const handler = async (req: Request): Promise<Response> => {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   const url = new URL(req.url);
   const trackingId = url.searchParams.get("t");
-  const action = url.searchParams.get("a"); // 'open' or 'click'
+  const action = url.searchParams.get("a"); // 'open', 'click', 'demo', 'interest'
   const redirectUrl = url.searchParams.get("url");
+
+  console.log(`marketing-track-email: Received request - action=${action}, trackingId=${trackingId}, url=${redirectUrl}`);
 
   if (!trackingId) {
     // Return pixel anyway to not break emails
     return new Response(TRACKING_PIXEL, {
       headers: {
+        ...corsHeaders,
         "Content-Type": "image/png",
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
@@ -70,7 +109,7 @@ const handler = async (req: Request): Promise<Response> => {
             })
             .eq("id", emailItem.lead_id);
 
-          // Move to "Interested" funnel stage
+          // Move to "Interested" funnel stage (stage_order = 3)
           const { data: interestedStage } = await supabase
             .from("marketing_funnel_stages")
             .select("id")
@@ -87,7 +126,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         console.log(`marketing-track-email: Tracked open for ${trackingId}`);
 
-      } else if (action === "click" && redirectUrl) {
+      } else if (action === "demo" || action === "interest" || action === "click") {
         // Track click
         await supabase
           .from("marketing_email_queue")
@@ -97,7 +136,7 @@ const handler = async (req: Request): Promise<Response> => {
           })
           .eq("id", emailItem.id);
 
-        // Update lead stats
+        // Get lead info
         const { data: lead } = await supabase
           .from("marketing_leads")
           .select("email_clicks_count, funnel_stage_id, email")
@@ -105,100 +144,92 @@ const handler = async (req: Request): Promise<Response> => {
           .single();
 
         if (lead) {
+          // Update lead stats
           await supabase
             .from("marketing_leads")
             .update({
               email_clicks_count: (lead.email_clicks_count || 0) + 1,
-              status: 'interested',
+              status: action === "demo" ? 'demo_requested' : 'interested',
               last_interaction_at: now,
             })
             .eq("id", emailItem.lead_id);
 
-          // Check if this is a free trial link
-          const decodedUrl = decodeURIComponent(redirectUrl).toLowerCase();
-          const isFreeTrialLink = 
-            decodedUrl.includes('prova') || 
-            decodedUrl.includes('trial') || 
-            decodedUrl.includes('registra') ||
-            decodedUrl.includes('/auth');
+          // Determine the funnel stage based on action
+          let targetStageOrder = 3; // Default: Interested
+          
+          if (action === "demo" || (redirectUrl && isDemoOrTrialLink(decodeURIComponent(redirectUrl)))) {
+            targetStageOrder = 4; // Demo Requested
+          } else if (action === "interest" || (redirectUrl && isInterestLink(decodeURIComponent(redirectUrl)))) {
+            targetStageOrder = 3; // Interested
+          }
 
-          if (isFreeTrialLink) {
-            // Move to "Demo Requested" funnel stage
-            const { data: demoStage } = await supabase
-              .from("marketing_funnel_stages")
-              .select("id")
-              .eq("stage_order", 4)
-              .single();
+          const { data: targetStage } = await supabase
+            .from("marketing_funnel_stages")
+            .select("id")
+            .eq("stage_order", targetStageOrder)
+            .single();
 
-            if (demoStage) {
-              await supabase
-                .from("marketing_leads")
-                .update({ funnel_stage_id: demoStage.id })
-                .eq("id", emailItem.lead_id);
-            }
-
-            // Log the free trial click
+          if (targetStage) {
             await supabase
-              .from("marketing_automation_logs")
-              .insert({
-                log_type: 'conversion',
-                message: `Lead ha cliccato link prova gratuita`,
-                details: { 
-                  lead_id: emailItem.lead_id, 
-                  email: lead.email,
-                  original_url: redirectUrl 
-                },
-                lead_id: emailItem.lead_id,
-              });
+              .from("marketing_leads")
+              .update({ funnel_stage_id: targetStage.id })
+              .eq("id", emailItem.lead_id);
+          }
 
-            // Redirect to auth page with lead info
+          // Log the interaction
+          const actionLabel = action === "demo" ? "Demo/Prova Gratuita" : 
+                             action === "interest" ? "Interessato" : "Click generico";
+          
+          await supabase
+            .from("marketing_automation_logs")
+            .insert({
+              log_type: action === "demo" ? 'conversion' : 'engagement',
+              message: `Lead ha cliccato: ${actionLabel}`,
+              details: { 
+                lead_id: emailItem.lead_id, 
+                email: lead.email,
+                action: action,
+                original_url: redirectUrl 
+              },
+              lead_id: emailItem.lead_id,
+            });
+
+          console.log(`marketing-track-email: Tracked ${action} for ${trackingId}`);
+
+          // For demo actions, redirect to auth page with lead info
+          if (action === "demo" && redirectUrl) {
             const leadEmail = lead.email || '';
             const authUrl = new URL(decodeURIComponent(redirectUrl));
+            authUrl.searchParams.set('trial', 'true');
+            authUrl.searchParams.set('lead', emailItem.lead_id);
+            if (leadEmail) {
+              authUrl.searchParams.set('email', leadEmail);
+            }
             
-            // If the URL is already an auth page, add lead parameters
-            if (authUrl.pathname.includes('/auth') || isFreeTrialLink) {
-              authUrl.searchParams.set('trial', 'true');
-              authUrl.searchParams.set('lead', emailItem.lead_id);
-              if (leadEmail) {
-                authUrl.searchParams.set('email', leadEmail);
-              }
-              
-              console.log(`marketing-track-email: Redirecting to auth with trial params: ${authUrl.toString()}`);
-              return new Response(null, {
-                status: 302,
-                headers: {
-                  "Location": authUrl.toString(),
-                  "Cache-Control": "no-cache, no-store, must-revalidate",
-                },
-              });
-            }
-          } else {
-            // Regular click - just move to interested stage
-            const { data: interestedStage } = await supabase
-              .from("marketing_funnel_stages")
-              .select("id")
-              .eq("stage_order", 3)
-              .single();
-
-            if (interestedStage && lead.funnel_stage_id !== interestedStage.id) {
-              await supabase
-                .from("marketing_leads")
-                .update({ funnel_stage_id: interestedStage.id })
-                .eq("id", emailItem.lead_id);
-            }
+            console.log(`marketing-track-email: Redirecting to auth with trial params: ${authUrl.toString()}`);
+            return new Response(null, {
+              status: 302,
+              headers: {
+                ...corsHeaders,
+                "Location": authUrl.toString(),
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+              },
+            });
           }
         }
 
-        console.log(`marketing-track-email: Tracked click for ${trackingId}, redirecting to ${redirectUrl}`);
-
-        // Redirect to the original URL
-        return new Response(null, {
-          status: 302,
-          headers: {
-            "Location": decodeURIComponent(redirectUrl),
-            "Cache-Control": "no-cache, no-store, must-revalidate",
-          },
-        });
+        // Redirect to the original URL if provided
+        if (redirectUrl) {
+          console.log(`marketing-track-email: Redirecting to ${redirectUrl}`);
+          return new Response(null, {
+            status: 302,
+            headers: {
+              ...corsHeaders,
+              "Location": decodeURIComponent(redirectUrl),
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+            },
+          });
+        }
       }
     }
 
@@ -210,6 +241,7 @@ const handler = async (req: Request): Promise<Response> => {
   if (action === "open") {
     return new Response(TRACKING_PIXEL, {
       headers: {
+        ...corsHeaders,
         "Content-Type": "image/png",
         "Cache-Control": "no-cache, no-store, must-revalidate",
       },
@@ -217,7 +249,10 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   // For click without redirect URL, return 204
-  return new Response(null, { status: 204 });
+  return new Response(null, { 
+    status: 204,
+    headers: corsHeaders,
+  });
 };
 
 serve(handler);
