@@ -96,23 +96,26 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         console.log(`marketing-auto-scanner: Scanning zone "${zone.name}"`);
 
-        // Call search-phone-shops function via Overpass API directly
-        const overpassQuery = `
-          [out:json][timeout:30];
-          (
-            node["shop"="mobile_phone"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-            way["shop"="mobile_phone"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-            node["shop"="electronics"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-            way["shop"="electronics"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-            node["shop"="computer"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-            way["shop"="computer"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-            node["shop"="telecommunication"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-            way["shop"="telecommunication"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-            node["craft"="electronics_repair"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-            way["craft"="electronics_repair"](around:${zone.radius_km * 1000},${zone.latitude},${zone.longitude});
-          );
-          out body center;
-        `;
+        // Call Overpass API to find shops
+        const radiusMeters = zone.radius_km * 1000;
+        const overpassQuery = `[out:json][timeout:60];
+(
+  node["shop"="mobile_phone"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  way["shop"="mobile_phone"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  node["shop"="electronics"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  way["shop"="electronics"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  node["shop"="computer"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  way["shop"="computer"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  node["shop"="telecommunication"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  way["shop"="telecommunication"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  node["craft"="electronics_repair"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  way["craft"="electronics_repair"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  node["amenity"="telephone"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+  node["office"="telecommunication"](around:${radiusMeters},${zone.latitude},${zone.longitude});
+);
+out body center;`;
+
+        console.log(`marketing-auto-scanner: Overpass query for ${zone.name} - radius: ${radiusMeters}m, lat: ${zone.latitude}, lon: ${zone.longitude}`);
 
         const overpassResponse = await fetch('https://overpass-api.de/api/interpreter', {
           method: 'POST',
@@ -120,15 +123,28 @@ const handler = async (req: Request): Promise<Response> => {
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         });
 
+        const responseText = await overpassResponse.text();
+        
         if (!overpassResponse.ok) {
-          console.error(`marketing-auto-scanner: Overpass error for zone ${zone.name}`);
+          console.error(`marketing-auto-scanner: Overpass HTTP error for zone ${zone.name}: ${overpassResponse.status} - ${responseText.substring(0, 200)}`);
           continue;
         }
 
-        const overpassData = await overpassResponse.json();
+        let overpassData;
+        try {
+          overpassData = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error(`marketing-auto-scanner: Failed to parse Overpass response for zone ${zone.name}: ${responseText.substring(0, 200)}`);
+          continue;
+        }
+
         const elements = overpassData.elements || [];
         
         console.log(`marketing-auto-scanner: Found ${elements.length} shops in zone "${zone.name}"`);
+        
+        if (elements.length === 0) {
+          console.log(`marketing-auto-scanner: No shops found in zone "${zone.name}" - this could be normal for smaller areas`);
+        }
 
         let zoneNewLeads = 0;
 
