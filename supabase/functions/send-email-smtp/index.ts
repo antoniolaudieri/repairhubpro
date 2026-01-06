@@ -74,6 +74,7 @@ const handler = async (req: Request): Promise<Response> => {
       smtp_config: requestSmtpConfig
     }: EmailRequest = await req.json();
     
+    console.log("send-email-smtp: Raw 'to' value received:", JSON.stringify(to));
     console.log("send-email-smtp: Sending email to", to, marketing ? "(marketing)" : "");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
