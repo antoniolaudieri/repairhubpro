@@ -12,8 +12,24 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Play, Pause, Settings, Zap, Clock, Mail, 
   RefreshCw, AlertCircle, CheckCircle, Loader2,
-  Server, Shield, Eye, EyeOff
+  Server, Shield, Eye, EyeOff, FlaskConical, Send
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import { it } from "date-fns/locale";
@@ -32,6 +48,11 @@ export function AutomationTab() {
   const [isRunningManualScan, setIsRunningManualScan] = useState(false);
   const [isProcessingEmails, setIsProcessingEmails] = useState(false);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
+  const [testEmail, setTestEmail] = useState("");
+  const [testBusinessName, setTestBusinessName] = useState("Test Riparazioni Srl");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const [smtpForm, setSmtpForm] = useState<SmtpConfig>({
     host: "",
     port: 587,
@@ -110,6 +131,20 @@ export function AutomationTab() {
         .select("*", { count: "exact", head: true });
       if (error) throw error;
       return { count: count || 0 };
+    },
+  });
+
+  // Fetch templates for test dialog
+  const { data: templates = [] } = useQuery({
+    queryKey: ["marketing-templates-for-test"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("marketing_templates")
+        .select("id, name, type")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -227,6 +262,89 @@ export function AutomationTab() {
       }
     } catch (error: any) {
       toast.error(`Errore test SMTP: ${error.message}`);
+    }
+  };
+
+  // Test complete flow with email
+  const sendTestEmail = async () => {
+    if (!testEmail) {
+      toast.error("Inserisci la tua email");
+      return;
+    }
+    if (!selectedTemplateId) {
+      toast.error("Seleziona un template");
+      return;
+    }
+
+    setIsSendingTest(true);
+    try {
+      // 1. Create a test lead
+      const { data: lead, error: leadError } = await supabase
+        .from("marketing_leads")
+        .insert({
+          business_name: testBusinessName,
+          email: testEmail,
+          address: "Via Test 123, Test City",
+          source: "manual_test",
+          status: "new",
+        })
+        .select()
+        .single();
+
+      if (leadError) throw leadError;
+
+      // 2. Get first funnel stage
+      const { data: firstStage } = await supabase
+        .from("marketing_funnel_stages")
+        .select("id")
+        .eq("stage_order", 1)
+        .single();
+
+      if (firstStage) {
+        await supabase
+          .from("marketing_leads")
+          .update({ funnel_stage_id: firstStage.id })
+          .eq("id", lead.id);
+      }
+
+      // 3. Add to email queue with immediate scheduling
+      const trackingId = crypto.randomUUID();
+      const { error: queueError } = await supabase
+        .from("marketing_email_queue")
+        .insert({
+          lead_id: lead.id,
+          template_id: selectedTemplateId,
+          scheduled_for: new Date().toISOString(),
+          status: "pending",
+          tracking_id: trackingId,
+        });
+
+      if (queueError) throw queueError;
+
+      // 4. Log the test
+      await supabase
+        .from("marketing_automation_logs")
+        .insert({
+          log_type: "test",
+          message: `Test flusso avviato per ${testEmail}`,
+          details: { lead_id: lead.id, email: testEmail, template_id: selectedTemplateId },
+          lead_id: lead.id,
+        });
+
+      toast.success(
+        `Lead di test creato e email schedulata! Clicca "Processa Coda Email" per inviarla subito.`,
+        { duration: 6000 }
+      );
+
+      setIsTestDialogOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["marketing-email-queue-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["marketing-automation-logs"] });
+
+    } catch (error: any) {
+      toast.error(`Errore: ${error.message}`);
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -370,6 +488,103 @@ export function AutomationTab() {
                     </>
                   )}
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Test Flow Card */}
+            <Card className="md:col-span-2 border-2 border-dashed border-primary/30 bg-primary/5">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FlaskConical className="h-5 w-5 text-primary" />
+                  Test Flusso Completo
+                </CardTitle>
+                <CardDescription>
+                  Testa il flusso email marketing completo con la tua email: invio → apertura → click → registrazione
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Dialog open={isTestDialogOpen} onOpenChange={setIsTestDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="w-full" variant="default">
+                      <FlaskConical className="h-4 w-4 mr-2" />
+                      Avvia Test con la Mia Email
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <FlaskConical className="h-5 w-5 text-primary" />
+                        Test Flusso Marketing
+                      </DialogTitle>
+                      <DialogDescription>
+                        Inserisci la tua email per testare l'intero flusso: riceverai un'email con tracking, quando clicchi sul CTA verrai reindirizzato alla registrazione con i parametri corretti.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>La tua Email</Label>
+                        <Input
+                          type="email"
+                          placeholder="tuaemail@esempio.it"
+                          value={testEmail}
+                          onChange={(e) => setTestEmail(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nome Azienda Test</Label>
+                        <Input
+                          placeholder="Test Riparazioni Srl"
+                          value={testBusinessName}
+                          onChange={(e) => setTestBusinessName(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Template Email</Label>
+                        <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Seleziona un template..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {templates.map((t: any) => (
+                              <SelectItem key={t.id} value={t.id}>
+                                {t.name} ({t.type})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="bg-muted/50 p-3 rounded-lg text-sm space-y-1">
+                        <p className="font-medium">Cosa succederà:</p>
+                        <ol className="list-decimal list-inside text-muted-foreground space-y-1">
+                          <li>Verrà creato un lead di test con la tua email</li>
+                          <li>L'email verrà schedulata nella coda</li>
+                          <li>Clicca "Processa Coda Email" per inviarla</li>
+                          <li>Apri l'email → lo stato diventa "Interested"</li>
+                          <li>Clicca il CTA → redirect a /auth con parametri</li>
+                          <li>Registrati → lead diventa "Converted"</li>
+                        </ol>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsTestDialogOpen(false)}>
+                        Annulla
+                      </Button>
+                      <Button onClick={sendTestEmail} disabled={isSendingTest}>
+                        {isSendingTest ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Creazione...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Crea Lead e Schedula Email
+                          </>
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </CardContent>
             </Card>
           </div>
