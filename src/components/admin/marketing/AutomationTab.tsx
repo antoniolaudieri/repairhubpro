@@ -85,17 +85,42 @@ export function AutomationTab() {
     },
   });
 
-  // Manual scan trigger
+  // Manual scan trigger - searches all active zones with Firecrawl
   const runManualScan = async () => {
     setIsRunningManualScan(true);
     try {
-      const { data, error } = await supabase.functions.invoke("marketing-auto-scanner", {
-        body: { manual: true },
-      });
-      if (error) throw error;
-      toast.success(`Scansione completata: ${data.leadsCreated || 0} nuovi lead trovati`);
+      // Get all active zones
+      const { data: zones } = await supabase
+        .from("marketing_scan_zones")
+        .select("id, name")
+        .eq("is_active", true);
+
+      if (!zones || zones.length === 0) {
+        toast.error("Nessuna zona attiva configurata. Aggiungi una zona prima di scansionare.");
+        setIsRunningManualScan(false);
+        return;
+      }
+
+      let totalLeads = 0;
+      let totalResults = 0;
+
+      for (const zone of zones) {
+        toast.info(`Scansione "${zone.name}" in corso...`);
+        
+        const { data, error } = await supabase.functions.invoke("marketing-lead-finder", {
+          body: { zoneId: zone.id, cityName: zone.name, searchType: "both" },
+        });
+        
+        if (!error && data) {
+          totalLeads += data.leadsCreated || 0;
+          totalResults += data.resultsFound || 0;
+        }
+      }
+
+      toast.success(`Scansione completata: ${totalLeads} nuovi lead su ${totalResults} risultati`);
       queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
       queryClient.invalidateQueries({ queryKey: ["marketing-automation-logs"] });
+      queryClient.invalidateQueries({ queryKey: ["marketing-scan-zones"] });
     } catch (error: any) {
       toast.error(`Errore nella scansione: ${error.message}`);
     } finally {
