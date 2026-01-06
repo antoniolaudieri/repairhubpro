@@ -168,18 +168,23 @@ const handler = async (req: Request): Promise<Response> => {
     for (const result of allResults) {
       try {
         // Extract business info from result
-        const businessName = extractBusinessName(result.title, result.url);
-        if (!businessName || businessName.length < 3) continue;
+        const businessName = extractBusinessName(result.title || '', result.url || '');
+        console.log(`marketing-lead-finder: Processing "${businessName}" from ${result.url}`);
+        
+        if (!businessName || businessName.length < 3) {
+          console.log(`marketing-lead-finder: Skipping - name too short: "${businessName}"`);
+          continue;
+        }
 
-        // Check if lead already exists
+        // Check if lead already exists (exact match or similar)
         const { data: existingLeads } = await supabase
           .from("marketing_leads")
-          .select("id")
-          .ilike("business_name", `%${businessName}%`)
+          .select("id, business_name")
+          .or(`business_name.ilike.%${businessName.substring(0, 20)}%,website.eq.${result.url}`)
           .limit(1);
 
         if (existingLeads && existingLeads.length > 0) {
-          console.log(`marketing-lead-finder: Lead "${businessName}" already exists`);
+          console.log(`marketing-lead-finder: Lead "${businessName}" already exists as "${existingLeads[0].business_name}"`);
           continue;
         }
 
@@ -303,30 +308,32 @@ const handler = async (req: Request): Promise<Response> => {
 
 // Helper: Extract business name from title/url
 function extractBusinessName(title: string, url: string): string {
-  // Clean title
-  let name = title
-    .replace(/\s*[-|–—]\s*.*/g, '') // Remove everything after dash
-    .replace(/riparazione|assistenza|centro|negozio|vendita|smartphone|cellulari|telefoni|tablet|iphone|apple|samsung/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
+  // First try: get the first part before dash/pipe
+  let name = title.split(/\s*[-|–—]\s*/)[0].trim();
+  
+  // If that's too long or generic, clean it up
+  if (name.length > 60) {
+    name = name.substring(0, 60);
+  }
 
-  // If too short, try from URL
+  // If name is too short or empty, try from URL
   if (name.length < 3) {
     try {
       const hostname = new URL(url).hostname;
       name = hostname
         .replace(/^www\./, '')
-        .replace(/\.(com|it|net|org|eu|info|biz)$/, '')
+        .replace(/\.(com|it|net|org|eu|info|biz|shop|store)$/g, '')
         .replace(/[-_]/g, ' ')
         .trim();
     } catch {
-      name = title.split(/[-|–—]/)[0].trim();
+      name = title.substring(0, 50).trim();
     }
   }
 
   // Capitalize first letter of each word
   return name
     .split(' ')
+    .filter(word => word.length > 0)
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ')
     .substring(0, 100);
