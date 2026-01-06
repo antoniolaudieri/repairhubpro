@@ -29,7 +29,6 @@ export function ScanZonesTab() {
     longitude: "",
     radius_km: "10",
     scan_frequency_hours: "24",
-    target_type: "both",
   });
   const [scanningZoneId, setScanningZoneId] = useState<string | null>(null);
 
@@ -55,7 +54,6 @@ export function ScanZonesTab() {
         longitude: parseFloat(newZone.longitude),
         radius_km: parseFloat(newZone.radius_km),
         scan_frequency_hours: parseInt(newZone.scan_frequency_hours),
-        target_type: newZone.target_type,
         is_active: true,
       });
       if (error) throw error;
@@ -70,7 +68,6 @@ export function ScanZonesTab() {
         longitude: "",
         radius_km: "10",
         scan_frequency_hours: "24",
-        target_type: "both",
       });
     },
     onError: () => {
@@ -210,7 +207,6 @@ export function ScanZonesTab() {
                 <TableHead>Zona</TableHead>
                 <TableHead>Coordinate</TableHead>
                 <TableHead>Raggio</TableHead>
-                <TableHead>Target</TableHead>
                 <TableHead>Lead Trovati</TableHead>
                 <TableHead>Ultima Scansione</TableHead>
                 <TableHead>Stato</TableHead>
@@ -220,13 +216,13 @@ export function ScanZonesTab() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
                   </TableCell>
                 </TableRow>
               ) : zones.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     Nessuna zona configurata
                   </TableCell>
                 </TableRow>
@@ -243,9 +239,6 @@ export function ScanZonesTab() {
                       {zone.latitude.toFixed(4)}, {zone.longitude.toFixed(4)}
                     </TableCell>
                     <TableCell>{zone.radius_km} km</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">Entrambi</Badge>
-                    </TableCell>
                     <TableCell>
                       <span className="font-semibold">{zone.total_leads_found || 0}</span>
                     </TableCell>
@@ -379,22 +372,6 @@ export function ScanZonesTab() {
                   value={newZone.scan_frequency_hours}
                   onChange={(e) => setNewZone(prev => ({ ...prev, scan_frequency_hours: e.target.value }))}
                 />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Target</Label>
-              <div className="flex gap-2">
-                {["both", "centro", "corner"].map((type) => (
-                  <Button
-                    key={type}
-                    variant={newZone.target_type === type ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setNewZone(prev => ({ ...prev, target_type: type }))}
-                  >
-                    {type === "both" ? "Entrambi" : type === "centro" ? "Centri" : "Corner"}
-                  </Button>
-                ))}
               </div>
             </div>
           </div>
