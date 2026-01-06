@@ -7,7 +7,13 @@ import { MarketingStats } from "@/components/admin/marketing/MarketingStats";
 import { LeadsList } from "@/components/admin/marketing/LeadsList";
 import { LeadDetailDialog } from "@/components/admin/marketing/LeadDetailDialog";
 import { AddLeadDialog } from "@/components/admin/marketing/AddLeadDialog";
-import { Target, Users, MessageSquare, Plus } from "lucide-react";
+import { AutomationTab } from "@/components/admin/marketing/AutomationTab";
+import { ScanZonesTab } from "@/components/admin/marketing/ScanZonesTab";
+import { SequencesTab } from "@/components/admin/marketing/SequencesTab";
+import { FunnelTab } from "@/components/admin/marketing/FunnelTab";
+import { EmailQueueTab } from "@/components/admin/marketing/EmailQueueTab";
+import { AnalyticsTab } from "@/components/admin/marketing/AnalyticsTab";
+import { Target, Users, MessageSquare, Plus, Zap, MapPin, Mail, Filter, BarChart3, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -135,17 +141,61 @@ export default function AdminMarketing() {
         <MarketingStats stats={stats} />
 
         {/* Tabs */}
-        <Tabs defaultValue="leads" className="space-y-4">
-          <TabsList>
+        <Tabs defaultValue="automation" className="space-y-4">
+          <TabsList className="flex-wrap h-auto gap-1">
+            <TabsTrigger value="automation" className="gap-2">
+              <Zap className="h-4 w-4" />
+              Automazione
+            </TabsTrigger>
+            <TabsTrigger value="zones" className="gap-2">
+              <MapPin className="h-4 w-4" />
+              Zone Scansione
+            </TabsTrigger>
+            <TabsTrigger value="sequences" className="gap-2">
+              <Mail className="h-4 w-4" />
+              Sequenze
+            </TabsTrigger>
+            <TabsTrigger value="funnel" className="gap-2">
+              <Filter className="h-4 w-4" />
+              Funnel
+            </TabsTrigger>
+            <TabsTrigger value="queue" className="gap-2">
+              <Send className="h-4 w-4" />
+              Coda Email
+            </TabsTrigger>
             <TabsTrigger value="leads" className="gap-2">
               <Users className="h-4 w-4" />
               Lead
             </TabsTrigger>
             <TabsTrigger value="templates" className="gap-2">
               <MessageSquare className="h-4 w-4" />
-              Template Messaggi
+              Template
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="automation" className="space-y-4">
+            <AutomationTab />
+          </TabsContent>
+
+          <TabsContent value="zones" className="space-y-4">
+            <ScanZonesTab />
+          </TabsContent>
+
+          <TabsContent value="sequences" className="space-y-4">
+            <SequencesTab />
+          </TabsContent>
+
+          <TabsContent value="funnel" className="space-y-4">
+            <FunnelTab />
+          </TabsContent>
+
+          <TabsContent value="queue" className="space-y-4">
+            <EmailQueueTab />
+          </TabsContent>
 
           <TabsContent value="leads" className="space-y-4">
             <LeadsList
@@ -162,6 +212,10 @@ export default function AdminMarketing() {
 
           <TabsContent value="templates" className="space-y-4">
             <TemplatesSection />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4">
+            <AnalyticsTab />
           </TabsContent>
         </Tabs>
 
