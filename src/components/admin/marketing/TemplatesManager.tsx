@@ -30,7 +30,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Edit, Copy, Plus, Trash2, Mail, MessageSquare, Eye, Code, FileText, Sparkles } from "lucide-react";
+import { Edit, Copy, Plus, Trash2, Mail, MessageSquare, Eye, Code, FileText, Sparkles, Wand2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 interface Template {
@@ -47,18 +47,21 @@ interface Template {
 // Sample HTML template for free trial CTA
 const TRIAL_CTA_HTML = `
 <div style="text-align:center;margin:30px 0;">
-  <a href="https://linkriparo.it/auth?trial=true" 
+  <a href="{{tracking_url_demo}}" 
      style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px 32px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;font-size:16px;box-shadow:0 4px 14px rgba(37,99,235,0.4);">
     🚀 Inizia la Prova Gratuita
   </a>
-</div>`;
+</div>
+<p style="text-align:center;color:#888;font-size:13px;">Oppure rispondi a questa email per maggiori informazioni</p>`;
 
-// Sample professional HTML template
+// Professional HTML template with CTA buttons
 const PROFESSIONAL_HTML_TEMPLATE = `<!DOCTYPE html>
 <html lang="it">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="x-apple-disable-message-reformatting">
 </head>
 <body style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333;margin:0;padding:0;background-color:#f5f5f5;">
   <div style="max-width:600px;margin:0 auto;background-color:#ffffff;">
@@ -87,11 +90,19 @@ const PROFESSIONAL_HTML_TEMPLATE = `<!DOCTYPE html>
         <li style="margin-bottom:10px;">🔔 Comunicare automaticamente con i clienti</li>
       </ul>
       
-      <!-- CTA Button -->
+      <!-- Primary CTA Button -->
       <div style="text-align:center;margin:30px 0;">
-        <a href="https://linkriparo.it/auth?trial=true" 
+        <a href="{{tracking_url_demo}}" 
            style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px 32px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;font-size:16px;box-shadow:0 4px 14px rgba(37,99,235,0.4);">
-          Inizia la Prova Gratuita
+          🚀 Inizia la Prova Gratuita
+        </a>
+      </div>
+      
+      <!-- Secondary CTA -->
+      <div style="text-align:center;margin:20px 0;">
+        <a href="{{tracking_url_interest}}" 
+           style="color:#2563eb;text-decoration:underline;font-size:14px;">
+          Sono interessato, vorrei più informazioni
         </a>
       </div>
       
@@ -103,15 +114,77 @@ const PROFESSIONAL_HTML_TEMPLATE = `<!DOCTYPE html>
       </p>
     </div>
     
-    <!-- Footer with logo -->
+    <!-- Footer -->
     <div style="background:#f8f9fa;padding:20px;text-align:center;border-top:1px solid #e0e0e0;">
-      <p style="color:#888;margin:0;font-size:12px;">
-        © 2024 LinkRiparo - Sistema di Gestione Riparazioni
+      <p style="color:#888;margin:0 0 10px;font-size:12px;">
+        © ${new Date().getFullYear()} LinkRiparo - Sistema di Gestione Riparazioni
+      </p>
+      <p style="margin:0;">
+        <a href="{{unsubscribe_url}}" style="color:#888;font-size:11px;text-decoration:underline;">
+          Clicca qui per non ricevere più email
+        </a>
       </p>
     </div>
   </div>
 </body>
 </html>`;
+
+// Function to convert plain text to professional HTML
+const convertToHtml = (plainText: string, subject: string): string => {
+  // Parse the content to extract key sections
+  const lines = plainText.split('\n').filter(line => line.trim());
+  
+  return `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="x-apple-disable-message-reformatting">
+</head>
+<body style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333;margin:0;padding:0;background-color:#f5f5f5;">
+  <div style="max-width:600px;margin:0 auto;background-color:#ffffff;">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:30px;text-align:center;">
+      <h1 style="color:#ffffff;margin:0;font-size:24px;">LinkRiparo</h1>
+    </div>
+    
+    <!-- Content -->
+    <div style="padding:40px 30px;">
+${lines.map(line => `      <p style="color:#555;margin:0 0 16px;">${line}</p>`).join('\n')}
+      
+      <!-- Primary CTA Button -->
+      <div style="text-align:center;margin:30px 0;">
+        <a href="{{tracking_url_demo}}" 
+           style="background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff;padding:16px 32px;text-decoration:none;border-radius:8px;display:inline-block;font-weight:600;font-size:16px;box-shadow:0 4px 14px rgba(37,99,235,0.4);">
+          🚀 Inizia la Prova Gratuita
+        </a>
+      </div>
+      
+      <!-- Secondary CTA -->
+      <div style="text-align:center;margin:20px 0;">
+        <a href="{{tracking_url_interest}}" 
+           style="color:#2563eb;text-decoration:underline;font-size:14px;">
+          Sono interessato, vorrei più informazioni
+        </a>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div style="background:#f8f9fa;padding:20px;text-align:center;border-top:1px solid #e0e0e0;">
+      <p style="color:#888;margin:0 0 10px;font-size:12px;">
+        © ${new Date().getFullYear()} LinkRiparo - Sistema di Gestione Riparazioni
+      </p>
+      <p style="margin:0;">
+        <a href="{{unsubscribe_url}}" style="color:#888;font-size:11px;text-decoration:underline;">
+          Clicca qui per non ricevere più email
+        </a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>`;
+};
 
 export function TemplatesManager() {
   const queryClient = useQueryClient();
@@ -267,6 +340,20 @@ export function TemplatesManager() {
     });
     setIsHtmlMode(true);
     toast.success("Template HTML professionale caricato!");
+  };
+
+  const convertCurrentToHtml = () => {
+    if (!editForm.content.includes('<')) {
+      const htmlVersion = convertToHtml(editForm.content, editForm.subject);
+      setEditForm({
+        ...editForm,
+        content: htmlVersion,
+      });
+      setIsHtmlMode(true);
+      toast.success("Template convertito in HTML con pulsanti CTA!");
+    } else {
+      toast.info("Il template è già in formato HTML");
+    }
   };
 
   const getTypeIcon = (type: string) => {
@@ -504,7 +591,7 @@ export function TemplatesManager() {
                 </div>
               )}
               
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={isHtmlMode}
@@ -512,7 +599,11 @@ export function TemplatesManager() {
                   />
                   <Label>Modalità HTML</Label>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={convertCurrentToHtml}>
+                    <Wand2 className="h-4 w-4 mr-1" />
+                    Converti in HTML
+                  </Button>
                   <Button variant="outline" size="sm" onClick={useHtmlTemplate}>
                     <FileText className="h-4 w-4 mr-1" />
                     Template HTML
@@ -534,7 +625,7 @@ export function TemplatesManager() {
                   placeholder={isHtmlMode ? "<!DOCTYPE html>..." : "Scrivi il contenuto del template..."}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Variabili: {"{{business_name}}"}, {"{{email}}"}, {"{{phone}}"}, {"{{address}}"}, {"{{website}}"}
+                  Variabili: {"{{business_name}}"}, {"{{email}}"}, {"{{phone}}"}, {"{{address}}"}, {"{{website}}"}, {"{{tracking_url_demo}}"}, {"{{tracking_url_interest}}"}, {"{{unsubscribe_url}}"}
                 </p>
               </div>
 
@@ -622,7 +713,7 @@ export function TemplatesManager() {
                 </div>
               )}
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={isHtmlMode}
@@ -630,7 +721,11 @@ export function TemplatesManager() {
                   />
                   <Label>Modalità HTML</Label>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={convertCurrentToHtml}>
+                    <Wand2 className="h-4 w-4 mr-1" />
+                    Converti in HTML
+                  </Button>
                   <Button variant="outline" size="sm" onClick={useHtmlTemplate}>
                     <FileText className="h-4 w-4 mr-1" />
                     Template HTML
@@ -652,7 +747,7 @@ export function TemplatesManager() {
                   placeholder={isHtmlMode ? "<!DOCTYPE html>..." : "Scrivi il contenuto del template..."}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Variabili: {"{{business_name}}"}, {"{{email}}"}, {"{{phone}}"}, {"{{address}}"}, {"{{website}}"}
+                  Variabili: {"{{business_name}}"}, {"{{email}}"}, {"{{phone}}"}, {"{{address}}"}, {"{{website}}"}, {"{{tracking_url_demo}}"}, {"{{tracking_url_interest}}"}, {"{{unsubscribe_url}}"}
                 </p>
               </div>
 
