@@ -102,7 +102,28 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const fromName = from_name_override || smtpConfig?.from_name || centroName;
-    const recipients = Array.isArray(to) ? to : [to];
+    
+    // Normalize recipients - ensure they are valid email strings
+    const normalizeEmail = (email: string): string => {
+      if (!email) return '';
+      const trimmed = email.trim();
+      // Check if already in "Name <email>" format
+      if (trimmed.includes('<') && trimmed.includes('>')) {
+        return trimmed;
+      }
+      // Just return the email
+      return trimmed;
+    };
+    
+    const rawRecipients = Array.isArray(to) ? to : [to];
+    const recipients = rawRecipients
+      .map(normalizeEmail)
+      .filter(email => email && email.includes('@'));
+    
+    if (recipients.length === 0) {
+      throw new Error("No valid email recipients provided");
+    }
+    
     const fromEmail = smtpConfig?.from_email || "noreply@linkriparo.it";
     const domain = fromEmail.split("@")[1] || "linkriparo.it";
 
