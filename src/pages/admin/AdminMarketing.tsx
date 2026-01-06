@@ -13,6 +13,7 @@ import { SequencesTab } from "@/components/admin/marketing/SequencesTab";
 import { FunnelTab } from "@/components/admin/marketing/FunnelTab";
 import { EmailQueueTab } from "@/components/admin/marketing/EmailQueueTab";
 import { AnalyticsTab } from "@/components/admin/marketing/AnalyticsTab";
+import { TemplatesManager } from "@/components/admin/marketing/TemplatesManager";
 import { Target, Users, MessageSquare, Plus, Zap, MapPin, Mail, Filter, BarChart3, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -231,7 +232,7 @@ export default function AdminMarketing() {
           </TabsContent>
 
           <TabsContent value="templates" className="space-y-4">
-            <TemplatesSection />
+            <TemplatesManager />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
@@ -253,65 +254,5 @@ export default function AdminMarketing() {
         />
       </div>
     </PlatformAdminLayout>
-  );
-}
-
-// Templates Section Component
-function TemplatesSection() {
-  const { data: templates = [], isLoading } = useQuery({
-    queryKey: ["marketing-templates"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("marketing_templates")
-        .select("*")
-        .eq("is_active", true)
-        .order("sort_order");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  if (isLoading) {
-    return (
-      <div className="grid gap-4 md:grid-cols-2">
-        {[1, 2, 3, 4].map(i => (
-          <div key={i} className="h-48 bg-muted/50 rounded-xl animate-pulse" />
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {templates.map(template => (
-        <div key={template.id} className="p-4 bg-card rounded-xl border shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold">{template.name}</h3>
-            <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded-full">
-              {template.type}
-            </span>
-          </div>
-          {template.subject && (
-            <p className="text-sm text-muted-foreground mb-2">
-              <strong>Oggetto:</strong> {template.subject}
-            </p>
-          )}
-          <p className="text-sm text-muted-foreground line-clamp-4 whitespace-pre-wrap">
-            {template.content.substring(0, 200)}...
-          </p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => {
-              navigator.clipboard.writeText(template.content);
-              toast.success("Template copiato!");
-            }}
-          >
-            Copia Template
-          </Button>
-        </div>
-      ))}
-    </div>
   );
 }
