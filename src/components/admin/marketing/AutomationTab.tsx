@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -71,23 +71,24 @@ export function AutomationTab() {
         .select("*")
         .single();
       if (error) throw error;
-      
-      // Initialize SMTP form with saved config
-      if (data?.smtp_config) {
-        const config = data.smtp_config as unknown as SmtpConfig;
-        setSmtpForm({
-          host: config.host || "",
-          port: config.port || 587,
-          secure: config.secure || false,
-          user: config.user || "",
-          password: config.password || "",
-          from_email: config.from_email || "",
-        });
-      }
-      
       return data;
     },
   });
+
+  // Sync SMTP form with settings when loaded
+  useEffect(() => {
+    if (settings?.smtp_config) {
+      const config = settings.smtp_config as unknown as SmtpConfig;
+      setSmtpForm({
+        host: config.host || "",
+        port: config.port || 587,
+        secure: config.secure || false,
+        user: config.user || "",
+        password: config.password || "",
+        from_email: config.from_email || "",
+      });
+    }
+  }, [settings]);
 
   // Fetch recent logs
   const { data: logs = [] } = useQuery({
