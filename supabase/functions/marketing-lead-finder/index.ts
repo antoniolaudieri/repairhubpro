@@ -238,9 +238,9 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
-        // Skip if still no email AND no phone after deep scrape
-        if (!contactInfo.email && !contactInfo.phone) {
-          console.log(`marketing-lead-finder: Skipping "${businessName}" - no email or phone found even after deep scrape`);
+        // Skip if no email - email is required, phone is optional
+        if (!contactInfo.email) {
+          console.log(`marketing-lead-finder: Skipping "${businessName}" - no email found (phone: ${contactInfo.phone || 'none'})`);
           continue;
         }
 
