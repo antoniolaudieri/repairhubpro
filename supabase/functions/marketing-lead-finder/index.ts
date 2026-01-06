@@ -191,8 +191,14 @@ const handler = async (req: Request): Promise<Response> => {
         // Extract contact info from markdown if available
         const contactInfo = extractContactInfo(result.markdown || result.description || '');
 
+        // Skip if no email AND no phone
+        if (!contactInfo.email && !contactInfo.phone) {
+          console.log(`marketing-lead-finder: Skipping "${businessName}" - no email or phone found`);
+          continue;
+        }
+
         // Determine business type
-        const businessType = determineBusinessType(result.title, result.description || '');
+        const businessType = determineBusinessType(result.title || '', result.description || '');
 
         // Create lead
         const { data: newLead, error: leadError } = await supabase
