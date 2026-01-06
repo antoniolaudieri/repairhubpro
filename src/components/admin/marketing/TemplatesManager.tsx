@@ -77,7 +77,7 @@ export function TemplatesManager() {
           type: template.type,
           subject: template.subject,
           content: template.content,
-          target_type: template.target_type,
+          target_type: template.target_type as "centro" | "corner" | "altro" | "computer" | "elettronica" | "telefonia" | null,
         })
         .eq("id", template.id);
       if (error) throw error;
@@ -97,9 +97,11 @@ export function TemplatesManager() {
       const { error } = await supabase
         .from("marketing_templates")
         .insert({
-          ...template,
-          is_active: true,
-          sort_order: templates.length + 1,
+          name: template.name,
+          type: template.type,
+          subject: template.subject,
+          content: template.content,
+          target_type: template.target_type as "centro" | "corner" | "altro" | "computer" | "elettronica" | "telefonia" | null,
         });
       if (error) throw error;
     },
