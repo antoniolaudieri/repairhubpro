@@ -56,6 +56,16 @@ const handler = async (req: Request): Promise<Response> => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+  // Parse request body to check for manual flag
+  let isManualTrigger = false;
+  try {
+    const body = await req.json();
+    isManualTrigger = body?.manual === true;
+    console.log(`marketing-email-processor: Manual trigger: ${isManualTrigger}`);
+  } catch {
+    // No body or invalid JSON, treat as automatic
+  }
+
   try {
     // Check if automation is enabled
     const { data: settings } = await supabase
@@ -63,42 +73,57 @@ const handler = async (req: Request): Promise<Response> => {
       .select("*")
       .single();
 
-    if (!settings?.is_enabled || !settings?.auto_email_enabled) {
-      console.log("marketing-email-processor: Email automation disabled");
+    // For manual triggers, only check if is_enabled (not auto_email_enabled)
+    if (!settings?.is_enabled) {
+      console.log("marketing-email-processor: Automation completely disabled");
       return new Response(
-        JSON.stringify({ success: true, message: "Email automation disabled", sent: 0 }),
+        JSON.stringify({ success: true, message: "Automation disabled", sent: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Check if we're within allowed hours
-    const now = new Date();
-    const currentHour = now.getUTCHours() + 1; // Approximate CET
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const currentDay = dayNames[now.getDay()];
-
-    if (currentHour < settings.email_send_hours_start || currentHour >= settings.email_send_hours_end) {
-      console.log(`marketing-email-processor: Outside sending hours (${currentHour})`);
+    // For automatic triggers, also check auto_email_enabled
+    if (!isManualTrigger && !settings?.auto_email_enabled) {
+      console.log("marketing-email-processor: Auto email disabled (not manual)");
       return new Response(
-        JSON.stringify({ success: true, message: "Outside sending hours", sent: 0 }),
+        JSON.stringify({ success: true, message: "Auto email disabled", sent: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    if (!settings.email_send_days.includes(currentDay)) {
-      console.log(`marketing-email-processor: Not a sending day (${currentDay})`);
-      return new Response(
-        JSON.stringify({ success: true, message: "Not a sending day", sent: 0 }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Skip time/day checks for manual triggers
+    if (!isManualTrigger) {
+      const now = new Date();
+      const currentHour = now.getUTCHours() + 1; // Approximate CET
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const currentDay = dayNames[now.getDay()];
+
+      if (currentHour < settings.email_send_hours_start || currentHour >= settings.email_send_hours_end) {
+        console.log(`marketing-email-processor: Outside sending hours (${currentHour})`);
+        return new Response(
+          JSON.stringify({ success: true, message: "Outside sending hours", sent: 0 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!settings.email_send_days.includes(currentDay)) {
+        console.log(`marketing-email-processor: Not a sending day (${currentDay})`);
+        return new Response(
+          JSON.stringify({ success: true, message: "Not a sending day", sent: 0 }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else {
+      console.log("marketing-email-processor: Skipping time/day checks (manual trigger)");
     }
 
     // Get pending emails that are due
+    const nowDate = new Date();
     const { data: pendingEmails, error: queueError } = await supabase
       .from("marketing_email_queue")
       .select("*")
       .eq("status", "pending")
-      .lte("scheduled_for", now.toISOString())
+      .lte("scheduled_for", nowDate.toISOString())
       .order("scheduled_for", { ascending: true })
       .limit(settings.max_emails_per_day);
 
