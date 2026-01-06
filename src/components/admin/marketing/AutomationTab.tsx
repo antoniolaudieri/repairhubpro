@@ -240,12 +240,20 @@ export function AutomationTab() {
       return;
     }
 
+    // Use from_email as the test recipient, or fallback to user if it's an email
+    const testRecipient = smtpForm.from_email || (smtpForm.user.includes('@') ? smtpForm.user : null);
+    
+    if (!testRecipient) {
+      toast.error("Inserisci un'email mittente valida per il test");
+      return;
+    }
+
     toast.info("Test connessione SMTP in corso...");
     
     try {
       const { data, error } = await supabase.functions.invoke("send-email-smtp", {
         body: {
-          to: smtpForm.user,
+          to: testRecipient,
           subject: "Test SMTP - LinkRiparo Marketing",
           html: "<h1>Test SMTP</h1><p>Se ricevi questa email, la configurazione SMTP è corretta!</p>",
           from_name_override: "LinkRiparo Test",
@@ -256,7 +264,7 @@ export function AutomationTab() {
       if (error) throw error;
       
       if (data?.success) {
-        toast.success(`Test riuscito! Email inviata via ${data.method}`);
+        toast.success(`Test riuscito! Email inviata a ${testRecipient} via ${data.method}`);
       } else {
         toast.error(data?.error || "Test fallito");
       }
