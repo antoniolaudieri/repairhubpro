@@ -37,6 +37,14 @@ interface MarketingTemplate {
   content: string;
 }
 
+interface SmtpConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password: string;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("marketing-email-processor: Starting email processing");
   
@@ -106,9 +114,20 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`marketing-email-processor: Found ${pendingEmails.length} pending emails`);
 
+    // Check for unsubscribed emails
+    const { data: unsubscribes } = await supabase
+      .from("marketing_unsubscribes")
+      .select("email");
+    const unsubscribedEmails = new Set((unsubscribes || []).map(u => u.email.toLowerCase()));
+
     let sentCount = 0;
     let failedCount = 0;
     let skippedCount = 0;
+
+    // SMTP config from settings
+    const smtpConfig = settings.smtp_config as SmtpConfig | null;
+    const senderName = settings.marketing_sender_name || "LinkRiparo";
+    const physicalAddress = settings.physical_address || "Via Example 123, Roma";
 
     for (const email of pendingEmails as EmailQueueItem[]) {
       try {
@@ -137,6 +156,17 @@ const handler = async (req: Request): Promise<Response> => {
           await supabase
             .from("marketing_email_queue")
             .update({ status: 'skipped', error_message: 'No email address' })
+            .eq("id", email.id);
+          skippedCount++;
+          continue;
+        }
+
+        // Check if unsubscribed
+        if (unsubscribedEmails.has(typedLead.email.toLowerCase())) {
+          console.log(`marketing-email-processor: Email unsubscribed: ${typedLead.email}`);
+          await supabase
+            .from("marketing_email_queue")
+            .update({ status: 'skipped', error_message: 'Email unsubscribed' })
             .eq("id", email.id);
           skippedCount++;
           continue;
@@ -194,10 +224,12 @@ const handler = async (req: Request): Promise<Response> => {
 
         const typedTemplate = template as MarketingTemplate;
 
-        // Replace variables in template
+        // Build tracking URLs
         const trackingPixelUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=open`;
         const clickTrackingBase = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=click&url=`;
+        const unsubscribeUrl = `${supabaseUrl}/functions/v1/marketing-unsubscribe?email=${encodeURIComponent(typedLead.email)}&lead_id=${email.lead_id}`;
 
+        // Replace variables in template
         let emailContent = typedTemplate.content
           .replace(/\{\{business_name\}\}/g, typedLead.business_name)
           .replace(/\{\{address\}\}/g, typedLead.address || '')
@@ -205,8 +237,21 @@ const handler = async (req: Request): Promise<Response> => {
           .replace(/\{\{website\}\}/g, typedLead.website || '')
           .replace(/\{\{email\}\}/g, typedLead.email);
 
-        // Add tracking pixel
-        emailContent += `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none" alt="" />`;
+        // Check if content is already HTML or plain text
+        const isHtml = emailContent.includes('<') && emailContent.includes('>');
+        
+        if (!isHtml) {
+          // Wrap plain text in HTML structure
+          emailContent = `<!DOCTYPE html>
+<html lang="it">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:#333;margin:0;padding:0;">
+  <div style="max-width:600px;margin:0 auto;padding:20px;">
+    ${emailContent.replace(/\n/g, '<br>')}
+  </div>
+</body>
+</html>`;
+        }
 
         // Replace links with tracked versions
         emailContent = emailContent.replace(
@@ -214,6 +259,32 @@ const handler = async (req: Request): Promise<Response> => {
           (match, url) => `href="${clickTrackingBase}${encodeURIComponent(url)}"`
         );
 
+        // Add anti-spam footer with unsubscribe link
+        const antiSpamFooter = `
+<div style="margin-top:40px;padding-top:20px;border-top:1px solid #e0e0e0;text-align:center;color:#888;font-size:12px;">
+  <p style="margin:0 0 10px 0;">${senderName}</p>
+  <p style="margin:0 0 10px 0;">${physicalAddress}</p>
+  <p style="margin:0;">
+    <a href="${unsubscribeUrl}" style="color:#888;text-decoration:underline;">Clicca qui per disiscriverti</a>
+  </p>
+</div>`;
+
+        // Insert footer before </body> or append
+        if (emailContent.includes('</body>')) {
+          emailContent = emailContent.replace('</body>', `${antiSpamFooter}</body>`);
+        } else {
+          emailContent += antiSpamFooter;
+        }
+
+        // Add tracking pixel
+        const trackingPixel = `<img src="${trackingPixelUrl}" width="1" height="1" style="display:none;width:1px;height:1px;" alt="" />`;
+        if (emailContent.includes('</body>')) {
+          emailContent = emailContent.replace('</body>', `${trackingPixel}</body>`);
+        } else {
+          emailContent += trackingPixel;
+        }
+
+        // Build subject
         let emailSubject = typedTemplate.subject || `${typedTemplate.name} - LinkRiparo`;
         emailSubject = emailSubject.replace(/\{\{business_name\}\}/g, typedLead.business_name);
 
@@ -223,17 +294,30 @@ const handler = async (req: Request): Promise<Response> => {
           .update({ status: 'processing' })
           .eq("id", email.id);
 
-        // Try to send via SMTP using platform SMTP settings
-        // For now, we'll use Resend as fallback
-        const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-        
-        if (!RESEND_API_KEY) {
-          console.log("marketing-email-processor: No RESEND_API_KEY configured");
+        // Send email via send-email-smtp function
+        console.log(`marketing-email-processor: Sending email to ${typedLead.email}`);
+
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke("send-email-smtp", {
+          body: {
+            to: typedLead.email,
+            subject: emailSubject,
+            html: emailContent,
+            from_name_override: senderName,
+            marketing: true,
+            unsubscribe_email: typedLead.email,
+            unsubscribe_url: unsubscribeUrl,
+            lead_id: email.lead_id,
+            smtp_config: smtpConfig,
+          },
+        });
+
+        if (emailError) {
+          console.error("marketing-email-processor: Email send failed:", emailError);
           await supabase
             .from("marketing_email_queue")
             .update({ 
               status: 'failed', 
-              error_message: 'No email service configured',
+              error_message: emailError.message || 'Send failed',
               retry_count: email.retry_count + 1 
             })
             .eq("id", email.id);
@@ -241,29 +325,13 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
 
-        const emailResponse = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${RESEND_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: "LinkRiparo <onboarding@resend.dev>",
-            to: [typedLead.email],
-            subject: emailSubject,
-            html: emailContent,
-          }),
-        });
-
-        const emailResult = await emailResponse.json();
-
-        if (!emailResponse.ok) {
-          console.error("marketing-email-processor: Email send failed:", emailResult);
+        if (!emailResult?.success) {
+          console.error("marketing-email-processor: Email send failed:", emailResult?.error);
           await supabase
             .from("marketing_email_queue")
             .update({ 
               status: 'failed', 
-              error_message: emailResult.message || 'Send failed',
+              error_message: emailResult?.error || 'Send failed',
               retry_count: email.retry_count + 1 
             })
             .eq("id", email.id);
@@ -344,19 +412,19 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         sentCount++;
-        console.log(`marketing-email-processor: Sent email to ${typedLead.email}`);
+        console.log(`marketing-email-processor: Sent email to ${typedLead.email} via ${emailResult.method || 'smtp'}`);
 
         // Log success
         await supabase
           .from("marketing_automation_logs")
           .insert({
             log_type: 'email',
-            message: `Email inviata a ${typedLead.business_name} (${typedLead.email})`,
+            message: `Email inviata a ${typedLead.business_name} (${typedLead.email}) via ${emailResult.method || 'smtp'}`,
             details: { 
               lead_id: email.lead_id, 
               template_id: email.template_id,
               sequence_step: email.step_number,
-              resend_id: emailResult.id 
+              method: emailResult.method,
             },
             lead_id: email.lead_id,
             email_queue_id: email.id,
@@ -394,7 +462,8 @@ const handler = async (req: Request): Promise<Response> => {
         success: true, 
         sent: sentCount,
         failed: failedCount,
-        skipped: skippedCount
+        skipped: skippedCount,
+        processed: sentCount
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
