@@ -164,3 +164,6 @@ verify_jwt = false
 
 [functions.marketing-funnel-updater]
 verify_jwt = false
+
+[functions.marketing-lead-finder]
+verify_jwt = false

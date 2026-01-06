@@ -107,15 +107,15 @@ export function ScanZonesTab() {
     },
   });
 
-  // Scan single zone
+  // Scan single zone using Firecrawl
   const scanZone = async (zone: typeof zones[0]) => {
     setScanningZoneId(zone.id);
     try {
-      const { data, error } = await supabase.functions.invoke("marketing-auto-scanner", {
-        body: { zoneId: zone.id },
+      const { data, error } = await supabase.functions.invoke("marketing-lead-finder", {
+        body: { zoneId: zone.id, cityName: zone.name, searchType: "both" },
       });
       if (error) throw error;
-      toast.success(`Scansione completata: ${data.leadsCreated || 0} nuovi lead`);
+      toast.success(`Ricerca completata: ${data.leadsCreated || 0} nuovi lead su ${data.resultsFound || 0} risultati`);
       queryClient.invalidateQueries({ queryKey: ["marketing-scan-zones"] });
       queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
     } catch (error: any) {
