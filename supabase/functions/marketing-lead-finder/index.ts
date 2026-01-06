@@ -426,7 +426,7 @@ function determineBusinessType(title: string, description: string): string {
   const text = `${title} ${description}`.toLowerCase();
   
   if (text.includes('riparazione') || text.includes('assistenza') || text.includes('repair')) {
-    return 'centro_assistenza';
+    return 'centro';
   }
   if (text.includes('negozio') || text.includes('vendita') || text.includes('store')) {
     return 'corner';
