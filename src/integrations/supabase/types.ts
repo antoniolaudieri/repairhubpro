@@ -3168,6 +3168,280 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_automation_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          email_queue_id: string | null
+          id: string
+          lead_id: string | null
+          log_type: string
+          message: string
+          zone_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          email_queue_id?: string | null
+          id?: string
+          lead_id?: string | null
+          log_type: string
+          message: string
+          zone_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          email_queue_id?: string | null
+          id?: string
+          lead_id?: string | null
+          log_type?: string
+          message?: string
+          zone_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_automation_logs_email_queue_id_fkey"
+            columns: ["email_queue_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_email_queue"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_automation_logs_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_automation_logs_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_scan_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_automation_settings: {
+        Row: {
+          auto_email_enabled: boolean
+          auto_funnel_enabled: boolean
+          auto_scan_enabled: boolean
+          blacklisted_domains: string[] | null
+          blacklisted_emails: string[] | null
+          created_at: string
+          email_send_days: string[]
+          email_send_hours_end: number
+          email_send_hours_start: number
+          id: string
+          is_enabled: boolean
+          max_emails_per_day: number
+          min_delay_between_emails_hours: number
+          updated_at: string
+        }
+        Insert: {
+          auto_email_enabled?: boolean
+          auto_funnel_enabled?: boolean
+          auto_scan_enabled?: boolean
+          blacklisted_domains?: string[] | null
+          blacklisted_emails?: string[] | null
+          created_at?: string
+          email_send_days?: string[]
+          email_send_hours_end?: number
+          email_send_hours_start?: number
+          id?: string
+          is_enabled?: boolean
+          max_emails_per_day?: number
+          min_delay_between_emails_hours?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_email_enabled?: boolean
+          auto_funnel_enabled?: boolean
+          auto_scan_enabled?: boolean
+          blacklisted_domains?: string[] | null
+          blacklisted_emails?: string[] | null
+          created_at?: string
+          email_send_days?: string[]
+          email_send_hours_end?: number
+          email_send_hours_start?: number
+          id?: string
+          is_enabled?: boolean
+          max_emails_per_day?: number
+          min_delay_between_emails_hours?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      marketing_email_queue: {
+        Row: {
+          click_count: number
+          clicked_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          lead_id: string
+          open_count: number
+          opened_at: string | null
+          retry_count: number
+          scheduled_for: string
+          sent_at: string | null
+          sequence_id: string | null
+          status: string
+          step_number: number | null
+          template_id: string
+          tracking_id: string
+          updated_at: string
+        }
+        Insert: {
+          click_count?: number
+          clicked_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id: string
+          open_count?: number
+          opened_at?: string | null
+          retry_count?: number
+          scheduled_for: string
+          sent_at?: string | null
+          sequence_id?: string | null
+          status?: string
+          step_number?: number | null
+          template_id: string
+          tracking_id?: string
+          updated_at?: string
+        }
+        Update: {
+          click_count?: number
+          clicked_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string
+          open_count?: number
+          opened_at?: string | null
+          retry_count?: number
+          scheduled_for?: string
+          sent_at?: string | null
+          sequence_id?: string | null
+          status?: string
+          step_number?: number | null
+          template_id?: string
+          tracking_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_email_queue_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_email_queue_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_email_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_email_queue_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_email_sequences: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          target_type: string
+          total_steps: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          target_type?: string
+          total_steps?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          target_type?: string
+          total_steps?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      marketing_funnel_stages: {
+        Row: {
+          auto_advance_after_days: number | null
+          auto_advance_condition: string | null
+          auto_advance_to_stage_id: string | null
+          color: string
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_final: boolean
+          name: string
+          stage_order: number
+        }
+        Insert: {
+          auto_advance_after_days?: number | null
+          auto_advance_condition?: string | null
+          auto_advance_to_stage_id?: string | null
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_final?: boolean
+          name: string
+          stage_order: number
+        }
+        Update: {
+          auto_advance_after_days?: number | null
+          auto_advance_condition?: string | null
+          auto_advance_to_stage_id?: string | null
+          color?: string
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_final?: boolean
+          name?: string
+          stage_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_funnel_stages_auto_advance_to_stage_id_fkey"
+            columns: ["auto_advance_to_stage_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_funnel_stages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketing_interactions: {
         Row: {
           created_at: string
@@ -3216,6 +3490,7 @@ export type Database = {
         Row: {
           address: string | null
           assigned_to: string | null
+          auto_processed: boolean
           business_name: string
           business_type: Database["public"]["Enums"]["marketing_business_type"]
           contacted_at: string | null
@@ -3223,14 +3498,23 @@ export type Database = {
           converted_entity_id: string | null
           converted_entity_type: string | null
           created_at: string
+          current_sequence_id: string | null
+          current_step: number | null
           email: string | null
+          email_clicks_count: number
+          email_opens_count: number
+          funnel_stage_id: string | null
           id: string
+          last_email_sent_at: string | null
           last_interaction_at: string | null
           latitude: number | null
           longitude: number | null
           next_followup_at: string | null
           notes: string | null
           phone: string | null
+          scan_zone_id: string | null
+          sequence_completed_at: string | null
+          sequence_started_at: string | null
           source: string
           status: Database["public"]["Enums"]["marketing_lead_status"]
           updated_at: string
@@ -3239,6 +3523,7 @@ export type Database = {
         Insert: {
           address?: string | null
           assigned_to?: string | null
+          auto_processed?: boolean
           business_name: string
           business_type?: Database["public"]["Enums"]["marketing_business_type"]
           contacted_at?: string | null
@@ -3246,14 +3531,23 @@ export type Database = {
           converted_entity_id?: string | null
           converted_entity_type?: string | null
           created_at?: string
+          current_sequence_id?: string | null
+          current_step?: number | null
           email?: string | null
+          email_clicks_count?: number
+          email_opens_count?: number
+          funnel_stage_id?: string | null
           id?: string
+          last_email_sent_at?: string | null
           last_interaction_at?: string | null
           latitude?: number | null
           longitude?: number | null
           next_followup_at?: string | null
           notes?: string | null
           phone?: string | null
+          scan_zone_id?: string | null
+          sequence_completed_at?: string | null
+          sequence_started_at?: string | null
           source?: string
           status?: Database["public"]["Enums"]["marketing_lead_status"]
           updated_at?: string
@@ -3262,6 +3556,7 @@ export type Database = {
         Update: {
           address?: string | null
           assigned_to?: string | null
+          auto_processed?: boolean
           business_name?: string
           business_type?: Database["public"]["Enums"]["marketing_business_type"]
           contacted_at?: string | null
@@ -3269,20 +3564,150 @@ export type Database = {
           converted_entity_id?: string | null
           converted_entity_type?: string | null
           created_at?: string
+          current_sequence_id?: string | null
+          current_step?: number | null
           email?: string | null
+          email_clicks_count?: number
+          email_opens_count?: number
+          funnel_stage_id?: string | null
           id?: string
+          last_email_sent_at?: string | null
           last_interaction_at?: string | null
           latitude?: number | null
           longitude?: number | null
           next_followup_at?: string | null
           notes?: string | null
           phone?: string | null
+          scan_zone_id?: string | null
+          sequence_completed_at?: string | null
+          sequence_started_at?: string | null
           source?: string
           status?: Database["public"]["Enums"]["marketing_lead_status"]
           updated_at?: string
           website?: string | null
         }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_leads_current_sequence_id_fkey"
+            columns: ["current_sequence_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_email_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_leads_funnel_stage_id_fkey"
+            columns: ["funnel_stage_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_funnel_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_leads_scan_zone_id_fkey"
+            columns: ["scan_zone_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_scan_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_scan_zones: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          last_scanned_at: string | null
+          latitude: number
+          longitude: number
+          name: string
+          next_scan_at: string | null
+          radius_km: number
+          scan_frequency_hours: number
+          search_keywords: string[] | null
+          total_leads_found: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scanned_at?: string | null
+          latitude: number
+          longitude: number
+          name: string
+          next_scan_at?: string | null
+          radius_km?: number
+          scan_frequency_hours?: number
+          search_keywords?: string[] | null
+          total_leads_found?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_scanned_at?: string | null
+          latitude?: number
+          longitude?: number
+          name?: string
+          next_scan_at?: string | null
+          radius_km?: number
+          scan_frequency_hours?: number
+          search_keywords?: string[] | null
+          total_leads_found?: number
+          updated_at?: string
+        }
         Relationships: []
+      }
+      marketing_sequence_steps: {
+        Row: {
+          condition: string
+          created_at: string
+          delay_days: number
+          delay_hours: number
+          id: string
+          is_active: boolean
+          sequence_id: string
+          step_number: number
+          template_id: string
+        }
+        Insert: {
+          condition?: string
+          created_at?: string
+          delay_days?: number
+          delay_hours?: number
+          id?: string
+          is_active?: boolean
+          sequence_id: string
+          step_number: number
+          template_id: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          delay_days?: number
+          delay_hours?: number
+          id?: string
+          is_active?: boolean
+          sequence_id?: string
+          step_number?: number
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_sequence_steps_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_email_sequences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_sequence_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "marketing_templates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       marketing_templates: {
         Row: {
