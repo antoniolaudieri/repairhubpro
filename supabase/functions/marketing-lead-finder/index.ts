@@ -37,7 +37,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const body = await req.json();
-    const { zoneId, cityName, searchType = "both" } = body;
+    const { zoneId, cityName, searchType = "both", scanSource = "both" } = body; // scanSource: "osm", "firecrawl", "both"
 
     // Get zone info
     let zoneName = cityName;
@@ -180,14 +180,14 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`marketing-lead-finder: Skipping Overpass - zone has no coordinates`);
     }
 
-    // ========== PHASE 2: Firecrawl Search (Fallback/Supplement) ==========
-    // Only use Firecrawl if OSM found very few results or no coordinates available
-    const shouldUseFirecrawl = osmLeadsCreated < 5 && firecrawlApiKey;
+    // ========== PHASE 2: Firecrawl Search ==========
+    const shouldUseFirecrawl = (scanSource === "firecrawl" || scanSource === "both") && firecrawlApiKey;
+    const firecrawlNeeded = scanSource === "firecrawl" || (scanSource === "both" && osmLeadsCreated < 5);
     
-    if (shouldUseFirecrawl) {
-      console.log(`marketing-lead-finder: Phase 2 - Firecrawl search (OSM found only ${osmLeadsCreated})`);
+    if (shouldUseFirecrawl && firecrawlNeeded) {
+      console.log(`marketing-lead-finder: Phase 2 - Firecrawl search (source: ${scanSource}, OSM found: ${osmLeadsCreated})`);
       
-      const firecrawlResults = await searchFirecrawl(zoneName, searchType, firecrawlApiKey);
+      const firecrawlResults = await searchFirecrawl(zoneName, searchType, firecrawlApiKey!);
       console.log(`marketing-lead-finder: Firecrawl found ${firecrawlResults.length} results`);
 
       for (const result of firecrawlResults) {
@@ -262,9 +262,9 @@ const handler = async (req: Request): Promise<Response> => {
           console.error(`marketing-lead-finder: Firecrawl - Error processing result:`, resultError);
         }
       }
-    } else if (!firecrawlApiKey) {
-      console.log(`marketing-lead-finder: Firecrawl not configured - using OSM only`);
-    } else {
+    } else if (!firecrawlApiKey && scanSource !== "osm") {
+      console.log(`marketing-lead-finder: Firecrawl not configured`);
+    } else if (scanSource === "both" && !firecrawlNeeded) {
       console.log(`marketing-lead-finder: Skipping Firecrawl - OSM found enough leads (${osmLeadsCreated})`);
     }
 
@@ -324,35 +324,40 @@ const handler = async (req: Request): Promise<Response> => {
 async function searchOverpass(lat: number, lon: number, radiusKm: number, searchType: string): Promise<OverpassShop[]> {
   const radiusMeters = radiusKm * 1000;
   
-  // Build shop type filters based on search type
+  // Build shop type filters - include both node AND way (buildings)
   let shopTypes: string[] = [];
   
   if (searchType === "centro" || searchType === "both") {
     shopTypes.push(
-      'node["craft"="electronics_repair"]',
-      'node["shop"="mobile_phone"]["repair"="yes"]',
-      'node["repair"~"phone|mobile|smartphone"]'
+      'nwr["craft"="electronics_repair"]',
+      'nwr["shop"="mobile_phone"]["repair"="yes"]',
+      'nwr["repair"~"phone|mobile|smartphone|cellulare"]',
+      'nwr["shop"="repair"]'
     );
   }
   
   if (searchType === "corner" || searchType === "both") {
     shopTypes.push(
-      'node["shop"="mobile_phone"]',
-      'node["shop"="electronics"]',
-      'node["shop"="computer"]',
-      'node["shop"="telecommunication"]',
-      'node["shop"="hifi"]',
-      'node["shop"="appliance"]'
+      'nwr["shop"="mobile_phone"]',
+      'nwr["shop"="electronics"]',
+      'nwr["shop"="computer"]',
+      'nwr["shop"="telecommunication"]',
+      'nwr["shop"="hifi"]',
+      'nwr["shop"="appliance"]',
+      'nwr["shop"="electrical"]',
+      'nwr["amenity"="telephone"]',
+      'nwr["office"="telecommunication"]'
     );
   }
 
+  // Use simpler query syntax that works better
   const query = `
-    [out:json][timeout:25];
-    (
-      ${shopTypes.map(t => `${t}(around:${radiusMeters},${lat},${lon});`).join('\n      ')}
-    );
-    out body;
-  `;
+[out:json][timeout:30];
+(
+  ${shopTypes.map(t => `${t}(around:${radiusMeters},${lat},${lon});`).join('\n  ')}
+);
+out center tags;
+  `.trim();
 
   const servers = [
     'https://overpass-api.de/api/interpreter',
@@ -382,15 +387,19 @@ async function searchOverpass(lat: number, lon: number, radiusKm: number, search
         if (!element.tags?.name) continue;
 
         const tags = element.tags;
+        // Get coordinates - for ways/relations use center
+        const elemLat = element.lat || element.center?.lat;
+        const elemLon = element.lon || element.center?.lon;
+        
         shops.push({
           name: tags.name,
           phone: tags.phone || tags['contact:phone'] || null,
           email: tags.email || tags['contact:email'] || null,
-          website: tags.website || tags['contact:website'] || null,
+          website: tags.website || tags['contact:website'] || tags.url || null,
           address: formatOsmAddress(tags),
-          lat: element.lat,
-          lon: element.lon,
-          shopType: tags.shop || tags.craft || 'unknown',
+          lat: elemLat || lat,
+          lon: elemLon || lon,
+          shopType: tags.shop || tags.craft || tags.amenity || 'unknown',
         });
       }
 
