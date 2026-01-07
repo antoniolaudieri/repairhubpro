@@ -35,7 +35,10 @@ import {
   ClipboardCheck,
   Truck,
   Send,
-  Archive
+  Archive,
+  MoreVertical,
+  Tag,
+  Printer
 } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import {
@@ -55,6 +58,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
 import AddRepairPartsDialog from "@/components/repair/AddRepairPartsDialog";
 import { PatternDisplay } from "@/components/customer/PatternDisplay";
@@ -1106,70 +1115,126 @@ export default function RepairDetail() {
             className="space-y-3"
           >
             {/* Top row: Back + Actions */}
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between">
               <Button 
                 variant="ghost" 
                 size="icon"
                 onClick={() => handleNavigation(backRoute)}
-                className="h-8 w-8 flex-shrink-0"
+                className="h-8 w-8"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
 
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <Button 
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setAcceptanceFormOpen(true)}
-                  className="h-8 w-8"
-                >
-                  <FileText className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center gap-1">
+                {/* Desktop: show all buttons */}
+                <div className="hidden sm:flex items-center gap-1">
+                  <Button 
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setAcceptanceFormOpen(true)}
+                    className="h-8 w-8"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
 
-                <Button 
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setChecklistType('pre_repair');
-                    setChecklistOpen(true);
-                  }}
-                  className="h-8 w-8"
-                >
-                  <ClipboardCheck className="h-4 w-4 text-amber-500" />
-                </Button>
+                  <Button 
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setChecklistType('pre_repair');
+                      setChecklistOpen(true);
+                    }}
+                    className="h-8 w-8"
+                  >
+                    <ClipboardCheck className="h-4 w-4 text-amber-500" />
+                  </Button>
 
-                <Button 
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setChecklistType('post_repair');
-                    setChecklistOpen(true);
-                  }}
-                  className="h-8 w-8"
-                >
-                  <ClipboardCheck className="h-4 w-4 text-emerald-500" />
-                </Button>
+                  <Button 
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setChecklistType('post_repair');
+                      setChecklistOpen(true);
+                    }}
+                    className="h-8 w-8"
+                  >
+                    <ClipboardCheck className="h-4 w-4 text-emerald-500" />
+                  </Button>
 
-                <PrintLabelButton
-                  repairId={repair.id}
-                  customerName={repair.customer.name}
-                  customerPhone={repair.customer.phone}
-                  deviceBrand={repair.device.brand}
-                  deviceModel={repair.device.model}
-                  deviceType={repair.device.device_type}
-                  issueDescription={repair.device.reported_issue}
-                  createdAt={repair.created_at}
-                  storageSlot={formattedStorageSlot}
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                />
+                  <PrintLabelButton
+                    repairId={repair.id}
+                    customerName={repair.customer.name}
+                    customerPhone={repair.customer.phone}
+                    deviceBrand={repair.device.brand}
+                    deviceModel={repair.device.model}
+                    deviceType={repair.device.device_type}
+                    issueDescription={repair.device.reported_issue}
+                    createdAt={repair.created_at}
+                    storageSlot={formattedStorageSlot}
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                  />
+                </div>
+
+                {/* Mobile: dropdown menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild className="sm:hidden">
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setAcceptanceFormOpen(true)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Modulo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setChecklistType('pre_repair');
+                      setChecklistOpen(true);
+                    }}>
+                      <ClipboardCheck className="h-4 w-4 mr-2 text-amber-500" />
+                      Pre-Riparazione
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      setChecklistType('post_repair');
+                      setChecklistOpen(true);
+                    }}>
+                      <ClipboardCheck className="h-4 w-4 mr-2 text-emerald-500" />
+                      Post-Riparazione
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      // Trigger print label - we'll handle this via the button's onClick
+                      const printBtn = document.querySelector('[data-print-label]') as HTMLButtonElement;
+                      printBtn?.click();
+                    }}>
+                      <Printer className="h-4 w-4 mr-2" />
+                      Etichetta
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                {/* Hidden print label button for mobile trigger */}
+                <div className="hidden">
+                  <PrintLabelButton
+                    repairId={repair.id}
+                    customerName={repair.customer.name}
+                    customerPhone={repair.customer.phone}
+                    deviceBrand={repair.device.brand}
+                    deviceModel={repair.device.model}
+                    deviceType={repair.device.device_type}
+                    issueDescription={repair.device.reported_issue}
+                    createdAt={repair.created_at}
+                    storageSlot={formattedStorageSlot}
+                    data-print-label
+                  />
+                </div>
 
                 <Button
                   onClick={() => saveChanges()}
                   disabled={saving} 
-                  size="sm"
-                  className="h-8 px-3"
+                  size="icon"
+                  className="h-8 w-8"
                 >
                   {saving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
