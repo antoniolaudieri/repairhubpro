@@ -30,47 +30,27 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
 
-  // Update lead status after successful registration
-  const updateLeadAfterRegistration = async () => {
-    if (leadId) {
-      try {
-        // Update lead status to converted
-        await supabase
-          .from("marketing_leads")
-          .update({ 
-            status: 'converted',
-            converted_at: new Date().toISOString(),
-          })
-          .eq("id", leadId);
+  // Assign role and update lead via edge function after registration
+  const processTrialRegistration = async (userId: string) => {
+    if (!leadId) return;
+    
+    try {
+      console.log("Processing trial registration for user:", userId, "lead:", leadId);
+      
+      const { data, error } = await supabase.functions.invoke("assign-trial-role", {
+        body: {
+          user_id: userId,
+          lead_id: leadId,
+        },
+      });
 
-        // Move to "Converted" funnel stage
-        const { data: convertedStage } = await supabase
-          .from("marketing_funnel_stages")
-          .select("id")
-          .eq("stage_order", 5)
-          .single();
-
-        if (convertedStage) {
-          await supabase
-            .from("marketing_leads")
-            .update({ funnel_stage_id: convertedStage.id })
-            .eq("id", leadId);
-        }
-
-        // Log conversion
-        await supabase
-          .from("marketing_automation_logs")
-          .insert({
-            log_type: 'conversion',
-            message: `Lead convertito - registrazione completata`,
-            details: { lead_id: leadId, email },
-            lead_id: leadId,
-          });
-
-        console.log("Lead updated to converted:", leadId);
-      } catch (error) {
-        console.error("Error updating lead after registration:", error);
+      if (error) {
+        console.error("Error assigning trial role:", error);
+      } else {
+        console.log("Trial role assigned:", data);
       }
+    } catch (error) {
+      console.error("Error in processTrialRegistration:", error);
     }
   };
 
@@ -126,12 +106,22 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { error } = await signUp(email, password, fullName, phone);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`,
+          data: {
+            full_name: fullName,
+            phone: phone,
+          },
+        },
+      });
       if (error) throw error;
       
-      // Update lead if this is a trial registration
-      if (isTrial && leadId) {
-        await updateLeadAfterRegistration();
+      // Assign role and update lead if this is a trial registration
+      if (isTrial && leadId && data.user) {
+        await processTrialRegistration(data.user.id);
       }
       
       toast.success("Registrazione completata! Verifica la tua email.");
