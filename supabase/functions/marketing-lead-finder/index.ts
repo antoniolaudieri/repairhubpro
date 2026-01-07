@@ -213,30 +213,90 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Extract contact info from markdown if available
-        let contactInfo = extractContactInfo(result.markdown || result.description || '');
+        let contactInfo = extractContactInfo(result.markdown || result.description || '', result.url);
 
-        // If no email found, do a deep scrape of the website + contact pages
+        // If no email found, do DEEP MULTI-PAGE scraping
         if (!contactInfo.email && result.url) {
-          console.log(`marketing-lead-finder: No email in search results for "${businessName}", doing deep scrape`);
+          console.log(`marketing-lead-finder: No email in search results for "${businessName}", starting deep multi-page scrape`);
           
-          // Pages to try for finding contact info
-          const urlsToScrape: string[] = [result.url];
-          
+          // First, try to map the entire site to find all pages
+          let sitePages: string[] = [];
           try {
             const baseUrl = new URL(result.url);
-            const contactPaths = ['/contatti', '/contatto', '/contact', '/contacts', '/chi-siamo', '/about', '/about-us', '/dove-siamo'];
-            for (const path of contactPaths) {
-              urlsToScrape.push(`${baseUrl.origin}${path}`);
+            console.log(`marketing-lead-finder: Mapping site ${baseUrl.origin}`);
+            
+            const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${firecrawlApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                url: baseUrl.origin,
+                limit: 50,
+                includeSubdomains: false,
+              }),
+            });
+
+            if (mapResponse.ok) {
+              const mapData = await mapResponse.json();
+              sitePages = mapData.links || [];
+              console.log(`marketing-lead-finder: Mapped ${sitePages.length} pages on site`);
             }
-          } catch {
-            // Invalid URL, continue with just the main page
+          } catch (mapError) {
+            console.log(`marketing-lead-finder: Could not map site, using fallback pages`);
+          }
+
+          // Build priority list of pages to scrape for contact info
+          const contactKeywords = ['contatt', 'contact', 'chi-siamo', 'about', 'dove-siamo', 'azienda', 'info', 'sede', 'negozio', 'store'];
+          
+          // Sort site pages by priority (contact pages first)
+          const priorityPages: string[] = [];
+          const otherPages: string[] = [];
+          
+          for (const page of sitePages) {
+            const pageLower = page.toLowerCase();
+            if (contactKeywords.some(kw => pageLower.includes(kw))) {
+              priorityPages.push(page);
+            } else {
+              otherPages.push(page);
+            }
           }
           
-          for (const urlToScrape of urlsToScrape) {
-            if (contactInfo.email) break; // Stop once we find an email
+          // Build final list of pages to scrape
+          const urlsToScrape: string[] = [result.url]; // Always start with the main page
+          
+          // Add priority pages (contact, about, etc.)
+          urlsToScrape.push(...priorityPages.slice(0, 5));
+          
+          // Add fallback contact paths if we didn't find them via mapping
+          try {
+            const baseUrl = new URL(result.url);
+            const fallbackPaths = ['/contatti', '/contatto', '/contact', '/contacts', '/chi-siamo', '/about', '/about-us', '/dove-siamo', '/info', '/negozio'];
+            for (const path of fallbackPaths) {
+              const fullUrl = `${baseUrl.origin}${path}`;
+              if (!urlsToScrape.includes(fullUrl)) {
+                urlsToScrape.push(fullUrl);
+              }
+            }
+          } catch {
+            // Invalid URL
+          }
+          
+          // Add some other pages from the site (might have email in footer)
+          urlsToScrape.push(...otherPages.slice(0, 3));
+          
+          // Limit total pages to scrape
+          const maxPagesToScrape = 8;
+          const pagesToScrape = urlsToScrape.slice(0, maxPagesToScrape);
+          
+          console.log(`marketing-lead-finder: Will scrape up to ${pagesToScrape.length} pages for email`);
+          
+          for (const urlToScrape of pagesToScrape) {
+            if (contactInfo.email) break; // Stop once we find a valid email
             
             try {
-              console.log(`marketing-lead-finder: Scraping ${urlToScrape}`);
+              console.log(`marketing-lead-finder: Deep scraping ${urlToScrape}`);
               
               const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
                 method: 'POST',
@@ -258,12 +318,12 @@ const handler = async (req: Request): Promise<Response> => {
                 
                 if (pageContent) {
                   console.log(`marketing-lead-finder: Scraped ${urlToScrape}, content length: ${pageContent.length}`);
-                  const deepContactInfo = extractContactInfo(pageContent);
+                  const deepContactInfo = extractContactInfo(pageContent, result.url);
                   
                   // Update contact info if found in deep scrape
                   if (deepContactInfo.email) {
                     contactInfo.email = deepContactInfo.email;
-                    console.log(`marketing-lead-finder: Found email via deep scrape (${urlToScrape}): ${deepContactInfo.email}`);
+                    console.log(`marketing-lead-finder: ✓ Found email via deep scrape (${urlToScrape}): ${deepContactInfo.email}`);
                   }
                   if (deepContactInfo.phone && !contactInfo.phone) {
                     contactInfo.phone = deepContactInfo.phone;
@@ -283,7 +343,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         // Skip if no email - email is required for automation
         if (!contactInfo.email) {
-          console.log(`marketing-lead-finder: Skipping "${businessName}" - no email found (phone: ${contactInfo.phone || 'none'})`);
+          console.log(`marketing-lead-finder: ✗ Skipping "${businessName}" - no valid email found after deep scrape (phone: ${contactInfo.phone || 'none'})`);
           continue;
         }
 
@@ -307,7 +367,7 @@ const handler = async (req: Request): Promise<Response> => {
             funnel_stage_id: defaultStage?.id || null,
             current_sequence_id: sequence?.id || null,
             current_step: 0,
-            notes: `Trovato cercando: ${result.title}\nURL: ${result.url}${contactInfo.email ? '\nEmail trovata via scraping' : ''}`,
+            notes: `Trovato cercando: ${result.title}\nURL: ${result.url}${contactInfo.email ? '\nEmail trovata via scraping multi-pagina' : ''}`,
           })
           .select()
           .single();
@@ -319,7 +379,7 @@ const handler = async (req: Request): Promise<Response> => {
 
         leadsCreated++;
         createdLeads.push(businessName);
-        console.log(`marketing-lead-finder: Created lead "${businessName}" with email: ${contactInfo.email || 'N/A'}, phone: ${contactInfo.phone || 'N/A'}`);
+        console.log(`marketing-lead-finder: ✓ Created lead "${businessName}" with email: ${contactInfo.email || 'N/A'}, phone: ${contactInfo.phone || 'N/A'}`);
 
         // Schedule first email if sequence exists and email found
         if (sequence?.id && newLead && contactInfo.email) {
@@ -435,8 +495,8 @@ function extractBusinessName(title: string, url: string): string {
     .substring(0, 100);
 }
 
-// Helper: Extract contact info from text
-function extractContactInfo(text: string): { phone: string | null; email: string | null; address: string | null } {
+// Helper: Extract contact info from text with smart validation
+function extractContactInfo(text: string, siteUrl?: string): { phone: string | null; email: string | null; address: string | null } {
   // Phone patterns (Italian format)
   const phonePatterns = [
     /\+39\s*\d{2,4}[\s.-]?\d{6,8}/g,
@@ -453,7 +513,17 @@ function extractContactInfo(text: string): { phone: string | null; email: string
     }
   }
 
-  // Email patterns - more aggressive extraction
+  // Extract site domain for email validation
+  let siteDomain: string | null = null;
+  if (siteUrl) {
+    try {
+      siteDomain = new URL(siteUrl).hostname.replace(/^www\./, '').toLowerCase();
+    } catch {
+      // Invalid URL
+    }
+  }
+
+  // Email patterns - comprehensive extraction
   const emailPatterns = [
     // Standard email
     /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
@@ -467,68 +537,66 @@ function extractContactInfo(text: string): { phone: string | null; email: string
     /href=["']mailto:([^"']+)["']/g,
   ];
   
-  let email: string | null = null;
+  const foundEmails: string[] = [];
   
   // First try mailto links (most reliable)
-  const mailtoMatch = text.match(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
-  if (mailtoMatch) {
-    email = mailtoMatch[1].toLowerCase();
+  const mailtoMatches = text.matchAll(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi);
+  for (const match of mailtoMatches) {
+    const email = match[1].toLowerCase();
+    if (isValidBusinessEmail(email, siteDomain)) {
+      foundEmails.push(email);
+    }
   }
   
   // Then try standard patterns
-  if (!email) {
-    for (const pattern of emailPatterns) {
-      const matches = text.match(pattern);
-      if (matches) {
-        for (const match of matches) {
-          // Clean up the match
-          let cleanEmail = match
-            .replace(/mailto:/i, '')
-            .replace(/\[at\]/gi, '@')
-            .replace(/\(at\)/gi, '@')
-            .replace(/\[dot\]/gi, '.')
-            .replace(/\(dot\)/gi, '.')
-            .replace(/\s+/g, '')
-            .toLowerCase();
-          
-          // Skip generic/invalid/fake emails
-          if (
-            cleanEmail.includes('example.com') ||
-            cleanEmail.includes('email.com') ||
-            cleanEmail.includes('your@') ||
-            cleanEmail.includes('yourmail') ||
-            cleanEmail.includes('youremail') ||
-            cleanEmail.includes('mail@mail') ||
-            cleanEmail.includes('info@info') ||
-            cleanEmail.includes('test@') ||
-            cleanEmail.includes('@test.') ||
-            cleanEmail.includes('.blink') ||  // Browser internal
-            cleanEmail.includes('@mhtml.') ||  // Browser internal
-            cleanEmail.includes('@placeholder') ||
-            cleanEmail.includes('placeholder@') ||
-            cleanEmail.includes('undefined') ||
-            cleanEmail.includes('null@') ||
-            cleanEmail.startsWith('noreply@') ||
-            cleanEmail.startsWith('no-reply@') ||
-            cleanEmail.startsWith('donotreply@') ||
-            cleanEmail.includes('sentry.io') ||  // Error tracking
-            cleanEmail.includes('bugsnag') ||
-            cleanEmail.includes('datadog') ||
-            cleanEmail.includes('@localhost') ||
-            cleanEmail.includes('@127.') ||
-            /^[a-f0-9-]{20,}@/.test(cleanEmail) ||  // Hash-like emails
-            cleanEmail.length < 6 ||
-            cleanEmail.length > 100
-          ) continue;
-          
-          // Validate it looks like a real email
-          if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(cleanEmail)) {
-            email = cleanEmail;
-            break;
+  for (const pattern of emailPatterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      for (const match of matches) {
+        // Clean up the match
+        let cleanEmail = match
+          .replace(/mailto:/i, '')
+          .replace(/\[at\]/gi, '@')
+          .replace(/\(at\)/gi, '@')
+          .replace(/\[dot\]/gi, '.')
+          .replace(/\(dot\)/gi, '.')
+          .replace(/\s+/g, '')
+          .toLowerCase();
+        
+        if (isValidBusinessEmail(cleanEmail, siteDomain)) {
+          if (!foundEmails.includes(cleanEmail)) {
+            foundEmails.push(cleanEmail);
           }
         }
-        if (email) break;
       }
+    }
+  }
+
+  // Prioritize emails: prefer ones matching site domain
+  let email: string | null = null;
+  if (foundEmails.length > 0) {
+    if (siteDomain) {
+      // First try to find email matching site domain
+      const domainMatch = foundEmails.find(e => e.endsWith(`@${siteDomain}`));
+      if (domainMatch) {
+        email = domainMatch;
+      } else {
+        // Try partial domain match (e.g., site: negozio-telefoni.it, email: info@negoziotelefoni.it)
+        const partialMatch = foundEmails.find(e => {
+          const emailDomain = e.split('@')[1];
+          const siteParts = siteDomain.replace(/-/g, '').split('.')[0];
+          const emailParts = emailDomain.replace(/-/g, '').split('.')[0];
+          return siteParts.includes(emailParts) || emailParts.includes(siteParts);
+        });
+        if (partialMatch) {
+          email = partialMatch;
+        }
+      }
+    }
+    
+    // If no domain match, use first valid email found
+    if (!email) {
+      email = foundEmails[0];
     }
   }
 
@@ -537,6 +605,87 @@ function extractContactInfo(text: string): { phone: string | null; email: string
   const address = addressMatch ? addressMatch[0] : null;
 
   return { phone, email, address };
+}
+
+// Validate email is a real business email
+function isValidBusinessEmail(email: string, siteDomain?: string | null): boolean {
+  // Basic format check
+  if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+    return false;
+  }
+  
+  // Length check
+  if (email.length < 6 || email.length > 100) {
+    return false;
+  }
+  
+  const emailLower = email.toLowerCase();
+  const emailDomain = email.split('@')[1].toLowerCase();
+  const emailPrefix = email.split('@')[0].toLowerCase();
+  
+  // Skip fake/placeholder emails
+  const fakePrefixes = [
+    'example', 'test', 'demo', 'sample', 'fake', 'placeholder',
+    'noreply', 'no-reply', 'donotreply', 'do-not-reply',
+    'webmaster', 'hostmaster', 'postmaster', 'administrator',
+    'privacy', 'legal', 'abuse', 'null', 'undefined', 'root'
+  ];
+  
+  if (fakePrefixes.some(p => emailPrefix.startsWith(p))) {
+    return false;
+  }
+  
+  // Skip technical/tracking emails
+  const fakeDomains = [
+    'example.com', 'example.it', 'test.com', 'localhost',
+    'sentry.io', 'bugsnag.com', 'datadog.com', 'newrelic.com',
+    'mailchimp.com', 'sendgrid.net', 'mailgun.org',
+    'mhtml.blink', 'placeholder.com', 'noemail.com'
+  ];
+  
+  if (fakeDomains.some(d => emailDomain.includes(d))) {
+    return false;
+  }
+  
+  // Skip hosting provider domains (unlikely to be the business email)
+  const hostingDomains = [
+    'aruba.it', 'register.it', 'godaddy.com', 'namecheap.com',
+    'cloudflare.com', 'amazonaws.com', 'googleusercontent.com',
+    'wixsite.com', 'wordpress.com', 'squarespace.com', 'shopify.com'
+  ];
+  
+  if (hostingDomains.some(d => emailDomain.includes(d))) {
+    return false;
+  }
+  
+  // Skip browser internal/hash-like emails
+  if (
+    emailLower.includes('.blink') ||
+    emailLower.includes('@mhtml.') ||
+    /^[a-f0-9-]{20,}@/.test(emailLower) ||  // Hash-like prefix
+    /^frame-[a-f0-9]+@/.test(emailLower)    // Browser frame emails
+  ) {
+    return false;
+  }
+  
+  // Skip emails with too many numbers (likely auto-generated)
+  const numbersInPrefix = (emailPrefix.match(/\d/g) || []).length;
+  if (numbersInPrefix > 5) {
+    return false;
+  }
+  
+  // If we have a site domain, prefer emails from same domain but don't reject others
+  // Free email providers are acceptable as last resort
+  const freeProviders = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'libero.it', 'virgilio.it', 'alice.it', 'tin.it', 'tiscali.it', 'email.it', 'fastwebnet.it'];
+  
+  // For business validation, if site domain exists and email uses free provider, 
+  // it's less ideal but still acceptable
+  if (siteDomain && freeProviders.includes(emailDomain)) {
+    // Still valid, but will be lower priority in sorting
+    return true;
+  }
+  
+  return true;
 }
 
 // Helper: Determine business type
