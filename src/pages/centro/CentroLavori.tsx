@@ -75,6 +75,7 @@ interface DirectRepair {
 export default function CentroLavori() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [centro, setCentro] = useState<Centro | null>(null);
   const [repairs, setRepairs] = useState<DirectRepair[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -176,8 +177,6 @@ export default function CentroLavori() {
   };
 
   // Refetch data when navigating back to this page
-  const location = useLocation();
-  
   useEffect(() => {
     fetchData();
   }, [user, location.key]);
