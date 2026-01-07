@@ -124,10 +124,14 @@ export const DiagnosticTestSection = () => {
   const testTouch = async (): Promise<TestResult> => {
     const maxPoints = navigator.maxTouchPoints || 0;
     const hasTouch = "ontouchstart" in window || maxPoints > 0;
-    if (hasTouch && maxPoints >= 5) {
-      return { status: "pass", message: `Multi-touch ${maxPoints} punti`, value: maxPoints };
+    
+    // Nella WebView Android, maxTouchPoints spesso restituisce un valore limitato (es. 2)
+    // che non riflette le reali capacità del dispositivo. >= 2 punti è sufficiente per la maggior parte delle interazioni
+    if (hasTouch && maxPoints >= 2) {
+      const label = maxPoints >= 5 ? `Multi-touch ${maxPoints} punti` : `Touch ${maxPoints}+ punti`;
+      return { status: "pass", message: label, value: maxPoints };
     } else if (hasTouch) {
-      return { status: "warning", message: `Touch limitato (${maxPoints} punti)`, value: maxPoints };
+      return { status: "warning", message: `Touch singolo`, value: maxPoints };
     }
     return { status: "fail", message: "Touch non supportato" };
   };
@@ -173,6 +177,20 @@ export const DiagnosticTestSection = () => {
   };
 
   const testGPS = async (): Promise<TestResult> => {
+    // Prima prova il plugin nativo (più affidabile su Android APK)
+    if (isNative) {
+      try {
+        const result = await DeviceDiagnostics.testSensor({ sensorType: 'gps' });
+        if (result.working) {
+          return { status: "pass", message: result.value || "GPS funzionante", value: result };
+        }
+        // Se il plugin fallisce, prova comunque le Web API
+      } catch (e) {
+        console.log("GPS native test fallback to web API:", e);
+      }
+    }
+
+    // Fallback alle Web API con timeout aumentato e accuratezza ridotta per evitare errori
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
         resolve({ status: "fail", message: "GPS non disponibile" });
@@ -187,9 +205,18 @@ export const DiagnosticTestSection = () => {
           });
         },
         (err) => {
-          resolve({ status: "fail", message: err.message });
+          // Errori comuni su Android WebView
+          if (err.code === 1) {
+            resolve({ status: "fail", message: "Permesso GPS negato" });
+          } else if (err.code === 2) {
+            resolve({ status: "warning", message: "GPS non disponibile (attiva localizzazione)" });
+          } else if (err.code === 3) {
+            resolve({ status: "warning", message: "GPS timeout - riprova" });
+          } else {
+            resolve({ status: "fail", message: err.message });
+          }
         },
-        { timeout: 10000, enableHighAccuracy: true }
+        { timeout: 15000, enableHighAccuracy: false, maximumAge: 60000 }
       );
     });
   };
