@@ -1126,60 +1126,9 @@ export default function RepairDetail() {
               </Button>
 
               <div className="flex items-center gap-1">
-                {/* Desktop: show all buttons */}
-                <div className="hidden sm:flex items-center gap-1">
-                  <Button 
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setAcceptanceFormOpen(true)}
-                    className="h-8 w-8"
-                  >
-                    <FileText className="h-4 w-4" />
-                  </Button>
-
-                  <Button 
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setChecklistType('pre_repair');
-                      setChecklistOpen(true);
-                    }}
-                    className="h-8 w-8"
-                  >
-                    <ClipboardCheck className="h-4 w-4 text-amber-500" />
-                  </Button>
-
-                  <Button 
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setChecklistType('post_repair');
-                      setChecklistOpen(true);
-                    }}
-                    className="h-8 w-8"
-                  >
-                    <ClipboardCheck className="h-4 w-4 text-emerald-500" />
-                  </Button>
-
-                  <PrintLabelButton
-                    repairId={repair.id}
-                    customerName={repair.customer.name}
-                    customerPhone={repair.customer.phone}
-                    deviceBrand={repair.device.brand}
-                    deviceModel={repair.device.model}
-                    deviceType={repair.device.device_type}
-                    issueDescription={repair.device.reported_issue}
-                    createdAt={repair.created_at}
-                    storageSlot={formattedStorageSlot}
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                  />
-                </div>
-
-                {/* Mobile: dropdown menu */}
+                {/* Dropdown menu for all screen sizes */}
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild className="sm:hidden">
+                  <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
@@ -1204,17 +1153,23 @@ export default function RepairDetail() {
                       Post-Riparazione
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => {
-                      // Trigger print label - we'll handle this via the button's onClick
                       const printBtn = document.querySelector('[data-print-label]') as HTMLButtonElement;
                       printBtn?.click();
                     }}>
                       <Printer className="h-4 w-4 mr-2" />
                       Etichetta
                     </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="text-destructive focus:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Elimina
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Hidden print label button for mobile trigger */}
+                {/* Hidden print label button for trigger */}
                 <div className="hidden">
                   <PrintLabelButton
                     repairId={repair.id}
@@ -1233,14 +1188,15 @@ export default function RepairDetail() {
                 <Button
                   onClick={() => saveChanges()}
                   disabled={saving} 
-                  size="icon"
-                  className="h-8 w-8"
+                  size="sm"
+                  className="h-8 gap-1.5"
                 >
                   {saving ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Save className="h-4 w-4" />
                   )}
+                  <span className="hidden sm:inline">Salva</span>
                 </Button>
               </div>
             </div>
