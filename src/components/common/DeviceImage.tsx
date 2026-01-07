@@ -104,7 +104,7 @@ export function DeviceImage({
           alt="Device"
           className={cn(
             sizeClasses[size],
-            "rounded-xl object-cover ring-2 ring-border group-hover:ring-primary/30 transition-all"
+            "rounded-xl object-contain bg-gradient-to-br from-muted to-muted/50 ring-2 ring-border group-hover:ring-primary/30 transition-all p-0.5"
           )}
           onError={() => setImageError(true)}
         />
