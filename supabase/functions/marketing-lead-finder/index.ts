@@ -104,11 +104,16 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`marketing-lead-finder: [PHASE 1] Firecrawl Search for "${zoneName}"...`);
       
       const searchQueries = buildSearchQueries(zoneName, searchType);
+      console.log(`marketing-lead-finder: Executing ${searchQueries.length} queries sequentially...`);
       
-      for (const query of searchQueries) {
+      // Execute queries SEQUENTIALLY with delay to avoid rate limiting and timeouts
+      for (let i = 0; i < searchQueries.length; i++) {
+        const query = searchQueries[i];
+        console.log(`marketing-lead-finder: Query ${i + 1}/${searchQueries.length}: "${query}"`);
+        
         try {
-          const searchResults = await firecrawlSearch(query, firecrawlApiKey);
-          console.log(`marketing-lead-finder: Query "${query}" found ${searchResults.length} results`);
+          const searchResults = await firecrawlSearchWithRetry(query, firecrawlApiKey);
+          console.log(`marketing-lead-finder: ✓ Found ${searchResults.length} results`);
           
           for (const result of searchResults) {
             // Check if not already added
@@ -122,7 +127,12 @@ const handler = async (req: Request): Promise<Response> => {
             }
           }
         } catch (err) {
-          console.log(`marketing-lead-finder: Search query failed: ${query}`);
+          console.log(`marketing-lead-finder: ✗ Query failed after retries: ${query}`);
+        }
+        
+        // Delay 3 seconds between queries to avoid rate limiting
+        if (i < searchQueries.length - 1) {
+          await new Promise(r => setTimeout(r, 3000));
         }
       }
       
@@ -368,47 +378,52 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-// ========== BUILD SEARCH QUERIES ==========
+// ========== BUILD SEARCH QUERIES (OTTIMIZZATE - MAX 5 QUERY) ==========
 function buildSearchQueries(cityName: string, searchType: string): string[] {
   const queries: string[] = [];
   
-  // CENTRO: Centri riparazione esistenti e laboratori tecnici
+  // CENTRO: Centri riparazione (MAX 2 query)
   if (searchType === 'centro' || searchType === 'both') {
     queries.push(
-      `centro riparazione smartphone ${cityName} email contatti`,
-      `laboratorio riparazione cellulari ${cityName} email`,
-      `tecnico riparazione telefoni ${cityName} contatti`,
-      `assistenza smartphone ${cityName} email`,
-      `riparatore iPhone Android ${cityName} contatti`,
+      `riparazione smartphone cellulari ${cityName} email contatti`,
+      `assistenza tecnico telefoni ${cityName} email`,
     );
   }
   
-  // CORNER: Negozi operatori telefonici e centri multiservizi
+  // CORNER: Negozi operatori e multiservizi (MAX 3 query)
   if (searchType === 'corner' || searchType === 'both') {
     queries.push(
-      // Negozi operatori telefonici
-      `negozio TIM ${cityName} email contatti`,
-      `negozio Vodafone ${cityName} email contatti`,
-      `negozio Wind Tre ${cityName} email`,
-      `negozio Iliad ${cityName} contatti email`,
-      `negozio Fastweb ${cityName} email`,
-      `rivenditore autorizzato telefonia ${cityName} email`,
-      // Centri multiservizi e telefonia generica
-      `centro multiservizi ${cityName} email contatti`,
-      `negozio telefonia ${cityName} email titolare`,
-      `punto vendita cellulari ${cityName} contatti`,
-      `accessori telefonia ${cityName} email`,
+      `negozio TIM Vodafone Wind ${cityName} email contatti`,
+      `rivenditore telefonia Iliad Fastweb ${cityName} email`,
+      `centro multiservizi telefonia ${cityName} contatti email`,
     );
   }
   
   return queries;
 }
 
+// ========== FIRECRAWL SEARCH WITH RETRY ==========
+async function firecrawlSearchWithRetry(query: string, apiKey: string, maxRetries = 2): Promise<SearchResult[]> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await firecrawlSearch(query, apiKey);
+    } catch (error) {
+      console.log(`marketing-lead-finder: Retry ${attempt}/${maxRetries} for query: ${query}`);
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      // Wait 2 seconds before retry
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  return [];
+}
+
 // ========== FIRECRAWL WEB SEARCH ==========
 async function firecrawlSearch(query: string, apiKey: string): Promise<SearchResult[]> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 secondi timeout
     
     const response = await fetch('https://api.firecrawl.dev/v1/search', {
       method: 'POST',
