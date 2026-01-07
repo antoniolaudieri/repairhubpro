@@ -51,6 +51,8 @@ interface ScanProgress {
   currentZoneIndex: number;
   currentZoneName: string;
   totalLeadsFound: number;
+  osmLeadsFound: number;
+  firecrawlLeadsFound: number;
   totalResultsFound: number;
   errors: string[];
   completedZones: string[];
@@ -81,6 +83,8 @@ export function AutomationTab() {
     currentZoneIndex: 0,
     currentZoneName: "",
     totalLeadsFound: 0,
+    osmLeadsFound: 0,
+    firecrawlLeadsFound: 0,
     totalResultsFound: 0,
     errors: [],
     completedZones: [],
@@ -220,6 +224,8 @@ export function AutomationTab() {
       currentZoneIndex: 0,
       currentZoneName: zones[0].name,
       totalLeadsFound: 0,
+      osmLeadsFound: 0,
+      firecrawlLeadsFound: 0,
       totalResultsFound: 0,
       errors: [],
       completedZones: [],
@@ -249,6 +255,8 @@ export function AutomationTab() {
           setScanProgress(prev => ({
             ...prev,
             totalLeadsFound: prev.totalLeadsFound + (data.leadsCreated || 0),
+            osmLeadsFound: prev.osmLeadsFound + (data.osmLeads || 0),
+            firecrawlLeadsFound: prev.firecrawlLeadsFound + (data.firecrawlLeads || 0),
             totalResultsFound: prev.totalResultsFound + (data.resultsFound || 0),
             completedZones: [...prev.completedZones, zone.name],
           }));
@@ -284,6 +292,8 @@ export function AutomationTab() {
         currentZoneIndex: 0,
         currentZoneName: "",
         totalLeadsFound: 0,
+        osmLeadsFound: 0,
+        firecrawlLeadsFound: 0,
         totalResultsFound: 0,
         errors: [],
         completedZones: [],
@@ -499,16 +509,21 @@ export function AutomationTab() {
             )}
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="p-3 bg-muted/50 rounded-lg text-center">
                 <Users className="h-5 w-5 mx-auto mb-1 text-green-600" />
                 <p className="text-2xl font-bold text-green-600">{scanProgress.totalLeadsFound}</p>
-                <p className="text-xs text-muted-foreground">Lead trovati</p>
+                <p className="text-xs text-muted-foreground">Lead totali</p>
               </div>
               <div className="p-3 bg-muted/50 rounded-lg text-center">
-                <RefreshCw className="h-5 w-5 mx-auto mb-1 text-blue-600" />
-                <p className="text-2xl font-bold text-blue-600">{scanProgress.totalResultsFound}</p>
-                <p className="text-xs text-muted-foreground">Siti analizzati</p>
+                <MapPin className="h-5 w-5 mx-auto mb-1 text-blue-600" />
+                <p className="text-2xl font-bold text-blue-600">{scanProgress.osmLeadsFound}</p>
+                <p className="text-xs text-muted-foreground">da OSM (gratis)</p>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg text-center">
+                <RefreshCw className="h-5 w-5 mx-auto mb-1 text-orange-600" />
+                <p className="text-2xl font-bold text-orange-600">{scanProgress.firecrawlLeadsFound}</p>
+                <p className="text-xs text-muted-foreground">da Firecrawl</p>
               </div>
             </div>
 

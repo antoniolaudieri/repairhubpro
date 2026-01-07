@@ -5,6 +5,17 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface OverpassShop {
+  name: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  address?: string;
+  lat: number;
+  lon: number;
+  shopType: string;
+}
+
 interface SearchResult {
   url: string;
   title: string;
@@ -13,21 +24,13 @@ interface SearchResult {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log("marketing-lead-finder: Starting lead search");
+  console.log("marketing-lead-finder: Starting hybrid lead search (OSM + Firecrawl)");
   
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   const firecrawlApiKey = Deno.env.get("FIRECRAWL_API_KEY");
-  if (!firecrawlApiKey) {
-    console.error("marketing-lead-finder: FIRECRAWL_API_KEY not configured");
-    return new Response(
-      JSON.stringify({ success: false, error: "Firecrawl non configurato" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
@@ -36,9 +39,12 @@ const handler = async (req: Request): Promise<Response> => {
     const body = await req.json();
     const { zoneId, cityName, searchType = "both" } = body;
 
-    // Get zone info if zoneId provided
+    // Get zone info
     let zoneName = cityName;
     let zone = null;
+    let lat: number | null = null;
+    let lon: number | null = null;
+    let radiusKm = 10;
     
     if (zoneId) {
       const { data: zoneData } = await supabase
@@ -50,6 +56,9 @@ const handler = async (req: Request): Promise<Response> => {
       if (zoneData) {
         zone = zoneData;
         zoneName = zoneData.name;
+        lat = zoneData.latitude;
+        lon = zoneData.longitude;
+        radiusKm = zoneData.radius_km || 10;
       }
     }
 
@@ -60,124 +69,15 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`marketing-lead-finder: Searching for leads in "${zoneName}"`);
+    console.log(`marketing-lead-finder: Searching in "${zoneName}" (lat: ${lat}, lon: ${lon}, radius: ${radiusKm}km)`);
 
-    // Build search queries based on type - with variations to find different results
-    const allCentroQueries = [
-      `riparazione smartphone ${zoneName}`,
-      `centro assistenza telefoni ${zoneName}`,
-      `riparazione cellulari ${zoneName}`,
-      `assistenza Apple iPhone ${zoneName}`,
-      `riparazione tablet ${zoneName}`,
-      `aggiustare telefono ${zoneName}`,
-      `riparazione schermo cellulare ${zoneName}`,
-      `laboratorio riparazione smartphone ${zoneName}`,
-      `tecnico telefoni ${zoneName}`,
-      `cambio batteria smartphone ${zoneName}`,
-      `riparatore iPhone ${zoneName}`,
-      `assistenza Samsung ${zoneName}`,
-      `riparazione Huawei ${zoneName}`,
-      `schermo rotto telefono ${zoneName}`,
-    ];
-    
-    const allCornerQueries = [
-      `negozio telefonia ${zoneName}`,
-      `vendita smartphone ${zoneName}`,
-      `negozio elettronica ${zoneName}`,
-      `phone store ${zoneName}`,
-      `rivenditore telefoni ${zoneName}`,
-      `compro vendo telefoni ${zoneName}`,
-      `accessori smartphone ${zoneName}`,
-      `negozio cellulari ${zoneName}`,
-      `shop telefonia ${zoneName}`,
-      `elettronica consumer ${zoneName}`,
-    ];
-    
-    // Shuffle and select random queries to get different results each scan
-    const shuffleArray = <T>(arr: T[]): T[] => arr.sort(() => Math.random() - 0.5);
-    
-    const searchQueries: string[] = [];
-    
-    if (searchType === "centro" || searchType === "both") {
-      // Pick 5 random centro queries each time
-      searchQueries.push(...shuffleArray([...allCentroQueries]).slice(0, 5));
-    }
-    
-    if (searchType === "corner" || searchType === "both") {
-      // Pick 4 random corner queries each time
-      searchQueries.push(...shuffleArray([...allCornerQueries]).slice(0, 4));
-    }
-
-    const allResults: SearchResult[] = [];
-    const seenUrls = new Set<string>();
-
-    // Search using Firecrawl
-    for (const query of searchQueries) {
-      try {
-        console.log(`marketing-lead-finder: Searching "${query}"`);
-        
-        const searchResponse = await fetch('https://api.firecrawl.dev/v1/search', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${firecrawlApiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: query,
-            limit: 10,
-            lang: 'it',
-            country: 'IT',
-            scrapeOptions: {
-              formats: ['markdown']
-            }
-          }),
-        });
-
-        if (!searchResponse.ok) {
-          console.error(`marketing-lead-finder: Search failed for "${query}": ${searchResponse.status}`);
-          continue;
-        }
-
-        const searchData = await searchResponse.json();
-        const results = searchData.data || [];
-        
-        console.log(`marketing-lead-finder: Found ${results.length} results for "${query}"`);
-
-        for (const result of results) {
-          // Skip duplicates
-          if (seenUrls.has(result.url)) continue;
-          seenUrls.add(result.url);
-          
-          // Skip irrelevant sites (social, directories, big chains)
-          const url = result.url?.toLowerCase() || '';
-          const skipDomains = [
-            'facebook.com', 'instagram.com', 'linkedin.com', 'twitter.com', 
-            'youtube.com', 'wikipedia.org', 'tripadvisor', 'paginegialle.it',
-            'paginebianche.it', 'subito.it', 'kijiji.it', 'ebay.it', 'amazon.',
-            'unieuro.it', 'trony.it', 'mediaworld.it', 'euronics.it', 'expert.it',
-            'apple.com', 'samsung.com', 'huawei.com', 'xiaomi.com', 'oppo.com',
-            'google.com', 'yelp.com', 'trustpilot.com', 'tuttocitta.it',
-            'corriere.it', 'repubblica.it', 'gazzetta.it', 'ilsole24ore.com'
-          ];
-          if (skipDomains.some(d => url.includes(d))) continue;
-
-          allResults.push(result);
-        }
-      } catch (searchError) {
-        console.error(`marketing-lead-finder: Error searching "${query}":`, searchError);
-      }
-    }
-
-    console.log(`marketing-lead-finder: Total unique results: ${allResults.length}`);
-
-    // Get default funnel stage
+    // Get default funnel stage and sequence early
     const { data: defaultStage } = await supabase
       .from("marketing_funnel_stages")
       .select("id")
       .eq("stage_order", 1)
       .single();
 
-    // Get email sequence
     const { data: sequence } = await supabase
       .from("marketing_email_sequences")
       .select("id")
@@ -186,162 +86,183 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     let leadsCreated = 0;
+    let osmLeadsCreated = 0;
+    let firecrawlLeadsCreated = 0;
     const createdLeads: string[] = [];
+    const processedBusinesses = new Set<string>();
 
-    // Process results and extract business info
-    for (const result of allResults) {
-      try {
-        // Extract business info from result
-        const businessName = extractBusinessName(result.title || '', result.url || '');
-        console.log(`marketing-lead-finder: Processing "${businessName}" from ${result.url}`);
-        
-        if (!businessName || businessName.length < 3) {
-          console.log(`marketing-lead-finder: Skipping - name too short: "${businessName}"`);
-          continue;
-        }
+    // ========== PHASE 1: OpenStreetMap/Overpass (FREE) ==========
+    if (lat && lon) {
+      console.log(`marketing-lead-finder: Phase 1 - Searching Overpass API (FREE)`);
+      
+      const osmShops = await searchOverpass(lat, lon, radiusKm, searchType);
+      console.log(`marketing-lead-finder: Overpass found ${osmShops.length} shops`);
 
-        // Check if lead already exists (exact match or similar)
-        const { data: existingLeads } = await supabase
-          .from("marketing_leads")
-          .select("id, business_name")
-          .or(`business_name.ilike.%${businessName.substring(0, 20)}%,website.eq.${result.url}`)
-          .limit(1);
+      for (const shop of osmShops) {
+        try {
+          // Skip if already processed
+          const businessKey = `${shop.name.toLowerCase()}-${shop.phone || ''}-${shop.website || ''}`;
+          if (processedBusinesses.has(businessKey)) continue;
+          processedBusinesses.add(businessKey);
 
-        if (existingLeads && existingLeads.length > 0) {
-          console.log(`marketing-lead-finder: Lead "${businessName}" already exists as "${existingLeads[0].business_name}"`);
-          continue;
-        }
+          // Check if lead exists
+          const { data: existingLeads } = await supabase
+            .from("marketing_leads")
+            .select("id")
+            .or(`business_name.ilike.%${shop.name.substring(0, 15)}%,phone.eq.${shop.phone || 'NONE'}`)
+            .limit(1);
 
-        // Extract contact info from markdown if available
-        let contactInfo = extractContactInfo(result.markdown || result.description || '', result.url);
-
-        // If no email found, try scraping contact page only (lightweight approach)
-        if (!contactInfo.email && result.url) {
-          console.log(`marketing-lead-finder: No email in search results for "${businessName}", trying contact page`);
-          
-          try {
-            const baseUrl = new URL(result.url);
-            // Only try the most common contact page paths - max 2 attempts
-            const contactPaths = ['/contatti', '/contact'];
-            
-            for (const path of contactPaths) {
-              if (contactInfo.email) break;
-              
-              const contactUrl = `${baseUrl.origin}${path}`;
-              console.log(`marketing-lead-finder: Trying ${contactUrl}`);
-              
-              try {
-                const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-                  method: 'POST',
-                  headers: {
-                    'Authorization': `Bearer ${firecrawlApiKey}`,
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    url: contactUrl,
-                    formats: ['markdown'],
-                    onlyMainContent: true,
-                  }),
-                });
-
-                if (scrapeResponse.ok) {
-                  const scrapeData = await scrapeResponse.json();
-                  const pageContent = scrapeData.data?.markdown || scrapeData.markdown || '';
-                  
-                  if (pageContent && pageContent.length < 100000) { // Skip huge pages
-                    const deepContactInfo = extractContactInfo(pageContent, result.url);
-                    
-                    if (deepContactInfo.email) {
-                      contactInfo.email = deepContactInfo.email;
-                      console.log(`marketing-lead-finder: ✓ Found email via ${path}: ${deepContactInfo.email}`);
-                    }
-                    if (deepContactInfo.phone && !contactInfo.phone) {
-                      contactInfo.phone = deepContactInfo.phone;
-                    }
-                  }
-                }
-              } catch {
-                // Continue to next path
-              }
-            }
-          } catch {
-            // Invalid URL, skip
+          if (existingLeads && existingLeads.length > 0) {
+            console.log(`marketing-lead-finder: OSM - "${shop.name}" already exists`);
+            continue;
           }
-        }
 
-        // Skip if no email - email is required for automation
-        if (!contactInfo.email) {
-          console.log(`marketing-lead-finder: ✗ Skipping "${businessName}" - no valid email found after deep scrape (phone: ${contactInfo.phone || 'none'})`);
-          continue;
-        }
+          let email: string | undefined = shop.email || undefined;
+          
+          // If no email but has website, try scraping contact page (only if Firecrawl is configured)
+          if (!email && shop.website && firecrawlApiKey) {
+            console.log(`marketing-lead-finder: OSM - Enriching "${shop.name}" via Firecrawl`);
+            const scrapedEmail = await scrapeContactPageForEmail(shop.website, firecrawlApiKey);
+            if (scrapedEmail) email = scrapedEmail;
+          }
 
-        // Determine business type
-        const businessType = determineBusinessType(result.title || '', result.description || '');
+          // Determine business type from OSM shop type
+          const businessType = mapOsmTypeToBusinessType(shop.shopType);
 
-        // Create lead
-        const { data: newLead, error: leadError } = await supabase
-          .from("marketing_leads")
-          .insert({
-            source: 'firecrawl_search',
-            business_name: businessName,
-            website: result.url,
-            phone: contactInfo.phone,
-            email: contactInfo.email,
-            address: contactInfo.address || `${zoneName}, Italia`,
-            business_type: businessType,
-            status: 'new',
-            auto_processed: true,
-            scan_zone_id: zone?.id || null,
-            funnel_stage_id: defaultStage?.id || null,
-            current_sequence_id: sequence?.id || null,
-            current_step: 0,
-            notes: `Trovato cercando: ${result.title}\nURL: ${result.url}${contactInfo.email ? '\nEmail trovata via scraping multi-pagina' : ''}`,
-          })
-          .select()
-          .single();
-
-        if (leadError) {
-          console.error(`marketing-lead-finder: Error creating lead:`, leadError);
-          continue;
-        }
-
-        leadsCreated++;
-        createdLeads.push(businessName);
-        console.log(`marketing-lead-finder: ✓ Created lead "${businessName}" with email: ${contactInfo.email || 'N/A'}, phone: ${contactInfo.phone || 'N/A'}`);
-
-        // Schedule first email if sequence exists and email found
-        if (sequence?.id && newLead && contactInfo.email) {
-          const { data: firstStep } = await supabase
-            .from("marketing_sequence_steps")
-            .select("*")
-            .eq("sequence_id", sequence.id)
-            .eq("step_number", 1)
+          // Create lead - even without email, phone is valuable
+          const { data: newLead, error: leadError } = await supabase
+            .from("marketing_leads")
+            .insert({
+              source: 'openstreetmap',
+              business_name: shop.name,
+              website: shop.website || null,
+              phone: shop.phone || null,
+              email: email || null,
+              address: shop.address || `${zoneName}, Italia`,
+              business_type: businessType,
+              status: email ? 'new' : 'no_email',
+              auto_processed: true,
+              scan_zone_id: zone?.id || null,
+              funnel_stage_id: defaultStage?.id || null,
+              current_sequence_id: email ? sequence?.id : null,
+              current_step: 0,
+              notes: `Trovato via OpenStreetMap (${shop.shopType})\nCoordinate: ${shop.lat}, ${shop.lon}`,
+            })
+            .select()
             .single();
 
-          if (firstStep) {
-            const scheduledFor = new Date();
-            scheduledFor.setHours(scheduledFor.getHours() + (firstStep.delay_hours || 0));
-            scheduledFor.setDate(scheduledFor.getDate() + (firstStep.delay_days || 0));
-
-            await supabase
-              .from("marketing_email_queue")
-              .insert({
-                lead_id: newLead.id,
-                template_id: firstStep.template_id,
-                sequence_id: sequence.id,
-                step_number: 1,
-                scheduled_for: scheduledFor.toISOString(),
-                status: 'pending',
-              });
+          if (leadError) {
+            console.error(`marketing-lead-finder: OSM - Error creating lead:`, leadError);
+            continue;
           }
-        }
 
-      } catch (resultError) {
-        console.error(`marketing-lead-finder: Error processing result:`, resultError);
+          leadsCreated++;
+          osmLeadsCreated++;
+          createdLeads.push(`📍 ${shop.name}`);
+          console.log(`marketing-lead-finder: OSM ✓ Created "${shop.name}" (email: ${email || 'N/A'}, phone: ${shop.phone || 'N/A'})`);
+
+          // Schedule email if has email
+          if (email && sequence?.id && newLead) {
+            await scheduleFirstEmail(supabase, newLead.id, sequence.id);
+          }
+
+        } catch (shopError) {
+          console.error(`marketing-lead-finder: OSM - Error processing shop:`, shopError);
+        }
       }
+    } else {
+      console.log(`marketing-lead-finder: Skipping Overpass - zone has no coordinates`);
     }
 
-    // Update zone stats if applicable
+    // ========== PHASE 2: Firecrawl Search (Fallback/Supplement) ==========
+    // Only use Firecrawl if OSM found very few results or no coordinates available
+    const shouldUseFirecrawl = osmLeadsCreated < 5 && firecrawlApiKey;
+    
+    if (shouldUseFirecrawl) {
+      console.log(`marketing-lead-finder: Phase 2 - Firecrawl search (OSM found only ${osmLeadsCreated})`);
+      
+      const firecrawlResults = await searchFirecrawl(zoneName, searchType, firecrawlApiKey);
+      console.log(`marketing-lead-finder: Firecrawl found ${firecrawlResults.length} results`);
+
+      for (const result of firecrawlResults) {
+        try {
+          const businessName = extractBusinessName(result.title || '', result.url || '');
+          
+          // Skip if already processed via OSM
+          const businessKey = businessName.toLowerCase();
+          if (processedBusinesses.has(businessKey)) continue;
+          processedBusinesses.add(businessKey);
+
+          if (!businessName || businessName.length < 3) continue;
+
+          // Check if exists
+          const { data: existingLeads } = await supabase
+            .from("marketing_leads")
+            .select("id")
+            .or(`business_name.ilike.%${businessName.substring(0, 15)}%,website.eq.${result.url}`)
+            .limit(1);
+
+          if (existingLeads && existingLeads.length > 0) continue;
+
+          // Extract contact info
+          let contactInfo = extractContactInfo(result.markdown || result.description || '', result.url);
+
+          // Try contact page if no email
+          if (!contactInfo.email && result.url) {
+            contactInfo.email = await scrapeContactPageForEmail(result.url, firecrawlApiKey);
+          }
+
+          // Skip if no email - Firecrawl results need email for ROI
+          if (!contactInfo.email) {
+            console.log(`marketing-lead-finder: Firecrawl ✗ Skipping "${businessName}" - no email`);
+            continue;
+          }
+
+          const businessType = determineBusinessType(result.title || '', result.description || '');
+
+          const { data: newLead, error: leadError } = await supabase
+            .from("marketing_leads")
+            .insert({
+              source: 'firecrawl_search',
+              business_name: businessName,
+              website: result.url,
+              phone: contactInfo.phone,
+              email: contactInfo.email,
+              address: contactInfo.address || `${zoneName}, Italia`,
+              business_type: businessType,
+              status: 'new',
+              auto_processed: true,
+              scan_zone_id: zone?.id || null,
+              funnel_stage_id: defaultStage?.id || null,
+              current_sequence_id: sequence?.id || null,
+              current_step: 0,
+              notes: `Trovato via Firecrawl search`,
+            })
+            .select()
+            .single();
+
+          if (leadError) continue;
+
+          leadsCreated++;
+          firecrawlLeadsCreated++;
+          createdLeads.push(`🔍 ${businessName}`);
+          console.log(`marketing-lead-finder: Firecrawl ✓ Created "${businessName}"`);
+
+          if (sequence?.id && newLead) {
+            await scheduleFirstEmail(supabase, newLead.id, sequence.id);
+          }
+
+        } catch (resultError) {
+          console.error(`marketing-lead-finder: Firecrawl - Error processing result:`, resultError);
+        }
+      }
+    } else if (!firecrawlApiKey) {
+      console.log(`marketing-lead-finder: Firecrawl not configured - using OSM only`);
+    } else {
+      console.log(`marketing-lead-finder: Skipping Firecrawl - OSM found enough leads (${osmLeadsCreated})`);
+    }
+
+    // Update zone stats
     if (zone) {
       await supabase
         .from("marketing_scan_zones")
@@ -357,24 +278,27 @@ const handler = async (req: Request): Promise<Response> => {
       .from("marketing_automation_logs")
       .insert({
         log_type: 'scan',
-        message: `Ricerca Firecrawl "${zoneName}" completata: ${leadsCreated} nuovi lead`,
+        message: `Scansione ibrida "${zoneName}": ${leadsCreated} lead (OSM: ${osmLeadsCreated}, Firecrawl: ${firecrawlLeadsCreated})`,
         details: { 
           zone_name: zoneName,
           search_type: searchType,
-          results_found: allResults.length,
           leads_created: leadsCreated,
+          osm_leads: osmLeadsCreated,
+          firecrawl_leads: firecrawlLeadsCreated,
           leads: createdLeads
         },
         zone_id: zone?.id || null,
       });
 
-    console.log(`marketing-lead-finder: Completed. Created ${leadsCreated} leads`);
+    console.log(`marketing-lead-finder: Completed. Created ${leadsCreated} leads (OSM: ${osmLeadsCreated}, Firecrawl: ${firecrawlLeadsCreated})`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         leadsCreated,
-        resultsFound: allResults.length,
+        osmLeads: osmLeadsCreated,
+        firecrawlLeads: firecrawlLeadsCreated,
+        resultsFound: osmLeadsCreated + firecrawlLeadsCreated,
         leads: createdLeads
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -390,17 +314,257 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-// Helper: Extract business name from title/url
+// ========== OVERPASS API (FREE) ==========
+async function searchOverpass(lat: number, lon: number, radiusKm: number, searchType: string): Promise<OverpassShop[]> {
+  const radiusMeters = radiusKm * 1000;
+  
+  // Build shop type filters based on search type
+  let shopTypes: string[] = [];
+  
+  if (searchType === "centro" || searchType === "both") {
+    shopTypes.push(
+      'node["craft"="electronics_repair"]',
+      'node["shop"="mobile_phone"]["repair"="yes"]',
+      'node["repair"~"phone|mobile|smartphone"]'
+    );
+  }
+  
+  if (searchType === "corner" || searchType === "both") {
+    shopTypes.push(
+      'node["shop"="mobile_phone"]',
+      'node["shop"="electronics"]',
+      'node["shop"="computer"]',
+      'node["shop"="telecommunication"]',
+      'node["shop"="hifi"]',
+      'node["shop"="appliance"]'
+    );
+  }
+
+  const query = `
+    [out:json][timeout:25];
+    (
+      ${shopTypes.map(t => `${t}(around:${radiusMeters},${lat},${lon});`).join('\n      ')}
+    );
+    out body;
+  `;
+
+  const servers = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://maps.mail.ru/osm/tools/overpass/api/interpreter'
+  ];
+
+  for (const server of servers) {
+    try {
+      console.log(`marketing-lead-finder: Trying Overpass server: ${server}`);
+      
+      const response = await fetch(server, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(query)}`,
+      });
+
+      if (!response.ok) {
+        console.log(`marketing-lead-finder: Overpass ${server} returned ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const shops: OverpassShop[] = [];
+
+      for (const element of data.elements || []) {
+        if (!element.tags?.name) continue;
+
+        const tags = element.tags;
+        shops.push({
+          name: tags.name,
+          phone: tags.phone || tags['contact:phone'] || null,
+          email: tags.email || tags['contact:email'] || null,
+          website: tags.website || tags['contact:website'] || null,
+          address: formatOsmAddress(tags),
+          lat: element.lat,
+          lon: element.lon,
+          shopType: tags.shop || tags.craft || 'unknown',
+        });
+      }
+
+      console.log(`marketing-lead-finder: Overpass returned ${shops.length} named shops`);
+      return shops;
+
+    } catch (err) {
+      console.error(`marketing-lead-finder: Overpass ${server} error:`, err);
+    }
+  }
+
+  console.log(`marketing-lead-finder: All Overpass servers failed`);
+  return [];
+}
+
+function formatOsmAddress(tags: Record<string, string>): string | undefined {
+  const parts: string[] = [];
+  if (tags['addr:street']) {
+    parts.push(tags['addr:street'] + (tags['addr:housenumber'] ? ' ' + tags['addr:housenumber'] : ''));
+  }
+  if (tags['addr:postcode'] || tags['addr:city']) {
+    parts.push([tags['addr:postcode'], tags['addr:city']].filter(Boolean).join(' '));
+  }
+  return parts.length > 0 ? parts.join(', ') : undefined;
+}
+
+function mapOsmTypeToBusinessType(osmType: string): string {
+  switch (osmType) {
+    case 'electronics_repair':
+      return 'centro';
+    case 'mobile_phone':
+      return 'telefonia';
+    case 'electronics':
+      return 'elettronica';
+    case 'computer':
+      return 'computer';
+    default:
+      return 'corner';
+  }
+}
+
+// ========== FIRECRAWL SEARCH (PAID - Fallback) ==========
+async function searchFirecrawl(zoneName: string, searchType: string, apiKey: string): Promise<SearchResult[]> {
+  const queries: string[] = [];
+  
+  if (searchType === "centro" || searchType === "both") {
+    queries.push(`riparazione smartphone ${zoneName}`, `centro assistenza telefoni ${zoneName}`);
+  }
+  if (searchType === "corner" || searchType === "both") {
+    queries.push(`negozio telefonia ${zoneName}`, `vendita smartphone ${zoneName}`);
+  }
+
+  const allResults: SearchResult[] = [];
+  const seenUrls = new Set<string>();
+
+  const skipDomains = [
+    'facebook.com', 'instagram.com', 'linkedin.com', 'twitter.com', 
+    'youtube.com', 'wikipedia.org', 'tripadvisor', 'paginegialle.it',
+    'paginebianche.it', 'subito.it', 'kijiji.it', 'ebay.it', 'amazon.',
+    'unieuro.it', 'trony.it', 'mediaworld.it', 'euronics.it', 'expert.it',
+    'apple.com', 'samsung.com', 'huawei.com', 'xiaomi.com', 'oppo.com'
+  ];
+
+  for (const query of queries) {
+    try {
+      const response = await fetch('https://api.firecrawl.dev/v1/search', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query,
+          limit: 8,
+          lang: 'it',
+          country: 'IT',
+          scrapeOptions: { formats: ['markdown'] }
+        }),
+      });
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      for (const result of data.data || []) {
+        if (seenUrls.has(result.url)) continue;
+        seenUrls.add(result.url);
+        
+        const url = result.url?.toLowerCase() || '';
+        if (skipDomains.some(d => url.includes(d))) continue;
+
+        allResults.push(result);
+      }
+    } catch (err) {
+      console.error(`marketing-lead-finder: Firecrawl search error for "${query}":`, err);
+    }
+  }
+
+  return allResults;
+}
+
+// ========== CONTACT PAGE SCRAPING (Minimal) ==========
+async function scrapeContactPageForEmail(websiteUrl: string, apiKey: string): Promise<string | null> {
+  try {
+    const baseUrl = new URL(websiteUrl);
+    const contactPaths = ['/contatti', '/contact'];
+    
+    for (const path of contactPaths) {
+      const contactUrl = `${baseUrl.origin}${path}`;
+      
+      try {
+        const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: contactUrl,
+            formats: ['markdown'],
+            onlyMainContent: true,
+          }),
+        });
+
+        if (!response.ok) continue;
+
+        const data = await response.json();
+        const content = data.data?.markdown || data.markdown || '';
+        
+        if (content && content.length < 80000) {
+          const contactInfo = extractContactInfo(content, websiteUrl);
+          if (contactInfo.email) {
+            console.log(`marketing-lead-finder: Found email via ${path}: ${contactInfo.email}`);
+            return contactInfo.email;
+          }
+        }
+      } catch {
+        // Continue to next path
+      }
+    }
+  } catch {
+    // Invalid URL
+  }
+  return null;
+}
+
+// ========== SCHEDULE FIRST EMAIL ==========
+async function scheduleFirstEmail(supabase: any, leadId: string, sequenceId: string) {
+  const { data: firstStep } = await supabase
+    .from("marketing_sequence_steps")
+    .select("*")
+    .eq("sequence_id", sequenceId)
+    .eq("step_number", 1)
+    .single();
+
+  if (firstStep) {
+    const scheduledFor = new Date();
+    scheduledFor.setHours(scheduledFor.getHours() + (firstStep.delay_hours || 0));
+    scheduledFor.setDate(scheduledFor.getDate() + (firstStep.delay_days || 0));
+
+    await supabase
+      .from("marketing_email_queue")
+      .insert({
+        lead_id: leadId,
+        template_id: firstStep.template_id,
+        sequence_id: sequenceId,
+        step_number: 1,
+        scheduled_for: scheduledFor.toISOString(),
+        status: 'pending',
+      });
+  }
+}
+
+// ========== HELPER FUNCTIONS ==========
 function extractBusinessName(title: string, url: string): string {
-  // First try: get the first part before dash/pipe
   let name = title.split(/\s*[-|–—]\s*/)[0].trim();
   
-  // If that's too long or generic, clean it up
   if (name.length > 60) {
     name = name.substring(0, 60);
   }
 
-  // If name is too short or empty, try from URL
   if (name.length < 3) {
     try {
       const hostname = new URL(url).hostname;
@@ -414,7 +578,6 @@ function extractBusinessName(title: string, url: string): string {
     }
   }
 
-  // Capitalize first letter of each word
   return name
     .split(' ')
     .filter(word => word.length > 0)
@@ -423,13 +586,12 @@ function extractBusinessName(title: string, url: string): string {
     .substring(0, 100);
 }
 
-// Helper: Extract contact info from text with smart validation
 function extractContactInfo(text: string, siteUrl?: string): { phone: string | null; email: string | null; address: string | null } {
-  // Phone patterns (Italian format)
+  // Phone patterns (Italian)
   const phonePatterns = [
     /\+39\s*\d{2,4}[\s.-]?\d{6,8}/g,
     /0\d{1,4}[\s.-]?\d{6,8}/g,
-    /3\d{2}[\s.-]?\d{6,7}/g, // Mobile
+    /3\d{2}[\s.-]?\d{6,7}/g,
   ];
   
   let phone: string | null = null;
@@ -441,33 +603,16 @@ function extractContactInfo(text: string, siteUrl?: string): { phone: string | n
     }
   }
 
-  // Extract site domain for email validation
   let siteDomain: string | null = null;
   if (siteUrl) {
     try {
       siteDomain = new URL(siteUrl).hostname.replace(/^www\./, '').toLowerCase();
-    } catch {
-      // Invalid URL
-    }
+    } catch {}
   }
 
-  // Email patterns - comprehensive extraction
-  const emailPatterns = [
-    // Standard email
-    /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
-    // Email with spaces around @ (sometimes in HTML)
-    /[a-zA-Z0-9._%+-]+\s*[@＠]\s*[a-zA-Z0-9.-]+\s*\.\s*[a-zA-Z]{2,}/g,
-    // Email with [at] or (at) replacements
-    /[a-zA-Z0-9._%+-]+\s*(?:\[at\]|\(at\)|@)\s*[a-zA-Z0-9.-]+\s*(?:\[dot\]|\(dot\)|\.)\s*[a-zA-Z]{2,}/gi,
-    // mailto: links
-    /mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
-    // href="mailto:..." pattern
-    /href=["']mailto:([^"']+)["']/g,
-  ];
-  
+  // Email extraction
   const foundEmails: string[] = [];
   
-  // First try mailto links (most reliable)
   const mailtoMatches = text.matchAll(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi);
   for (const match of mailtoMatches) {
     const email = match[1].toLowerCase();
@@ -476,162 +621,60 @@ function extractContactInfo(text: string, siteUrl?: string): { phone: string | n
     }
   }
   
-  // Then try standard patterns
-  for (const pattern of emailPatterns) {
-    const matches = text.match(pattern);
-    if (matches) {
-      for (const match of matches) {
-        // Clean up the match
-        let cleanEmail = match
-          .replace(/mailto:/i, '')
-          .replace(/\[at\]/gi, '@')
-          .replace(/\(at\)/gi, '@')
-          .replace(/\[dot\]/gi, '.')
-          .replace(/\(dot\)/gi, '.')
-          .replace(/\s+/g, '')
-          .toLowerCase();
-        
-        if (isValidBusinessEmail(cleanEmail, siteDomain)) {
-          if (!foundEmails.includes(cleanEmail)) {
-            foundEmails.push(cleanEmail);
-          }
-        }
+  const emailPattern = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+  const matches = text.match(emailPattern);
+  if (matches) {
+    for (const match of matches) {
+      const cleanEmail = match.toLowerCase();
+      if (isValidBusinessEmail(cleanEmail, siteDomain) && !foundEmails.includes(cleanEmail)) {
+        foundEmails.push(cleanEmail);
       }
     }
   }
 
-  // Prioritize emails: prefer ones matching site domain
+  // Prioritize domain-matching email
   let email: string | null = null;
   if (foundEmails.length > 0) {
     if (siteDomain) {
-      // First try to find email matching site domain
       const domainMatch = foundEmails.find(e => e.endsWith(`@${siteDomain}`));
-      if (domainMatch) {
-        email = domainMatch;
-      } else {
-        // Try partial domain match (e.g., site: negozio-telefoni.it, email: info@negoziotelefoni.it)
-        const partialMatch = foundEmails.find(e => {
-          const emailDomain = e.split('@')[1];
-          const siteParts = siteDomain.replace(/-/g, '').split('.')[0];
-          const emailParts = emailDomain.replace(/-/g, '').split('.')[0];
-          return siteParts.includes(emailParts) || emailParts.includes(siteParts);
-        });
-        if (partialMatch) {
-          email = partialMatch;
-        }
-      }
+      if (domainMatch) email = domainMatch;
     }
-    
-    // If no domain match, use first valid email found
-    if (!email) {
-      email = foundEmails[0];
-    }
+    if (!email) email = foundEmails[0];
   }
 
-  // Address pattern (Italian)
+  // Address
   const addressMatch = text.match(/(?:via|viale|piazza|corso|largo)\s+[^,\n]{3,50},?\s*\d{5}?\s*[a-zA-Z]+/i);
   const address = addressMatch ? addressMatch[0] : null;
 
   return { phone, email, address };
 }
 
-// Validate email is a real business email
 function isValidBusinessEmail(email: string, siteDomain?: string | null): boolean {
-  // Basic format check
-  if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
-    return false;
-  }
-  
-  // Length check
-  if (email.length < 6 || email.length > 100) {
-    return false;
-  }
+  if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) return false;
+  if (email.length < 6 || email.length > 100) return false;
   
   const emailLower = email.toLowerCase();
   const emailDomain = email.split('@')[1].toLowerCase();
   const emailPrefix = email.split('@')[0].toLowerCase();
   
-  // Skip fake/placeholder emails
-  const fakePrefixes = [
-    'example', 'test', 'demo', 'sample', 'fake', 'placeholder',
-    'noreply', 'no-reply', 'donotreply', 'do-not-reply',
-    'webmaster', 'hostmaster', 'postmaster', 'administrator',
-    'privacy', 'legal', 'abuse', 'null', 'undefined', 'root'
-  ];
+  const fakePrefixes = ['example', 'test', 'demo', 'noreply', 'no-reply', 'postmaster', 'webmaster'];
+  if (fakePrefixes.some(p => emailPrefix.startsWith(p))) return false;
   
-  if (fakePrefixes.some(p => emailPrefix.startsWith(p))) {
-    return false;
-  }
+  const fakeDomains = ['example.com', 'example.it', 'test.com', 'localhost', 'sentry.io'];
+  if (fakeDomains.some(d => emailDomain.includes(d))) return false;
   
-  // Skip technical/tracking emails
-  const fakeDomains = [
-    'example.com', 'example.it', 'test.com', 'localhost',
-    'sentry.io', 'bugsnag.com', 'datadog.com', 'newrelic.com',
-    'mailchimp.com', 'sendgrid.net', 'mailgun.org',
-    'mhtml.blink', 'placeholder.com', 'noemail.com'
-  ];
-  
-  if (fakeDomains.some(d => emailDomain.includes(d))) {
-    return false;
-  }
-  
-  // Skip hosting provider domains (unlikely to be the business email)
-  const hostingDomains = [
-    'aruba.it', 'register.it', 'godaddy.com', 'namecheap.com',
-    'cloudflare.com', 'amazonaws.com', 'googleusercontent.com',
-    'wixsite.com', 'wordpress.com', 'squarespace.com', 'shopify.com'
-  ];
-  
-  if (hostingDomains.some(d => emailDomain.includes(d))) {
-    return false;
-  }
-  
-  // Skip browser internal/hash-like emails
-  if (
-    emailLower.includes('.blink') ||
-    emailLower.includes('@mhtml.') ||
-    /^[a-f0-9-]{20,}@/.test(emailLower) ||  // Hash-like prefix
-    /^frame-[a-f0-9]+@/.test(emailLower)    // Browser frame emails
-  ) {
-    return false;
-  }
-  
-  // Skip emails with too many numbers (likely auto-generated)
-  const numbersInPrefix = (emailPrefix.match(/\d/g) || []).length;
-  if (numbersInPrefix > 5) {
-    return false;
-  }
-  
-  // If we have a site domain, prefer emails from same domain but don't reject others
-  // Free email providers are acceptable as last resort
-  const freeProviders = ['gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'libero.it', 'virgilio.it', 'alice.it', 'tin.it', 'tiscali.it', 'email.it', 'fastwebnet.it'];
-  
-  // For business validation, if site domain exists and email uses free provider, 
-  // it's less ideal but still acceptable
-  if (siteDomain && freeProviders.includes(emailDomain)) {
-    // Still valid, but will be lower priority in sorting
-    return true;
-  }
+  if (emailLower.includes('.blink') || /^[a-f0-9-]{20,}@/.test(emailLower)) return false;
   
   return true;
 }
 
-// Helper: Determine business type
 function determineBusinessType(title: string, description: string): string {
   const text = `${title} ${description}`.toLowerCase();
   
-  if (text.includes('riparazione') || text.includes('assistenza') || text.includes('repair')) {
-    return 'centro';
-  }
-  if (text.includes('negozio') || text.includes('vendita') || text.includes('store')) {
-    return 'corner';
-  }
-  if (text.includes('computer') || text.includes('pc')) {
-    return 'computer';
-  }
-  if (text.includes('elettronica') || text.includes('electronics')) {
-    return 'elettronica';
-  }
+  if (text.includes('riparazione') || text.includes('assistenza') || text.includes('repair')) return 'centro';
+  if (text.includes('negozio') || text.includes('vendita') || text.includes('store')) return 'corner';
+  if (text.includes('computer') || text.includes('pc')) return 'computer';
+  if (text.includes('elettronica')) return 'elettronica';
   
   return 'telefonia';
 }
