@@ -17,6 +17,7 @@ const Auth = () => {
   const isTrial = searchParams.get("trial") === "true";
   const leadId = searchParams.get("lead");
   const prefilledEmail = searchParams.get("email");
+  const roleType = searchParams.get("type"); // 'centro' or 'corner' from marketing link
   
   const { user, signIn, signUp, userRoles, loading: authLoading, isPlatformAdmin, isTechnician, isAdmin, isCentroAdmin, isCentroTech, isRiparatore, isCorner } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -30,10 +31,10 @@ const Auth = () => {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
 
-  // Assign role via edge function after registration - checks for lead by email
+  // Assign role via edge function after registration
   const processRegistration = async (userId: string, userEmail: string) => {
     try {
-      console.log("Processing registration for user:", userId, "lead:", leadId, "email:", userEmail);
+      console.log("Processing registration for user:", userId, "lead:", leadId, "email:", userEmail, "roleType:", roleType);
       
       // Use direct fetch to edge function since user might not have session yet
       const response = await fetch(
@@ -48,6 +49,7 @@ const Auth = () => {
             user_id: userId,
             lead_id: leadId,
             user_email: userEmail,
+            role_type: roleType, // Pass explicit role type from URL (centro or corner)
           }),
         }
       );

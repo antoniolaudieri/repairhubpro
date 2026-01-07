@@ -10,6 +10,7 @@ interface AssignRoleRequest {
   user_id: string;
   lead_id?: string;
   user_email?: string;
+  role_type?: string; // 'centro' or 'corner' - explicit role from URL
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -23,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { user_id, lead_id, user_email }: AssignRoleRequest = await req.json();
+    const { user_id, lead_id, user_email, role_type }: AssignRoleRequest = await req.json();
 
     if (!user_id) {
       return new Response(
@@ -32,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`assign-trial-role: Assigning role for user ${user_id}, lead_id: ${lead_id}, email: ${user_email}`);
+    console.log(`assign-trial-role: Assigning role for user ${user_id}, lead_id: ${lead_id}, email: ${user_email}, role_type: ${role_type}`);
 
     // Try to find lead by ID first, then by email
     let lead = null;
@@ -68,10 +69,16 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Determine role based on lead's business_type
+    // Determine role - priority: explicit role_type > lead's business_type > default
     let role = "centro_admin"; // Default role
     
-    if (lead) {
+    if (role_type === 'corner') {
+      role = "corner_admin";
+      console.log(`assign-trial-role: Using explicit role_type from URL: corner_admin`);
+    } else if (role_type === 'centro') {
+      role = "centro_admin";
+      console.log(`assign-trial-role: Using explicit role_type from URL: centro_admin`);
+    } else if (lead) {
       console.log(`assign-trial-role: Lead found with business_type: ${lead.business_type}`);
       if (lead.business_type === "corner") {
         role = "corner_admin";
@@ -79,7 +86,7 @@ const handler = async (req: Request): Promise<Response> => {
         role = "centro_admin";
       }
     } else {
-      console.log("assign-trial-role: No lead found, assigning default centro_admin role");
+      console.log("assign-trial-role: No explicit role_type or lead found, assigning default centro_admin role");
     }
     
     console.log(`assign-trial-role: Assigning role '${role}' to user ${user_id}`);
