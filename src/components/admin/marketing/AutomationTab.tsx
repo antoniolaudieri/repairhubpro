@@ -14,7 +14,7 @@ import {
   Play, Pause, Settings, Zap, Clock, Mail, 
   RefreshCw, AlertCircle, CheckCircle, Loader2,
   Server, Shield, Eye, EyeOff, FlaskConical, Send,
-  MapPin, Users, XCircle
+  MapPin, Users, XCircle, Phone
 } from "lucide-react";
 import {
   Dialog,
@@ -51,9 +51,10 @@ interface ScanProgress {
   currentZoneIndex: number;
   currentZoneName: string;
   totalLeadsFound: number;
+  leadsWithEmail: number;
+  leadsPhoneOnly: number;
   osmLeadsFound: number;
   firecrawlLeadsFound: number;
-  totalResultsFound: number;
   errors: string[];
   completedZones: string[];
 }
@@ -86,9 +87,10 @@ export function AutomationTab() {
     currentZoneIndex: 0,
     currentZoneName: "",
     totalLeadsFound: 0,
+    leadsWithEmail: 0,
+    leadsPhoneOnly: 0,
     osmLeadsFound: 0,
     firecrawlLeadsFound: 0,
-    totalResultsFound: 0,
     errors: [],
     completedZones: [],
   });
@@ -227,9 +229,10 @@ export function AutomationTab() {
       currentZoneIndex: 0,
       currentZoneName: zones[0].name,
       totalLeadsFound: 0,
+      leadsWithEmail: 0,
+      leadsPhoneOnly: 0,
       osmLeadsFound: 0,
       firecrawlLeadsFound: 0,
-      totalResultsFound: 0,
       errors: [],
       completedZones: [],
     });
@@ -258,9 +261,10 @@ export function AutomationTab() {
           setScanProgress(prev => ({
             ...prev,
             totalLeadsFound: prev.totalLeadsFound + (data.leadsCreated || 0),
+            leadsWithEmail: prev.leadsWithEmail + (data.leadsWithEmail || 0),
+            leadsPhoneOnly: prev.leadsPhoneOnly + (data.leadsPhoneOnly || 0),
             osmLeadsFound: prev.osmLeadsFound + (data.osmLeads || 0),
             firecrawlLeadsFound: prev.firecrawlLeadsFound + (data.firecrawlLeads || 0),
-            totalResultsFound: prev.totalResultsFound + (data.resultsFound || 0),
             completedZones: [...prev.completedZones, zone.name],
           }));
         }
@@ -295,9 +299,10 @@ export function AutomationTab() {
         currentZoneIndex: 0,
         currentZoneName: "",
         totalLeadsFound: 0,
+        leadsWithEmail: 0,
+        leadsPhoneOnly: 0,
         osmLeadsFound: 0,
         firecrawlLeadsFound: 0,
-        totalResultsFound: 0,
         errors: [],
         completedZones: [],
       });
@@ -512,21 +517,34 @@ export function AutomationTab() {
             )}
 
             {/* Stats */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-muted/50 rounded-lg text-center">
                 <Users className="h-5 w-5 mx-auto mb-1 text-green-600" />
                 <p className="text-2xl font-bold text-green-600">{scanProgress.totalLeadsFound}</p>
                 <p className="text-xs text-muted-foreground">Lead totali</p>
               </div>
               <div className="p-3 bg-muted/50 rounded-lg text-center">
-                <MapPin className="h-5 w-5 mx-auto mb-1 text-blue-600" />
-                <p className="text-2xl font-bold text-blue-600">{scanProgress.osmLeadsFound}</p>
-                <p className="text-xs text-muted-foreground">da OSM (gratis)</p>
+                <Mail className="h-5 w-5 mx-auto mb-1 text-primary" />
+                <p className="text-2xl font-bold text-primary">{scanProgress.leadsWithEmail}</p>
+                <p className="text-xs text-muted-foreground">Con email (auto)</p>
               </div>
-              <div className="p-3 bg-muted/50 rounded-lg text-center">
-                <RefreshCw className="h-5 w-5 mx-auto mb-1 text-orange-600" />
-                <p className="text-2xl font-bold text-orange-600">{scanProgress.firecrawlLeadsFound}</p>
-                <p className="text-xs text-muted-foreground">da Firecrawl</p>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg text-center">
+                <Phone className="h-4 w-4 mx-auto mb-1 text-orange-600" />
+                <p className="text-lg font-bold text-orange-600">{scanProgress.leadsPhoneOnly}</p>
+                <p className="text-xs text-muted-foreground">Solo tel.</p>
+              </div>
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-center">
+                <MapPin className="h-4 w-4 mx-auto mb-1 text-blue-600" />
+                <p className="text-lg font-bold text-blue-600">{scanProgress.osmLeadsFound}</p>
+                <p className="text-xs text-muted-foreground">OSM</p>
+              </div>
+              <div className="p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg text-center">
+                <RefreshCw className="h-4 w-4 mx-auto mb-1 text-purple-600" />
+                <p className="text-lg font-bold text-purple-600">{scanProgress.firecrawlLeadsFound}</p>
+                <p className="text-xs text-muted-foreground">Firecrawl</p>
               </div>
             </div>
 
