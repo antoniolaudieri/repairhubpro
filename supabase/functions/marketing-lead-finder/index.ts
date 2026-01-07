@@ -215,131 +215,57 @@ const handler = async (req: Request): Promise<Response> => {
         // Extract contact info from markdown if available
         let contactInfo = extractContactInfo(result.markdown || result.description || '', result.url);
 
-        // If no email found, do DEEP MULTI-PAGE scraping
+        // If no email found, try scraping contact page only (lightweight approach)
         if (!contactInfo.email && result.url) {
-          console.log(`marketing-lead-finder: No email in search results for "${businessName}", starting deep multi-page scrape`);
+          console.log(`marketing-lead-finder: No email in search results for "${businessName}", trying contact page`);
           
-          // First, try to map the entire site to find all pages
-          let sitePages: string[] = [];
           try {
             const baseUrl = new URL(result.url);
-            console.log(`marketing-lead-finder: Mapping site ${baseUrl.origin}`);
+            // Only try the most common contact page paths - max 2 attempts
+            const contactPaths = ['/contatti', '/contact'];
             
-            const mapResponse = await fetch('https://api.firecrawl.dev/v1/map', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${firecrawlApiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                url: baseUrl.origin,
-                limit: 50,
-                includeSubdomains: false,
-              }),
-            });
-
-            if (mapResponse.ok) {
-              const mapData = await mapResponse.json();
-              sitePages = mapData.links || [];
-              console.log(`marketing-lead-finder: Mapped ${sitePages.length} pages on site`);
-            }
-          } catch (mapError) {
-            console.log(`marketing-lead-finder: Could not map site, using fallback pages`);
-          }
-
-          // Build priority list of pages to scrape for contact info
-          const contactKeywords = ['contatt', 'contact', 'chi-siamo', 'about', 'dove-siamo', 'azienda', 'info', 'sede', 'negozio', 'store'];
-          
-          // Sort site pages by priority (contact pages first)
-          const priorityPages: string[] = [];
-          const otherPages: string[] = [];
-          
-          for (const page of sitePages) {
-            const pageLower = page.toLowerCase();
-            if (contactKeywords.some(kw => pageLower.includes(kw))) {
-              priorityPages.push(page);
-            } else {
-              otherPages.push(page);
-            }
-          }
-          
-          // Build final list of pages to scrape
-          const urlsToScrape: string[] = [result.url]; // Always start with the main page
-          
-          // Add priority pages (contact, about, etc.) - limit to 2
-          urlsToScrape.push(...priorityPages.slice(0, 2));
-          
-          // Add fallback contact paths only if no priority pages found
-          if (priorityPages.length === 0) {
-            try {
-              const baseUrl = new URL(result.url);
-              const fallbackPaths = ['/contatti', '/contact', '/chi-siamo'];
-              for (const path of fallbackPaths) {
-                const fullUrl = `${baseUrl.origin}${path}`;
-                if (!urlsToScrape.includes(fullUrl)) {
-                  urlsToScrape.push(fullUrl);
-                }
-              }
-            } catch {
-              // Invalid URL
-            }
-          }
-          
-          // Add some other pages from the site (might have email in footer)
-          urlsToScrape.push(...otherPages.slice(0, 1));
-          
-          // Limit total pages to scrape - keep it light to avoid CPU timeout
-          const maxPagesToScrape = 4;
-          const pagesToScrape = urlsToScrape.slice(0, maxPagesToScrape);
-          
-          console.log(`marketing-lead-finder: Will scrape up to ${pagesToScrape.length} pages for email`);
-          
-          for (const urlToScrape of pagesToScrape) {
-            if (contactInfo.email) break; // Stop once we find a valid email
-            
-            try {
-              console.log(`marketing-lead-finder: Deep scraping ${urlToScrape}`);
+            for (const path of contactPaths) {
+              if (contactInfo.email) break;
               
-              const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-                method: 'POST',
-                headers: {
-                  'Authorization': `Bearer ${firecrawlApiKey}`,
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  url: urlToScrape,
-                  formats: ['markdown', 'html'], // Get both for better email extraction
-                  onlyMainContent: false, // Get everything including header/footer with contacts
-                }),
-              });
+              const contactUrl = `${baseUrl.origin}${path}`;
+              console.log(`marketing-lead-finder: Trying ${contactUrl}`);
+              
+              try {
+                const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+                  method: 'POST',
+                  headers: {
+                    'Authorization': `Bearer ${firecrawlApiKey}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    url: contactUrl,
+                    formats: ['markdown'],
+                    onlyMainContent: true,
+                  }),
+                });
 
-              if (scrapeResponse.ok) {
-                const scrapeData = await scrapeResponse.json();
-                const pageContent = (scrapeData.data?.markdown || scrapeData.markdown || '') + 
-                                   ' ' + (scrapeData.data?.html || scrapeData.html || '');
-                
-                if (pageContent) {
-                  console.log(`marketing-lead-finder: Scraped ${urlToScrape}, content length: ${pageContent.length}`);
-                  const deepContactInfo = extractContactInfo(pageContent, result.url);
+                if (scrapeResponse.ok) {
+                  const scrapeData = await scrapeResponse.json();
+                  const pageContent = scrapeData.data?.markdown || scrapeData.markdown || '';
                   
-                  // Update contact info if found in deep scrape
-                  if (deepContactInfo.email) {
-                    contactInfo.email = deepContactInfo.email;
-                    console.log(`marketing-lead-finder: ✓ Found email via deep scrape (${urlToScrape}): ${deepContactInfo.email}`);
-                  }
-                  if (deepContactInfo.phone && !contactInfo.phone) {
-                    contactInfo.phone = deepContactInfo.phone;
-                    console.log(`marketing-lead-finder: Found phone via deep scrape: ${deepContactInfo.phone}`);
-                  }
-                  if (deepContactInfo.address && !contactInfo.address) {
-                    contactInfo.address = deepContactInfo.address;
+                  if (pageContent && pageContent.length < 100000) { // Skip huge pages
+                    const deepContactInfo = extractContactInfo(pageContent, result.url);
+                    
+                    if (deepContactInfo.email) {
+                      contactInfo.email = deepContactInfo.email;
+                      console.log(`marketing-lead-finder: ✓ Found email via ${path}: ${deepContactInfo.email}`);
+                    }
+                    if (deepContactInfo.phone && !contactInfo.phone) {
+                      contactInfo.phone = deepContactInfo.phone;
+                    }
                   }
                 }
+              } catch {
+                // Continue to next path
               }
-            } catch (scrapeError) {
-              // Silently continue to next URL
-              console.log(`marketing-lead-finder: Could not scrape ${urlToScrape}`);
             }
+          } catch {
+            // Invalid URL, skip
           }
         }
 
