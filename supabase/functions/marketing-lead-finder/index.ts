@@ -203,47 +203,31 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // ========== PHASE 4: SAVE ALL LEADS TO DATABASE ==========
-    console.log(`marketing-lead-finder: [PHASE 4] Filtering and saving leads...`);
+    // ========== PHASE 4: POSITIVE FILTER + SAVE LEADS ==========
+    console.log(`marketing-lead-finder: [PHASE 4] Applying POSITIVE filter (whitelist + score)...`);
     
-    // Filter out irrelevant business types (public entities, police, etc.)
-    const excludedKeywords = [
-      // Enti pubblici
-      'comune di', 'municipio', 'municipalità', 'provincia di', 'regione',
-      'agenzia entrate', 'agenzia delle entrate', 'inps', 'inail',
-      'ministero', 'prefettura', 'questura', 'tribunale', 'procura',
-      'camera di commercio', 'asl', 'ospedale', 'azienda sanitaria',
-      'università', 'scuola', 'istituto comprensivo', 'liceo',
-      // Forze dell'ordine
-      'carabinieri', 'polizia', 'guardia di finanza', 'vigili del fuoco',
-      'polizia locale', 'polizia municipale', 'vigili urbani', 'gendarmeria',
-      'arma dei carabinieri', 'comando', 'stazione carabinieri', 'commissariato',
-      // Altri enti non rilevanti
-      'protezione civile', 'croce rossa', 'croce verde', 'croce bianca',
-      'associazione', 'onlus', 'ong', 'fondazione', 'caf', 'patronato',
-      'parrocchia', 'chiesa', 'diocesi', 'curia',
-      'banca', 'banco', 'cassa di risparmio', 'credito', 'assicurazione', 'assicurazioni',
-      'posta', 'poste italiane', 'ufficio postale',
-      'ferrovie', 'trenitalia', 'atm', 'atac', 'trasporto pubblico',
-      // Esclusioni email
-      'pec.it', 'legalmail', 'postacert', 'gov.it', 'edu.it', 'istruzione.it',
-    ];
+    let excludedCount = 0;
+    let lowScoreCount = 0;
     
     const filteredResults = allResults.filter(result => {
-      const nameLower = result.name.toLowerCase();
-      const emailLower = (result.email || '').toLowerCase();
+      const check = isRelevantLead(result.name, result.website || '', result.email);
       
-      // Check if name or email contains excluded keywords
-      for (const keyword of excludedKeywords) {
-        if (nameLower.includes(keyword) || emailLower.includes(keyword)) {
-          console.log(`marketing-lead-finder: EXCLUDED "${result.name}" (matched: ${keyword})`);
-          return false;
+      if (!check.relevant) {
+        if (check.reason.includes('Excluded domain') || check.reason.includes('No required keyword')) {
+          excludedCount++;
+          console.log(`marketing-lead-finder: ✗ EXCLUDED "${result.name}" - ${check.reason}`);
+        } else {
+          lowScoreCount++;
+          console.log(`marketing-lead-finder: ✗ LOW SCORE "${result.name}" - ${check.reason}`);
         }
+        return false;
       }
+      
+      console.log(`marketing-lead-finder: ✓ RELEVANT "${result.name}" - ${check.reason}`);
       return true;
     });
     
-    console.log(`marketing-lead-finder: Filtered ${allResults.length - filteredResults.length} irrelevant leads, keeping ${filteredResults.length}`);
+    console.log(`marketing-lead-finder: Filtered out ${excludedCount} (excluded domains/keywords) + ${lowScoreCount} (low score), keeping ${filteredResults.length} relevant leads`);
     
     for (const result of filteredResults) {
       try {
@@ -378,24 +362,133 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-// ========== BUILD SEARCH QUERIES (OTTIMIZZATE - MAX 5 QUERY) ==========
+// ========== WHITELIST KEYWORD POSITIVE (MUST MATCH) ==========
+const REQUIRED_KEYWORDS = [
+  // Telefonia e cellulari
+  'telefon', 'cellulari', 'smartphone', 'mobile', 'phone', 'iphone', 'samsung', 'huawei', 'xiaomi',
+  // Operatori
+  'tim', 'vodafone', 'wind', 'tre', '3 store', 'iliad', 'fastweb', 'tiscali', 'ho.mobile', 'kena', 'postemobile',
+  // Riparazione
+  'riparazione', 'riparazioni', 'assistenza', 'fix', 'repair', 'service', 'tecnico', 'laboratorio',
+  // Negozi
+  'negozio', 'shop', 'store', 'punto vendita', 'centro', 'multiservizi', 'accessori',
+  // Elettronica
+  'elettronica', 'hi-tech', 'informatica', 'computer', 'tablet', 'apple', 'android',
+];
+
+// ========== EXCLUDED DOMAINS (News, blog, social, annunci) ==========
+const EXCLUDED_DOMAINS = [
+  // Social media
+  'facebook.com', 'instagram.com', 'twitter.com', 'linkedin.com', 'youtube.com', 'tiktok.com',
+  // News e blog
+  'ilfattoquotidiano', 'repubblica', 'corriere', 'lastampa', 'ansa', 'ilmessaggero', 'ilgiornale',
+  'fanpage', 'huffingtonpost', 'tgcom24', 'sky.it', 'rai.it', 'mediaset',
+  'blog', 'wordpress', 'blogspot', 'medium.com', 'tumblr',
+  // Wikipedia e directory
+  'wikipedia.org', 'wikihow', 'paginegialle', 'paginebianche', 'yelp', 'tripadvisor',
+  // Annunci e marketplace
+  'subito.it', 'kijiji', 'bakeca', 'ebay', 'amazon', 'aliexpress',
+  // Altri
+  'google.com', 'apple.com/it', 'samsung.com', 'gov.it', 'edu.it',
+  'comune.', 'provincia.', 'regione.',
+];
+
+// ========== RELEVANCE SCORING FUNCTION ==========
+function calculateRelevanceScore(name: string, url: string, email: string | undefined): number {
+  let score = 0;
+  const nameLower = name.toLowerCase();
+  const urlLower = (url || '').toLowerCase();
+  const emailLower = (email || '').toLowerCase();
+  
+  // +3 punti: Nome contiene operatore telefonico
+  const operators = ['tim', 'vodafone', 'wind', 'tre', 'iliad', 'fastweb', 'ho.mobile', 'kena', 'postemobile'];
+  if (operators.some(op => nameLower.includes(op))) {
+    score += 3;
+  }
+  
+  // +2 punti: Nome contiene keyword telefonia
+  const phoneKeywords = ['telefon', 'cellulari', 'smartphone', 'mobile', 'phone', 'iphone', 'samsung'];
+  if (phoneKeywords.some(kw => nameLower.includes(kw))) {
+    score += 2;
+  }
+  
+  // +2 punti: Nome contiene keyword riparazione
+  const repairKeywords = ['riparazione', 'riparazioni', 'assistenza', 'repair', 'fix', 'service'];
+  if (repairKeywords.some(kw => nameLower.includes(kw))) {
+    score += 2;
+  }
+  
+  // +1 punto: URL contiene keyword telefonia
+  const urlKeywords = ['phone', 'mobile', 'cell', 'ripar', 'telefon', 'tim', 'vodafone'];
+  if (urlKeywords.some(kw => urlLower.includes(kw))) {
+    score += 1;
+  }
+  
+  // +1 punto: Email aziendale (non generica)
+  if (email && !emailLower.includes('gmail') && !emailLower.includes('hotmail') && 
+      !emailLower.includes('yahoo') && !emailLower.includes('libero') && 
+      !emailLower.includes('outlook') && !emailLower.includes('icloud')) {
+    score += 1;
+  }
+  
+  // +1 punto: Nome contiene "negozio" o "centro" o "punto"
+  if (['negozio', 'centro', 'punto', 'shop', 'store'].some(kw => nameLower.includes(kw))) {
+    score += 1;
+  }
+  
+  return score;
+}
+
+// ========== CHECK IF LEAD IS RELEVANT (POSITIVE FILTER) ==========
+function isRelevantLead(name: string, url: string, email: string | undefined): { relevant: boolean; score: number; reason: string } {
+  const nameLower = name.toLowerCase();
+  const urlLower = (url || '').toLowerCase();
+  
+  // CHECK 1: Domain must not be excluded
+  for (const domain of EXCLUDED_DOMAINS) {
+    if (urlLower.includes(domain)) {
+      return { relevant: false, score: 0, reason: `Excluded domain: ${domain}` };
+    }
+  }
+  
+  // CHECK 2: Must contain at least one required keyword
+  const hasRequiredKeyword = REQUIRED_KEYWORDS.some(kw => 
+    nameLower.includes(kw) || urlLower.includes(kw)
+  );
+  
+  if (!hasRequiredKeyword) {
+    return { relevant: false, score: 0, reason: 'No required keyword found' };
+  }
+  
+  // CHECK 3: Calculate relevance score
+  const score = calculateRelevanceScore(name, url, email);
+  
+  // Minimum score required: 3
+  if (score < 3) {
+    return { relevant: false, score, reason: `Score too low: ${score}/3` };
+  }
+  
+  return { relevant: true, score, reason: `Score: ${score}` };
+}
+
+// ========== BUILD SEARCH QUERIES (PRECISE WITH QUOTES) ==========
 function buildSearchQueries(cityName: string, searchType: string): string[] {
   const queries: string[] = [];
   
-  // CENTRO: Centri riparazione (MAX 2 query)
+  // CENTRO: Centri riparazione (query precise con virgolette)
   if (searchType === 'centro' || searchType === 'both') {
     queries.push(
-      `riparazione smartphone cellulari ${cityName} email contatti`,
-      `assistenza tecnico telefoni ${cityName} email`,
+      `"riparazione smartphone" ${cityName} email`,
+      `"assistenza cellulari" ${cityName} contatti`,
     );
   }
   
-  // CORNER: Negozi operatori e multiservizi (MAX 3 query)
+  // CORNER: Negozi operatori e telefonia
   if (searchType === 'corner' || searchType === 'both') {
     queries.push(
-      `negozio TIM Vodafone Wind ${cityName} email contatti`,
-      `rivenditore telefonia Iliad Fastweb ${cityName} email`,
-      `centro multiservizi telefonia ${cityName} contatti email`,
+      `"negozio TIM" OR "punto Vodafone" ${cityName} email`,
+      `"negozio telefonia" ${cityName} contatti email`,
+      `"centro multiservizi" telefonia ${cityName} email`,
     );
   }
   
