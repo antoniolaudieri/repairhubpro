@@ -114,93 +114,115 @@ const handler = async (req: Request): Promise<Response> => {
       const osmShops = await searchOverpass(lat, lon, radiusKm, searchType);
       console.log(`marketing-lead-finder: Overpass found ${osmShops.length} shops`);
 
-      for (const shop of osmShops) {
-        try {
-          // Skip if already processed
-          const businessKey = `${shop.name.toLowerCase()}-${shop.phone || ''}-${shop.website || ''}`;
-          if (processedBusinesses.has(businessKey)) continue;
-          processedBusinesses.add(businessKey);
+      // Process shops in batches to avoid timeout
+      const batchSize = 20;
+      const shopsToProcess = osmShops.slice(0, 100); // Limit to first 100 shops
+      
+      for (let i = 0; i < shopsToProcess.length; i += batchSize) {
+        const batch = shopsToProcess.slice(i, i + batchSize);
+        console.log(`marketing-lead-finder: OSM - Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(shopsToProcess.length/batchSize)}`);
+        
+        for (const shop of batch) {
+          try {
+            // Skip if already processed
+            const businessKey = `${shop.name.toLowerCase().substring(0, 20)}`;
+            if (processedBusinesses.has(businessKey)) continue;
+            processedBusinesses.add(businessKey);
 
-          // Check if lead exists
-          const { data: existingLeads } = await supabase
-            .from("marketing_leads")
-            .select("id")
-            .or(`business_name.ilike.%${shop.name.substring(0, 15)}%,phone.eq.${shop.phone || 'NONE'}`)
-            .limit(1);
+            // Check if lead exists (simplified check)
+            const { data: existingLeads } = await supabase
+              .from("marketing_leads")
+              .select("id")
+              .ilike("business_name", `%${shop.name.substring(0, 12)}%`)
+              .limit(1);
 
-          if (existingLeads && existingLeads.length > 0) {
-            console.log(`marketing-lead-finder: OSM - "${shop.name}" already exists`);
-            continue;
+            if (existingLeads && existingLeads.length > 0) {
+              continue;
+            }
+
+            let email: string | undefined = shop.email || undefined;
+            let phone: string | undefined = shop.phone || undefined;
+            let website: string | undefined = shop.website || undefined;
+            
+            // NEW: If no website, try to find it via Google search with Firecrawl
+            if (!website && !email && firecrawlApiKey) {
+              const searchQuery = `${shop.name} ${shop.address || zoneName} telefono email`;
+              const searchResult = await searchGoogleForBusiness(searchQuery, shop.name, firecrawlApiKey);
+              if (searchResult) {
+                website = searchResult.website || website;
+                email = searchResult.email || email;
+                phone = searchResult.phone || phone;
+                if (searchResult.website) {
+                  console.log(`marketing-lead-finder: OSM - Found website for "${shop.name}": ${searchResult.website}`);
+                }
+              }
+            }
+            
+            // If has website but no email, try aggressive email enrichment
+            if (!email && website && firecrawlApiKey) {
+              const enrichedEmail = await enrichEmailFromWebsite(website, firecrawlApiKey);
+              if (enrichedEmail) email = enrichedEmail;
+            }
+
+            // Determine business type from OSM shop type
+            const businessType = mapOsmTypeToBusinessType(shop.shopType);
+
+            // Save lead if has email OR phone OR website (website alone is still valuable)
+            if (!email && !phone && !website) {
+              continue; // Truly no contact info
+            }
+
+            // Determine status based on contact info
+            const hasEmail = !!email;
+            const leadStatus = hasEmail ? 'new' : 'manual_contact';
+
+            // Create lead
+            const { data: newLead, error: leadError } = await supabase
+              .from("marketing_leads")
+              .insert({
+                source: 'openstreetmap',
+                business_name: shop.name,
+                website: website || null,
+                phone: phone || null,
+                email: email || null,
+                address: shop.address || `${zoneName}, Italia`,
+                business_type: businessType,
+                status: leadStatus,
+                auto_processed: true,
+                scan_zone_id: zone?.id || null,
+                funnel_stage_id: defaultStage?.id || null,
+                current_sequence_id: hasEmail ? sequence?.id : null,
+                current_step: 0,
+                notes: `Trovato via OpenStreetMap (${shop.shopType})\nCoordinate: ${shop.lat}, ${shop.lon}${!hasEmail ? '\n⚠️ Contatto manuale richiesto' : ''}`,
+              })
+              .select()
+              .single();
+
+            if (leadError) {
+              console.error(`marketing-lead-finder: OSM - Error creating lead:`, leadError);
+              continue;
+            }
+
+            stats.total++;
+            stats.osmTotal++;
+            if (hasEmail) {
+              stats.withEmail++;
+              createdLeads.push(`📧 ${shop.name}`);
+            } else {
+              stats.phoneOnly++;
+              createdLeads.push(`📞 ${shop.name}`);
+            }
+            
+            console.log(`marketing-lead-finder: OSM ✓ "${shop.name}" (email: ${email || '-'}, phone: ${phone || '-'}, web: ${website ? 'yes' : '-'})`);
+
+            // Schedule email only if has email
+            if (hasEmail && sequence?.id && newLead) {
+              await scheduleFirstEmail(supabase, newLead.id, sequence.id);
+            }
+
+          } catch (shopError) {
+            console.error(`marketing-lead-finder: OSM - Error processing shop:`, shopError);
           }
-
-          let email: string | undefined = shop.email || undefined;
-          
-          // If no email but has website, try aggressive email enrichment
-          if (!email && shop.website && firecrawlApiKey) {
-            console.log(`marketing-lead-finder: OSM - Enriching "${shop.name}" via Firecrawl`);
-            const enrichedEmail = await enrichEmailFromWebsite(shop.website, firecrawlApiKey);
-            if (enrichedEmail) email = enrichedEmail;
-          }
-
-          // Determine business type from OSM shop type
-          const businessType = mapOsmTypeToBusinessType(shop.shopType);
-
-          // NEW LOGIC: Save lead if has email OR phone
-          if (!email && !shop.phone) {
-            console.log(`marketing-lead-finder: OSM - Skipping "${shop.name}" - no email AND no phone`);
-            continue;
-          }
-
-          // Determine status based on contact info
-          const hasEmail = !!email;
-          const leadStatus = hasEmail ? 'new' : 'manual_contact';
-
-          // Create lead
-          const { data: newLead, error: leadError } = await supabase
-            .from("marketing_leads")
-            .insert({
-              source: 'openstreetmap',
-              business_name: shop.name,
-              website: shop.website || null,
-              phone: shop.phone || null,
-              email: email || null,
-              address: shop.address || `${zoneName}, Italia`,
-              business_type: businessType,
-              status: leadStatus,
-              auto_processed: true,
-              scan_zone_id: zone?.id || null,
-              funnel_stage_id: defaultStage?.id || null,
-              current_sequence_id: hasEmail ? sequence?.id : null,
-              current_step: 0,
-              notes: `Trovato via OpenStreetMap (${shop.shopType})\nCoordinate: ${shop.lat}, ${shop.lon}${!hasEmail ? '\n⚠️ Solo telefono - contatto manuale richiesto' : ''}`,
-            })
-            .select()
-            .single();
-
-          if (leadError) {
-            console.error(`marketing-lead-finder: OSM - Error creating lead:`, leadError);
-            continue;
-          }
-
-          stats.total++;
-          stats.osmTotal++;
-          if (hasEmail) {
-            stats.withEmail++;
-            createdLeads.push(`📧 ${shop.name}`);
-          } else {
-            stats.phoneOnly++;
-            createdLeads.push(`📞 ${shop.name}`);
-          }
-          
-          console.log(`marketing-lead-finder: OSM ✓ Created "${shop.name}" (email: ${email || 'N/A'}, phone: ${shop.phone || 'N/A'}, status: ${leadStatus})`);
-
-          // Schedule email only if has email
-          if (hasEmail && sequence?.id && newLead) {
-            await scheduleFirstEmail(supabase, newLead.id, sequence.id);
-          }
-
-        } catch (shopError) {
-          console.error(`marketing-lead-finder: OSM - Error processing shop:`, shopError);
         }
       }
     } else if (!lat || !lon) {
@@ -532,6 +554,72 @@ async function searchFirecrawl(zoneName: string, searchType: string, apiKey: str
   }
 
   return allResults;
+}
+
+// ========== SEARCH GOOGLE FOR BUSINESS INFO ==========
+async function searchGoogleForBusiness(
+  query: string, 
+  businessName: string, 
+  apiKey: string
+): Promise<{ website?: string; email?: string; phone?: string } | null> {
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v1/search', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query,
+        limit: 3,
+        lang: 'it',
+        country: 'IT',
+        scrapeOptions: { formats: ['markdown'] }
+      }),
+    });
+
+    if (!response.ok) return null;
+
+    const data = await response.json();
+    const results = data.data || [];
+    
+    // Skip big directories/marketplaces
+    const skipDomains = [
+      'facebook.com', 'instagram.com', 'linkedin.com', 'twitter.com',
+      'youtube.com', 'wikipedia.org', 'tripadvisor', 'paginegialle.it',
+      'paginebianche.it', 'subito.it', 'kijiji.it', 'ebay.it', 'amazon.',
+      'unieuro.it', 'trony.it', 'mediaworld.it', 'euronics.it', 'yelp.com'
+    ];
+
+    for (const result of results) {
+      const url = result.url?.toLowerCase() || '';
+      
+      // Skip directories
+      if (skipDomains.some(d => url.includes(d))) continue;
+      
+      // Check if title/URL seems to match business name
+      const nameWords = businessName.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+      const urlMatch = nameWords.some(w => url.includes(w));
+      const titleMatch = nameWords.some(w => (result.title || '').toLowerCase().includes(w));
+      
+      if (!urlMatch && !titleMatch) continue;
+      
+      // Extract contact info from the result
+      const content = result.markdown || result.description || '';
+      const contactInfo = extractContactInfo(content, result.url);
+      
+      return {
+        website: result.url,
+        email: contactInfo.email || undefined,
+        phone: contactInfo.phone || undefined,
+      };
+    }
+    
+    return null;
+  } catch (err) {
+    console.error(`marketing-lead-finder: Google search error:`, err);
+    return null;
+  }
 }
 
 // ========== AGGRESSIVE EMAIL ENRICHMENT ==========
