@@ -1151,56 +1151,53 @@ export default function RepairDetail() {
               </div>
             </div>
 
-            {/* Action Buttons - Organized in logical groups */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            {/* Action Buttons - Responsive layout */}
+            <div className="flex items-center gap-2 flex-wrap">
               {/* Navigation */}
               <Button 
                 variant="ghost" 
+                size="sm"
                 onClick={() => handleNavigation(backRoute)}
-                className="gap-2 text-muted-foreground hover:text-foreground"
+                className="gap-1.5"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span>Indietro</span>
+                <span className="hidden sm:inline">Indietro</span>
               </Button>
 
               {/* Document & Checklist Group */}
-              <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+              <div className="flex items-center gap-0.5 bg-muted/50 rounded-md p-0.5">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button 
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => setAcceptanceFormOpen(true)}
-                        className="gap-1.5 h-8"
+                        className="h-7 w-7"
                       >
-                        <FileText className="h-4 w-4" />
-                        <span className="text-xs">Modulo</span>
+                        <FileText className="h-3.5 w-3.5" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Modulo di Accettazione</TooltipContent>
+                    <TooltipContent>Modulo</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
 
-                <div className="w-px h-4 bg-border" />
-
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Button 
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => {
                           setChecklistType('pre_repair');
                           setChecklistOpen(true);
                         }}
-                        className="gap-1.5 h-8"
+                        className="h-7 w-7"
                       >
-                        <ClipboardCheck className="h-4 w-4 text-amber-500" />
-                        <span className="text-xs">Pre</span>
+                        <ClipboardCheck className="h-3.5 w-3.5 text-amber-500" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Checklist Pre-Riparazione</TooltipContent>
+                    <TooltipContent>Pre</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
 
@@ -1209,22 +1206,19 @@ export default function RepairDetail() {
                     <TooltipTrigger asChild>
                       <Button 
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={() => {
                           setChecklistType('post_repair');
                           setChecklistOpen(true);
                         }}
-                        className="gap-1.5 h-8"
+                        className="h-7 w-7"
                       >
-                        <ClipboardCheck className="h-4 w-4 text-emerald-500" />
-                        <span className="text-xs">Post</span>
+                        <ClipboardCheck className="h-3.5 w-3.5 text-emerald-500" />
                       </Button>
                     </TooltipTrigger>
-                    <TooltipContent>Checklist Post-Riparazione</TooltipContent>
+                    <TooltipContent>Post</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-
-                <div className="w-px h-4 bg-border" />
 
                 <PrintLabelButton
                   repairId={repair.id}
@@ -1237,40 +1231,34 @@ export default function RepairDetail() {
                   createdAt={repair.created_at}
                   storageSlot={formattedStorageSlot}
                   variant="ghost"
-                  size="sm"
-                  className="gap-1.5 h-8"
+                  size="icon"
+                  className="h-7 w-7"
                 />
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowDeleteDialog(true)}
-                  className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  <span>Elimina</span>
-                </Button>
-                <Button
-                  onClick={() => saveChanges()}
-                  disabled={saving} 
-                  className="gap-2 shadow-md hover:shadow-lg transition-all"
-                >
-                  {saving ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Salva...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Save className="h-4 w-4" />
-                      <span>Salva</span>
-                    </>
-                  )}
-                </Button>
-              </div>
+              {/* Delete & Save */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDeleteDialog(true)}
+                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+              
+              <Button
+                onClick={() => saveChanges()}
+                disabled={saving} 
+                size="sm"
+                className="gap-1.5 h-7"
+              >
+                {saving ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Save className="h-3.5 w-3.5" />
+                )}
+                <span>Salva</span>
+              </Button>
             </div>
           </motion.div>
         </div>
