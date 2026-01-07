@@ -191,50 +191,69 @@ const handler = async (req: Request): Promise<Response> => {
         // Extract contact info from markdown if available
         let contactInfo = extractContactInfo(result.markdown || result.description || '');
 
-        // If no email found, do a deep scrape of the website
+        // If no email found, do a deep scrape of the website + contact pages
         if (!contactInfo.email && result.url) {
-          console.log(`marketing-lead-finder: No email in search results for "${businessName}", doing deep scrape of ${result.url}`);
+          console.log(`marketing-lead-finder: No email in search results for "${businessName}", doing deep scrape`);
+          
+          // Pages to try for finding contact info
+          const urlsToScrape: string[] = [result.url];
           
           try {
-            const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${firecrawlApiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                url: result.url,
-                formats: ['markdown'],
-                onlyMainContent: false, // Get everything including header/footer with contacts
-              }),
-            });
-
-            if (scrapeResponse.ok) {
-              const scrapeData = await scrapeResponse.json();
-              const pageContent = scrapeData.data?.markdown || scrapeData.markdown || '';
+            const baseUrl = new URL(result.url);
+            const contactPaths = ['/contatti', '/contatto', '/contact', '/contacts', '/chi-siamo', '/about', '/about-us', '/dove-siamo'];
+            for (const path of contactPaths) {
+              urlsToScrape.push(`${baseUrl.origin}${path}`);
+            }
+          } catch {
+            // Invalid URL, continue with just the main page
+          }
+          
+          for (const urlToScrape of urlsToScrape) {
+            if (contactInfo.email) break; // Stop once we find an email
+            
+            try {
+              console.log(`marketing-lead-finder: Scraping ${urlToScrape}`);
               
-              if (pageContent) {
-                console.log(`marketing-lead-finder: Deep scrape successful for "${businessName}", content length: ${pageContent.length}`);
-                const deepContactInfo = extractContactInfo(pageContent);
+              const scrapeResponse = await fetch('https://api.firecrawl.dev/v1/scrape', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${firecrawlApiKey}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  url: urlToScrape,
+                  formats: ['markdown', 'html'], // Get both for better email extraction
+                  onlyMainContent: false, // Get everything including header/footer with contacts
+                }),
+              });
+
+              if (scrapeResponse.ok) {
+                const scrapeData = await scrapeResponse.json();
+                const pageContent = (scrapeData.data?.markdown || scrapeData.markdown || '') + 
+                                   ' ' + (scrapeData.data?.html || scrapeData.html || '');
                 
-                // Update contact info if found in deep scrape
-                if (deepContactInfo.email) {
-                  contactInfo.email = deepContactInfo.email;
-                  console.log(`marketing-lead-finder: Found email via deep scrape: ${deepContactInfo.email}`);
-                }
-                if (deepContactInfo.phone && !contactInfo.phone) {
-                  contactInfo.phone = deepContactInfo.phone;
-                  console.log(`marketing-lead-finder: Found phone via deep scrape: ${deepContactInfo.phone}`);
-                }
-                if (deepContactInfo.address && !contactInfo.address) {
-                  contactInfo.address = deepContactInfo.address;
+                if (pageContent) {
+                  console.log(`marketing-lead-finder: Scraped ${urlToScrape}, content length: ${pageContent.length}`);
+                  const deepContactInfo = extractContactInfo(pageContent);
+                  
+                  // Update contact info if found in deep scrape
+                  if (deepContactInfo.email) {
+                    contactInfo.email = deepContactInfo.email;
+                    console.log(`marketing-lead-finder: Found email via deep scrape (${urlToScrape}): ${deepContactInfo.email}`);
+                  }
+                  if (deepContactInfo.phone && !contactInfo.phone) {
+                    contactInfo.phone = deepContactInfo.phone;
+                    console.log(`marketing-lead-finder: Found phone via deep scrape: ${deepContactInfo.phone}`);
+                  }
+                  if (deepContactInfo.address && !contactInfo.address) {
+                    contactInfo.address = deepContactInfo.address;
+                  }
                 }
               }
-            } else {
-              console.log(`marketing-lead-finder: Deep scrape failed for "${businessName}": ${scrapeResponse.status}`);
+            } catch (scrapeError) {
+              // Silently continue to next URL
+              console.log(`marketing-lead-finder: Could not scrape ${urlToScrape}`);
             }
-          } catch (scrapeError) {
-            console.error(`marketing-lead-finder: Error deep scraping ${result.url}:`, scrapeError);
           }
         }
 
@@ -410,9 +429,64 @@ function extractContactInfo(text: string): { phone: string | null; email: string
     }
   }
 
-  // Email pattern
-  const emailMatch = text.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-  const email = emailMatch ? emailMatch[0].toLowerCase() : null;
+  // Email patterns - more aggressive extraction
+  const emailPatterns = [
+    // Standard email
+    /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g,
+    // Email with spaces around @ (sometimes in HTML)
+    /[a-zA-Z0-9._%+-]+\s*[@＠]\s*[a-zA-Z0-9.-]+\s*\.\s*[a-zA-Z]{2,}/g,
+    // Email with [at] or (at) replacements
+    /[a-zA-Z0-9._%+-]+\s*(?:\[at\]|\(at\)|@)\s*[a-zA-Z0-9.-]+\s*(?:\[dot\]|\(dot\)|\.)\s*[a-zA-Z]{2,}/gi,
+    // mailto: links
+    /mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g,
+    // href="mailto:..." pattern
+    /href=["']mailto:([^"']+)["']/g,
+  ];
+  
+  let email: string | null = null;
+  
+  // First try mailto links (most reliable)
+  const mailtoMatch = text.match(/mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i);
+  if (mailtoMatch) {
+    email = mailtoMatch[1].toLowerCase();
+  }
+  
+  // Then try standard patterns
+  if (!email) {
+    for (const pattern of emailPatterns) {
+      const matches = text.match(pattern);
+      if (matches) {
+        for (const match of matches) {
+          // Clean up the match
+          let cleanEmail = match
+            .replace(/mailto:/i, '')
+            .replace(/\[at\]/gi, '@')
+            .replace(/\(at\)/gi, '@')
+            .replace(/\[dot\]/gi, '.')
+            .replace(/\(dot\)/gi, '.')
+            .replace(/\s+/g, '')
+            .toLowerCase();
+          
+          // Skip generic/invalid emails
+          if (
+            cleanEmail.includes('example.com') ||
+            cleanEmail.includes('email.com') ||
+            cleanEmail.includes('your@') ||
+            cleanEmail.includes('info@info') ||
+            cleanEmail.startsWith('noreply@') ||
+            cleanEmail.length < 6
+          ) continue;
+          
+          // Validate it looks like a real email
+          if (/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(cleanEmail)) {
+            email = cleanEmail;
+            break;
+          }
+        }
+        if (email) break;
+      }
+    }
+  }
 
   // Address pattern (Italian)
   const addressMatch = text.match(/(?:via|viale|piazza|corso|largo)\s+[^,\n]{3,50},?\s*\d{5}?\s*[a-zA-Z]+/i);
