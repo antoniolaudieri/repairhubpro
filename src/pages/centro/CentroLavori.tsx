@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { CentroLayout } from "@/layouts/CentroLayout";
@@ -175,9 +175,12 @@ export default function CentroLavori() {
     }
   };
 
+  // Refetch data when navigating back to this page
+  const location = useLocation();
+  
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [user, location.key]);
 
   // Fetch storage slots stats when centro is loaded
   useEffect(() => {
