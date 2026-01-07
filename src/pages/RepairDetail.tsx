@@ -1106,109 +1106,76 @@ export default function RepairDetail() {
             className="space-y-3"
           >
             {/* Top row: Back + Actions */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <Button 
                 variant="ghost" 
-                size="sm"
+                size="icon"
                 onClick={() => handleNavigation(backRoute)}
-                className="gap-1.5 h-8 px-2"
+                className="h-8 w-8 flex-shrink-0"
               >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
 
-              <div className="flex items-center gap-1">
-                <div className="flex items-center bg-muted/50 rounded-md p-0.5">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setAcceptanceFormOpen(true)}
-                          className="h-7 w-7"
-                        >
-                          <FileText className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Modulo</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setChecklistType('pre_repair');
-                            setChecklistOpen(true);
-                          }}
-                          className="h-7 w-7"
-                        >
-                          <ClipboardCheck className="h-3.5 w-3.5 text-amber-500" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Pre</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setChecklistType('post_repair');
-                            setChecklistOpen(true);
-                          }}
-                          className="h-7 w-7"
-                        >
-                          <ClipboardCheck className="h-3.5 w-3.5 text-emerald-500" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Post</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-
-                  <PrintLabelButton
-                    repairId={repair.id}
-                    customerName={repair.customer.name}
-                    customerPhone={repair.customer.phone}
-                    deviceBrand={repair.device.brand}
-                    deviceModel={repair.device.model}
-                    deviceType={repair.device.device_type}
-                    issueDescription={repair.device.reported_issue}
-                    createdAt={repair.created_at}
-                    storageSlot={formattedStorageSlot}
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7"
-                  />
-                </div>
-
-                <Button
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <Button 
                   variant="ghost"
                   size="icon"
-                  onClick={() => setShowDeleteDialog(true)}
-                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => setAcceptanceFormOpen(true)}
+                  className="h-8 w-8"
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  <FileText className="h-4 w-4" />
                 </Button>
-                
+
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setChecklistType('pre_repair');
+                    setChecklistOpen(true);
+                  }}
+                  className="h-8 w-8"
+                >
+                  <ClipboardCheck className="h-4 w-4 text-amber-500" />
+                </Button>
+
+                <Button 
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setChecklistType('post_repair');
+                    setChecklistOpen(true);
+                  }}
+                  className="h-8 w-8"
+                >
+                  <ClipboardCheck className="h-4 w-4 text-emerald-500" />
+                </Button>
+
+                <PrintLabelButton
+                  repairId={repair.id}
+                  customerName={repair.customer.name}
+                  customerPhone={repair.customer.phone}
+                  deviceBrand={repair.device.brand}
+                  deviceModel={repair.device.model}
+                  deviceType={repair.device.device_type}
+                  issueDescription={repair.device.reported_issue}
+                  createdAt={repair.created_at}
+                  storageSlot={formattedStorageSlot}
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                />
+
                 <Button
                   onClick={() => saveChanges()}
                   disabled={saving} 
                   size="sm"
-                  className="gap-1.5 h-7"
+                  className="h-8 px-3"
                 >
                   {saving ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Save className="h-3.5 w-3.5" />
+                    <Save className="h-4 w-4" />
                   )}
-                  <span>Salva</span>
                 </Button>
               </div>
             </div>
