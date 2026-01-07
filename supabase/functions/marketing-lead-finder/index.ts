@@ -433,52 +433,86 @@ function mapOsmTypeToBusinessType(osmType: string): string {
   }
 }
 
-// ========== QUICK EMAIL EXTRACTION (single page, fast) ==========
+// ========== REAL EMAIL EXTRACTION (no fake emails) ==========
 async function quickEmailExtract(websiteUrl: string, apiKey: string): Promise<string | null> {
   try {
     const baseUrl = new URL(websiteUrl);
     
-    // Try homepage only (fastest)
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    // Skip social media and generic sites
+    const skipDomains = ['facebook', 'instagram', 'twitter', 'linkedin', 'google', 'youtube', 'tiktok'];
+    if (skipDomains.some(d => baseUrl.hostname.includes(d))) {
+      return null;
+    }
     
-    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        url: baseUrl.origin,
-        formats: ['markdown'],
-        timeout: 5000,
-      }),
-      signal: controller.signal,
-    });
+    // Try multiple pages to find real email
+    const pagesToTry = [
+      baseUrl.origin,
+      baseUrl.origin + '/contatti',
+      baseUrl.origin + '/contacts',
+      baseUrl.origin + '/contact',
+      baseUrl.origin + '/chi-siamo',
+      baseUrl.origin + '/about',
+    ];
     
-    clearTimeout(timeoutId);
+    for (const pageUrl of pagesToTry) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        
+        const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            url: pageUrl,
+            formats: ['markdown'],
+            timeout: 5000,
+          }),
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
 
-    if (!response.ok) return null;
+        if (!response.ok) continue;
 
-    const data = await response.json();
-    const content = data.data?.markdown || '';
-    
-    // Extract email with regex
-    const emailMatch = content.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
-    if (emailMatch) {
-      const email = emailMatch[0].toLowerCase();
-      // Skip generic/fake emails
-      if (!email.includes('example') && !email.includes('test@') && !email.includes('noreply')) {
-        return email;
+        const data = await response.json();
+        const content = data.data?.markdown || '';
+        
+        // Extract ALL emails with regex
+        const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+        const allEmails = content.match(emailRegex) || [];
+        
+        // Filter to find REAL business emails only
+        for (const rawEmail of allEmails) {
+          const email = rawEmail.toLowerCase();
+          
+          // Skip fake/generic/system emails
+          const skipPatterns = [
+            'example', 'test@', 'noreply', 'no-reply', 'donotreply',
+            'privacy@', 'gdpr@', 'cookie@', 'abuse@', 'postmaster@',
+            'webmaster@', 'hostmaster@', 'mailer-daemon', 'newsletter@',
+            '@sentry.io', '@google.com', '@facebook.com', '@twitter.com',
+            '@example.com', '@test.com', 'wordpress', 'wix.com', '@w3.org'
+          ];
+          
+          if (skipPatterns.some(p => email.includes(p))) {
+            continue;
+          }
+          
+          // Must be a real domain email (not info@ generic unless it's their domain)
+          if (email.includes('@')) {
+            console.log(`marketing-lead-finder: Found REAL email: ${email} on ${pageUrl}`);
+            return email;
+          }
+        }
+      } catch (pageErr) {
+        // Continue to next page
       }
     }
-    
-    // Try to deduce email from domain
-    const domain = baseUrl.hostname.replace(/^www\./, '');
-    if (domain && !domain.includes('facebook') && !domain.includes('google')) {
-      return `info@${domain}`;
-    }
 
+    // NO email found - return null, DO NOT INVENT
     return null;
   } catch {
     return null;
