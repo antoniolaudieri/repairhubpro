@@ -5553,6 +5553,8 @@ export type Database = {
         | "demo_scheduled"
         | "converted"
         | "rejected"
+        | "manual_contact"
+        | "needs_enrichment"
       used_device_sale_type: "alienato" | "conto_vendita" | "acquistato"
     }
     CompositeTypes: {
@@ -5734,6 +5736,8 @@ export const Constants = {
         "demo_scheduled",
         "converted",
         "rejected",
+        "manual_contact",
+        "needs_enrichment",
       ],
       used_device_sale_type: ["alienato", "conto_vendita", "acquistato"],
     },
