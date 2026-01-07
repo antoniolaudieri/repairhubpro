@@ -50,6 +50,7 @@ interface LeadsListProps {
 
 const statusLabels: Record<string, { label: string; color: string }> = {
   new: { label: "Nuovo", color: "bg-blue-500" },
+  manual_contact: { label: "Solo Tel.", color: "bg-orange-500" },
   contacted: { label: "Contattato", color: "bg-amber-500" },
   interested: { label: "Interessato", color: "bg-green-500" },
   demo_scheduled: { label: "Demo", color: "bg-purple-500" },
@@ -102,7 +103,8 @@ export function LeadsList({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutti gli stati</SelectItem>
-            <SelectItem value="new">Nuovi</SelectItem>
+            <SelectItem value="new">Nuovi (con email)</SelectItem>
+            <SelectItem value="manual_contact">Solo telefono</SelectItem>
             <SelectItem value="contacted">Contattati</SelectItem>
             <SelectItem value="interested">Interessati</SelectItem>
             <SelectItem value="demo_scheduled">Demo</SelectItem>
@@ -190,9 +192,15 @@ export function LeadsList({
                   onClick={() => onSelectLead(lead)}
                 >
                   <div className="flex items-start gap-4">
-                    {/* Icon */}
-                    <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <TypeIcon className="h-6 w-6 text-primary" />
+                    {/* Icon - different based on contact type */}
+                    <div className={`h-12 w-12 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      lead.email ? 'bg-primary/10' : 'bg-orange-500/10'
+                    }`}>
+                      {lead.email ? (
+                        <Mail className="h-6 w-6 text-primary" />
+                      ) : (
+                        <Phone className="h-6 w-6 text-orange-500" />
+                      )}
                     </div>
 
                     {/* Content */}
