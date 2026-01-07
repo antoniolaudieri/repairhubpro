@@ -55,6 +55,7 @@ interface DirectRepair {
   completed_at: string | null;
   delivered_at: string | null;
   storage_slot: number | null;
+  device_location: string | null;
   device: {
     id: string;
     device_type: string;
@@ -114,6 +115,7 @@ export default function CentroLavori() {
             completed_at,
             delivered_at,
             storage_slot,
+            device_location,
             devices!inner (
               id,
               device_type,
@@ -146,6 +148,7 @@ export default function CentroLavori() {
           completed_at: r.completed_at,
           delivered_at: r.delivered_at,
           storage_slot: r.storage_slot,
+          device_location: r.device_location,
           device: {
             id: r.devices.id,
             device_type: r.devices.device_type,
@@ -226,6 +229,7 @@ export default function CentroLavori() {
 
     // "in_corso" filter includes both in_progress and waiting_for_parts to match stats
     // "expiring" filter shows completed repairs older than 14 days
+    // "awaiting_device" filter shows waiting_for_device or device_location === 'with_customer'
     let matchesStatus = false;
     if (statusFilter === "all") {
       matchesStatus = true;
@@ -236,6 +240,8 @@ export default function CentroLavori() {
         const completedDate = repair.completed_at ? new Date(repair.completed_at) : new Date(repair.created_at);
         matchesStatus = differenceInDays(new Date(), completedDate) > 14;
       }
+    } else if (statusFilter === "awaiting_device") {
+      matchesStatus = repair.status === "waiting_for_device" || repair.device_location === 'with_customer';
     } else {
       matchesStatus = repair.status === statusFilter;
     }
@@ -248,6 +254,7 @@ export default function CentroLavori() {
   // Stats
   const totalRepairs = repairs.length;
   const pendingCount = repairs.filter((r) => r.status === "pending" || r.status === "assigned").length;
+  const waitingDeviceCount = repairs.filter((r) => r.status === "waiting_for_device" || r.device_location === 'with_customer').length;
   const inProgressCount = repairs.filter((r) => r.status === "in_progress" || r.status === "waiting_for_parts").length;
   const completedCount = repairs.filter((r) => r.status === "completed").length;
   const deliveredCount = repairs.filter((r) => r.status === "delivered").length;
@@ -446,6 +453,7 @@ export default function CentroLavori() {
               <SelectContent>
                 <SelectItem value="all">Tutti gli stati</SelectItem>
                 <SelectItem value="pending">In Attesa</SelectItem>
+                <SelectItem value="awaiting_device">Attesa Dispositivo ({waitingDeviceCount})</SelectItem>
                 <SelectItem value="in_corso">In Corso (+ Attesa Ricambi)</SelectItem>
                 <SelectItem value="completed">Completato</SelectItem>
                 <SelectItem value="delivered">Consegnato</SelectItem>
@@ -505,6 +513,12 @@ export default function CentroLavori() {
                                       {repair.device.brand} {repair.device.model}
                                     </h3>
                                     <StatusBadge status={repair.status} statuses={DIRECT_REPAIR_STATUSES} />
+                                    {/* Device Location Badge */}
+                                    {repair.device_location === 'with_customer' && (
+                                      <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+                                        📱 Presso cliente
+                                      </Badge>
+                                    )}
                                     {/* Storage Slot Badge */}
                                     {slotsStats?.enabled && repair.storage_slot && (
                                       <Badge variant="outline" className="bg-indigo-500/10 text-indigo-600 border-indigo-500/30">
