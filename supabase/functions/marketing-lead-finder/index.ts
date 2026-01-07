@@ -210,7 +210,7 @@ const handler = async (req: Request): Promise<Response> => {
     let lowScoreCount = 0;
     
     const filteredResults = allResults.filter(result => {
-      const check = isRelevantLead(result.name, result.website || '', result.email);
+      const check = isRelevantLead(result.name, result.website || '', result.email, zoneName);
       
       if (!check.relevant) {
         if (check.reason.includes('Excluded domain') || check.reason.includes('No required keyword')) {
@@ -365,15 +365,20 @@ const handler = async (req: Request): Promise<Response> => {
 // ========== WHITELIST KEYWORD POSITIVE (MUST MATCH) ==========
 const REQUIRED_KEYWORDS = [
   // Telefonia e cellulari
-  'telefon', 'cellulari', 'smartphone', 'mobile', 'phone', 'iphone', 'samsung', 'huawei', 'xiaomi',
+  'telefon', 'cellulari', 'smartphone', 'mobile', 'phone', 'iphone', 'samsung', 'huawei', 'xiaomi', 'oppo', 'realme',
   // Operatori
-  'tim', 'vodafone', 'wind', 'tre', '3 store', 'iliad', 'fastweb', 'tiscali', 'ho.mobile', 'kena', 'postemobile',
+  'tim', 'vodafone', 'wind', 'tre', '3 store', 'iliad', 'fastweb', 'tiscali', 'ho.mobile', 'kena', 'postemobile', 'very mobile',
   // Riparazione
   'riparazione', 'riparazioni', 'assistenza', 'fix', 'repair', 'service', 'tecnico', 'laboratorio',
   // Negozi
   'negozio', 'shop', 'store', 'punto vendita', 'centro', 'multiservizi', 'accessori',
   // Elettronica
   'elettronica', 'hi-tech', 'informatica', 'computer', 'tablet', 'apple', 'android',
+  // Keyword generiche (ampliamento)
+  'vendita', 'usato', 'ricondizionato', 'hi-fi', 'audio', 'video',
+  'connettività', 'internet', 'fibra', 'wifi', 'rete',
+  // Location hints
+  'contatti', 'orari', 'dove siamo', 'chi siamo',
 ];
 
 // ========== EXCLUDED DOMAINS (News, blog, social, annunci) ==========
@@ -394,7 +399,7 @@ const EXCLUDED_DOMAINS = [
 ];
 
 // ========== RELEVANCE SCORING FUNCTION ==========
-function calculateRelevanceScore(name: string, url: string, email: string | undefined): number {
+function calculateRelevanceScore(name: string, url: string, email: string | undefined, cityName?: string): number {
   let score = 0;
   const nameLower = name.toLowerCase();
   const urlLower = (url || '').toLowerCase();
@@ -418,17 +423,16 @@ function calculateRelevanceScore(name: string, url: string, email: string | unde
     score += 2;
   }
   
-  // +1 punto: URL contiene keyword telefonia
-  const urlKeywords = ['phone', 'mobile', 'cell', 'ripar', 'telefon', 'tim', 'vodafone'];
+  // +2 punti: URL contiene keyword telefonia (aumentato da +1)
+  const urlKeywords = ['phone', 'mobile', 'cell', 'ripar', 'telefon', 'tim', 'vodafone', 'smartphone', 'fix'];
   if (urlKeywords.some(kw => urlLower.includes(kw))) {
-    score += 1;
+    score += 2;
   }
   
-  // +1 punto: Email aziendale (non generica)
-  if (email && !emailLower.includes('gmail') && !emailLower.includes('hotmail') && 
-      !emailLower.includes('yahoo') && !emailLower.includes('libero') && 
-      !emailLower.includes('outlook') && !emailLower.includes('icloud')) {
-    score += 1;
+  // +2 punti: Email aziendale (non generica) - aumentato da +1
+  const genericDomains = ['gmail', 'hotmail', 'yahoo', 'libero', 'outlook', 'icloud', 'live.', 'msn.'];
+  if (email && !genericDomains.some(d => emailLower.includes(d))) {
+    score += 2;
   }
   
   // +1 punto: Nome contiene "negozio" o "centro" o "punto"
@@ -436,19 +440,34 @@ function calculateRelevanceScore(name: string, url: string, email: string | unde
     score += 1;
   }
   
+  // +2 punti: Nome contiene la città cercata (NUOVO)
+  if (cityName && nameLower.includes(cityName.toLowerCase())) {
+    score += 2;
+  }
+  
   return score;
 }
 
 // ========== CHECK IF LEAD IS RELEVANT (POSITIVE FILTER) ==========
-function isRelevantLead(name: string, url: string, email: string | undefined): { relevant: boolean; score: number; reason: string } {
+function isRelevantLead(name: string, url: string, email: string | undefined, cityName?: string): { relevant: boolean; score: number; reason: string } {
   const nameLower = name.toLowerCase();
   const urlLower = (url || '').toLowerCase();
+  const emailLower = (email || '').toLowerCase();
   
   // CHECK 1: Domain must not be excluded
   for (const domain of EXCLUDED_DOMAINS) {
     if (urlLower.includes(domain)) {
       return { relevant: false, score: 0, reason: `Excluded domain: ${domain}` };
     }
+  }
+  
+  // BYPASS: Se ha email aziendale (non generica), salva sempre!
+  const genericDomains = ['gmail', 'hotmail', 'yahoo', 'libero', 'outlook', 'icloud', 'live.', 'msn.'];
+  const hasBusinessEmail = email && !genericDomains.some(d => emailLower.includes(d));
+  
+  if (hasBusinessEmail) {
+    const score = calculateRelevanceScore(name, url, email, cityName);
+    return { relevant: true, score: score + 2, reason: `Business email bypass (score: ${score + 2})` };
   }
   
   // CHECK 2: Must contain at least one required keyword
@@ -461,38 +480,36 @@ function isRelevantLead(name: string, url: string, email: string | undefined): {
   }
   
   // CHECK 3: Calculate relevance score
-  const score = calculateRelevanceScore(name, url, email);
+  const score = calculateRelevanceScore(name, url, email, cityName);
   
-  // Minimum score required: 3
-  if (score < 3) {
-    return { relevant: false, score, reason: `Score too low: ${score}/3` };
+  // Minimum score required: 1 (abbassato da 3)
+  if (score < 1) {
+    return { relevant: false, score, reason: `Score too low: ${score}/1` };
   }
   
   return { relevant: true, score, reason: `Score: ${score}` };
 }
 
-// ========== BUILD SEARCH QUERIES (PRECISE WITH QUOTES) ==========
+// ========== BUILD SEARCH QUERIES (RIDOTTE A 3 MAX) ==========
 function buildSearchQueries(cityName: string, searchType: string): string[] {
   const queries: string[] = [];
   
-  // CENTRO: Centri riparazione (query precise con virgolette)
+  // CENTRO: Una sola query combinata per riparazione
   if (searchType === 'centro' || searchType === 'both') {
     queries.push(
-      `"riparazione smartphone" ${cityName} email`,
-      `"assistenza cellulari" ${cityName} contatti`,
+      `riparazione smartphone cellulari ${cityName} email contatti`
     );
   }
   
-  // CORNER: Negozi operatori e telefonia
+  // CORNER: Due query per negozi operatori (max 2)
   if (searchType === 'corner' || searchType === 'both') {
     queries.push(
-      `"negozio TIM" OR "punto Vodafone" ${cityName} email`,
-      `"negozio telefonia" ${cityName} contatti email`,
-      `"centro multiservizi" telefonia ${cityName} email`,
+      `negozio telefonia TIM Vodafone ${cityName} email`,
+      `centro multiservizi telefonia ${cityName} contatti`
     );
   }
   
-  return queries;
+  return queries; // Max 3 query invece di 5
 }
 
 // ========== FIRECRAWL SEARCH WITH RETRY ==========
@@ -516,7 +533,7 @@ async function firecrawlSearchWithRetry(query: string, apiKey: string, maxRetrie
 async function firecrawlSearch(query: string, apiKey: string): Promise<SearchResult[]> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 secondi timeout
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 secondi timeout
     
     const response = await fetch('https://api.firecrawl.dev/v1/search', {
       method: 'POST',
