@@ -12,6 +12,7 @@ interface SearchResult {
   website?: string;
   address?: string;
   source: 'firecrawl' | 'osm';
+  queryType?: 'centro' | 'corner';
 }
 
 interface LeadStats {
@@ -79,12 +80,22 @@ const handler = async (req: Request): Promise<Response> => {
       .eq("stage_order", 1)
       .single();
 
-    const { data: sequence } = await supabase
+    // Get BOTH sequences (centro and corner)
+    const { data: centroSequence } = await supabase
       .from("marketing_email_sequences")
       .select("id")
-      .eq("target_type", searchType === "corner" ? "corner" : "centro")
+      .eq("target_type", "centro")
       .eq("is_active", true)
       .single();
+
+    const { data: cornerSequence } = await supabase
+      .from("marketing_email_sequences")
+      .select("id")
+      .eq("target_type", "corner")
+      .eq("is_active", true)
+      .single();
+    
+    console.log(`marketing-lead-finder: Sequences loaded - Centro: ${centroSequence?.id || 'none'}, Corner: ${cornerSequence?.id || 'none'}`);
 
     // Stats tracking
     const stats: LeadStats = {
@@ -108,8 +119,8 @@ const handler = async (req: Request): Promise<Response> => {
       
       // Execute queries SEQUENTIALLY with delay to avoid rate limiting and timeouts
       for (let i = 0; i < searchQueries.length; i++) {
-        const query = searchQueries[i];
-        console.log(`marketing-lead-finder: Query ${i + 1}/${searchQueries.length}: "${query}"`);
+        const { query, type: queryType } = searchQueries[i];
+        console.log(`marketing-lead-finder: Query ${i + 1}/${searchQueries.length} (${queryType}): "${query}"`);
         
         try {
           const searchResults = await firecrawlSearchWithRetry(query, firecrawlApiKey);
@@ -122,6 +133,7 @@ const handler = async (req: Request): Promise<Response> => {
               r.name.toLowerCase() === result.name.toLowerCase()
             );
             if (!isDupe && result.email) {
+              result.queryType = queryType; // Mark with query type
               allResults.push(result);
               stats.fromSearch++;
             }
@@ -255,8 +267,14 @@ const handler = async (req: Request): Promise<Response> => {
           leadStatus = 'manual_contact';
         }
 
-        const businessType = result.source === 'osm' ? 'corner' : 
-          (searchType === 'centro' ? 'centro' : 'corner');
+        // Determine business type based on keywords + query origin
+        const detectedType = determineBusinessType(result.name, result.website || '');
+        const businessType = result.queryType || detectedType;
+        
+        // Select correct sequence based on business type
+        const sequenceToUse = businessType === 'centro' ? centroSequence : cornerSequence;
+        
+        console.log(`marketing-lead-finder: Lead "${result.name}" -> type: ${businessType}, sequence: ${sequenceToUse?.id || 'none'}`);
 
         // Insert lead
         const { data: newLead, error: leadError } = await supabase
@@ -273,7 +291,7 @@ const handler = async (req: Request): Promise<Response> => {
             auto_processed: !!result.email,
             scan_zone_id: zone?.id || null,
             funnel_stage_id: defaultStage?.id || null,
-            current_sequence_id: result.email ? sequence?.id : null,
+            current_sequence_id: result.email ? sequenceToUse?.id : null,
             current_step: 0,
             notes: `Source: ${result.source}`,
           })
@@ -289,9 +307,9 @@ const handler = async (req: Request): Promise<Response> => {
         
         if (result.email) {
           stats.withEmail++;
-          // Schedule first email
-          if (sequence?.id && newLead) {
-            await scheduleFirstEmail(supabase, newLead.id, sequence.id);
+          // Schedule first email with correct sequence
+          if (sequenceToUse?.id && newLead) {
+            await scheduleFirstEmail(supabase, newLead.id, sequenceToUse.id);
           }
         } else if (result.phone) {
           stats.phoneOnly++;
@@ -490,23 +508,59 @@ function isRelevantLead(name: string, url: string, email: string | undefined, ci
   return { relevant: true, score, reason: `Score: ${score}` };
 }
 
+// ========== DETERMINE BUSINESS TYPE FROM NAME/URL ==========
+function determineBusinessType(name: string, url: string): 'centro' | 'corner' {
+  const nameLower = name.toLowerCase();
+  const urlLower = (url || '').toLowerCase();
+  const combined = nameLower + ' ' + urlLower;
+  
+  // Keywords for CENTRO (repair, technical assistance)
+  const centroKeywords = [
+    'riparazion', 'assistenza', 'ripara', 'laboratorio', 'tecnico',
+    'service', 'fix', 'repair', 'aggiust', 'ricambi', 'centro assistenza',
+    'samsung service', 'apple service', 'huawei service', 'iphone repair',
+    'display', 'schermo', 'batteria'
+  ];
+  
+  // Keywords for CORNER (shops, operators, sales)
+  const cornerKeywords = [
+    'negozio', 'store', 'shop', 'punto vendita', 'multiservizi',
+    'tim', 'vodafone', 'wind', 'tre', 'iliad', 'fastweb', 'ho.mobile', 'kena', 'postemobile',
+    'telefonia', 'accessori', 'vendita', 'rivenditore', 'dealer'
+  ];
+  
+  // Count matches for each type
+  const centroScore = centroKeywords.filter(k => combined.includes(k)).length;
+  const cornerScore = cornerKeywords.filter(k => combined.includes(k)).length;
+  
+  console.log(`marketing-lead-finder: Type detection for "${name}" - centro: ${centroScore}, corner: ${cornerScore}`);
+  
+  // Return type with more matches (default: corner)
+  if (centroScore > cornerScore) return 'centro';
+  return 'corner';
+}
+
 // ========== BUILD SEARCH QUERIES (RIDOTTE A 3 MAX) ==========
-function buildSearchQueries(cityName: string, searchType: string): string[] {
-  const queries: string[] = [];
+function buildSearchQueries(cityName: string, searchType: string): { query: string; type: 'centro' | 'corner' }[] {
+  const queries: { query: string; type: 'centro' | 'corner' }[] = [];
   
   // CENTRO: Una sola query combinata per riparazione
   if (searchType === 'centro' || searchType === 'both') {
-    queries.push(
-      `riparazione smartphone cellulari ${cityName} email contatti`
-    );
+    queries.push({
+      query: `riparazione smartphone cellulari ${cityName} email contatti`,
+      type: 'centro'
+    });
   }
   
   // CORNER: Due query per negozi operatori (max 2)
   if (searchType === 'corner' || searchType === 'both') {
-    queries.push(
-      `negozio telefonia TIM Vodafone ${cityName} email`,
-      `centro multiservizi telefonia ${cityName} contatti`
-    );
+    queries.push({
+      query: `negozio telefonia TIM Vodafone ${cityName} email`,
+      type: 'corner'
+    }, {
+      query: `centro multiservizi telefonia ${cityName} contatti`,
+      type: 'corner'
+    });
   }
   
   return queries; // Max 3 query invece di 5
