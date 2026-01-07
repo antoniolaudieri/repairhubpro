@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Building2, CheckCircle, XCircle, MapPin, Phone, Mail } from "lucide-react";
+import { Building2, CheckCircle, XCircle, MapPin, Phone, Mail, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -76,6 +76,29 @@ export default function AdminCentri() {
       toast.success("Stato aggiornato con successo");
     },
     onError: () => toast.error("Errore nell'aggiornamento"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const centro = centri.find(c => c.id === id);
+      
+      // Delete user role first
+      if (centro?.owner_user_id) {
+        await supabase.from("user_roles").delete()
+          .eq("user_id", centro.owner_user_id)
+          .eq("role", "centro_admin");
+      }
+      
+      // Delete centro
+      const { error } = await supabase.from("centri_assistenza").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-centri"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-pending-counts"] });
+      toast.success("Centro eliminato con successo");
+    },
+    onError: () => toast.error("Errore nell'eliminazione"),
   });
 
   const pendingCount = centri.filter(c => c.status === "pending").length;
@@ -209,6 +232,20 @@ export default function AdminCentri() {
                             Riattiva
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                          onClick={() => {
+                            if (confirm(`Sei sicuro di voler eliminare "${centro.business_name}"? Questa azione non può essere annullata.`)) {
+                              deleteMutation.mutate(centro.id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Elimina
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
