@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Store, CheckCircle, XCircle, MapPin, Phone, Mail, UserPlus, Plus } from "lucide-react";
+import { Store, CheckCircle, XCircle, MapPin, Phone, Mail, UserPlus, Plus, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -219,6 +219,32 @@ export default function AdminCorners() {
     onError: () => toast.error("Errore nella creazione del Corner"),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const corner = corners.find(c => c.id === id);
+      
+      // Delete user role first
+      if (corner?.user_id) {
+        await supabase.from("user_roles").delete()
+          .eq("user_id", corner.user_id)
+          .eq("role", "corner");
+        await supabase.from("user_roles").delete()
+          .eq("user_id", corner.user_id)
+          .eq("role", "corner_admin");
+      }
+      
+      // Delete corner
+      const { error } = await supabase.from("corners").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-corners"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-pending-counts"] });
+      toast.success("Corner eliminato con successo");
+    },
+    onError: () => toast.error("Errore nell'eliminazione"),
+  });
+
   const pendingCount = corners.filter(c => c.status === "pending").length;
 
   return (
@@ -363,6 +389,20 @@ export default function AdminCorners() {
                         >
                           <UserPlus className="h-4 w-4 mr-1" />
                           Assegna Utente
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                          onClick={() => {
+                            if (confirm(`Sei sicuro di voler eliminare "${corner.business_name}"? Questa azione non può essere annullata.`)) {
+                              deleteMutation.mutate(corner.id);
+                            }
+                          }}
+                          disabled={deleteMutation.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" />
+                          Elimina
                         </Button>
                       </div>
                     </div>
