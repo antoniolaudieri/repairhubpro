@@ -75,6 +75,9 @@ export function AutomationTab() {
     password: "",
     from_email: "",
   });
+  
+  // Scan source selection
+  const [scanSource, setScanSource] = useState<"both" | "osm" | "firecrawl">("both");
 
   // Scan progress state
   const [scanProgress, setScanProgress] = useState<ScanProgress>({
@@ -243,7 +246,7 @@ export function AutomationTab() {
 
       try {
         const { data, error } = await supabase.functions.invoke("marketing-lead-finder", {
-          body: { zoneId: zone.id, cityName: zone.name, searchType: "both" },
+          body: { zoneId: zone.id, cityName: zone.name, searchType: "both", scanSource },
         });
         
         if (error) {
@@ -648,9 +651,44 @@ export function AutomationTab() {
                   <RefreshCw className="h-5 w-5" />
                   Scansione Manuale
                 </CardTitle>
-                <CardDescription>Avvia una scansione approfondita di tutte le zone attive con progress bar</CardDescription>
+                <CardDescription>Avvia una scansione di tutte le zone attive</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Source Selection */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Fonte dati</Label>
+                  <Select value={scanSource} onValueChange={(v) => setScanSource(v as any)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="both">
+                        <div className="flex items-center gap-2">
+                          <span>🔄</span>
+                          <span>Entrambi (OSM + Firecrawl)</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="osm">
+                        <div className="flex items-center gap-2">
+                          <span>📍</span>
+                          <span>Solo OpenStreetMap (GRATIS)</span>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="firecrawl">
+                        <div className="flex items-center gap-2">
+                          <span>🔍</span>
+                          <span>Solo Firecrawl (a pagamento)</span>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {scanSource === "osm" && "OpenStreetMap è gratuito ma ha meno negozi con email"}
+                    {scanSource === "firecrawl" && "Firecrawl cerca sul web ma consuma crediti API"}
+                    {scanSource === "both" && "Prima cerca su OSM, poi integra con Firecrawl se necessario"}
+                  </p>
+                </div>
+                
                 <Button 
                   onClick={runManualScan} 
                   disabled={scanProgress.isScanning}
@@ -664,7 +702,7 @@ export function AutomationTab() {
                   ) : (
                     <>
                       <Play className="h-4 w-4 mr-2" />
-                      Avvia Scansione Completa
+                      Avvia Scansione
                     </>
                   )}
                 </Button>
