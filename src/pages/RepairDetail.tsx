@@ -1151,50 +1151,81 @@ export default function RepairDetail() {
               </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            {/* Action Buttons - Organized in logical groups */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              {/* Navigation */}
               <Button 
-                variant="outline" 
+                variant="ghost" 
                 onClick={() => handleNavigation(backRoute)}
-                className="gap-2"
+                className="gap-2 text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Indietro</span>
+                <span>Indietro</span>
               </Button>
-              <Button 
-                variant="outline"
-                onClick={() => setAcceptanceFormOpen(true)}
-                className="gap-2"
-              >
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Modulo</span>
-              </Button>
-              {/* Checklist Buttons */}
-              <div className="flex gap-1">
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setChecklistType('pre_repair');
-                    setChecklistOpen(true);
-                  }}
-                  className="gap-2"
-                  title="Checklist Pre-Riparazione"
-                >
-                  <ClipboardCheck className="h-4 w-4 text-amber-500" />
-                  <span className="hidden lg:inline">Pre</span>
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setChecklistType('post_repair');
-                    setChecklistOpen(true);
-                  }}
-                  className="gap-2"
-                  title="Checklist Post-Riparazione"
-                >
-                  <ClipboardCheck className="h-4 w-4 text-emerald-500" />
-                  <span className="hidden lg:inline">Post</span>
-                </Button>
+
+              {/* Document & Checklist Group */}
+              <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAcceptanceFormOpen(true)}
+                        className="gap-1.5 h-8"
+                      >
+                        <FileText className="h-4 w-4" />
+                        <span className="text-xs">Modulo</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Modulo di Accettazione</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <div className="w-px h-4 bg-border" />
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setChecklistType('pre_repair');
+                          setChecklistOpen(true);
+                        }}
+                        className="gap-1.5 h-8"
+                      >
+                        <ClipboardCheck className="h-4 w-4 text-amber-500" />
+                        <span className="text-xs">Pre</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Checklist Pre-Riparazione</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setChecklistType('post_repair');
+                          setChecklistOpen(true);
+                        }}
+                        className="gap-1.5 h-8"
+                      >
+                        <ClipboardCheck className="h-4 w-4 text-emerald-500" />
+                        <span className="text-xs">Post</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Checklist Post-Riparazione</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+
+                <div className="w-px h-4 bg-border" />
+
                 <PrintLabelButton
                   repairId={repair.id}
                   customerName={repair.customer.name}
@@ -1205,43 +1236,41 @@ export default function RepairDetail() {
                   issueDescription={repair.device.reported_issue}
                   createdAt={repair.created_at}
                   storageSlot={formattedStorageSlot}
-                  variant="outline"
-                  className="gap-2"
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 h-8"
                 />
               </div>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowDeleteDialog(true)}
-                      className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="hidden sm:inline">Elimina</span>
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Elimina lavoro</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <Button
-                onClick={() => saveChanges()}
-                disabled={saving} 
-                size="lg"
-                className="gap-2 shadow-lg hover:shadow-xl transition-all bg-gradient-to-r from-primary to-primary/90"
-              >
-                {saving ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    <span className="hidden sm:inline">Salvataggio...</span>
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-5 w-5" />
-                    <span>Salva</span>
-                  </>
-                )}
-              </Button>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Elimina</span>
+                </Button>
+                <Button
+                  onClick={() => saveChanges()}
+                  disabled={saving} 
+                  className="gap-2 shadow-md hover:shadow-lg transition-all"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Salva...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      <span>Salva</span>
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </motion.div>
         </div>
