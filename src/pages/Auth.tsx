@@ -124,7 +124,13 @@ const Auth = () => {
         await processTrialRegistration(data.user.id, email);
       }
       
-      toast.success("Registrazione completata! Verifica la tua email.");
+      // If user is confirmed (auto-confirm enabled), proceed to login flow
+      if (data.user?.confirmed_at || data.session) {
+        toast.success("Registrazione completata!");
+        setWaitingForRoles(true);
+      } else {
+        toast.success("Registrazione completata! Verifica la tua email.");
+      }
     } catch (error: any) {
       toast.error(error.message || "Errore durante la registrazione");
     } finally {
