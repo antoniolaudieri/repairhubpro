@@ -679,28 +679,40 @@ function formatOsmAddress(tags: Record<string, string>): string | undefined {
 // ========== SCHEDULE FIRST EMAIL ==========
 async function scheduleFirstEmail(supabase: any, leadId: string, sequenceId: string) {
   try {
+    // Get first step of the sequence
     const { data: steps } = await supabase
       .from("marketing_sequence_steps")
-      .select("id, email_template_id, delay_days")
+      .select("id, template_id, delay_days, delay_hours, step_number")
       .eq("sequence_id", sequenceId)
-      .order("step_order", { ascending: true })
+      .eq("is_active", true)
+      .order("step_number", { ascending: true })
       .limit(1);
 
     if (steps && steps.length > 0) {
       const step = steps[0];
       const scheduledDate = new Date();
       scheduledDate.setDate(scheduledDate.getDate() + (step.delay_days || 0));
+      scheduledDate.setHours(scheduledDate.getHours() + (step.delay_hours || 0));
 
-      await supabase
-        .from("marketing_scheduled_emails")
+      // Insert into marketing_email_queue (the correct table that processor reads from)
+      const { error } = await supabase
+        .from("marketing_email_queue")
         .insert({
           lead_id: leadId,
+          template_id: step.template_id,
           sequence_id: sequenceId,
-          step_id: step.id,
-          template_id: step.email_template_id,
+          step_number: step.step_number || 1,
           scheduled_for: scheduledDate.toISOString(),
           status: 'pending',
         });
+
+      if (error) {
+        console.log('marketing-lead-finder: Error scheduling email:', error.message);
+      } else {
+        console.log(`marketing-lead-finder: ✓ Scheduled first email for lead ${leadId}`);
+      }
+    } else {
+      console.log('marketing-lead-finder: No active steps found in sequence');
     }
   } catch (err) {
     console.log('marketing-lead-finder: Could not schedule email:', err);
