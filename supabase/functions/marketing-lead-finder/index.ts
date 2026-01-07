@@ -129,7 +129,13 @@ const handler = async (req: Request): Promise<Response> => {
           // Determine business type from OSM shop type
           const businessType = mapOsmTypeToBusinessType(shop.shopType);
 
-          // Create lead - even without email, phone is valuable
+          // Skip shops without email - we need email for marketing automation
+          if (!email) {
+            console.log(`marketing-lead-finder: OSM - Skipping "${shop.name}" - no email found`);
+            continue;
+          }
+
+          // Create lead with email only
           const { data: newLead, error: leadError } = await supabase
             .from("marketing_leads")
             .insert({
@@ -137,14 +143,14 @@ const handler = async (req: Request): Promise<Response> => {
               business_name: shop.name,
               website: shop.website || null,
               phone: shop.phone || null,
-              email: email || null,
+              email: email,
               address: shop.address || `${zoneName}, Italia`,
               business_type: businessType,
-              status: email ? 'new' : 'no_email',
+              status: 'new',
               auto_processed: true,
               scan_zone_id: zone?.id || null,
               funnel_stage_id: defaultStage?.id || null,
-              current_sequence_id: email ? sequence?.id : null,
+              current_sequence_id: sequence?.id || null,
               current_step: 0,
               notes: `Trovato via OpenStreetMap (${shop.shopType})\nCoordinate: ${shop.lat}, ${shop.lon}`,
             })
@@ -161,8 +167,8 @@ const handler = async (req: Request): Promise<Response> => {
           createdLeads.push(`📍 ${shop.name}`);
           console.log(`marketing-lead-finder: OSM ✓ Created "${shop.name}" (email: ${email || 'N/A'}, phone: ${shop.phone || 'N/A'})`);
 
-          // Schedule email if has email
-          if (email && sequence?.id && newLead) {
+          // Schedule email
+          if (sequence?.id && newLead) {
             await scheduleFirstEmail(supabase, newLead.id, sequence.id);
           }
 
