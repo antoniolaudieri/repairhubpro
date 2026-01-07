@@ -69,17 +69,17 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Determine role based on lead's business_type
-    let role = "centro_admin"; // Default role
+    let role = "centro"; // Default role
     
     if (lead) {
       console.log(`assign-trial-role: Lead found with business_type: ${lead.business_type}`);
       if (lead.business_type === "corner") {
-        role = "corner_admin";
+        role = "corner";
       } else {
-        role = "centro_admin";
+        role = "centro";
       }
     } else {
-      console.log("assign-trial-role: No lead found, assigning default centro_admin role");
+      console.log("assign-trial-role: No lead found, assigning default centro role");
     }
     
     console.log(`assign-trial-role: Assigning role '${role}' to user ${user_id}`);
