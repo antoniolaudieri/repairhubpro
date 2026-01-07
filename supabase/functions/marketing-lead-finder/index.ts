@@ -63,26 +63,50 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`marketing-lead-finder: Searching for leads in "${zoneName}"`);
 
-    // Build search queries based on type
+    // Build search queries based on type - with variations to find different results
+    const allCentroQueries = [
+      `riparazione smartphone ${zoneName}`,
+      `centro assistenza telefoni ${zoneName}`,
+      `riparazione cellulari ${zoneName}`,
+      `assistenza Apple iPhone ${zoneName}`,
+      `riparazione tablet ${zoneName}`,
+      `aggiustare telefono ${zoneName}`,
+      `riparazione schermo cellulare ${zoneName}`,
+      `laboratorio riparazione smartphone ${zoneName}`,
+      `tecnico telefoni ${zoneName}`,
+      `cambio batteria smartphone ${zoneName}`,
+      `riparatore iPhone ${zoneName}`,
+      `assistenza Samsung ${zoneName}`,
+      `riparazione Huawei ${zoneName}`,
+      `schermo rotto telefono ${zoneName}`,
+    ];
+    
+    const allCornerQueries = [
+      `negozio telefonia ${zoneName}`,
+      `vendita smartphone ${zoneName}`,
+      `negozio elettronica ${zoneName}`,
+      `phone store ${zoneName}`,
+      `rivenditore telefoni ${zoneName}`,
+      `compro vendo telefoni ${zoneName}`,
+      `accessori smartphone ${zoneName}`,
+      `negozio cellulari ${zoneName}`,
+      `shop telefonia ${zoneName}`,
+      `elettronica consumer ${zoneName}`,
+    ];
+    
+    // Shuffle and select random queries to get different results each scan
+    const shuffleArray = <T>(arr: T[]): T[] => arr.sort(() => Math.random() - 0.5);
+    
     const searchQueries: string[] = [];
     
     if (searchType === "centro" || searchType === "both") {
-      searchQueries.push(
-        `riparazione smartphone ${zoneName}`,
-        `centro assistenza telefoni ${zoneName}`,
-        `riparazione cellulari ${zoneName}`,
-        `assistenza Apple iPhone ${zoneName}`,
-        `riparazione tablet ${zoneName}`
-      );
+      // Pick 5 random centro queries each time
+      searchQueries.push(...shuffleArray([...allCentroQueries]).slice(0, 5));
     }
     
     if (searchType === "corner" || searchType === "both") {
-      searchQueries.push(
-        `negozio telefonia ${zoneName}`,
-        `vendita smartphone ${zoneName}`,
-        `negozio elettronica ${zoneName}`,
-        `phone store ${zoneName}`
-      );
+      // Pick 4 random corner queries each time
+      searchQueries.push(...shuffleArray([...allCornerQueries]).slice(0, 4));
     }
 
     const allResults: SearchResult[] = [];
@@ -467,14 +491,34 @@ function extractContactInfo(text: string): { phone: string | null; email: string
             .replace(/\s+/g, '')
             .toLowerCase();
           
-          // Skip generic/invalid emails
+          // Skip generic/invalid/fake emails
           if (
             cleanEmail.includes('example.com') ||
             cleanEmail.includes('email.com') ||
             cleanEmail.includes('your@') ||
+            cleanEmail.includes('yourmail') ||
+            cleanEmail.includes('youremail') ||
+            cleanEmail.includes('mail@mail') ||
             cleanEmail.includes('info@info') ||
+            cleanEmail.includes('test@') ||
+            cleanEmail.includes('@test.') ||
+            cleanEmail.includes('.blink') ||  // Browser internal
+            cleanEmail.includes('@mhtml.') ||  // Browser internal
+            cleanEmail.includes('@placeholder') ||
+            cleanEmail.includes('placeholder@') ||
+            cleanEmail.includes('undefined') ||
+            cleanEmail.includes('null@') ||
             cleanEmail.startsWith('noreply@') ||
-            cleanEmail.length < 6
+            cleanEmail.startsWith('no-reply@') ||
+            cleanEmail.startsWith('donotreply@') ||
+            cleanEmail.includes('sentry.io') ||  // Error tracking
+            cleanEmail.includes('bugsnag') ||
+            cleanEmail.includes('datadog') ||
+            cleanEmail.includes('@localhost') ||
+            cleanEmail.includes('@127.') ||
+            /^[a-f0-9-]{20,}@/.test(cleanEmail) ||  // Hash-like emails
+            cleanEmail.length < 6 ||
+            cleanEmail.length > 100
           ) continue;
           
           // Validate it looks like a real email
