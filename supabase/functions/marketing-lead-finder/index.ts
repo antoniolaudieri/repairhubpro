@@ -148,17 +148,18 @@ const handler = async (req: Request): Promise<Response> => {
           if (seenUrls.has(result.url)) continue;
           seenUrls.add(result.url);
           
-          // Skip irrelevant sites
+          // Skip irrelevant sites (social, directories, big chains)
           const url = result.url?.toLowerCase() || '';
-          if (
-            url.includes('facebook.com') ||
-            url.includes('instagram.com') ||
-            url.includes('linkedin.com') ||
-            url.includes('twitter.com') ||
-            url.includes('youtube.com') ||
-            url.includes('wikipedia.org') ||
-            url.includes('tripadvisor')
-          ) continue;
+          const skipDomains = [
+            'facebook.com', 'instagram.com', 'linkedin.com', 'twitter.com', 
+            'youtube.com', 'wikipedia.org', 'tripadvisor', 'paginegialle.it',
+            'paginebianche.it', 'subito.it', 'kijiji.it', 'ebay.it', 'amazon.',
+            'unieuro.it', 'trony.it', 'mediaworld.it', 'euronics.it', 'expert.it',
+            'apple.com', 'samsung.com', 'huawei.com', 'xiaomi.com', 'oppo.com',
+            'google.com', 'yelp.com', 'trustpilot.com', 'tuttocitta.it',
+            'corriere.it', 'repubblica.it', 'gazzetta.it', 'ilsole24ore.com'
+          ];
+          if (skipDomains.some(d => url.includes(d))) continue;
 
           allResults.push(result);
         }
@@ -265,28 +266,30 @@ const handler = async (req: Request): Promise<Response> => {
           // Build final list of pages to scrape
           const urlsToScrape: string[] = [result.url]; // Always start with the main page
           
-          // Add priority pages (contact, about, etc.)
-          urlsToScrape.push(...priorityPages.slice(0, 5));
+          // Add priority pages (contact, about, etc.) - limit to 2
+          urlsToScrape.push(...priorityPages.slice(0, 2));
           
-          // Add fallback contact paths if we didn't find them via mapping
-          try {
-            const baseUrl = new URL(result.url);
-            const fallbackPaths = ['/contatti', '/contatto', '/contact', '/contacts', '/chi-siamo', '/about', '/about-us', '/dove-siamo', '/info', '/negozio'];
-            for (const path of fallbackPaths) {
-              const fullUrl = `${baseUrl.origin}${path}`;
-              if (!urlsToScrape.includes(fullUrl)) {
-                urlsToScrape.push(fullUrl);
+          // Add fallback contact paths only if no priority pages found
+          if (priorityPages.length === 0) {
+            try {
+              const baseUrl = new URL(result.url);
+              const fallbackPaths = ['/contatti', '/contact', '/chi-siamo'];
+              for (const path of fallbackPaths) {
+                const fullUrl = `${baseUrl.origin}${path}`;
+                if (!urlsToScrape.includes(fullUrl)) {
+                  urlsToScrape.push(fullUrl);
+                }
               }
+            } catch {
+              // Invalid URL
             }
-          } catch {
-            // Invalid URL
           }
           
           // Add some other pages from the site (might have email in footer)
-          urlsToScrape.push(...otherPages.slice(0, 3));
+          urlsToScrape.push(...otherPages.slice(0, 1));
           
-          // Limit total pages to scrape
-          const maxPagesToScrape = 8;
+          // Limit total pages to scrape - keep it light to avoid CPU timeout
+          const maxPagesToScrape = 4;
           const pagesToScrape = urlsToScrape.slice(0, maxPagesToScrape);
           
           console.log(`marketing-lead-finder: Will scrape up to ${pagesToScrape.length} pages for email`);
