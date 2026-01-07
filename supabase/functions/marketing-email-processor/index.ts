@@ -252,7 +252,13 @@ const handler = async (req: Request): Promise<Response> => {
         // Build tracking URLs
         const trackingPixelUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=open`;
         const clickTrackingBase = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=click&url=`;
-        const demoTrackingUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=demo&url=${encodeURIComponent('https://lablinkriparo.com/auth?trial=true')}`;
+        
+        // Determine role type from lead's business_type
+        const roleType = (lead as any).business_type === 'corner' ? 'corner' : 'centro';
+        
+        // Build demo URL with type and lead ID for direct role assignment
+        const demoBaseUrl = `https://lablinkriparo.com/auth?trial=true&type=${roleType}&lead=${email.lead_id}&email=${encodeURIComponent(typedLead.email)}`;
+        const demoTrackingUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=demo&url=${encodeURIComponent(demoBaseUrl)}`;
         const interestTrackingUrl = `${supabaseUrl}/functions/v1/marketing-track-email?t=${email.tracking_id}&a=interest&url=${encodeURIComponent('https://lablinkriparo.com')}`;
         const unsubscribeUrl = `${supabaseUrl}/functions/v1/marketing-unsubscribe?email=${encodeURIComponent(typedLead.email)}&lead_id=${email.lead_id}`;
 
