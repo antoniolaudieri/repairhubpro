@@ -937,10 +937,19 @@ export default function RepairDetail() {
       // Delete associated records first
       await supabase.from("repair_parts").delete().eq("repair_id", id);
       await supabase.from("repair_history").delete().eq("repair_id", id);
-      await supabase.from("credit_transactions").delete().eq("commission_id", 
-        (await supabase.from("commission_ledger").select("id").eq("repair_id", id).single()).data?.id
-      );
-      await supabase.from("commission_ledger").delete().eq("repair_id", id);
+      
+      // Delete commission ledger and related credit transactions (if exist)
+      const { data: ledgerData } = await supabase
+        .from("commission_ledger")
+        .select("id")
+        .eq("repair_id", id);
+      
+      if (ledgerData && ledgerData.length > 0) {
+        for (const ledger of ledgerData) {
+          await supabase.from("credit_transactions").delete().eq("commission_id", ledger.id);
+        }
+        await supabase.from("commission_ledger").delete().eq("repair_id", id);
+      }
       
       // Delete the repair itself
       const { error } = await supabase
