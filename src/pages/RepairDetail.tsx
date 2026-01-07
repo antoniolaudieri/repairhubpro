@@ -1099,45 +1099,152 @@ export default function RepairDetail() {
 
       {/* Hero Header */}
       <div className="bg-gradient-to-r from-card via-card to-primary/5 border-b border-border/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
           <motion.div 
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4"
+            className="space-y-3"
           >
-            <div className="flex items-start gap-4">
-              {/* Device Image or Icon */}
+            {/* Top row: Back + Actions */}
+            <div className="flex items-center justify-between">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => handleNavigation(backRoute)}
+                className="gap-1.5 h-8 px-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+
+              <div className="flex items-center gap-1">
+                <div className="flex items-center bg-muted/50 rounded-md p-0.5">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setAcceptanceFormOpen(true)}
+                          className="h-7 w-7"
+                        >
+                          <FileText className="h-3.5 w-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Modulo</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setChecklistType('pre_repair');
+                            setChecklistOpen(true);
+                          }}
+                          className="h-7 w-7"
+                        >
+                          <ClipboardCheck className="h-3.5 w-3.5 text-amber-500" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Pre</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setChecklistType('post_repair');
+                            setChecklistOpen(true);
+                          }}
+                          className="h-7 w-7"
+                        >
+                          <ClipboardCheck className="h-3.5 w-3.5 text-emerald-500" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Post</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+
+                  <PrintLabelButton
+                    repairId={repair.id}
+                    customerName={repair.customer.name}
+                    customerPhone={repair.customer.phone}
+                    deviceBrand={repair.device.brand}
+                    deviceModel={repair.device.model}
+                    deviceType={repair.device.device_type}
+                    issueDescription={repair.device.reported_issue}
+                    createdAt={repair.created_at}
+                    storageSlot={formattedStorageSlot}
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                  />
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+                
+                <Button
+                  onClick={() => saveChanges()}
+                  disabled={saving} 
+                  size="sm"
+                  className="gap-1.5 h-7"
+                >
+                  {saving ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Save className="h-3.5 w-3.5" />
+                  )}
+                  <span>Salva</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Device info row */}
+            <div className="flex items-center gap-3">
               <div className="relative flex-shrink-0">
                 <DeviceImage
                   photoUrl={repair.device.photo_url}
                   brand={repair.device.brand}
                   model={repair.device.model}
                   deviceType={repair.device.device_type}
-                  size="lg"
-                  className="h-20 w-20 sm:h-24 sm:w-24"
+                  size="md"
+                  className="h-14 w-14 sm:h-16 sm:w-16"
                 />
-                <div className={`absolute -bottom-1 -right-1 h-6 w-6 rounded-full ${status.color} flex items-center justify-center ring-2 ring-background`}>
-                  <StatusIcon className="h-3.5 w-3.5 text-white" />
+                <div className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full ${status.color} flex items-center justify-center ring-2 ring-background`}>
+                  <StatusIcon className="h-3 w-3 text-white" />
                 </div>
               </div>
               
-              {/* Title & Info */}
               <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 mb-1">
-                  <Badge className={`${status.bgLight} ${status.text} border-0 font-medium`}>
+                <div className="flex flex-wrap items-center gap-1 mb-0.5">
+                  <Badge className={`${status.bgLight} ${status.text} border-0 font-medium text-xs px-1.5 py-0`}>
                     {status.label}
                   </Badge>
-                  <Badge className={`${priority.bgLight} ${priority.text} border-0 font-medium`}>
-                    Priorità {priority.label}
+                  <Badge className={`${priority.bgLight} ${priority.text} border-0 font-medium text-xs px-1.5 py-0`}>
+                    {priority.label}
                   </Badge>
                 </div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground truncate">
+                <h1 className="text-base sm:text-lg font-bold text-foreground truncate">
                   {repair.device.brand} {repair.device.model}
                 </h1>
-                <p className="text-muted-foreground flex items-center gap-2 mt-1">
-                  <User className="h-4 w-4" />
+                <p className="text-muted-foreground text-sm flex items-center gap-1">
+                  <User className="h-3 w-3" />
                   <span 
-                    className="font-medium text-primary hover:underline cursor-pointer"
+                    className="font-medium text-primary hover:underline cursor-pointer truncate"
                     onClick={() => {
                       const isCentroRoute = location.pathname.startsWith('/centro');
                       navigate(isCentroRoute ? `/centro/clienti/${repair.customer.id}` : `/customers/${repair.customer.id}`);
@@ -1145,120 +1252,8 @@ export default function RepairDetail() {
                   >
                     {repair.customer.name}
                   </span>
-                  <span className="text-border">•</span>
-                  <span className="text-sm">{repair.device.device_type}</span>
                 </p>
               </div>
-            </div>
-
-            {/* Action Buttons - Responsive layout */}
-            <div className="flex items-center gap-2 flex-wrap">
-              {/* Navigation */}
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={() => handleNavigation(backRoute)}
-                className="gap-1.5"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="hidden sm:inline">Indietro</span>
-              </Button>
-
-              {/* Document & Checklist Group */}
-              <div className="flex items-center gap-0.5 bg-muted/50 rounded-md p-0.5">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setAcceptanceFormOpen(true)}
-                        className="h-7 w-7"
-                      >
-                        <FileText className="h-3.5 w-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Modulo</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setChecklistType('pre_repair');
-                          setChecklistOpen(true);
-                        }}
-                        className="h-7 w-7"
-                      >
-                        <ClipboardCheck className="h-3.5 w-3.5 text-amber-500" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Pre</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button 
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setChecklistType('post_repair');
-                          setChecklistOpen(true);
-                        }}
-                        className="h-7 w-7"
-                      >
-                        <ClipboardCheck className="h-3.5 w-3.5 text-emerald-500" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Post</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-
-                <PrintLabelButton
-                  repairId={repair.id}
-                  customerName={repair.customer.name}
-                  customerPhone={repair.customer.phone}
-                  deviceBrand={repair.device.brand}
-                  deviceModel={repair.device.model}
-                  deviceType={repair.device.device_type}
-                  issueDescription={repair.device.reported_issue}
-                  createdAt={repair.created_at}
-                  storageSlot={formattedStorageSlot}
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                />
-              </div>
-
-              {/* Delete & Save */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowDeleteDialog(true)}
-                className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-              
-              <Button
-                onClick={() => saveChanges()}
-                disabled={saving} 
-                size="sm"
-                className="gap-1.5 h-7"
-              >
-                {saving ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Save className="h-3.5 w-3.5" />
-                )}
-                <span>Salva</span>
-              </Button>
             </div>
           </motion.div>
         </div>
