@@ -238,9 +238,9 @@ const handler = async (req: Request): Promise<Response> => {
           }
         }
 
-        // Skip if no email AND no phone - at least one contact method required
-        if (!contactInfo.email && !contactInfo.phone) {
-          console.log(`marketing-lead-finder: Skipping "${businessName}" - no email and no phone found`);
+        // Skip if no email - email is required for automation
+        if (!contactInfo.email) {
+          console.log(`marketing-lead-finder: Skipping "${businessName}" - no email found (phone: ${contactInfo.phone || 'none'})`);
           continue;
         }
 
