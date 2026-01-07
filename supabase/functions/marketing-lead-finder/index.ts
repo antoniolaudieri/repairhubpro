@@ -372,19 +372,32 @@ const handler = async (req: Request): Promise<Response> => {
 function buildSearchQueries(cityName: string, searchType: string): string[] {
   const queries: string[] = [];
   
+  // CENTRO: Centri riparazione esistenti e laboratori tecnici
   if (searchType === 'centro' || searchType === 'both') {
     queries.push(
       `centro riparazione smartphone ${cityName} email contatti`,
-      `riparazione cellulari ${cityName} contatti`,
-      `assistenza telefoni ${cityName} email`,
+      `laboratorio riparazione cellulari ${cityName} email`,
+      `tecnico riparazione telefoni ${cityName} contatti`,
+      `assistenza smartphone ${cityName} email`,
+      `riparatore iPhone Android ${cityName} contatti`,
     );
   }
   
+  // CORNER: Negozi operatori telefonici e centri multiservizi
   if (searchType === 'corner' || searchType === 'both') {
     queries.push(
-      `negozio telefonia ${cityName} email contatti`,
-      `elettronica ${cityName} contatti email`,
-      `vendita smartphone ${cityName} contatti`,
+      // Negozi operatori telefonici
+      `negozio TIM ${cityName} email contatti`,
+      `negozio Vodafone ${cityName} email contatti`,
+      `negozio Wind Tre ${cityName} email`,
+      `negozio Iliad ${cityName} contatti email`,
+      `negozio Fastweb ${cityName} email`,
+      `rivenditore autorizzato telefonia ${cityName} email`,
+      // Centri multiservizi e telefonia generica
+      `centro multiservizi ${cityName} email contatti`,
+      `negozio telefonia ${cityName} email titolare`,
+      `punto vendita cellulari ${cityName} contatti`,
+      `accessori telefonia ${cityName} email`,
     );
   }
   
@@ -405,7 +418,7 @@ async function firecrawlSearch(query: string, apiKey: string): Promise<SearchRes
       },
       body: JSON.stringify({
         query,
-        limit: 10,
+        limit: 20,
         lang: 'it',
         country: 'IT',
         scrapeOptions: {
@@ -470,12 +483,15 @@ async function searchOverpass(lat: number, lon: number, radiusKm: number, search
     );
   }
   
+  // CORNER: Negozi telefonia operatori (TIM, Vodafone, etc.) e multiservizi
   if (searchType === "corner" || searchType === "both") {
     shopTypes.push(
-      'nwr["shop"="mobile_phone"]',
-      'nwr["shop"="electronics"]',
-      'nwr["shop"="computer"]',
-      'nwr["shop"="telecommunication"]'
+      'nwr["shop"="mobile_phone"]',               // Negozi telefonia generici
+      'nwr["shop"="telecommunication"]',          // Operatori telefonici
+      'nwr["name"~"TIM|Vodafone|Wind|Iliad|Fastweb|Tiscali",i]', // Negozi operatori
+      'nwr["brand"~"TIM|Vodafone|Wind Tre|Iliad|Fastweb",i]',    // Brand operatori
+      'nwr["shop"="electronics"]["name"~"phone|cell|telefon",i]', // Elettronica telefonia
+      'nwr["amenity"="internet_cafe"]',           // Centri multiservizi/internet point
     );
   }
 
