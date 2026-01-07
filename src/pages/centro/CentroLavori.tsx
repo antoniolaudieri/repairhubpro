@@ -497,18 +497,10 @@ export default function CentroLavori() {
                         transition={{ delay: index * 0.03 }}
                       >
                         <Card
-                          className={`hover:bg-accent/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 group relative overflow-hidden ${
-                            repair.device_location === 'with_customer' || repair.status === 'waiting_for_device'
-                              ? 'border-2 border-amber-400 bg-amber-50/50 dark:bg-amber-950/20'
-                              : ''
-                          }`}
+                          className="hover:bg-accent/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:-translate-y-0.5 group relative overflow-hidden"
                           onClick={() => navigate(`/centro/lavori/${repair.id}`)}
                         >
-                          {/* Visual indicator stripe for device with customer */}
-                          {(repair.device_location === 'with_customer' || repair.status === 'waiting_for_device') && (
-                            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400" />
-                          )}
-                          <CardContent className="p-4 pl-5">
+                          <CardContent className="p-4">
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                               <div className="flex items-start gap-4">
                                 <DeviceImage 
@@ -523,9 +515,9 @@ export default function CentroLavori() {
                                       {repair.device.brand} {repair.device.model}
                                     </h3>
                                     <StatusBadge status={repair.status} statuses={DIRECT_REPAIR_STATUSES} />
-                                    {/* Device Location Badge - più visibile */}
+                                    {/* Device Location Badge - discreto */}
                                     {(repair.device_location === 'with_customer' || repair.status === 'waiting_for_device') && (
-                                      <Badge className="bg-amber-500 text-white border-0 font-medium">
+                                      <Badge variant="outline" className="text-muted-foreground border-dashed">
                                         🏠 Presso cliente
                                       </Badge>
                                     )}
