@@ -123,6 +123,51 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Create the centro or corner record
+    if (role === "centro_admin") {
+      // Create centro_assistenza record with basic info
+      const centroData = {
+        owner_user_id: user_id,
+        business_name: lead?.business_name || "Nuovo Centro",
+        email: lead?.email || user_email || "",
+        phone: "",
+        address: "",
+        status: "pending", // Will need to complete profile
+      };
+      
+      const { error: centroError } = await supabase
+        .from("centri_assistenza")
+        .insert(centroData);
+      
+      if (centroError) {
+        console.error("assign-trial-role: Error creating centro:", centroError);
+        // Don't fail the whole operation, just log
+      } else {
+        console.log(`assign-trial-role: Created centro for user ${user_id}`);
+      }
+    } else if (role === "corner_admin") {
+      // Create corner record with basic info
+      const cornerData = {
+        user_id: user_id,
+        business_name: lead?.business_name || "Nuovo Corner",
+        email: lead?.email || user_email || "",
+        phone: "",
+        address: "",
+        status: "pending", // Will need to complete profile
+      };
+      
+      const { error: cornerError } = await supabase
+        .from("corners")
+        .insert(cornerData);
+      
+      if (cornerError) {
+        console.error("assign-trial-role: Error creating corner:", cornerError);
+        // Don't fail the whole operation, just log
+      } else {
+        console.log(`assign-trial-role: Created corner for user ${user_id}`);
+      }
+    }
+
     // Update lead status to converted (only if we have a lead)
     if (actualLeadId) {
       await supabase
@@ -131,7 +176,7 @@ const handler = async (req: Request): Promise<Response> => {
           status: 'converted',
           conversion_date: new Date().toISOString(),
           converted_entity_id: user_id,
-          converted_entity_type: 'centro',
+          converted_entity_type: role === "corner_admin" ? 'corner' : 'centro',
         })
         .eq("id", actualLeadId);
 
