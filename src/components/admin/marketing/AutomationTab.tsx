@@ -9,10 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
 import { 
   Play, Pause, Settings, Zap, Clock, Mail, 
   RefreshCw, AlertCircle, CheckCircle, Loader2,
-  Server, Shield, Eye, EyeOff, FlaskConical, Send
+  Server, Shield, Eye, EyeOff, FlaskConical, Send,
+  MapPin, Users, XCircle
 } from "lucide-react";
 import {
   Dialog,
@@ -43,9 +45,19 @@ interface SmtpConfig {
   from_email: string;
 }
 
+interface ScanProgress {
+  isScanning: boolean;
+  totalZones: number;
+  currentZoneIndex: number;
+  currentZoneName: string;
+  totalLeadsFound: number;
+  totalResultsFound: number;
+  errors: string[];
+  completedZones: string[];
+}
+
 export function AutomationTab() {
   const queryClient = useQueryClient();
-  const [isRunningManualScan, setIsRunningManualScan] = useState(false);
   const [isProcessingEmails, setIsProcessingEmails] = useState(false);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
@@ -61,6 +73,19 @@ export function AutomationTab() {
     password: "",
     from_email: "",
   });
+
+  // Scan progress state
+  const [scanProgress, setScanProgress] = useState<ScanProgress>({
+    isScanning: false,
+    totalZones: 0,
+    currentZoneIndex: 0,
+    currentZoneName: "",
+    totalLeadsFound: 0,
+    totalResultsFound: 0,
+    errors: [],
+    completedZones: [],
+  });
+  const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
 
   // Fetch automation settings
   const { data: settings, isLoading: settingsLoading } = useQuery({
@@ -174,45 +199,95 @@ export function AutomationTab() {
     });
   };
 
-  // Manual scan trigger
+  // Manual scan trigger with progress tracking
   const runManualScan = async () => {
-    setIsRunningManualScan(true);
-    try {
-      const { data: zones } = await supabase
-        .from("marketing_scan_zones")
-        .select("id, name")
-        .eq("is_active", true);
+    // Fetch all active zones
+    const { data: zones } = await supabase
+      .from("marketing_scan_zones")
+      .select("id, name")
+      .eq("is_active", true);
 
-      if (!zones || zones.length === 0) {
-        toast.error("Nessuna zona attiva configurata. Aggiungi una zona prima di scansionare.");
-        setIsRunningManualScan(false);
-        return;
-      }
+    if (!zones || zones.length === 0) {
+      toast.error("Nessuna zona attiva configurata. Aggiungi una zona prima di scansionare.");
+      return;
+    }
 
-      let totalLeads = 0;
-      let totalResults = 0;
+    // Open dialog and initialize progress
+    setIsScanDialogOpen(true);
+    setScanProgress({
+      isScanning: true,
+      totalZones: zones.length,
+      currentZoneIndex: 0,
+      currentZoneName: zones[0].name,
+      totalLeadsFound: 0,
+      totalResultsFound: 0,
+      errors: [],
+      completedZones: [],
+    });
 
-      for (const zone of zones) {
-        toast.info(`Scansione "${zone.name}" in corso...`);
-        
+    // Process each zone sequentially
+    for (let i = 0; i < zones.length; i++) {
+      const zone = zones[i];
+      
+      setScanProgress(prev => ({
+        ...prev,
+        currentZoneIndex: i,
+        currentZoneName: zone.name,
+      }));
+
+      try {
         const { data, error } = await supabase.functions.invoke("marketing-lead-finder", {
           body: { zoneId: zone.id, cityName: zone.name, searchType: "both" },
         });
         
-        if (!error && data) {
-          totalLeads += data.leadsCreated || 0;
-          totalResults += data.resultsFound || 0;
+        if (error) {
+          setScanProgress(prev => ({
+            ...prev,
+            errors: [...prev.errors, `${zone.name}: ${error.message}`],
+          }));
+        } else if (data) {
+          setScanProgress(prev => ({
+            ...prev,
+            totalLeadsFound: prev.totalLeadsFound + (data.leadsCreated || 0),
+            totalResultsFound: prev.totalResultsFound + (data.resultsFound || 0),
+            completedZones: [...prev.completedZones, zone.name],
+          }));
         }
+      } catch (err: any) {
+        setScanProgress(prev => ({
+          ...prev,
+          errors: [...prev.errors, `${zone.name}: ${err.message}`],
+        }));
       }
+    }
 
-      toast.success(`Scansione completata: ${totalLeads} nuovi lead su ${totalResults} risultati`);
-      queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
-      queryClient.invalidateQueries({ queryKey: ["marketing-automation-logs"] });
-      queryClient.invalidateQueries({ queryKey: ["marketing-scan-zones"] });
-    } catch (error: any) {
-      toast.error(`Errore nella scansione: ${error.message}`);
-    } finally {
-      setIsRunningManualScan(false);
+    // Mark scan as complete
+    setScanProgress(prev => ({
+      ...prev,
+      isScanning: false,
+      currentZoneIndex: zones.length,
+    }));
+
+    // Refresh data
+    queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
+    queryClient.invalidateQueries({ queryKey: ["marketing-automation-logs"] });
+    queryClient.invalidateQueries({ queryKey: ["marketing-scan-zones"] });
+  };
+
+  // Close scan dialog
+  const closeScanDialog = () => {
+    if (!scanProgress.isScanning) {
+      setIsScanDialogOpen(false);
+      setScanProgress({
+        isScanning: false,
+        totalZones: 0,
+        currentZoneIndex: 0,
+        currentZoneName: "",
+        totalLeadsFound: 0,
+        totalResultsFound: 0,
+        errors: [],
+        completedZones: [],
+      });
     }
   };
 
@@ -357,6 +432,11 @@ export function AutomationTab() {
     }
   };
 
+  // Calculate progress percentage
+  const progressPercentage = scanProgress.totalZones > 0 
+    ? Math.round((scanProgress.currentZoneIndex / scanProgress.totalZones) * 100) 
+    : 0;
+
   if (settingsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -367,6 +447,114 @@ export function AutomationTab() {
 
   return (
     <div className="space-y-6">
+      {/* Scan Progress Dialog */}
+      <Dialog open={isScanDialogOpen} onOpenChange={(open) => !scanProgress.isScanning && setIsScanDialogOpen(open)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {scanProgress.isScanning ? (
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              ) : scanProgress.errors.length > 0 ? (
+                <AlertCircle className="h-5 w-5 text-orange-500" />
+              ) : (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              )}
+              {scanProgress.isScanning ? "Scansione in corso..." : "Scansione completata"}
+            </DialogTitle>
+            <DialogDescription>
+              {scanProgress.isScanning 
+                ? "Ricerca lead in tutte le zone attive. Questo può richiedere diversi minuti."
+                : `Scansione completata su ${scanProgress.totalZones} zone.`
+              }
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Progresso</span>
+                <span className="font-medium">
+                  {scanProgress.isScanning 
+                    ? `${scanProgress.currentZoneIndex + 1} / ${scanProgress.totalZones}`
+                    : `${scanProgress.totalZones} / ${scanProgress.totalZones}`
+                  }
+                </span>
+              </div>
+              <Progress 
+                value={scanProgress.isScanning ? progressPercentage : 100} 
+                className="h-3"
+              />
+            </div>
+
+            {/* Current Zone */}
+            {scanProgress.isScanning && scanProgress.currentZoneName && (
+              <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                <MapPin className="h-5 w-5 text-primary animate-pulse" />
+                <div>
+                  <p className="font-medium text-sm">Scansione zona:</p>
+                  <p className="text-primary font-semibold">{scanProgress.currentZoneName}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Stats */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 bg-muted/50 rounded-lg text-center">
+                <Users className="h-5 w-5 mx-auto mb-1 text-green-600" />
+                <p className="text-2xl font-bold text-green-600">{scanProgress.totalLeadsFound}</p>
+                <p className="text-xs text-muted-foreground">Lead trovati</p>
+              </div>
+              <div className="p-3 bg-muted/50 rounded-lg text-center">
+                <RefreshCw className="h-5 w-5 mx-auto mb-1 text-blue-600" />
+                <p className="text-2xl font-bold text-blue-600">{scanProgress.totalResultsFound}</p>
+                <p className="text-xs text-muted-foreground">Siti analizzati</p>
+              </div>
+            </div>
+
+            {/* Completed Zones */}
+            {scanProgress.completedZones.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Zone completate:</p>
+                <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
+                  {scanProgress.completedZones.map((zone, i) => (
+                    <Badge key={i} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      {zone}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Errors */}
+            {scanProgress.errors.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-destructive">Errori ({scanProgress.errors.length}):</p>
+                <div className="max-h-24 overflow-y-auto space-y-1">
+                  {scanProgress.errors.map((error, i) => (
+                    <div key={i} className="flex items-start gap-2 text-xs text-destructive bg-destructive/5 p-2 rounded">
+                      <XCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                      <span>{error}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button 
+              onClick={closeScanDialog} 
+              disabled={scanProgress.isScanning}
+              variant={scanProgress.isScanning ? "outline" : "default"}
+            >
+              {scanProgress.isScanning ? "Scansione in corso..." : "Chiudi"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Master Control */}
       <Card className="border-2 border-primary/20">
         <CardHeader>
@@ -445,15 +633,15 @@ export function AutomationTab() {
                   <RefreshCw className="h-5 w-5" />
                   Scansione Manuale
                 </CardTitle>
-                <CardDescription>Avvia una scansione immediata di tutte le zone attive</CardDescription>
+                <CardDescription>Avvia una scansione approfondita di tutte le zone attive con progress bar</CardDescription>
               </CardHeader>
               <CardContent>
                 <Button 
                   onClick={runManualScan} 
-                  disabled={isRunningManualScan}
+                  disabled={scanProgress.isScanning}
                   className="w-full"
                 >
-                  {isRunningManualScan ? (
+                  {scanProgress.isScanning ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Scansione in corso...
@@ -461,7 +649,7 @@ export function AutomationTab() {
                   ) : (
                     <>
                       <Play className="h-4 w-4 mr-2" />
-                      Avvia Scansione
+                      Avvia Scansione Completa
                     </>
                   )}
                 </Button>
