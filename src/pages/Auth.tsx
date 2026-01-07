@@ -31,21 +31,21 @@ const Auth = () => {
   const [phone, setPhone] = useState("");
 
   // Assign role and update lead via edge function after registration
-  const processTrialRegistration = async (userId: string) => {
-    if (!leadId) return;
-    
+  const processTrialRegistration = async (userId: string, userEmail: string) => {
     try {
-      console.log("Processing trial registration for user:", userId, "lead:", leadId);
+      console.log("Processing trial registration for user:", userId, "lead:", leadId, "email:", userEmail);
       
       const { data, error } = await supabase.functions.invoke("assign-trial-role", {
         body: {
           user_id: userId,
-          lead_id: leadId,
+          lead_id: leadId, // Can be null - function will try to find by email
+          user_email: userEmail,
         },
       });
 
       if (error) {
         console.error("Error assigning trial role:", error);
+        toast.error("Errore nell'assegnazione del ruolo. Contatta l'assistenza.");
       } else {
         console.log("Trial role assigned:", data);
       }
@@ -120,8 +120,8 @@ const Auth = () => {
       if (error) throw error;
       
       // Assign role and update lead if this is a trial registration
-      if (isTrial && leadId && data.user) {
-        await processTrialRegistration(data.user.id);
+      if (isTrial && data.user) {
+        await processTrialRegistration(data.user.id, email);
       }
       
       toast.success("Registrazione completata! Verifica la tua email.");

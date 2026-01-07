@@ -8,7 +8,8 @@ const corsHeaders = {
 
 interface AssignRoleRequest {
   user_id: string;
-  lead_id: string;
+  lead_id?: string;
+  user_email?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -22,30 +23,54 @@ const handler = async (req: Request): Promise<Response> => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const { user_id, lead_id }: AssignRoleRequest = await req.json();
+    const { user_id, lead_id, user_email }: AssignRoleRequest = await req.json();
 
-    if (!user_id || !lead_id) {
+    if (!user_id) {
       return new Response(
-        JSON.stringify({ error: "Missing user_id or lead_id" }),
+        JSON.stringify({ error: "Missing user_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`assign-trial-role: Assigning role for user ${user_id} from lead ${lead_id}`);
+    console.log(`assign-trial-role: Assigning role for user ${user_id}, lead_id: ${lead_id}, email: ${user_email}`);
 
-    // Get the lead to check business_type
-    const { data: lead, error: leadError } = await supabase
-      .from("marketing_leads")
-      .select("business_type, business_name, email")
-      .eq("id", lead_id)
-      .single();
+    // Try to find lead by ID first, then by email
+    let lead = null;
+    let actualLeadId = lead_id;
 
-    if (leadError || !lead) {
-      console.error("assign-trial-role: Lead not found:", leadError);
-      return new Response(
-        JSON.stringify({ error: "Lead not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (lead_id) {
+      const { data, error } = await supabase
+        .from("marketing_leads")
+        .select("id, business_type, business_name, email")
+        .eq("id", lead_id)
+        .single();
+      
+      if (!error && data) {
+        lead = data;
+      }
+    }
+
+    // If no lead found by ID, try to find by email
+    if (!lead && user_email) {
+      console.log(`assign-trial-role: Lead not found by ID, trying email: ${user_email}`);
+      const { data, error } = await supabase
+        .from("marketing_leads")
+        .select("id, business_type, business_name, email")
+        .eq("email", user_email)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (!error && data) {
+        lead = data;
+        actualLeadId = data.id;
+        console.log(`assign-trial-role: Found lead by email: ${data.id}`);
+      }
+    }
+
+    // If still no lead, assign default centro_admin role for trial users
+    if (!lead) {
+      console.log("assign-trial-role: No lead found, assigning default centro_admin role");
     }
 
     // All leads from marketing are businesses, assign centro_admin role
@@ -83,48 +108,52 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Update lead status to converted
-    await supabase
-      .from("marketing_leads")
-      .update({
-        status: 'converted',
-        conversion_date: new Date().toISOString(),
-        converted_entity_id: user_id,
-        converted_entity_type: 'centro',
-      })
-      .eq("id", lead_id);
-
-    // Move to "Converted" funnel stage
-    const { data: convertedStage } = await supabase
-      .from("marketing_funnel_stages")
-      .select("id")
-      .eq("stage_order", 5)
-      .single();
-
-    if (convertedStage) {
+    // Update lead status to converted (only if we have a lead)
+    if (actualLeadId) {
       await supabase
         .from("marketing_leads")
-        .update({ funnel_stage_id: convertedStage.id })
-        .eq("id", lead_id);
+        .update({
+          status: 'converted',
+          conversion_date: new Date().toISOString(),
+          converted_entity_id: user_id,
+          converted_entity_type: 'centro',
+        })
+        .eq("id", actualLeadId);
+
+      // Move to "Converted" funnel stage
+      const { data: convertedStage } = await supabase
+        .from("marketing_funnel_stages")
+        .select("id")
+        .eq("stage_order", 5)
+        .single();
+
+      if (convertedStage) {
+        await supabase
+          .from("marketing_leads")
+          .update({ funnel_stage_id: convertedStage.id })
+          .eq("id", actualLeadId);
+      }
+
+      // Log conversion
+      await supabase
+        .from("marketing_automation_logs")
+        .insert({
+          log_type: 'conversion',
+          message: `Lead convertito - registrazione completata come ${role}`,
+          details: { 
+            lead_id: actualLeadId, 
+            email: lead?.email || user_email,
+            user_id: user_id,
+            role: role,
+            business_name: lead?.business_name || 'N/A',
+          },
+          lead_id: actualLeadId,
+        });
+
+      console.log(`assign-trial-role: Successfully assigned role '${role}' to user from lead: ${lead?.business_name}`);
+    } else {
+      console.log(`assign-trial-role: Successfully assigned role '${role}' to user (no lead found)`);
     }
-
-    // Log conversion
-    await supabase
-      .from("marketing_automation_logs")
-      .insert({
-        log_type: 'conversion',
-        message: `Lead convertito - registrazione completata come ${role}`,
-        details: { 
-          lead_id: lead_id, 
-          email: lead.email,
-          user_id: user_id,
-          role: role,
-          business_name: lead.business_name,
-        },
-        lead_id: lead_id,
-      });
-
-    console.log(`assign-trial-role: Successfully assigned role '${role}' to user from lead: ${lead.business_name}`);
 
     return new Response(
       JSON.stringify({ success: true, role }),
