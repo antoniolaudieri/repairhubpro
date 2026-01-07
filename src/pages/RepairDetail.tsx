@@ -238,6 +238,8 @@ export default function RepairDetail() {
     changed_at: string;
   }>>([]);
   const [originalRepair, setOriginalRepair] = useState<RepairDetail | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Track unsaved changes
   const hasChanges = useMemo(() => {
@@ -927,6 +929,42 @@ export default function RepairDetail() {
     }
   };
 
+  const deleteRepair = async () => {
+    if (!repair) return;
+    
+    setDeleting(true);
+    try {
+      // Delete associated records first
+      await supabase.from("repair_parts").delete().eq("repair_id", id);
+      await supabase.from("repair_history").delete().eq("repair_id", id);
+      
+      // Delete the repair itself
+      const { error } = await supabase
+        .from("repairs")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Lavoro Eliminato",
+        description: "Il lavoro è stato eliminato con successo",
+      });
+      
+      navigate(backRoute);
+    } catch (error) {
+      console.error("Error deleting repair:", error);
+      toast({
+        title: "Errore",
+        description: "Impossibile eliminare il lavoro",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   const applySavedGuide = async (savedGuide: {
     id: string;
     guide_data: RepairGuideData;
@@ -1158,6 +1196,21 @@ export default function RepairDetail() {
                   className="gap-2"
                 />
               </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowDeleteDialog(true)}
+                      className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="hidden sm:inline">Elimina</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Elimina lavoro</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Button
                 onClick={() => saveChanges()}
                 disabled={saving} 
@@ -2284,6 +2337,45 @@ export default function RepairDetail() {
         onCancel={handleCancelNavigation}
         isSaving={saving}
       />
+
+      {/* Delete Repair Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Eliminare questo lavoro?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Stai per eliminare definitivamente la riparazione di <strong>{repair?.device?.brand} {repair?.device?.model}</strong> per il cliente <strong>{repair?.customer?.name}</strong>.
+              <br /><br />
+              <span className="text-destructive font-medium">Questa azione non può essere annullata.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>
+              Annulla
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={deleteRepair}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-2"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Eliminazione...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" />
+                  Elimina
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
