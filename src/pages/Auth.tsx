@@ -35,17 +35,27 @@ const Auth = () => {
     try {
       console.log("Processing registration for user:", userId, "lead:", leadId, "email:", userEmail);
       
-      const { data, error } = await supabase.functions.invoke("assign-trial-role", {
-        body: {
-          user_id: userId,
-          lead_id: leadId, // Can be null - function will try to find by email
-          user_email: userEmail,
-        },
-      });
+      // Use direct fetch to edge function since user might not have session yet
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/assign-trial-role`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            lead_id: leadId,
+            user_email: userEmail,
+          }),
+        }
+      );
 
-      if (error) {
-        console.error("Error assigning role:", error);
-        // Don't show error toast - user might just be a regular customer
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error("Error assigning role:", data);
       } else {
         console.log("Role assigned:", data);
       }
