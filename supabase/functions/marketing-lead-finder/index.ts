@@ -194,9 +194,48 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ========== PHASE 4: SAVE ALL LEADS TO DATABASE ==========
-    console.log(`marketing-lead-finder: [PHASE 4] Saving ${allResults.length} leads to database...`);
+    console.log(`marketing-lead-finder: [PHASE 4] Filtering and saving leads...`);
     
-    for (const result of allResults) {
+    // Filter out irrelevant business types (public entities, police, etc.)
+    const excludedKeywords = [
+      // Enti pubblici
+      'comune di', 'municipio', 'municipalità', 'provincia di', 'regione',
+      'agenzia entrate', 'agenzia delle entrate', 'inps', 'inail',
+      'ministero', 'prefettura', 'questura', 'tribunale', 'procura',
+      'camera di commercio', 'asl', 'ospedale', 'azienda sanitaria',
+      'università', 'scuola', 'istituto comprensivo', 'liceo',
+      // Forze dell'ordine
+      'carabinieri', 'polizia', 'guardia di finanza', 'vigili del fuoco',
+      'polizia locale', 'polizia municipale', 'vigili urbani', 'gendarmeria',
+      'arma dei carabinieri', 'comando', 'stazione carabinieri', 'commissariato',
+      // Altri enti non rilevanti
+      'protezione civile', 'croce rossa', 'croce verde', 'croce bianca',
+      'associazione', 'onlus', 'ong', 'fondazione', 'caf', 'patronato',
+      'parrocchia', 'chiesa', 'diocesi', 'curia',
+      'banca', 'banco', 'cassa di risparmio', 'credito', 'assicurazione', 'assicurazioni',
+      'posta', 'poste italiane', 'ufficio postale',
+      'ferrovie', 'trenitalia', 'atm', 'atac', 'trasporto pubblico',
+      // Esclusioni email
+      'pec.it', 'legalmail', 'postacert', 'gov.it', 'edu.it', 'istruzione.it',
+    ];
+    
+    const filteredResults = allResults.filter(result => {
+      const nameLower = result.name.toLowerCase();
+      const emailLower = (result.email || '').toLowerCase();
+      
+      // Check if name or email contains excluded keywords
+      for (const keyword of excludedKeywords) {
+        if (nameLower.includes(keyword) || emailLower.includes(keyword)) {
+          console.log(`marketing-lead-finder: EXCLUDED "${result.name}" (matched: ${keyword})`);
+          return false;
+        }
+      }
+      return true;
+    });
+    
+    console.log(`marketing-lead-finder: Filtered ${allResults.length - filteredResults.length} irrelevant leads, keeping ${filteredResults.length}`);
+    
+    for (const result of filteredResults) {
       try {
         // Skip leads with no useful contact info
         if (!result.email && !result.phone && !result.website) {
