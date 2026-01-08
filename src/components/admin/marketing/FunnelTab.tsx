@@ -1,11 +1,17 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
-  Users, TrendingUp, ArrowRight, ChevronRight, Loader2 
+  Users, TrendingUp, ChevronRight, Loader2, ExternalLink, Mail, Phone, Building2, ArrowLeft
 } from "lucide-react";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
 type FunnelStage = {
   id: string;
@@ -18,7 +24,20 @@ type FunnelStage = {
   leadCount?: number;
 };
 
+type MarketingLead = {
+  id: string;
+  business_name: string;
+  email: string | null;
+  phone: string | null;
+  website: string | null;
+  business_type: string | null;
+  status: string;
+  created_at: string;
+};
+
 export function FunnelTab() {
+  const [selectedStage, setSelectedStage] = useState<FunnelStage | null>(null);
+
   // Fetch funnel stages
   const { data: stages = [], isLoading: stagesLoading } = useQuery({
     queryKey: ["marketing-funnel-stages"],
@@ -51,6 +70,22 @@ export function FunnelTab() {
     },
   });
 
+  // Fetch leads for selected stage
+  const { data: stageLeads = [], isLoading: leadsLoading } = useQuery({
+    queryKey: ["marketing-leads-by-stage", selectedStage?.id],
+    queryFn: async () => {
+      if (!selectedStage) return [];
+      const { data, error } = await supabase
+        .from("marketing_leads")
+        .select("id, business_name, email, phone, website, business_type, status, created_at")
+        .eq("funnel_stage_id", selectedStage.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data as MarketingLead[];
+    },
+    enabled: !!selectedStage,
+  });
+
   // Total leads for percentage calculation
   const totalLeads = Object.values(leadCounts).reduce((sum, count) => sum + count, 0);
 
@@ -81,7 +116,7 @@ export function FunnelTab() {
       <div>
         <h2 className="text-lg font-semibold">Funnel di Conversione</h2>
         <p className="text-sm text-muted-foreground">
-          Visualizza il percorso dei lead attraverso gli stadi del funnel
+          Clicca su uno stadio per vedere i lead corrispondenti
         </p>
       </div>
 
@@ -96,7 +131,7 @@ export function FunnelTab() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">
-              {stagesWithData.find(s => s.name === "Converted")?.leadCount || 0}
+              {stagesWithData.find(s => s.name === "Convertito")?.leadCount || 0}
             </div>
             <p className="text-sm text-muted-foreground">Conversioni totali</p>
           </CardContent>
@@ -105,7 +140,7 @@ export function FunnelTab() {
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-primary">
               {totalLeads > 0 
-                ? ((stagesWithData.find(s => s.name === "Converted")?.leadCount || 0) / totalLeads * 100).toFixed(1)
+                ? ((stagesWithData.find(s => s.name === "Convertito")?.leadCount || 0) / totalLeads * 100).toFixed(1)
                 : 0}%
             </div>
             <p className="text-sm text-muted-foreground">Tasso conversione globale</p>
@@ -140,9 +175,10 @@ export function FunnelTab() {
                   </div>
                 )}
                 
-                {/* Stage Card */}
-                <div 
-                  className="relative overflow-hidden rounded-lg border p-4"
+                {/* Stage Card - Now Clickable */}
+                <button 
+                  onClick={() => setSelectedStage(stage)}
+                  className="w-full text-left relative overflow-hidden rounded-lg border p-4 hover:bg-muted/50 transition-colors cursor-pointer"
                   style={{ 
                     borderLeftWidth: "4px",
                     borderLeftColor: stage.color 
@@ -199,17 +235,21 @@ export function FunnelTab() {
                       {stage.auto_advance_condition && ` (condizione: ${stage.auto_advance_condition})`}
                     </p>
                   )}
-                </div>
+                </button>
               </div>
             ))}
           </div>
         </CardContent>
       </Card>
 
-      {/* Funnel Stages Detail */}
+      {/* Funnel Stages Detail - Also Clickable */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {stagesWithData.map((stage) => (
-          <Card key={stage.id}>
+          <Card 
+            key={stage.id} 
+            className="cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={() => setSelectedStage(stage)}
+          >
             <CardContent className="pt-6">
               <div className="flex items-center gap-3 mb-4">
                 <div 
@@ -238,6 +278,98 @@ export function FunnelTab() {
           </Card>
         ))}
       </div>
+
+      {/* Leads Dialog */}
+      <Dialog open={!!selectedStage} onOpenChange={(open) => !open && setSelectedStage(null)}>
+        <DialogContent className="max-w-3xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3">
+              {selectedStage && (
+                <>
+                  <div 
+                    className="h-4 w-4 rounded-full"
+                    style={{ backgroundColor: selectedStage.color }}
+                  />
+                  Lead in "{selectedStage.name}"
+                  <Badge variant="secondary">{stageLeads.length}</Badge>
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="h-[60vh]">
+            {leadsLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : stageLeads.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
+                <Users className="h-10 w-10 mb-2 opacity-50" />
+                <p>Nessun lead in questo stadio</p>
+              </div>
+            ) : (
+              <div className="space-y-3 pr-4">
+                {stageLeads.map((lead) => (
+                  <Card key={lead.id} className="p-4">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Building2 className="h-4 w-4 text-muted-foreground" />
+                          <span className="font-semibold">{lead.business_name}</span>
+                          {lead.business_type && (
+                            <Badge variant="outline" className="text-xs">
+                              {lead.business_type}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {lead.email && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Mail className="h-3 w-3" />
+                            <a href={`mailto:${lead.email}`} className="hover:underline">
+                              {lead.email}
+                            </a>
+                          </div>
+                        )}
+                        
+                        {lead.phone && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Phone className="h-3 w-3" />
+                            <a href={`tel:${lead.phone}`} className="hover:underline">
+                              {lead.phone}
+                            </a>
+                          </div>
+                        )}
+
+                        {lead.website && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <ExternalLink className="h-3 w-3" />
+                            <a 
+                              href={lead.website} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="hover:underline truncate max-w-[300px]"
+                            >
+                              {lead.website}
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="text-right text-xs text-muted-foreground">
+                        <p>{format(new Date(lead.created_at), "d MMM yyyy", { locale: it })}</p>
+                        <Badge variant={lead.status === 'active' ? 'default' : 'secondary'} className="mt-1">
+                          {lead.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
