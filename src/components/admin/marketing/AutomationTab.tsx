@@ -45,6 +45,18 @@ interface SmtpConfig {
   from_email: string;
 }
 
+interface FoundLead {
+  id?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  businessType: 'centro' | 'corner';
+  source: 'firecrawl' | 'osm';
+  isNew: boolean;
+  zone?: string;
+}
+
 interface ScanProgress {
   isScanning: boolean;
   totalZones: number;
@@ -57,6 +69,8 @@ interface ScanProgress {
   firecrawlLeadsFound: number;
   errors: string[];
   completedZones: string[];
+  foundLeads: FoundLead[];
+  duplicatesSkipped: number;
 }
 
 export function AutomationTab() {
@@ -93,8 +107,11 @@ export function AutomationTab() {
     firecrawlLeadsFound: 0,
     errors: [],
     completedZones: [],
+    foundLeads: [],
+    duplicatesSkipped: 0,
   });
   const [isScanDialogOpen, setIsScanDialogOpen] = useState(false);
+  const [leadFilter, setLeadFilter] = useState<'all' | 'new' | 'email' | 'duplicate'>('all');
 
   // Fetch automation settings
   const { data: settings, isLoading: settingsLoading } = useQuery({
@@ -223,6 +240,7 @@ export function AutomationTab() {
 
     // Open dialog and initialize progress
     setIsScanDialogOpen(true);
+    setLeadFilter('all');
     setScanProgress({
       isScanning: true,
       totalZones: zones.length,
@@ -235,6 +253,8 @@ export function AutomationTab() {
       firecrawlLeadsFound: 0,
       errors: [],
       completedZones: [],
+      foundLeads: [],
+      duplicatesSkipped: 0,
     });
 
     // Process each zone sequentially
@@ -258,14 +278,21 @@ export function AutomationTab() {
             errors: [...prev.errors, `${zone.name}: ${error.message}`],
           }));
         } else if (data) {
+          const newLeads: FoundLead[] = (data.leadsDetail || []).map((lead: any) => ({
+            ...lead,
+            zone: zone.name,
+          }));
+          
           setScanProgress(prev => ({
             ...prev,
             totalLeadsFound: prev.totalLeadsFound + (data.leadsCreated || 0),
             leadsWithEmail: prev.leadsWithEmail + (data.leadsWithEmail || 0),
             leadsPhoneOnly: prev.leadsPhoneOnly + (data.leadsPhoneOnly || 0),
-            osmLeadsFound: prev.osmLeadsFound + (data.osmLeads || 0),
-            firecrawlLeadsFound: prev.firecrawlLeadsFound + (data.firecrawlLeads || 0),
+            osmLeadsFound: prev.osmLeadsFound + (data.fromOsm || 0),
+            firecrawlLeadsFound: prev.firecrawlLeadsFound + (data.fromSearch || 0),
             completedZones: [...prev.completedZones, zone.name],
+            foundLeads: [...prev.foundLeads, ...newLeads],
+            duplicatesSkipped: prev.duplicatesSkipped + (data.duplicatesSkipped || 0),
           }));
         }
       } catch (err: any) {
@@ -293,6 +320,7 @@ export function AutomationTab() {
   const closeScanDialog = () => {
     if (!scanProgress.isScanning) {
       setIsScanDialogOpen(false);
+      setLeadFilter('all');
       setScanProgress({
         isScanning: false,
         totalZones: 0,
@@ -305,9 +333,21 @@ export function AutomationTab() {
         firecrawlLeadsFound: 0,
         errors: [],
         completedZones: [],
+        foundLeads: [],
+        duplicatesSkipped: 0,
       });
     }
   };
+
+  // Filter leads based on selection
+  const filteredLeads = scanProgress.foundLeads.filter(lead => {
+    switch (leadFilter) {
+      case 'new': return lead.isNew;
+      case 'email': return !!lead.email;
+      case 'duplicate': return !lead.isNew;
+      default: return true;
+    }
+  });
 
   // Manual email processing
   const processEmails = async () => {
@@ -465,9 +505,9 @@ export function AutomationTab() {
 
   return (
     <div className="space-y-6">
-      {/* Scan Progress Dialog */}
+      {/* Scan Progress Dialog - Nuovo layout a due colonne */}
       <Dialog open={isScanDialogOpen} onOpenChange={(open) => !scanProgress.isScanning && setIsScanDialogOpen(open)}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-4xl max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               {scanProgress.isScanning ? (
@@ -481,105 +521,225 @@ export function AutomationTab() {
             </DialogTitle>
             <DialogDescription>
               {scanProgress.isScanning 
-                ? "Ricerca lead in tutte le zone attive. Questo può richiedere diversi minuti."
-                : `Scansione completata su ${scanProgress.totalZones} zone.`
+                ? `Ricerca lead in ${scanProgress.totalZones} zone. Leads trovati in tempo reale.`
+                : `Completata su ${scanProgress.totalZones} zone - ${scanProgress.foundLeads.length} lead trovati.`
               }
             </DialogDescription>
           </DialogHeader>
           
-          <div className="space-y-4 py-4">
-            {/* Progress Bar */}
-            <div className="space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Progresso</span>
-                <span className="font-medium">
-                  {scanProgress.isScanning 
-                    ? `${scanProgress.currentZoneIndex + 1} / ${scanProgress.totalZones}`
-                    : `${scanProgress.totalZones} / ${scanProgress.totalZones}`
-                  }
-                </span>
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 max-h-[60vh] overflow-hidden">
+            {/* Colonna sinistra - Progress & Stats (2/5) */}
+            <div className="md:col-span-2 space-y-4 overflow-y-auto pr-2">
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Progresso</span>
+                  <span className="font-medium">
+                    {scanProgress.isScanning 
+                      ? `${scanProgress.currentZoneIndex + 1} / ${scanProgress.totalZones}`
+                      : `${scanProgress.totalZones} / ${scanProgress.totalZones}`
+                    }
+                  </span>
+                </div>
+                <Progress 
+                  value={scanProgress.isScanning ? progressPercentage : 100} 
+                  className="h-3"
+                />
               </div>
-              <Progress 
-                value={scanProgress.isScanning ? progressPercentage : 100} 
-                className="h-3"
-              />
-            </div>
 
-            {/* Current Zone */}
-            {scanProgress.isScanning && scanProgress.currentZoneName && (
-              <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
-                <MapPin className="h-5 w-5 text-primary animate-pulse" />
-                <div>
-                  <p className="font-medium text-sm">Scansione zona:</p>
-                  <p className="text-primary font-semibold">{scanProgress.currentZoneName}</p>
+              {/* Current Zone */}
+              {scanProgress.isScanning && scanProgress.currentZoneName && (
+                <div className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                  <MapPin className="h-5 w-5 text-primary animate-pulse" />
+                  <div>
+                    <p className="font-medium text-sm">Scansione zona:</p>
+                    <p className="text-primary font-semibold">{scanProgress.currentZoneName}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Stats compatti */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="p-2 bg-green-50 dark:bg-green-950/30 rounded-lg text-center">
+                  <p className="text-xl font-bold text-green-600">{scanProgress.totalLeadsFound}</p>
+                  <p className="text-xs text-muted-foreground">Nuovi lead</p>
+                </div>
+                <div className="p-2 bg-primary/10 rounded-lg text-center">
+                  <p className="text-xl font-bold text-primary">{scanProgress.leadsWithEmail}</p>
+                  <p className="text-xs text-muted-foreground">Con email</p>
+                </div>
+                <div className="p-2 bg-orange-50 dark:bg-orange-950/30 rounded-lg text-center">
+                  <p className="text-xl font-bold text-orange-600">{scanProgress.leadsPhoneOnly}</p>
+                  <p className="text-xs text-muted-foreground">Solo tel.</p>
+                </div>
+                <div className="p-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-center">
+                  <p className="text-xl font-bold text-muted-foreground">{scanProgress.duplicatesSkipped}</p>
+                  <p className="text-xs text-muted-foreground">Duplicati</p>
                 </div>
               </div>
-            )}
+              
+              {/* Source stats */}
+              <div className="flex gap-2 text-xs">
+                <Badge variant="outline" className="bg-blue-50 text-blue-700">
+                  <MapPin className="h-3 w-3 mr-1" />
+                  OSM: {scanProgress.osmLeadsFound}
+                </Badge>
+                <Badge variant="outline" className="bg-purple-50 text-purple-700">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Web: {scanProgress.firecrawlLeadsFound}
+                </Badge>
+              </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-muted/50 rounded-lg text-center">
-                <Users className="h-5 w-5 mx-auto mb-1 text-green-600" />
-                <p className="text-2xl font-bold text-green-600">{scanProgress.totalLeadsFound}</p>
-                <p className="text-xs text-muted-foreground">Lead totali</p>
-              </div>
-              <div className="p-3 bg-muted/50 rounded-lg text-center">
-                <Mail className="h-5 w-5 mx-auto mb-1 text-primary" />
-                <p className="text-2xl font-bold text-primary">{scanProgress.leadsWithEmail}</p>
-                <p className="text-xs text-muted-foreground">Con email (auto)</p>
-              </div>
+              {/* Completed Zones */}
+              {scanProgress.completedZones.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">Zone completate:</p>
+                  <div className="flex flex-wrap gap-1 max-h-16 overflow-y-auto">
+                    {scanProgress.completedZones.map((zone, i) => (
+                      <Badge key={i} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                        <CheckCircle className="h-2.5 w-2.5 mr-1" />
+                        {zone}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Errors */}
+              {scanProgress.errors.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-destructive">Errori ({scanProgress.errors.length}):</p>
+                  <div className="max-h-16 overflow-y-auto space-y-1">
+                    {scanProgress.errors.map((error, i) => (
+                      <div key={i} className="flex items-start gap-1 text-xs text-destructive bg-destructive/5 p-1 rounded">
+                        <XCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                        <span className="truncate">{error}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-orange-50 dark:bg-orange-950/30 rounded-lg text-center">
-                <Phone className="h-4 w-4 mx-auto mb-1 text-orange-600" />
-                <p className="text-lg font-bold text-orange-600">{scanProgress.leadsPhoneOnly}</p>
-                <p className="text-xs text-muted-foreground">Solo tel.</p>
+            {/* Colonna destra - Lista Lead Real-time (3/5) */}
+            <div className="md:col-span-3 flex flex-col border-l pl-4">
+              {/* Filtri */}
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <span className="text-xs text-muted-foreground">Filtro:</span>
+                <Button 
+                  size="sm" 
+                  variant={leadFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setLeadFilter('all')}
+                  className="h-6 text-xs px-2"
+                >
+                  Tutti ({scanProgress.foundLeads.length})
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={leadFilter === 'new' ? 'default' : 'outline'}
+                  onClick={() => setLeadFilter('new')}
+                  className="h-6 text-xs px-2"
+                >
+                  Nuovi ({scanProgress.foundLeads.filter(l => l.isNew).length})
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={leadFilter === 'email' ? 'default' : 'outline'}
+                  onClick={() => setLeadFilter('email')}
+                  className="h-6 text-xs px-2"
+                >
+                  Con email ({scanProgress.foundLeads.filter(l => l.email).length})
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant={leadFilter === 'duplicate' ? 'default' : 'outline'}
+                  onClick={() => setLeadFilter('duplicate')}
+                  className="h-6 text-xs px-2"
+                >
+                  Duplicati ({scanProgress.foundLeads.filter(l => !l.isNew).length})
+                </Button>
               </div>
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg text-center">
-                <MapPin className="h-4 w-4 mx-auto mb-1 text-blue-600" />
-                <p className="text-lg font-bold text-blue-600">{scanProgress.osmLeadsFound}</p>
-                <p className="text-xs text-muted-foreground">OSM</p>
-              </div>
-              <div className="p-3 bg-purple-50 dark:bg-purple-950/30 rounded-lg text-center">
-                <RefreshCw className="h-4 w-4 mx-auto mb-1 text-purple-600" />
-                <p className="text-lg font-bold text-purple-600">{scanProgress.firecrawlLeadsFound}</p>
-                <p className="text-xs text-muted-foreground">Firecrawl</p>
+              
+              {/* Lista lead scrollabile */}
+              <div className="flex-1 overflow-y-auto space-y-2 max-h-[45vh] pr-2">
+                {filteredLeads.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-muted-foreground py-8">
+                    {scanProgress.isScanning ? (
+                      <>
+                        <Loader2 className="h-8 w-8 animate-spin mb-2" />
+                        <p className="text-sm">Ricerca lead in corso...</p>
+                      </>
+                    ) : (
+                      <>
+                        <Users className="h-8 w-8 mb-2 opacity-50" />
+                        <p className="text-sm">Nessun lead trovato</p>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  filteredLeads.map((lead, idx) => (
+                    <div 
+                      key={`${lead.name}-${idx}`}
+                      className={`p-3 rounded-lg border transition-all ${
+                        lead.isNew 
+                          ? lead.email 
+                            ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' 
+                            : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
+                          : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-sm truncate">{lead.name}</span>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${
+                                lead.isNew 
+                                  ? lead.email 
+                                    ? 'bg-green-100 text-green-700 border-green-300'
+                                    : 'bg-blue-100 text-blue-700 border-blue-300'
+                                  : 'bg-gray-100 text-gray-600 border-gray-300'
+                              }`}
+                            >
+                              {lead.isNew ? (lead.email ? '✓ NUOVO + EMAIL' : '+ NUOVO') : 'DUPLICATO'}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-muted-foreground">
+                            {lead.email && (
+                              <span className="flex items-center gap-1 text-green-600">
+                                <Mail className="h-3 w-3" />
+                                {lead.email}
+                              </span>
+                            )}
+                            {lead.phone && (
+                              <span className="flex items-center gap-1">
+                                <Phone className="h-3 w-3" />
+                                {lead.phone}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-xs">
+                            <Badge variant="secondary" className="text-xs h-5">
+                              {lead.businessType === 'centro' ? '🔧 Centro' : '🏪 Corner'}
+                            </Badge>
+                            <Badge variant="outline" className="text-xs h-5">
+                              {lead.source === 'osm' ? '📍 OSM' : '🔍 Web'}
+                            </Badge>
+                            {lead.zone && (
+                              <span className="text-muted-foreground">{lead.zone}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
-
-            {/* Completed Zones */}
-            {scanProgress.completedZones.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Zone completate:</p>
-                <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
-                  {scanProgress.completedZones.map((zone, i) => (
-                    <Badge key={i} variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      {zone}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Errors */}
-            {scanProgress.errors.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium text-destructive">Errori ({scanProgress.errors.length}):</p>
-                <div className="max-h-24 overflow-y-auto space-y-1">
-                  {scanProgress.errors.map((error, i) => (
-                    <div key={i} className="flex items-start gap-2 text-xs text-destructive bg-destructive/5 p-2 rounded">
-                      <XCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-                      <span>{error}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="mt-4">
             <Button 
               onClick={closeScanDialog} 
               disabled={scanProgress.isScanning}

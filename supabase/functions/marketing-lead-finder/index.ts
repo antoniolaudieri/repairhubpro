@@ -25,6 +25,18 @@ interface LeadStats {
   enriched: number;
 }
 
+interface LeadDetail {
+  id?: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  businessType: 'centro' | 'corner';
+  source: 'firecrawl' | 'osm';
+  isNew: boolean;
+  zone?: string;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("marketing-lead-finder: Starting MULTI-SOURCE lead search");
   
@@ -109,6 +121,8 @@ const handler = async (req: Request): Promise<Response> => {
     };
     
     const allResults: SearchResult[] = [];
+    const leadsDetail: LeadDetail[] = [];
+    let duplicatesSkipped = 0;
 
     // ========== PHASE 1: FIRECRAWL SEARCH (PRIMARY - finds sites WITH email) ==========
     if (firecrawlApiKey) {
@@ -185,7 +199,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // ========== PHASE 3: PARALLEL ENRICHMENT (for leads with website but no email) ==========
     if (firecrawlApiKey) {
-      const toEnrich = allResults.filter(r => r.website && !r.email).slice(0, 20);
+      const toEnrich = allResults.filter(r => r.website && !r.email).slice(0, 50);
       
       if (toEnrich.length > 0) {
         console.log(`marketing-lead-finder: [PHASE 3] Parallel enrichment for ${toEnrich.length} leads...`);
@@ -256,6 +270,17 @@ const handler = async (req: Request): Promise<Response> => {
           .limit(1);
 
         if (existingLeads && existingLeads.length > 0) {
+          duplicatesSkipped++;
+          leadsDetail.push({
+            name: result.name,
+            email: result.email,
+            phone: result.phone,
+            website: result.website,
+            businessType: result.queryType || determineBusinessType(result.name, result.website || ''),
+            source: result.source,
+            isNew: false,
+            zone: zoneName,
+          });
           continue;
         }
 
@@ -304,6 +329,19 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         stats.total++;
+        
+        // Add to leads detail
+        leadsDetail.push({
+          id: newLead.id,
+          name: result.name,
+          email: result.email,
+          phone: result.phone,
+          website: result.website,
+          businessType: businessType,
+          source: result.source,
+          isNew: true,
+          zone: zoneName,
+        });
         
         if (result.email) {
           stats.withEmail++;
@@ -361,6 +399,8 @@ const handler = async (req: Request): Promise<Response> => {
         enriched: stats.enriched,
         fromSearch: stats.fromSearch,
         fromOsm: stats.fromOsm,
+        leadsDetail,
+        duplicatesSkipped,
         message: `Trovati ${stats.total} lead: ${stats.withEmail} con email, ${stats.phoneOnly} solo telefono, ${stats.websiteOnly} solo sito`
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -742,11 +782,16 @@ async function quickEmailExtract(websiteUrl: string, apiKey: string): Promise<st
       return null;
     }
     
-    // Try homepage and contact page in parallel
+    // Try homepage and multiple Italian contact pages in parallel
     const pagesToTry = [
       baseUrl.origin,
       baseUrl.origin + '/contatti',
       baseUrl.origin + '/contact',
+      baseUrl.origin + '/contattaci',
+      baseUrl.origin + '/chi-siamo',
+      baseUrl.origin + '/about',
+      baseUrl.origin + '/dove-siamo',
+      baseUrl.origin + '/info',
     ];
     
     const promises = pagesToTry.map(async (pageUrl) => {
@@ -762,8 +807,8 @@ async function quickEmailExtract(websiteUrl: string, apiKey: string): Promise<st
           },
           body: JSON.stringify({
             url: pageUrl,
-            formats: ['markdown'],
-            timeout: 3000,
+            formats: ['markdown', 'html'],
+            timeout: 4000,
           }),
           signal: controller.signal,
         });
@@ -773,9 +818,19 @@ async function quickEmailExtract(websiteUrl: string, apiKey: string): Promise<st
         if (!response.ok) return null;
 
         const data = await response.json();
-        const content = data.data?.markdown || '';
+        const markdown = data.data?.markdown || '';
+        const html = data.data?.html || '';
         
-        return extractEmailFromContent(content);
+        // Try extracting from markdown first
+        const emailFromMarkdown = extractEmailFromContent(markdown);
+        if (emailFromMarkdown) return emailFromMarkdown;
+        
+        // Try mailto links from HTML
+        const emailFromMailto = extractMailtoLinks(html);
+        if (emailFromMailto) return emailFromMailto;
+        
+        // Try extracting from HTML content
+        return extractEmailFromContent(html);
       } catch {
         return null;
       }
@@ -798,30 +853,89 @@ async function quickEmailExtract(websiteUrl: string, apiKey: string): Promise<st
 // ========== UTILITY FUNCTIONS ==========
 
 function extractEmailFromContent(content: string): string | null {
+  // Standard email regex
   const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
-  const allEmails = content.match(emailRegex) || [];
+  const allEmails: string[] = [];
+  
+  // Standard emails
+  const standardMatches = content.match(emailRegex) || [];
+  allEmails.push(...standardMatches);
+  
+  // Obfuscated emails: [at], (at), AT, etc.
+  const obfuscatedPatterns = [
+    /([a-zA-Z0-9._%+-]+)\s*\[at\]\s*([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi,
+    /([a-zA-Z0-9._%+-]+)\s*\(at\)\s*([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi,
+    /([a-zA-Z0-9._%+-]+)\s*\[chiocciola\]\s*([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi,
+    /([a-zA-Z0-9._%+-]+)\s+AT\s+([a-zA-Z0-9.-]+)\s+DOT\s+([a-zA-Z]{2,})/gi,
+    /([a-zA-Z0-9._%+-]+)\s*@\s*([a-zA-Z0-9.-]+)\s*\.\s*([a-zA-Z]{2,})/gi,
+  ];
+  
+  for (const pattern of obfuscatedPatterns) {
+    let match;
+    while ((match = pattern.exec(content)) !== null) {
+      if (match.length >= 3) {
+        const reconstructed = match.length === 4 
+          ? `${match[1]}@${match[2]}.${match[3]}`
+          : `${match[1]}@${match[2]}`;
+        allEmails.push(reconstructed);
+      }
+    }
+  }
+  
+  // Skip fake/generic/system emails and prioritize business emails
+  const skipPatterns = [
+    'example', 'test@', 'noreply', 'no-reply', 'donotreply',
+    'privacy@', 'gdpr@', 'cookie@', 'abuse@', 'postmaster@',
+    'webmaster@', 'hostmaster@', 'mailer-daemon', 'newsletter@',
+    '@sentry.io', '@google.com', '@facebook.com', '@twitter.com',
+    '@example.com', '@test.com', 'wordpress', 'wix.com', '@w3.org',
+    'support@wix', 'support@google', '@email.com'
+  ];
+  
+  const genericDomains = ['gmail', 'hotmail', 'yahoo', 'libero', 'outlook', 'icloud', 'live.', 'msn.', 'virgilio'];
+  
+  // Separate business emails from generic ones
+  const businessEmails: string[] = [];
+  const genericEmails: string[] = [];
   
   for (const rawEmail of allEmails) {
     const email = rawEmail.toLowerCase();
-    
-    // Skip fake/generic/system emails
-    const skipPatterns = [
-      'example', 'test@', 'noreply', 'no-reply', 'donotreply',
-      'privacy@', 'gdpr@', 'cookie@', 'abuse@', 'postmaster@',
-      'webmaster@', 'hostmaster@', 'mailer-daemon', 'newsletter@',
-      '@sentry.io', '@google.com', '@facebook.com', '@twitter.com',
-      '@example.com', '@test.com', 'wordpress', 'wix.com', '@w3.org',
-      'support@wix', 'support@google', '@email.com'
-    ];
     
     if (skipPatterns.some(p => email.includes(p))) {
       continue;
     }
     
-    return email;
+    if (genericDomains.some(d => email.includes(d))) {
+      genericEmails.push(email);
+    } else {
+      businessEmails.push(email);
+    }
   }
   
+  // Prioritize business emails
+  if (businessEmails.length > 0) return businessEmails[0];
+  if (genericEmails.length > 0) return genericEmails[0];
+  
   return null;
+}
+
+// Extract email from mailto: links in HTML
+function extractMailtoLinks(html: string): string | null {
+  const mailtoRegex = /mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/gi;
+  const matches: string[] = [];
+  let match;
+  
+  while ((match = mailtoRegex.exec(html)) !== null) {
+    matches.push(match[1].toLowerCase());
+  }
+  
+  if (matches.length === 0) return null;
+  
+  // Prioritize business emails from mailto links too
+  const genericDomains = ['gmail', 'hotmail', 'yahoo', 'libero', 'outlook', 'icloud'];
+  const businessEmail = matches.find(e => !genericDomains.some(d => e.includes(d)));
+  
+  return businessEmail || matches[0];
 }
 
 function extractPhoneFromContent(content: string): string | null {
