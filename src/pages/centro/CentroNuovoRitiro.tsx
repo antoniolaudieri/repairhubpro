@@ -912,7 +912,10 @@ export default function CentroNuovoRitiro() {
         });
       } else {
         toast.success("Dispositivo registrato con successo!");
-        // Don't navigate immediately, let user see slot and print label
+        // Navigate to dashboard after short delay to allow toast to show
+        setTimeout(() => {
+          navigate("/centro", { replace: true });
+        }, 1500);
       }
     } catch (error: any) {
       console.error("Error:", error);
