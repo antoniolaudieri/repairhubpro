@@ -261,6 +261,7 @@ const handler = async (req: Request): Promise<Response> => {
     let lat: number | null = null;
     let lon: number | null = null;
     let radiusKm = 10;
+    let provinceName: string | undefined = undefined;
     
     if (zoneId) {
       const { data: zoneData } = await supabase
@@ -275,6 +276,8 @@ const handler = async (req: Request): Promise<Response> => {
         lat = zoneData.latitude;
         lon = zoneData.longitude;
         radiusKm = zoneData.radius_km || 10;
+        // Usa la provincia se disponibile nelle note o nel nome
+        provinceName = zoneData.province || zoneData.notes || undefined;
       }
     }
 
@@ -325,76 +328,103 @@ const handler = async (req: Request): Promise<Response> => {
     const leadsDetail: LeadDetail[] = [];
     let duplicatesSkipped = 0;
 
-    // ========== PHASE 1: FIRECRAWL SEARCH (PRIMARY - finds sites WITH email) ==========
+    // ========== PHASE 1 & 2: FIRECRAWL + OSM IN PARALLELO ==========
+    console.log(`marketing-lead-finder: [PHASE 1-2] Starting parallel search (Firecrawl + OSM)`);
+    
+    // Prepara le promise per esecuzione parallela
+    const searchPromises: Promise<void>[] = [];
+    
+    // FIRECRAWL SEARCH
     if (firecrawlApiKey) {
-      console.log(`marketing-lead-finder: [PHASE 1] Firecrawl Search for "${zoneName}"...`);
-      
-      const searchQueries = buildSearchQueries(zoneName, searchType);
-      console.log(`marketing-lead-finder: Executing ${searchQueries.length} queries sequentially...`);
-      
-      for (let i = 0; i < searchQueries.length; i++) {
-        const { query, type: queryType } = searchQueries[i];
-        console.log(`marketing-lead-finder: Query ${i + 1}/${searchQueries.length} (${queryType}): "${query}"`);
+      const firecrawlPromise = (async () => {
+        console.log(`marketing-lead-finder: [FIRECRAWL] Starting search for "${zoneName}"...`);
         
-        try {
-          const searchResults = await firecrawlSearchWithRetry(query, firecrawlApiKey);
-          console.log(`marketing-lead-finder: ✓ Found ${searchResults.length} results`);
+        const searchQueries = buildSearchQueries(zoneName, searchType, provinceName);
+        console.log(`marketing-lead-finder: [FIRECRAWL] Executing ${searchQueries.length} queries...`);
+        
+        // Esegui tutte le query in parallelo (max 3 alla volta)
+        const batchSize = 3;
+        for (let i = 0; i < searchQueries.length; i += batchSize) {
+          const batch = searchQueries.slice(i, i + batchSize);
           
-          for (const result of searchResults) {
-            // Check if not already added
-            const isDupe = allResults.some(r => 
-              r.website === result.website || 
-              r.name.toLowerCase() === result.name.toLowerCase()
-            );
-            if (!isDupe) {
-              result.queryType = queryType;
-              allResults.push(result);
-              stats.fromSearch++;
+          const batchResults = await Promise.allSettled(
+            batch.map(async ({ query, type: queryType }) => {
+              console.log(`marketing-lead-finder: [FIRECRAWL] Query: "${query}"`);
+              const results = await firecrawlSearchWithRetry(query, firecrawlApiKey);
+              return { results, queryType };
+            })
+          );
+          
+          for (const result of batchResults) {
+            if (result.status === 'fulfilled') {
+              const { results: searchResults, queryType } = result.value;
+              console.log(`marketing-lead-finder: [FIRECRAWL] ✓ Found ${searchResults.length} results`);
+              
+              for (const item of searchResults) {
+                const isDupe = allResults.some(r => 
+                  r.website === item.website || 
+                  r.name.toLowerCase() === item.name.toLowerCase()
+                );
+                if (!isDupe) {
+                  item.queryType = queryType;
+                  allResults.push(item);
+                  stats.fromSearch++;
+                }
+              }
             }
           }
-        } catch (err) {
-          console.log(`marketing-lead-finder: ✗ Query failed after retries: ${query}`);
+          
+          // Breve pausa tra batch per evitare rate limiting
+          if (i + batchSize < searchQueries.length) {
+            await new Promise(r => setTimeout(r, 1000));
+          }
         }
         
-        // Delay 3 seconds between queries
-        if (i < searchQueries.length - 1) {
-          await new Promise(r => setTimeout(r, 3000));
-        }
-      }
+        console.log(`marketing-lead-finder: [FIRECRAWL] Total: ${stats.fromSearch} candidates`);
+      })();
       
-      console.log(`marketing-lead-finder: [PHASE 1] Found ${allResults.length} candidates from search`);
+      searchPromises.push(firecrawlPromise);
     } else {
       console.log(`marketing-lead-finder: No Firecrawl API key, skipping web search`);
     }
-
-    // ========== PHASE 2: OSM BACKUP (finds local shops) ==========
+    
+    // OSM SEARCH (in parallelo con Firecrawl)
     if (lat && lon) {
-      console.log(`marketing-lead-finder: [PHASE 2] OSM search (lat: ${lat}, lon: ${lon}, radius: ${radiusKm}km)...`);
-      
-      const osmShops = await searchOverpass(lat, lon, radiusKm, searchType);
-      console.log(`marketing-lead-finder: OSM found ${osmShops.length} shops`);
-      
-      for (const shop of osmShops) {
-        const isDupe = allResults.some(r => 
-          r.name.toLowerCase() === shop.name.toLowerCase() ||
-          (r.website && shop.website && extractDomain(r.website) === extractDomain(shop.website))
-        );
+      const osmPromise = (async () => {
+        console.log(`marketing-lead-finder: [OSM] Starting search (lat: ${lat}, lon: ${lon}, radius: ${radiusKm}km)...`);
         
-        if (!isDupe) {
-          allResults.push({
-            name: shop.name,
-            email: shop.email,
-            phone: shop.phone,
-            website: shop.website,
-            address: shop.address || `${zoneName}, Italia`,
-            source: 'osm',
-          });
-          stats.fromOsm++;
+        const osmShops = await searchOverpass(lat, lon, radiusKm, searchType);
+        console.log(`marketing-lead-finder: [OSM] Found ${osmShops.length} shops`);
+        
+        for (const shop of osmShops) {
+          const isDupe = allResults.some(r => 
+            r.name.toLowerCase() === shop.name.toLowerCase() ||
+            (r.website && shop.website && extractDomain(r.website) === extractDomain(shop.website))
+          );
+          
+          if (!isDupe) {
+            allResults.push({
+              name: shop.name,
+              email: shop.email,
+              phone: shop.phone,
+              website: shop.website,
+              address: shop.address || `${zoneName}, Italia`,
+              source: 'osm',
+            });
+            stats.fromOsm++;
+          }
         }
-      }
+        
+        console.log(`marketing-lead-finder: [OSM] Added ${stats.fromOsm} candidates`);
+      })();
       
-      console.log(`marketing-lead-finder: [PHASE 2] Added ${stats.fromOsm} from OSM`);
+      searchPromises.push(osmPromise);
     }
+    
+    // Attendi che tutte le ricerche finiscano
+    await Promise.allSettled(searchPromises);
+    
+    console.log(`marketing-lead-finder: [PHASE 1-2] Total candidates: ${allResults.length} (Firecrawl: ${stats.fromSearch}, OSM: ${stats.fromOsm})`)
 
     // ========== PHASE 3: ENRICHMENT (for leads with website but no email) ==========
     if (firecrawlApiKey) {
@@ -647,24 +677,46 @@ function determineBusinessType(name: string, url: string): 'centro' | 'corner' {
 }
 
 // ========== BUILD SEARCH QUERIES ==========
-function buildSearchQueries(cityName: string, searchType: string): { query: string; type: 'centro' | 'corner' }[] {
+// Query semplici e generiche per massimizzare risultati
+function buildSearchQueries(cityName: string, searchType: string, provinceName?: string): { query: string; type: 'centro' | 'corner' }[] {
   const queries: { query: string; type: 'centro' | 'corner' }[] = [];
   
   if (searchType === 'centro' || searchType === 'both') {
+    // Query principale per centri riparazione
     queries.push({
-      query: `riparazione smartphone cellulari ${cityName} email contatti`,
+      query: `riparazione smartphone cellulari ${cityName}`,
       type: 'centro'
     });
+    queries.push({
+      query: `centro assistenza telefoni ${cityName}`,
+      type: 'centro'
+    });
+    // Query provinciale per zone piccole
+    if (provinceName && provinceName !== cityName) {
+      queries.push({
+        query: `riparazione cellulari provincia ${provinceName}`,
+        type: 'centro'
+      });
+    }
   }
   
   if (searchType === 'corner' || searchType === 'both') {
+    // Query principale per corner telefonia
     queries.push({
-      query: `negozio telefonia TIM Vodafone ${cityName} email`,
-      type: 'corner'
-    }, {
-      query: `centro multiservizi telefonia ${cityName} contatti`,
+      query: `negozio telefonia ${cityName}`,
       type: 'corner'
     });
+    queries.push({
+      query: `rivenditore TIM Vodafone Wind ${cityName}`,
+      type: 'corner'
+    });
+    // Query provinciale per zone piccole
+    if (provinceName && provinceName !== cityName) {
+      queries.push({
+        query: `negozio telefonia provincia ${provinceName}`,
+        type: 'corner'
+      });
+    }
   }
   
   return queries;
@@ -687,10 +739,13 @@ async function firecrawlSearchWithRetry(query: string, apiKey: string, maxRetrie
 }
 
 // ========== FIRECRAWL WEB SEARCH ==========
+// Timeout ridotto a 30s, limit aumentato a 30
 async function firecrawlSearch(query: string, apiKey: string): Promise<SearchResult[]> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s invece di 60s
+    
+    console.log(`marketing-lead-finder: Firecrawl searching: "${query}"`);
     
     const response = await fetch('https://api.firecrawl.dev/v1/search', {
       method: 'POST',
@@ -700,7 +755,7 @@ async function firecrawlSearch(query: string, apiKey: string): Promise<SearchRes
       },
       body: JSON.stringify({
         query,
-        limit: 20,
+        limit: 30, // Aumentato da 20 a 30
         lang: 'it',
         country: 'IT',
         scrapeOptions: {
@@ -719,6 +774,8 @@ async function firecrawlSearch(query: string, apiKey: string): Promise<SearchRes
 
     const data = await response.json();
     const results: SearchResult[] = [];
+    
+    console.log(`marketing-lead-finder: Firecrawl returned ${data.data?.length || 0} results for "${query}"`);
     
     for (const item of data.data || []) {
       const title = item.title || '';
@@ -741,16 +798,26 @@ async function firecrawlSearch(query: string, apiKey: string): Promise<SearchRes
       }
     }
     
+    console.log(`marketing-lead-finder: Firecrawl parsed ${results.length} valid results`);
     return results;
   } catch (err) {
-    console.error('marketing-lead-finder: Firecrawl search error:', err);
+    if (err instanceof Error && err.name === 'AbortError') {
+      console.log(`marketing-lead-finder: Firecrawl timeout for query: "${query}"`);
+    } else {
+      console.error('marketing-lead-finder: Firecrawl search error:', err);
+    }
     return [];
   }
 }
 
 // ========== OVERPASS API (OSM) ==========
+// Raggio aumentato per zone piccole, timeout ottimizzato
 async function searchOverpass(lat: number, lon: number, radiusKm: number, searchType: string): Promise<SearchResult[]> {
-  const radiusMeters = radiusKm * 1000;
+  // Raggio minimo 15km per zone piccole
+  const effectiveRadiusKm = Math.max(radiusKm, 15);
+  const radiusMeters = effectiveRadiusKm * 1000;
+  
+  console.log(`marketing-lead-finder: OSM searching radius ${effectiveRadiusKm}km around (${lat}, ${lon})`);
   
   let shopTypes: string[] = [];
   
@@ -759,7 +826,8 @@ async function searchOverpass(lat: number, lon: number, radiusKm: number, search
       'nwr["craft"="electronics_repair"]',
       'nwr["shop"="mobile_phone"]["repair"="yes"]',
       'nwr["repair"~"phone|mobile|smartphone"]',
-      'nwr["shop"="repair"]'
+      'nwr["shop"="repair"]',
+      'nwr["service"~"phone|mobile|smartphone"]'
     );
   }
   
@@ -767,15 +835,16 @@ async function searchOverpass(lat: number, lon: number, radiusKm: number, search
     shopTypes.push(
       'nwr["shop"="mobile_phone"]',
       'nwr["shop"="telecommunication"]',
-      'nwr["name"~"TIM|Vodafone|Wind|Iliad|Fastweb|Tiscali",i]',
-      'nwr["brand"~"TIM|Vodafone|Wind Tre|Iliad|Fastweb",i]',
+      'nwr["name"~"TIM|Vodafone|Wind|Iliad|Fastweb|Tiscali|Kena|ho\\.",i]',
+      'nwr["brand"~"TIM|Vodafone|Wind Tre|Iliad|Fastweb|PosteMobile",i]',
       'nwr["shop"="electronics"]["name"~"phone|cell|telefon",i]',
       'nwr["amenity"="internet_cafe"]',
+      'nwr["shop"="electronics"]'
     );
   }
 
   const query = `
-[out:json][timeout:25];
+[out:json][timeout:30];
 (
   ${shopTypes.map(t => `${t}(around:${radiusMeters},${lat},${lon});`).join('\n  ')}
 );
@@ -790,7 +859,7 @@ out center tags;
   for (const server of servers) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
+      const timeoutId = setTimeout(() => controller.abort(), 25000);
       
       const response = await fetch(server, {
         method: 'POST',
@@ -801,10 +870,15 @@ out center tags;
       
       clearTimeout(timeoutId);
 
-      if (!response.ok) continue;
+      if (!response.ok) {
+        console.log(`marketing-lead-finder: OSM server ${server} returned ${response.status}`);
+        continue;
+      }
 
       const data = await response.json();
       const results: SearchResult[] = [];
+
+      console.log(`marketing-lead-finder: OSM returned ${data.elements?.length || 0} elements`);
 
       for (const element of data.elements || []) {
         if (!element.tags?.name) continue;
@@ -821,10 +895,15 @@ out center tags;
         });
       }
 
+      console.log(`marketing-lead-finder: OSM parsed ${results.length} valid results`);
       return results;
 
     } catch (err) {
-      console.log(`marketing-lead-finder: OSM server ${server} failed`);
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log(`marketing-lead-finder: OSM server ${server} timeout`);
+      } else {
+        console.log(`marketing-lead-finder: OSM server ${server} failed:`, err);
+      }
     }
   }
 
@@ -832,30 +911,29 @@ out center tags;
 }
 
 // ========== QUICK EMAIL EXTRACTION ==========
+// Timeout aumentato a 8s, priorità a pagine contatti, max 4 pagine in parallelo
 async function quickEmailExtract(websiteUrl: string, apiKey: string): Promise<string | null> {
   try {
     const baseUrl = new URL(websiteUrl);
     
-    const skipDomains = ['facebook', 'instagram', 'twitter', 'linkedin', 'google', 'youtube', 'tiktok', 'paginegialle', 'yelp'];
+    const skipDomains = ['facebook', 'instagram', 'twitter', 'linkedin', 'google', 'youtube', 'tiktok', 'paginegialle', 'yelp', 'tripadvisor'];
     if (skipDomains.some(d => baseUrl.hostname.includes(d))) {
       return null;
     }
     
+    // Pagine prioritarie (contatti prima)
     const pagesToTry = [
-      baseUrl.origin,
       baseUrl.origin + '/contatti',
       baseUrl.origin + '/contact',
+      baseUrl.origin,
       baseUrl.origin + '/contattaci',
-      baseUrl.origin + '/chi-siamo',
-      baseUrl.origin + '/about',
-      baseUrl.origin + '/dove-siamo',
-      baseUrl.origin + '/info',
     ];
     
-    const promises = pagesToTry.map(async (pageUrl) => {
+    // Limita a 4 pagine in parallelo
+    const promises = pagesToTry.slice(0, 4).map(async (pageUrl) => {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 4000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8s invece di 4s
         
         const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
           method: 'POST',
@@ -866,7 +944,7 @@ async function quickEmailExtract(websiteUrl: string, apiKey: string): Promise<st
           body: JSON.stringify({
             url: pageUrl,
             formats: ['markdown', 'html'],
-            timeout: 4000,
+            timeout: 8000,
           }),
           signal: controller.signal,
         });
@@ -879,12 +957,15 @@ async function quickEmailExtract(websiteUrl: string, apiKey: string): Promise<st
         const markdown = data.data?.markdown || '';
         const html = data.data?.html || '';
         
-        const emailFromMarkdown = extractEmailFromContent(markdown);
-        if (emailFromMarkdown) return emailFromMarkdown;
-        
+        // Prima cerca in mailto (più affidabile)
         const emailFromMailto = extractMailtoLinks(html);
         if (emailFromMailto) return emailFromMailto;
         
+        // Poi nel markdown
+        const emailFromMarkdown = extractEmailFromContent(markdown);
+        if (emailFromMarkdown) return emailFromMarkdown;
+        
+        // Infine nel HTML
         return extractEmailFromContent(html);
       } catch {
         return null;
