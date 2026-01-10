@@ -85,6 +85,14 @@ const INVALID_BUSINESS_NAMES = [
 ];
 
 // ========== VALIDATE EMAIL RIGOROUSLY ==========
+// ========== PLACEHOLDER/FAKE EMAILS ==========
+const PLACEHOLDER_EMAILS = [
+  'nome@gmail.com', 'email@example.com', 'test@test.com', 'info@info.com',
+  'your@email.com', 'example@example.com', 'mail@mail.com', 'user@user.com',
+  'name@gmail.com', 'email@email.com', 'tuaemail@gmail.com', 'email@gmail.com'
+];
+
+// ========== VALIDATE EMAIL RIGOROUSLY ==========
 function isValidEmail(email: string | undefined): { valid: boolean; reason: string } {
   if (!email) {
     return { valid: false, reason: 'Email mancante' };
@@ -92,8 +100,18 @@ function isValidEmail(email: string | undefined): { valid: boolean; reason: stri
   
   const emailLower = email.toLowerCase().trim();
   
-  // Check basic format with strict regex
-  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  // CRITICAL: Block @mhtml.blink (browser cache frame IDs)
+  if (emailLower.includes('@mhtml.blink') || emailLower.includes('frame-')) {
+    return { valid: false, reason: 'ID cache browser (mhtml.blink)' };
+  }
+  
+  // Block placeholder/fake emails
+  if (PLACEHOLDER_EMAILS.includes(emailLower)) {
+    return { valid: false, reason: `Email placeholder: ${email}` };
+  }
+  
+  // Check basic format with strict regex (min 3 chars before @)
+  const emailRegex = /^[a-zA-Z0-9._%+-]{3,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   if (!emailRegex.test(emailLower)) {
     return { valid: false, reason: `Formato email invalido: ${email}` };
   }
@@ -102,6 +120,17 @@ function isValidEmail(email: string | undefined): { valid: boolean; reason: stri
   const domain = emailLower.split('@')[1];
   if (!domain) {
     return { valid: false, reason: 'Dominio mancante' };
+  }
+  
+  // Check domain has at least one dot
+  if (!domain.includes('.')) {
+    return { valid: false, reason: 'Dominio senza TLD' };
+  }
+  
+  // Check TLD is at least 2 chars
+  const tld = domain.split('.').pop();
+  if (!tld || tld.length < 2) {
+    return { valid: false, reason: 'TLD troppo corto' };
   }
   
   // Check blocked domains

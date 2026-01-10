@@ -185,6 +185,44 @@ const handler = async (req: Request): Promise<Response> => {
           skippedCount++;
           continue;
         }
+        
+        // PHASE 4: Pre-validate email format before sending
+        const emailToSend = typedLead.email.toLowerCase().trim();
+        
+        // Block @mhtml.blink (browser cache frame IDs)
+        if (emailToSend.includes('@mhtml.blink') || emailToSend.includes('frame-')) {
+          console.log(`marketing-email-processor: Invalid email (mhtml.blink): ${emailToSend}`);
+          await supabase
+            .from("marketing_email_queue")
+            .update({ status: 'skipped', error_message: 'Invalid email: browser cache ID' })
+            .eq("id", email.id);
+          skippedCount++;
+          continue;
+        }
+        
+        // Block placeholder emails
+        const placeholderEmails = ['nome@gmail.com', 'email@example.com', 'test@test.com', 'info@info.com'];
+        if (placeholderEmails.includes(emailToSend)) {
+          console.log(`marketing-email-processor: Placeholder email blocked: ${emailToSend}`);
+          await supabase
+            .from("marketing_email_queue")
+            .update({ status: 'skipped', error_message: 'Invalid email: placeholder' })
+            .eq("id", email.id);
+          skippedCount++;
+          continue;
+        }
+        
+        // Basic format validation (min 3 chars before @, valid TLD)
+        const emailRegex = /^[a-zA-Z0-9._%+-]{3,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(emailToSend)) {
+          console.log(`marketing-email-processor: Invalid email format: ${emailToSend}`);
+          await supabase
+            .from("marketing_email_queue")
+            .update({ status: 'skipped', error_message: 'Invalid email format' })
+            .eq("id", email.id);
+          skippedCount++;
+          continue;
+        }
 
         // Check if unsubscribed
         if (unsubscribedEmails.has(typedLead.email.toLowerCase())) {
