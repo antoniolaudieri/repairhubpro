@@ -11,7 +11,7 @@ interface SearchResult {
   phone?: string;
   website?: string;
   address?: string;
-  source: 'firecrawl' | 'osm';
+  source: 'firecrawl' | 'osm' | 'linkedin';
   queryType?: 'centro' | 'corner';
 }
 
@@ -21,6 +21,7 @@ interface LeadStats {
   rejected: number;
   fromSearch: number;
   fromOsm: number;
+  fromLinkedIn: number;
   enriched: number;
 }
 
@@ -31,7 +32,7 @@ interface LeadDetail {
   phone?: string;
   website?: string;
   businessType: 'centro' | 'corner';
-  source: 'firecrawl' | 'osm';
+  source: 'firecrawl' | 'osm' | 'linkedin';
   isNew: boolean;
   zone?: string;
   rejectedReason?: string;
@@ -350,66 +351,107 @@ const handler = async (req: Request): Promise<Response> => {
       rejected: 0,
       fromSearch: 0,
       fromOsm: 0,
+      fromLinkedIn: 0,
       enriched: 0,
+    };
+    
+    // Deduplication map for cross-source deduplication
+    const seenBusinesses = new Map<string, boolean>();
+    
+    // Normalize business name for deduplication
+    const normalizeBusinessName = (name: string): string => {
+      return name.toLowerCase()
+        .replace(/[^a-z0-9]/g, '')
+        .replace(/(srl|snc|sas|spa|ltd|inc|sas|srls)/g, '');
     };
     
     const allResults: SearchResult[] = [];
     const leadsDetail: LeadDetail[] = [];
     let duplicatesSkipped = 0;
 
-    // ========== PHASE 1 & 2: FIRECRAWL + OSM IN PARALLELO ==========
-    console.log(`marketing-lead-finder: [PHASE 1-2] Starting parallel search (Firecrawl + OSM)`);
+    // ========== PHASE 1 & 2: FIRECRAWL + OSM + LINKEDIN IN PARALLELO ==========
+    console.log(`marketing-lead-finder: [PHASE 1-2] Starting parallel search (Firecrawl + OSM + LinkedIn)`);
     
     // Prepara le promise per esecuzione parallela
     const searchPromises: Promise<void>[] = [];
     
-    // FIRECRAWL SEARCH
+    // FIRECRAWL SEARCH (web + LinkedIn)
     if (firecrawlApiKey) {
       const firecrawlPromise = (async () => {
         console.log(`marketing-lead-finder: [FIRECRAWL] Starting search for "${zoneName}"...`);
         
         const searchQueries = buildSearchQueries(zoneName, searchType, provinceName);
-        console.log(`marketing-lead-finder: [FIRECRAWL] Executing ${searchQueries.length} queries...`);
+        const webQueries = searchQueries.filter(q => q.source === 'web' || !q.source);
+        const linkedInQueries = searchQueries.filter(q => q.source === 'linkedin');
+        
+        console.log(`marketing-lead-finder: [FIRECRAWL] Executing ${webQueries.length} web queries + ${linkedInQueries.length} LinkedIn queries...`);
         
         // Esegui tutte le query in parallelo (max 3 alla volta)
         const batchSize = 3;
-        for (let i = 0; i < searchQueries.length; i += batchSize) {
-          const batch = searchQueries.slice(i, i + batchSize);
+        const allQueries = [...webQueries, ...linkedInQueries];
+        
+        for (let i = 0; i < allQueries.length; i += batchSize) {
+          const batch = allQueries.slice(i, i + batchSize);
           
           const batchResults = await Promise.allSettled(
-            batch.map(async ({ query, type: queryType }) => {
-              console.log(`marketing-lead-finder: [FIRECRAWL] Query: "${query}"`);
+            batch.map(async ({ query, type: queryType, source }) => {
+              console.log(`marketing-lead-finder: [${source === 'linkedin' ? 'LINKEDIN' : 'FIRECRAWL'}] Query: "${query}"`);
               const results = await firecrawlSearchWithRetry(query, firecrawlApiKey);
-              return { results, queryType };
+              return { results, queryType, source };
             })
           );
           
           for (const result of batchResults) {
             if (result.status === 'fulfilled') {
-              const { results: searchResults, queryType } = result.value;
-              console.log(`marketing-lead-finder: [FIRECRAWL] ✓ Found ${searchResults.length} results`);
+              const { results: searchResults, queryType, source } = result.value;
+              const isLinkedIn = source === 'linkedin';
+              console.log(`marketing-lead-finder: [${isLinkedIn ? 'LINKEDIN' : 'FIRECRAWL'}] ✓ Found ${searchResults.length} results`);
               
               for (const item of searchResults) {
+                // Per risultati LinkedIn, usa parser dedicato
+                let processedItem: SearchResult | null = item;
+                if (isLinkedIn && item.website?.includes('linkedin.com')) {
+                  processedItem = parseLinkedInResult(item);
+                  if (!processedItem) continue;
+                }
+                
+                // Deduplicazione cross-source
+                const normalized = normalizeBusinessName(processedItem.name);
+                if (seenBusinesses.has(normalized)) {
+                  console.log(`marketing-lead-finder: SKIP "${processedItem.name}" - già trovato da altra fonte`);
+                  continue;
+                }
+                
                 const isDupe = allResults.some(r => 
-                  r.website === item.website || 
-                  r.name.toLowerCase() === item.name.toLowerCase()
+                  r.website === processedItem!.website || 
+                  r.name.toLowerCase() === processedItem!.name.toLowerCase()
                 );
+                
                 if (!isDupe) {
-                  item.queryType = queryType;
-                  allResults.push(item);
-                  stats.fromSearch++;
+                  seenBusinesses.set(normalized, true);
+                  processedItem.queryType = queryType;
+                  if (isLinkedIn) {
+                    processedItem.source = 'linkedin';
+                  }
+                  allResults.push(processedItem);
+                  
+                  if (isLinkedIn) {
+                    stats.fromLinkedIn++;
+                  } else {
+                    stats.fromSearch++;
+                  }
                 }
               }
             }
           }
           
           // Breve pausa tra batch per evitare rate limiting
-          if (i + batchSize < searchQueries.length) {
+          if (i + batchSize < allQueries.length) {
             await new Promise(r => setTimeout(r, 1000));
           }
         }
         
-        console.log(`marketing-lead-finder: [FIRECRAWL] Total: ${stats.fromSearch} candidates`);
+        console.log(`marketing-lead-finder: [FIRECRAWL] Total: ${stats.fromSearch} web + ${stats.fromLinkedIn} LinkedIn candidates`);
       })();
       
       searchPromises.push(firecrawlPromise);
@@ -453,14 +495,15 @@ const handler = async (req: Request): Promise<Response> => {
     // Attendi che tutte le ricerche finiscano
     await Promise.allSettled(searchPromises);
     
-    console.log(`marketing-lead-finder: [PHASE 1-2] Total candidates: ${allResults.length} (Firecrawl: ${stats.fromSearch}, OSM: ${stats.fromOsm})`)
+    console.log(`marketing-lead-finder: [PHASE 1-2] Total candidates: ${allResults.length} (Firecrawl: ${stats.fromSearch}, OSM: ${stats.fromOsm}, LinkedIn: ${stats.fromLinkedIn})`)
 
     // ========== PHASE 3: ENRICHMENT (for leads with website but no email) ==========
+    // Prioritizza lead LinkedIn che hanno sito web ma non email
     if (firecrawlApiKey) {
-      const toEnrich = allResults.filter(r => r.website && !r.email).slice(0, 50);
+      const toEnrich = allResults.filter(r => r.website && !r.email && !r.website.includes('linkedin.com')).slice(0, 60);
       
       if (toEnrich.length > 0) {
-        console.log(`marketing-lead-finder: [PHASE 3] Enrichment for ${toEnrich.length} leads...`);
+        console.log(`marketing-lead-finder: [PHASE 3] Enrichment for ${toEnrich.length} leads (incl. LinkedIn leads with websites)...`);
         
         const batchSize = 5;
         for (let i = 0; i < toEnrich.length; i += batchSize) {
@@ -475,7 +518,7 @@ const handler = async (req: Request): Promise<Response> => {
                 if (cleanedEmail) {
                   result.email = cleanedEmail;
                   stats.enriched++;
-                  console.log(`marketing-lead-finder: ✓ Enriched "${result.name}" with ${cleanedEmail}`);
+                  console.log(`marketing-lead-finder: ✓ Enriched "${result.name}" (${result.source}) with ${cleanedEmail}`);
                 }
               }
             } catch {
@@ -647,7 +690,7 @@ const handler = async (req: Request): Promise<Response> => {
         zone_id: zone?.id || null,
       });
 
-    console.log(`marketing-lead-finder: DONE - ${stats.total} valid leads saved (${stats.rejected} rejected, ${duplicatesSkipped} duplicates)`);
+    console.log(`marketing-lead-finder: DONE - ${stats.total} valid leads saved (Web: ${stats.fromSearch}, OSM: ${stats.fromOsm}, LinkedIn: ${stats.fromLinkedIn}, Enriched: ${stats.enriched})`);
 
     return new Response(
       JSON.stringify({ 
@@ -658,9 +701,10 @@ const handler = async (req: Request): Promise<Response> => {
         enriched: stats.enriched,
         fromSearch: stats.fromSearch,
         fromOsm: stats.fromOsm,
+        fromLinkedIn: stats.fromLinkedIn,
         leadsDetail,
         duplicatesSkipped,
-        message: `Salvati ${stats.total} lead validi (${stats.rejected} rifiutati, ${duplicatesSkipped} duplicati)`
+        message: `Salvati ${stats.total} lead validi (Web: ${stats.fromSearch}, LinkedIn: ${stats.fromLinkedIn}, OSM: ${stats.fromOsm})`
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
@@ -706,49 +750,134 @@ function determineBusinessType(name: string, url: string): 'centro' | 'corner' {
 }
 
 // ========== BUILD SEARCH QUERIES ==========
-// Query semplici e generiche per massimizzare risultati
-function buildSearchQueries(cityName: string, searchType: string, provinceName?: string): { query: string; type: 'centro' | 'corner' }[] {
-  const queries: { query: string; type: 'centro' | 'corner' }[] = [];
+// Query semplici e generiche per massimizzare risultati + LinkedIn
+function buildSearchQueries(cityName: string, searchType: string, provinceName?: string): { query: string; type: 'centro' | 'corner'; source?: 'web' | 'linkedin' }[] {
+  const queries: { query: string; type: 'centro' | 'corner'; source?: 'web' | 'linkedin' }[] = [];
   
   if (searchType === 'centro' || searchType === 'both') {
     // Query principale per centri riparazione
     queries.push({
       query: `riparazione smartphone cellulari ${cityName}`,
-      type: 'centro'
+      type: 'centro',
+      source: 'web'
     });
     queries.push({
       query: `centro assistenza telefoni ${cityName}`,
-      type: 'centro'
+      type: 'centro',
+      source: 'web'
     });
     // Query provinciale per zone piccole
     if (provinceName && provinceName !== cityName) {
       queries.push({
         query: `riparazione cellulari provincia ${provinceName}`,
-        type: 'centro'
+        type: 'centro',
+        source: 'web'
       });
     }
+    
+    // LinkedIn queries per centri
+    queries.push({
+      query: `site:linkedin.com/company "riparazione smartphone" ${cityName}`,
+      type: 'centro',
+      source: 'linkedin'
+    });
+    queries.push({
+      query: `site:linkedin.com/company "assistenza telefoni" ${cityName}`,
+      type: 'centro',
+      source: 'linkedin'
+    });
   }
   
   if (searchType === 'corner' || searchType === 'both') {
     // Query principale per corner telefonia
     queries.push({
       query: `negozio telefonia ${cityName}`,
-      type: 'corner'
+      type: 'corner',
+      source: 'web'
     });
     queries.push({
       query: `rivenditore TIM Vodafone Wind ${cityName}`,
-      type: 'corner'
+      type: 'corner',
+      source: 'web'
     });
     // Query provinciale per zone piccole
     if (provinceName && provinceName !== cityName) {
       queries.push({
         query: `negozio telefonia provincia ${provinceName}`,
-        type: 'corner'
+        type: 'corner',
+        source: 'web'
       });
     }
+    
+    // LinkedIn queries per corner
+    queries.push({
+      query: `site:linkedin.com/company "negozio telefonia" ${cityName}`,
+      type: 'corner',
+      source: 'linkedin'
+    });
+    queries.push({
+      query: `site:linkedin.com/company "rivenditore telefonia" ${cityName}`,
+      type: 'corner',
+      source: 'linkedin'
+    });
   }
   
   return queries;
+}
+
+// ========== PARSE LINKEDIN RESULT ==========
+function parseLinkedInResult(result: any): SearchResult | null {
+  const url = result.url || '';
+  const title = result.title || '';
+  const content = result.markdown || result.description || '';
+  
+  // Extract company name from LinkedIn URL: linkedin.com/company/nome-azienda
+  const companyMatch = url.match(/linkedin\.com\/company\/([^\/\?]+)/);
+  if (!companyMatch) return null;
+  
+  const companySlug = companyMatch[1];
+  // Convert slug to proper name (kebab-case to Title Case)
+  const companyName = companySlug
+    .split('-')
+    .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+  
+  // Try to extract website from content
+  const websitePatterns = [
+    /(?:sito|website|web|homepage)[:\s]+([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
+    /(?:visita|visit)[:\s]+([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i,
+    /https?:\/\/([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/,
+  ];
+  
+  let website: string | undefined = undefined;
+  for (const pattern of websitePatterns) {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      const domain = match[1].toLowerCase();
+      // Skip social media and LinkedIn itself
+      if (!domain.includes('linkedin') && !domain.includes('facebook') && 
+          !domain.includes('instagram') && !domain.includes('twitter')) {
+        website = `https://${domain}`;
+        break;
+      }
+    }
+  }
+  
+  // Also check title for business name (often cleaner than slug)
+  let cleanName = companyName;
+  if (title && !title.toLowerCase().includes('linkedin')) {
+    // Extract company name from title like "Azienda Nome | LinkedIn"
+    const titleParts = title.split(/[\|–—-]/);
+    if (titleParts.length > 0 && titleParts[0].trim().length > 3) {
+      cleanName = titleParts[0].trim();
+    }
+  }
+  
+  return {
+    name: cleanBusinessName(cleanName),
+    website: website,
+    source: 'linkedin',
+  };
 }
 
 // ========== FIRECRAWL SEARCH WITH RETRY ==========
