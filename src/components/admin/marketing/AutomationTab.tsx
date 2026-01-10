@@ -73,9 +73,24 @@ interface ScanProgress {
   duplicatesSkipped: number;
 }
 
+interface EmailProcessingProgress {
+  isProcessing: boolean;
+  sent: number;
+  failed: number;
+  skipped: number;
+  total: number;
+}
+
 export function AutomationTab() {
   const queryClient = useQueryClient();
   const [isProcessingEmails, setIsProcessingEmails] = useState(false);
+  const [emailProgress, setEmailProgress] = useState<EmailProcessingProgress>({
+    isProcessing: false,
+    sent: 0,
+    failed: 0,
+    skipped: 0,
+    total: 0,
+  });
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
   const [isTestDialogOpen, setIsTestDialogOpen] = useState(false);
   const [testEmail, setTestEmail] = useState("");
@@ -349,19 +364,65 @@ export function AutomationTab() {
     }
   });
 
-  // Manual email processing
+  // Manual email processing with detailed progress
   const processEmails = async () => {
+    const pendingCount = queueStats?.pending || 0;
+    
+    if (pendingCount === 0) {
+      toast.info("Nessuna email in coda da processare");
+      return;
+    }
+    
     setIsProcessingEmails(true);
+    setEmailProgress({
+      isProcessing: true,
+      sent: 0,
+      failed: 0,
+      skipped: 0,
+      total: pendingCount,
+    });
+    
+    toast.loading(`Avvio invio email... (${pendingCount} in coda)`, { id: "email-processing" });
+    
     try {
       const { data, error } = await supabase.functions.invoke("marketing-email-processor", {
         body: { manual: true },
       });
+      
       if (error) throw error;
-      toast.success(`Email processate: ${data.sent || 0} inviate, ${data.failed || 0} fallite`);
+      
+      const sent = data?.sent || 0;
+      const failed = data?.failed || 0;
+      const skipped = data?.skipped || 0;
+      
+      setEmailProgress({
+        isProcessing: false,
+        sent,
+        failed,
+        skipped,
+        total: sent + failed + skipped,
+      });
+      
+      toast.dismiss("email-processing");
+      
+      if (sent > 0 && failed === 0) {
+        toast.success(`✅ ${sent} email inviate con successo!`, { duration: 5000 });
+      } else if (sent > 0 && failed > 0) {
+        toast.warning(`📧 ${sent} inviate, ${failed} fallite, ${skipped} saltate`, { duration: 5000 });
+      } else if (sent === 0 && failed > 0) {
+        toast.error(`❌ Tutte le ${failed} email sono fallite`, { duration: 5000 });
+      } else if (sent === 0 && skipped > 0) {
+        toast.info(`⏭️ ${skipped} email saltate (email invalide o disiscritti)`, { duration: 5000 });
+      } else {
+        toast.info("Nessuna email processata", { duration: 3000 });
+      }
+      
       queryClient.invalidateQueries({ queryKey: ["marketing-email-queue-stats"] });
       queryClient.invalidateQueries({ queryKey: ["marketing-automation-logs"] });
     } catch (error: any) {
+      toast.dismiss("email-processing");
       toast.error(`Errore nell'invio: ${error.message}`);
+      setEmailProgress(prev => ({ ...prev, isProcessing: false }));
     } finally {
       setIsProcessingEmails(false);
     }
@@ -897,22 +958,88 @@ export function AutomationTab() {
                   {queueStats?.pending || 0} in coda, {queueStats?.sent || 0} inviate, {queueStats?.failed || 0} fallite
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {/* Progress indicator during processing */}
+                {emailProgress.isProcessing && (
+                  <div className="space-y-2 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                        <span>Elaborazione in corso...</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        {emailProgress.sent + emailProgress.failed + emailProgress.skipped}/{emailProgress.total}
+                      </span>
+                    </div>
+                    <Progress 
+                      value={emailProgress.total > 0 
+                        ? ((emailProgress.sent + emailProgress.failed + emailProgress.skipped) / emailProgress.total) * 100 
+                        : 0
+                      } 
+                      className="h-2"
+                    />
+                    <div className="flex gap-4 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3 text-green-500" />
+                        {emailProgress.sent} inviate
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <XCircle className="h-3 w-3 text-red-500" />
+                        {emailProgress.failed} fallite
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3 text-yellow-500" />
+                        {emailProgress.skipped} saltate
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Last processing result (after completion) */}
+                {!emailProgress.isProcessing && emailProgress.total > 0 && (
+                  <div className="p-3 bg-muted/30 rounded-lg border">
+                    <div className="text-sm font-medium mb-2">Ultimo invio completato:</div>
+                    <div className="flex gap-4 text-sm">
+                      <span className="flex items-center gap-1 text-green-600">
+                        <CheckCircle className="h-4 w-4" />
+                        {emailProgress.sent} inviate
+                      </span>
+                      {emailProgress.failed > 0 && (
+                        <span className="flex items-center gap-1 text-red-600">
+                          <XCircle className="h-4 w-4" />
+                          {emailProgress.failed} fallite
+                        </span>
+                      )}
+                      {emailProgress.skipped > 0 && (
+                        <span className="flex items-center gap-1 text-yellow-600">
+                          <AlertCircle className="h-4 w-4" />
+                          {emailProgress.skipped} saltate
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 <Button 
                   onClick={processEmails} 
                   disabled={isProcessingEmails || (queueStats?.pending || 0) === 0}
                   className="w-full"
-                  variant="outline"
+                  variant={(queueStats?.pending || 0) > 0 ? "default" : "outline"}
                 >
                   {isProcessingEmails ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Invio in corso...
                     </>
+                  ) : (queueStats?.pending || 0) === 0 ? (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Nessuna email da inviare
+                    </>
                   ) : (
                     <>
-                      <Mail className="h-4 w-4 mr-2" />
-                      Invia Email ({queueStats?.pending || 0})
+                      <Send className="h-4 w-4 mr-2" />
+                      Invia {queueStats?.pending} Email
                     </>
                   )}
                 </Button>

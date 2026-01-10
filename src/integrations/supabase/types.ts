@@ -5503,6 +5503,10 @@ export type Database = {
         Returns: boolean
       }
       is_platform_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_valid_marketing_email: {
+        Args: { email_value: string }
+        Returns: boolean
+      }
       trigger_marketing_email_processor: { Args: never; Returns: undefined }
     }
     Enums: {
