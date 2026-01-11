@@ -117,8 +117,8 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("marketing-email-processor: Skipping time/day checks (manual trigger)");
     }
 
-    // Get pending emails that are due - limit to 20 for faster processing and to avoid timeout
-    const BATCH_SIZE = 20;
+    // Get pending emails that are due - limit to 10 for faster processing and to avoid timeout
+    const BATCH_SIZE = 10;
     const nowDate = new Date();
     
     // First, get pending email queue items with their leads (only leads with valid email)

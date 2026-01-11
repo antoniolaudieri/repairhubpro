@@ -398,10 +398,10 @@ export function AutomationTab() {
       sent: 0,
       failed: 0,
       skipped: 0,
-      total: Math.min(pendingCount, 20), // batch size is 20
+      total: Math.min(pendingCount, 10), // batch size is 10
     });
     
-    toast.loading(`Invio email in corso... (batch di max 20)`, { id: "email-processing", duration: 120000 });
+    toast.loading(`Invio email in corso... (batch di max 10)`, { id: "email-processing", duration: 120000 });
     
     try {
       const controller = new AbortController();
