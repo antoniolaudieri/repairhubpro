@@ -398,21 +398,36 @@ export function AutomationTab() {
       sent: 0,
       failed: 0,
       skipped: 0,
-      total: pendingCount,
+      total: Math.min(pendingCount, 20), // batch size is 20
     });
     
-    toast.loading(`Avvio invio email... (${pendingCount} in coda)`, { id: "email-processing" });
+    toast.loading(`Invio email in corso... (batch di max 20)`, { id: "email-processing", duration: 120000 });
     
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
+      
       const { data, error } = await supabase.functions.invoke("marketing-email-processor", {
         body: { manual: true },
       });
       
-      if (error) throw error;
+      clearTimeout(timeoutId);
+      
+      toast.dismiss("email-processing");
+      
+      if (error) {
+        console.error("Email processor error:", error);
+        toast.error(`Errore: ${error.message}. Controlla i log per dettagli.`, { duration: 8000 });
+        setEmailProgress(prev => ({ ...prev, isProcessing: false }));
+        queryClient.invalidateQueries({ queryKey: ["marketing-email-queue-stats"] });
+        return;
+      }
       
       const sent = data?.sent || 0;
       const failed = data?.failed || 0;
       const skipped = data?.skipped || 0;
+      const remaining = data?.remaining || 0;
+      const message = data?.message || "";
       
       setEmailProgress({
         isProcessing: false,
@@ -422,25 +437,37 @@ export function AutomationTab() {
         total: sent + failed + skipped,
       });
       
-      toast.dismiss("email-processing");
-      
-      if (sent > 0 && failed === 0) {
-        toast.success(`✅ ${sent} email inviate con successo!`, { duration: 5000 });
-      } else if (sent > 0 && failed > 0) {
-        toast.warning(`📧 ${sent} inviate, ${failed} fallite, ${skipped} saltate`, { duration: 5000 });
-      } else if (sent === 0 && failed > 0) {
-        toast.error(`❌ Tutte le ${failed} email sono fallite`, { duration: 5000 });
-      } else if (sent === 0 && skipped > 0) {
-        toast.info(`⏭️ ${skipped} email saltate (email invalide o disiscritti)`, { duration: 5000 });
+      // Show detailed result
+      if (sent > 0 || failed > 0 || skipped > 0) {
+        const parts = [];
+        if (sent > 0) parts.push(`✅ ${sent} inviate`);
+        if (failed > 0) parts.push(`❌ ${failed} fallite`);
+        if (skipped > 0) parts.push(`⏭️ ${skipped} saltate`);
+        if (remaining > 0) parts.push(`📋 ${remaining} rimanenti`);
+        
+        const toastFn = failed > sent ? toast.error : sent > 0 ? toast.success : toast.info;
+        toastFn(parts.join(" | "), { duration: 8000 });
       } else {
-        toast.info("Nessuna email processata", { duration: 3000 });
+        toast.info(message || "Nessuna email processata in questo batch", { duration: 5000 });
       }
       
       queryClient.invalidateQueries({ queryKey: ["marketing-email-queue-stats"] });
       queryClient.invalidateQueries({ queryKey: ["marketing-automation-logs"] });
+      
     } catch (error: any) {
+      console.error("Email processing catch error:", error);
       toast.dismiss("email-processing");
-      toast.error(`Errore nell'invio: ${error.message}`);
+      
+      // Even on error, refresh stats to show what happened
+      queryClient.invalidateQueries({ queryKey: ["marketing-email-queue-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["marketing-automation-logs"] });
+      
+      if (error.name === 'AbortError') {
+        toast.warning("Timeout raggiunto. Le email potrebbero essere ancora in invio. Controlla i log.", { duration: 8000 });
+      } else {
+        toast.error(`Errore: ${error.message}. Riprova o controlla i log.`, { duration: 8000 });
+      }
+      
       setEmailProgress(prev => ({ ...prev, isProcessing: false }));
     } finally {
       setIsProcessingEmails(false);
@@ -1043,8 +1070,26 @@ export function AutomationTab() {
                   <Mail className="h-5 w-5" />
                   Processa Coda Email
                 </CardTitle>
-                <CardDescription>
-                  {queueStats?.pending || 0} in coda, {queueStats?.sent || 0} inviate, {queueStats?.failed || 0} fallite
+                <CardDescription className="space-y-1">
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-200">
+                      📋 {queueStats?.pending || 0} in coda
+                    </Badge>
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      ✅ {queueStats?.sent || 0} inviate
+                    </Badge>
+                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                      ❌ {queueStats?.failed || 0} fallite
+                    </Badge>
+                    {(queueStats?.processing || 0) > 0 && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 animate-pulse">
+                        ⏳ {queueStats.processing} in elaborazione
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Processa max 20 email per batch. Premi più volte per continuare.
+                  </p>
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
