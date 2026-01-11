@@ -189,6 +189,23 @@ const handler = async (req: Request): Promise<Response> => {
         // PHASE 4: Pre-validate email format before sending
         const emailToSend = typedLead.email.toLowerCase().trim();
         
+        // Block image file extensions (critical fix)
+        const imageExtensions = ['.png', '.svg', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.bmp', '.tiff'];
+        if (imageExtensions.some(ext => emailToSend.endsWith(ext))) {
+          console.log(`marketing-email-processor: BLOCKED image file as email: ${emailToSend}`);
+          await supabase
+            .from("marketing_email_queue")
+            .update({ status: 'skipped', error_message: 'Invalid: image file not email' })
+            .eq("id", email.id);
+          // Also delete this invalid lead
+          await supabase
+            .from("marketing_leads")
+            .delete()
+            .eq("id", email.lead_id);
+          skippedCount++;
+          continue;
+        }
+        
         // Block @mhtml.blink (browser cache frame IDs)
         if (emailToSend.includes('@mhtml.blink') || emailToSend.includes('frame-')) {
           console.log(`marketing-email-processor: Invalid email (mhtml.blink): ${emailToSend}`);
