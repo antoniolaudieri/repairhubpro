@@ -224,8 +224,12 @@ const handler = async (req: Request): Promise<Response> => {
         );
       } catch (smtpError: any) {
         console.error("send-email-smtp: SMTP error:", smtpError.message);
-        // Fallback to Resend for all emails when SMTP fails
-        console.log("send-email-smtp: SMTP failed, falling back to Resend");
+        // For marketing emails, throw error - no fallback
+        if (marketing) {
+          throw new Error(`SMTP error: ${smtpError.message}`);
+        }
+        // For transactional emails only, we can try Resend
+        console.log("send-email-smtp: SMTP failed for transactional, trying Resend");
       }
     }
 
