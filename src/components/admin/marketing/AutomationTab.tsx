@@ -453,59 +453,37 @@ export function AutomationTab() {
     toast.loading("Pulizia email invalide in corso...", { id: "cleaning-emails" });
     
     try {
-      // Delete leads with image file extensions as emails
-      const imageExtensions = ['.png', '.svg', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.bmp'];
-      
       let totalDeleted = 0;
+      let queueCleaned = 0;
       
-      for (const ext of imageExtensions) {
-        const { data: invalidLeads } = await supabase
-          .from("marketing_leads")
-          .select("id")
-          .ilike("email", `%${ext}`);
-        
-        if (invalidLeads && invalidLeads.length > 0) {
-          const leadIds = invalidLeads.map(l => l.id);
-          
-          // Delete queue entries for these leads first
-          await supabase
-            .from("marketing_email_queue")
-            .delete()
-            .in("lead_id", leadIds);
-          
-          // Delete the leads
-          const { count } = await supabase
-            .from("marketing_leads")
-            .delete()
-            .in("id", leadIds);
-          
-          totalDeleted += count || invalidLeads.length;
-        }
-      }
-      
-      // Also delete leads with null/empty/invalid email format
-      const { data: badFormatLeads } = await supabase
+      // 1. Get all leads with image file extensions as emails (single query)
+      const { data: invalidLeads } = await supabase
         .from("marketing_leads")
-        .select("id, email")
-        .or("email.is.null,email.eq.");
+        .select("id")
+        .or("email.ilike.%.png,email.ilike.%.svg,email.ilike.%.jpg,email.ilike.%.jpeg,email.ilike.%.gif,email.ilike.%.webp,email.ilike.%.ico,email.ilike.%.bmp,email.is.null,email.eq.")
+        .limit(500);
       
-      if (badFormatLeads && badFormatLeads.length > 0) {
-        const leadIds = badFormatLeads.map(l => l.id);
+      if (invalidLeads && invalidLeads.length > 0) {
+        const leadIds = invalidLeads.map(l => l.id);
         
-        await supabase
+        // Delete queue entries for these leads first
+        const { count: queueCount } = await supabase
           .from("marketing_email_queue")
           .delete()
           .in("lead_id", leadIds);
         
+        queueCleaned = queueCount || 0;
+        
+        // Delete the leads
         const { count } = await supabase
           .from("marketing_leads")
           .delete()
           .in("id", leadIds);
         
-        totalDeleted += count || badFormatLeads.length;
+        totalDeleted = count || invalidLeads.length;
       }
       
-      // Reset stuck processing emails
+      // 2. Reset stuck processing emails
       const { count: resetCount } = await supabase
         .from("marketing_email_queue")
         .update({ 
@@ -515,13 +493,24 @@ export function AutomationTab() {
         .eq("status", "processing");
       
       toast.dismiss("cleaning-emails");
-      toast.success(`✅ Pulizia completata: ${totalDeleted} lead invalidi rimossi${resetCount ? `, ${resetCount} email stuck resettate` : ""}`);
+      
+      const messages = [];
+      if (totalDeleted > 0) messages.push(`${totalDeleted} lead invalidi rimossi`);
+      if (queueCleaned > 0) messages.push(`${queueCleaned} email in coda rimosse`);
+      if (resetCount && resetCount > 0) messages.push(`${resetCount} email stuck resettate`);
+      
+      if (messages.length > 0) {
+        toast.success(`✅ Pulizia completata: ${messages.join(", ")}`);
+      } else {
+        toast.info("Nessun dato invalido trovato");
+      }
       
       queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
       queryClient.invalidateQueries({ queryKey: ["marketing-email-queue-stats"] });
       queryClient.invalidateQueries({ queryKey: ["marketing-invalid-emails-count"] });
       
     } catch (error: any) {
+      console.error("Cleanup error:", error);
       toast.dismiss("cleaning-emails");
       toast.error(`Errore pulizia: ${error.message}`);
     } finally {
