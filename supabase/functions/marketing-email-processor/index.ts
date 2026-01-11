@@ -117,27 +117,55 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("marketing-email-processor: Skipping time/day checks (manual trigger)");
     }
 
-    // Get pending emails that are due
+    // Get pending emails that are due - limit to 20 for faster processing and to avoid timeout
+    const BATCH_SIZE = 20;
     const nowDate = new Date();
+    
+    // First, get pending email queue items with their leads (only leads with valid email)
     const { data: pendingEmails, error: queueError } = await supabase
       .from("marketing_email_queue")
-      .select("*")
+      .select(`
+        *,
+        lead:marketing_leads!inner(id, email)
+      `)
       .eq("status", "pending")
       .lte("scheduled_for", nowDate.toISOString())
+      .not("lead.email", "is", null)
+      .neq("lead.email", "")
       .order("scheduled_for", { ascending: true })
-      .limit(settings.max_emails_per_day);
+      .limit(BATCH_SIZE);
 
     if (queueError) throw queueError;
 
     if (!pendingEmails || pendingEmails.length === 0) {
-      console.log("marketing-email-processor: No pending emails");
+      console.log("marketing-email-processor: No pending emails with valid leads");
       return new Response(
         JSON.stringify({ success: true, message: "No pending emails", sent: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`marketing-email-processor: Found ${pendingEmails.length} pending emails`);
+    console.log(`marketing-email-processor: Processing ${pendingEmails.length} emails (batch of ${BATCH_SIZE})`);
+
+    // Clean up orphan queue entries (leads without email) in background
+    const cleanupPromise = supabase
+      .from("marketing_email_queue")
+      .delete()
+      .eq("status", "pending")
+      .in("lead_id", 
+        (await supabase
+          .from("marketing_leads")
+          .select("id")
+          .or("email.is.null,email.eq.")
+        ).data?.map(l => l.id) || []
+      );
+    
+    // Don't await - run in background
+    cleanupPromise.then(({ count }) => {
+      if (count && count > 0) {
+        console.log(`marketing-email-processor: Cleaned ${count} orphan queue entries`);
+      }
+    });
 
     // Check for unsubscribed emails
     const { data: unsubscribes } = await supabase
@@ -559,7 +587,13 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    console.log(`marketing-email-processor: Completed. Sent: ${sentCount}, Failed: ${failedCount}, Skipped: ${skippedCount}`);
+    console.log(`marketing-email-processor: Batch completed. Sent: ${sentCount}, Failed: ${failedCount}, Skipped: ${skippedCount}`);
+
+    // Check remaining pending emails with valid leads for UI feedback
+    const { count: remainingCount } = await supabase
+      .from("marketing_email_queue")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending");
 
     return new Response(
       JSON.stringify({ 
@@ -567,7 +601,12 @@ const handler = async (req: Request): Promise<Response> => {
         sent: sentCount,
         failed: failedCount,
         skipped: skippedCount,
-        processed: sentCount
+        processed: sentCount + failedCount + skippedCount,
+        remaining: remainingCount || 0,
+        batchSize: BATCH_SIZE,
+        message: remainingCount && remainingCount > 0 
+          ? `Processate ${sentCount} email. Rimanenti: ${remainingCount}. Premi di nuovo per continuare.`
+          : `Tutte le email elaborate. Inviate: ${sentCount}`
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
