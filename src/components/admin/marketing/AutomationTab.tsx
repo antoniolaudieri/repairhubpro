@@ -14,7 +14,7 @@ import {
   Play, Pause, Settings, Zap, Clock, Mail, 
   RefreshCw, AlertCircle, CheckCircle, Loader2,
   Server, Shield, Eye, EyeOff, FlaskConical, Send,
-  MapPin, Users, XCircle, Phone
+  MapPin, Users, XCircle, Phone, Trash2
 } from "lucide-react";
 import {
   Dialog,
@@ -184,10 +184,29 @@ export function AutomationTab() {
         pending: data.filter(e => e.status === "pending").length,
         sent: data.filter(e => e.status === "sent").length,
         failed: data.filter(e => e.status === "failed").length,
+        processing: data.filter(e => e.status === "processing").length,
       };
     },
     refetchInterval: 10000,
   });
+
+  // Check for invalid emails in leads
+  const { data: invalidEmailsCount = 0 } = useQuery({
+    queryKey: ["marketing-invalid-emails-count"],
+    queryFn: async () => {
+      const imageExtensions = ['%.png', '%.svg', '%.jpg', '%.jpeg', '%.gif', '%.webp', '%.ico', '%.bmp'];
+      const { count, error } = await supabase
+        .from("marketing_leads")
+        .select("*", { count: "exact", head: true })
+        .or(imageExtensions.map(ext => `email.ilike.${ext}`).join(','));
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  // State for cleanup operation
+  const [isCleaningEmails, setIsCleaningEmails] = useState(false);
 
   // Fetch unsubscribe stats
   const { data: unsubStats } = useQuery({
@@ -428,7 +447,88 @@ export function AutomationTab() {
     }
   };
 
-  // Test SMTP connection
+  // Clean invalid emails (image files, etc)
+  const cleanInvalidEmails = async () => {
+    setIsCleaningEmails(true);
+    toast.loading("Pulizia email invalide in corso...", { id: "cleaning-emails" });
+    
+    try {
+      // Delete leads with image file extensions as emails
+      const imageExtensions = ['.png', '.svg', '.jpg', '.jpeg', '.gif', '.webp', '.ico', '.bmp'];
+      
+      let totalDeleted = 0;
+      
+      for (const ext of imageExtensions) {
+        const { data: invalidLeads } = await supabase
+          .from("marketing_leads")
+          .select("id")
+          .ilike("email", `%${ext}`);
+        
+        if (invalidLeads && invalidLeads.length > 0) {
+          const leadIds = invalidLeads.map(l => l.id);
+          
+          // Delete queue entries for these leads first
+          await supabase
+            .from("marketing_email_queue")
+            .delete()
+            .in("lead_id", leadIds);
+          
+          // Delete the leads
+          const { count } = await supabase
+            .from("marketing_leads")
+            .delete()
+            .in("id", leadIds);
+          
+          totalDeleted += count || invalidLeads.length;
+        }
+      }
+      
+      // Also delete leads with null/empty/invalid email format
+      const { data: badFormatLeads } = await supabase
+        .from("marketing_leads")
+        .select("id, email")
+        .or("email.is.null,email.eq.");
+      
+      if (badFormatLeads && badFormatLeads.length > 0) {
+        const leadIds = badFormatLeads.map(l => l.id);
+        
+        await supabase
+          .from("marketing_email_queue")
+          .delete()
+          .in("lead_id", leadIds);
+        
+        const { count } = await supabase
+          .from("marketing_leads")
+          .delete()
+          .in("id", leadIds);
+        
+        totalDeleted += count || badFormatLeads.length;
+      }
+      
+      // Reset stuck processing emails
+      const { count: resetCount } = await supabase
+        .from("marketing_email_queue")
+        .update({ 
+          status: 'failed', 
+          error_message: 'Reset: stuck in processing' 
+        })
+        .eq("status", "processing");
+      
+      toast.dismiss("cleaning-emails");
+      toast.success(`✅ Pulizia completata: ${totalDeleted} lead invalidi rimossi${resetCount ? `, ${resetCount} email stuck resettate` : ""}`);
+      
+      queryClient.invalidateQueries({ queryKey: ["marketing-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["marketing-email-queue-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["marketing-invalid-emails-count"] });
+      
+    } catch (error: any) {
+      toast.dismiss("cleaning-emails");
+      toast.error(`Errore pulizia: ${error.message}`);
+    } finally {
+      setIsCleaningEmails(false);
+    }
+  };
+
   const testSmtpConnection = async () => {
     if (!smtpForm.host || !smtpForm.user || !smtpForm.password) {
       toast.error("Compila tutti i campi SMTP prima di testare");
@@ -1043,6 +1143,43 @@ export function AutomationTab() {
                     </>
                   )}
                 </Button>
+                
+                {/* Invalid emails alert & cleanup */}
+                {(invalidEmailsCount > 0 || (queueStats?.processing || 0) > 0) && (
+                  <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/30">
+                    <div className="flex items-center gap-2 text-destructive text-sm font-medium mb-2">
+                      <AlertCircle className="h-4 w-4" />
+                      Problemi rilevati
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      {invalidEmailsCount > 0 && (
+                        <p>• {invalidEmailsCount} lead con email invalide (file immagine)</p>
+                      )}
+                      {(queueStats?.processing || 0) > 0 && (
+                        <p>• {queueStats?.processing} email bloccate in elaborazione</p>
+                      )}
+                    </div>
+                    <Button 
+                      onClick={cleanInvalidEmails} 
+                      disabled={isCleaningEmails}
+                      variant="destructive"
+                      size="sm"
+                      className="w-full mt-2"
+                    >
+                      {isCleaningEmails ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Pulizia in corso...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Pulisci Email Invalide
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
             {/* Test Flow Card */}
