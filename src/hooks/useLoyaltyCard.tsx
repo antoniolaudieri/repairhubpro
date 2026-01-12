@@ -330,10 +330,11 @@ export function useCustomerLoyaltyCards(customerEmail: string | null) {
 
       try {
         // Get ALL customer IDs from email (there may be duplicates)
+        // Use case-insensitive matching since emails may be stored in different cases
         const { data: customers } = await supabase
           .from('customers')
           .select('id')
-          .eq('email', customerEmail);
+          .ilike('email', customerEmail);
 
         if (!customers || customers.length === 0) {
           setCards([]);
