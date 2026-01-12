@@ -56,6 +56,8 @@ export default function AdminMarketing() {
       let query = supabase
         .from("marketing_leads")
         .select("*")
+        .not("email", "is", null)
+        .neq("email", "")
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") {
