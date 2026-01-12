@@ -17,8 +17,8 @@ const navItems: { id: NativeView; icon: typeof Home; label: string }[] = [
 
 export const BottomNavBar = ({ currentView, onNavigate, unreadNotifications = 0 }: BottomNavBarProps) => {
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t border-border safe-area-bottom">
-      <div className="flex items-center justify-around h-16 max-w-lg mx-auto">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur-lg border-t border-border" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      <div className="flex items-center justify-around h-16 w-full max-w-full">
         {navItems.map((item) => {
           const isActive = currentView === item.id;
           const Icon = item.icon;

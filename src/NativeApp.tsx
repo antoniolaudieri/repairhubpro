@@ -176,7 +176,7 @@ const NativeApp = () => {
 
   if (loading || cardLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-[100dvh] w-full max-w-full overflow-hidden bg-background flex items-center justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
@@ -193,9 +193,9 @@ const NativeApp = () => {
 
   if (!loyaltyCard) {
     return (
-      <div className="min-h-screen bg-background p-4">
+      <div className="min-h-[100dvh] w-full max-w-full overflow-hidden bg-background p-4">
         <Toaster />
-        <div className="max-w-md mx-auto">
+        <div className="w-full max-w-md mx-auto">
           <Card className="border-destructive/50">
             <CardHeader className="text-center">
               <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
@@ -207,7 +207,7 @@ const NativeApp = () => {
               <p className="text-muted-foreground">
                 Non hai una tessera fedeltà attiva associata a questo account.
               </p>
-              <p className="text-sm text-muted-foreground">Email: {user.email}</p>
+              <p className="text-sm text-muted-foreground break-all">Email: {user.email}</p>
               <Button variant="outline" onClick={handleLogout} className="w-full">
                 <LogOut className="mr-2 h-4 w-4" />
                 Esci
@@ -237,9 +237,9 @@ const NativeApp = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-[100dvh] w-full max-w-full overflow-x-hidden bg-background flex flex-col">
       <Toaster />
-      <div className="min-h-screen pb-20">
+      <div className="flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden pb-20">
         {renderContent()}
       </div>
       <BottomNavBar currentView={currentView} onNavigate={setCurrentView} />

@@ -9,9 +9,20 @@ const config: CapacitorConfig = {
   //   url: 'https://7522884a-a116-466d-8d27-8f081d5be322.lovableproject.com?forceHideBadge=true',
   //   cleartext: true
   // },
+  android: {
+    // Prevent WebView from zooming and ensure proper scaling
+    initialFocus: true,
+    captureInput: true,
+    webContentsDebuggingEnabled: true,
+    allowMixedContent: true,
+  },
   plugins: {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert']
+    },
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true
     }
   }
 };
