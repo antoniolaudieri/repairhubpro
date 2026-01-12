@@ -40,7 +40,7 @@ const NativeLogin = () => {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+    <div className="min-h-[100dvh] w-full max-w-full relative overflow-hidden flex items-center justify-center p-4">
       {/* Animated gradient background */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-background to-accent/20" />
       
