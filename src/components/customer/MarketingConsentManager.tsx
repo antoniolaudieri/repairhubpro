@@ -35,11 +35,11 @@ export function MarketingConsentManager({ customerEmail }: MarketingConsentManag
 
   const fetchProfiles = async () => {
     try {
-      // Get customer IDs for this email
+      // Get customer IDs for this email (case-insensitive)
       const { data: customers } = await supabase
         .from("customers")
         .select("id, centro_id")
-        .eq("email", customerEmail);
+        .ilike("email", customerEmail);
 
       if (!customers || customers.length === 0) {
         setLoading(false);

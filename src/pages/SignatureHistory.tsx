@@ -58,11 +58,11 @@ export default function SignatureHistory() {
 
   const fetchSignatureHistory = async () => {
     try {
-      // Find customer by email
+      // Find customer by email (case-insensitive)
       const { data: customerData } = await supabase
         .from("customers")
         .select("id")
-        .eq("email", user?.email)
+        .ilike("email", user?.email || '')
         .maybeSingle();
 
       if (!customerData) {
