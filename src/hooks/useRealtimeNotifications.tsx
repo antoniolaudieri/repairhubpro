@@ -26,7 +26,7 @@ export function useRealtimeNotifications() {
       const { data, error } = await supabase
         .from("customer_notifications")
         .select("*")
-        .eq("customer_email", user.email)
+        .ilike("customer_email", user.email!)
         .order("created_at", { ascending: false })
         .limit(50);
 

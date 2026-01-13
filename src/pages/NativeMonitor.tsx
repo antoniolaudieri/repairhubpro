@@ -187,7 +187,7 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
       const { data } = await supabase
         .from("customer_notifications")
         .select("*")
-        .eq("customer_email", user.email)
+        .ilike("customer_email", user.email!)
         .order("created_at", { ascending: false })
         .limit(50);
       
@@ -211,7 +211,7 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
         const { data: appointmentsByEmail } = await supabase
           .from("appointments")
           .select("*")
-          .eq("customer_email", user.email)
+          .ilike("customer_email", user.email!)
           .order("preferred_date", { ascending: false })
           .limit(20);
         
@@ -223,7 +223,7 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
         const { data: appointmentsByEmail } = await supabase
           .from("appointments")
           .select("*")
-          .eq("customer_email", user.email)
+          .ilike("customer_email", user.email!)
           .order("preferred_date", { ascending: false })
           .limit(20);
         
@@ -321,7 +321,7 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
     await supabase
       .from("customer_notifications")
       .update({ read: true })
-      .eq("customer_email", user.email)
+      .ilike("customer_email", user.email!)
       .eq("read", false);
     
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
