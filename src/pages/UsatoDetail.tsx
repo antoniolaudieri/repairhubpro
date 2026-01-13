@@ -183,7 +183,7 @@ export default function UsatoDetail() {
       const { data } = await supabase
         .from("customers")
         .select("name, email, phone")
-        .eq("email", user.email)
+        .ilike("email", user.email)
         .maybeSingle();
       
       if (data) {

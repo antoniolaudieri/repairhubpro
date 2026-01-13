@@ -117,7 +117,7 @@ export default function CustomerDashboard() {
       const { data: customerRecords } = await supabase
         .from("customers")
         .select("id")
-        .eq("email", user?.email);
+        .ilike("email", user?.email || '');
 
       if (!customerRecords || customerRecords.length === 0) {
         setLoading(false);

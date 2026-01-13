@@ -202,7 +202,7 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
       const { data: customers } = await supabase
         .from("customers")
         .select("id")
-        .eq("email", user.email);
+        .ilike("email", user.email);
 
       if (customers && customers.length > 0) {
         const customerIds = customers.map(c => c.id);
@@ -662,7 +662,7 @@ const NativeMonitor = ({ user, onOpenSettings }: NativeMonitorProps) => {
       const { data: customers } = await supabase
         .from("customers")
         .select("id")
-        .eq("email", user.email);
+        .ilike("email", user.email);
 
       if (!customers || customers.length === 0) {
         setLoyaltyCard(null);

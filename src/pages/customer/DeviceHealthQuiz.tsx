@@ -57,7 +57,7 @@ export default function DeviceHealthQuiz() {
         const { data: customers, error: customersError } = await supabase
           .from("customers")
           .select("id")
-          .eq("email", userEmail);
+          .ilike("email", userEmail);
         
         if (customersError) throw customersError;
         

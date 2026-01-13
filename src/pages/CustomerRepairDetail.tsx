@@ -95,11 +95,11 @@ export default function CustomerRepairDetail() {
 
   const fetchRepairDetail = async () => {
     try {
-      // Trova il cliente tramite email
+      // Trova il cliente tramite email (case-insensitive)
       const { data: customerData } = await supabase
         .from("customers")
         .select("id")
-        .eq("email", user?.email)
+        .ilike("email", user?.email || '')
         .maybeSingle();
 
       if (!customerData) {
