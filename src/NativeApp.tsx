@@ -113,7 +113,7 @@ const NativeApp = () => {
       const { data: customers } = await supabase
         .from("customers")
         .select("id")
-        .eq("email", user.email);
+        .ilike("email", user.email);
 
       if (!customers || customers.length === 0) {
         setLoyaltyCard(null);
