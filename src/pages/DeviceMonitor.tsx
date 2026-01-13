@@ -161,7 +161,7 @@ const DeviceMonitor = () => {
         const { data: customerData, error: customerError } = await supabase
           .from('customers')
           .select('id')
-          .eq('email', userEmail)
+          .ilike('email', userEmail)
           .maybeSingle();
         
         if (customerError) {
