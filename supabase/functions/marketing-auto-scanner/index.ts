@@ -29,6 +29,36 @@ interface PhoneShop {
   shopType: string;
 }
 
+// Email validation function - same as marketing-lead-finder
+const isValidEmail = (email: string): boolean => {
+  if (!email || typeof email !== 'string') return false;
+  
+  const trimmed = email.trim().toLowerCase();
+  if (trimmed.length < 5 || trimmed.length > 254) return false;
+  
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  if (!emailRegex.test(trimmed)) return false;
+  
+  // Block invalid/generic emails
+  const blockedDomains = [
+    'example.com', 'test.com', 'demo.com', 'sample.com',
+    'noreply.com', 'no-reply.com', 'donotreply.com',
+    'mailinator.com', 'tempmail.com', 'guerrillamail.com'
+  ];
+  const domain = trimmed.split('@')[1];
+  if (blockedDomains.includes(domain)) return false;
+  
+  const blockedPrefixes = [
+    'info@', 'support@', 'admin@', 'webmaster@', 'postmaster@',
+    'noreply@', 'no-reply@', 'donotreply@', 'do-not-reply@',
+    'sales@', 'contact@', 'hello@', 'help@', 'abuse@',
+    'privacy@', 'security@', 'legal@', 'marketing@'
+  ];
+  if (blockedPrefixes.some(prefix => trimmed.startsWith(prefix))) return false;
+  
+  return true;
+};
+
 const handler = async (req: Request): Promise<Response> => {
   console.log("marketing-auto-scanner: Starting automatic scan");
   
@@ -212,13 +242,22 @@ out;`;
             continue;
           }
 
+          // CRITICAL: Validate email BEFORE saving - don't waste resources on leads without valid email
+          const rawEmail = el.tags.email || el.tags['contact:email'] || null;
+          const email = rawEmail ? rawEmail.trim().toLowerCase() : null;
+          
+          if (!email || !isValidEmail(email)) {
+            console.log(`marketing-auto-scanner: Skipping "${el.tags.name}" - no valid email (${email || 'null'})`);
+            continue;
+          }
+
           // Determine business type
           let businessType = 'telefonia';
           const shop = el.tags?.shop || el.tags?.craft || '';
           if (shop === 'electronics' || shop === 'electronics_repair') businessType = 'elettronica';
           else if (shop === 'computer') businessType = 'computer';
 
-          // Create new lead
+          // Create new lead - only with validated email
           const { data: newLead, error: leadError } = await supabase
             .from("marketing_leads")
             .insert({
@@ -228,7 +267,7 @@ out;`;
               latitude: lat,
               longitude: lon,
               phone: el.tags.phone || el.tags['contact:phone'] || null,
-              email: el.tags.email || el.tags['contact:email'] || null,
+              email: email, // Using validated email
               website: el.tags.website || el.tags['contact:website'] || null,
               business_type: businessType,
               status: 'new',
@@ -250,7 +289,7 @@ out;`;
           zoneNewLeads++;
           totalNewLeads++;
 
-          // Schedule first email if sequence exists and email is available
+          // Schedule first email - email is guaranteed to exist now
           if (centroSequence?.id && newLead) {
             const { data: firstStep } = await supabase
               .from("marketing_sequence_steps")
@@ -274,10 +313,12 @@ out;`;
                   scheduled_for: scheduledFor.toISOString(),
                   status: 'pending',
                 });
+              
+              console.log(`marketing-auto-scanner: Scheduled first email for "${el.tags.name}" (${email})`);
             }
           }
 
-          console.log(`marketing-auto-scanner: Created lead "${el.tags.name}"`);
+          console.log(`marketing-auto-scanner: Created lead "${el.tags.name}" with email ${email}`);
         }
 
         // Update zone scan stats
