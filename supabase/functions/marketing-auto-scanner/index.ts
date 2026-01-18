@@ -48,11 +48,11 @@ const isValidEmail = (email: string): boolean => {
   const domain = trimmed.split('@')[1];
   if (blockedDomains.includes(domain)) return false;
   
+  // Only block clearly invalid emails - allow info@, contact@, etc. which are common for Italian businesses
   const blockedPrefixes = [
-    'info@', 'support@', 'admin@', 'webmaster@', 'postmaster@',
     'noreply@', 'no-reply@', 'donotreply@', 'do-not-reply@',
-    'sales@', 'contact@', 'hello@', 'help@', 'abuse@',
-    'privacy@', 'security@', 'legal@', 'marketing@'
+    'webmaster@', 'postmaster@', 'abuse@', 'mailer-daemon@',
+    'privacy@', 'security@', 'legal@'
   ];
   if (blockedPrefixes.some(prefix => trimmed.startsWith(prefix))) return false;
   
