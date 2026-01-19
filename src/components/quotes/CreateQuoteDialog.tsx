@@ -638,8 +638,8 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   return (
     <>
       <Dialog open={open && !showPreview} onOpenChange={(o) => { onOpenChange(o); if (!o) resetForm(); }}>
-        <DialogContent className="w-[95vw] max-w-4xl h-[85dvh] max-h-[600px] sm:max-h-[85dvh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="p-2 pb-1.5 sm:p-4 sm:pb-2 shrink-0 border-b">
+        <DialogContent className="w-[95vw] max-w-4xl h-[90dvh] sm:h-[85dvh] p-0 flex flex-col">
+          <DialogHeader className="p-2 pb-1.5 sm:p-4 sm:pb-2 shrink-0 border-b bg-background">
             <DialogTitle className="flex items-center gap-2 text-sm sm:text-lg">
               <div className="p-1 sm:p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
                 <Sparkles className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-primary" />
@@ -651,8 +651,8 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0 overflow-auto">
-            <div className="p-2 sm:p-4 space-y-2 sm:space-y-4">
+          <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="p-2 sm:p-4 space-y-2 sm:space-y-4 pb-4">
               <Card className="border-primary/20">
                 <CardContent className="p-2 sm:p-4">
                   <Label className="flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
@@ -1080,10 +1080,10 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
               </Card>
 
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Action Buttons - Fixed at bottom */}
-          <div className="flex gap-2 p-3 sm:p-4 border-t shrink-0 bg-background">
+          <div className="flex gap-2 p-2 sm:p-4 border-t shrink-0 bg-background">
             <Button 
               variant="outline" 
               onClick={() => { onOpenChange(false); resetForm(); }}
