@@ -197,6 +197,36 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setLineWidth(0.5);
   doc.roundedRect(margin, y, boxWidth, 45, 4, 4, 'S');
 
+  // Customer header text
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("CLIENTE", margin + 8, y + 9);
+  
+  // Customer data
+  doc.setTextColor(...dark);
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(data.customerName, margin + 8, y + 24);
+  
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...gray);
+  
+  let customerDetailY = y + 32;
+  doc.text(`Tel: ${data.customerPhone}`, margin + 8, customerDetailY);
+  customerDetailY += 6;
+  
+  if (data.customerAddress) {
+    const addressLines = doc.splitTextToSize(data.customerAddress, boxWidth - 16);
+    doc.text(addressLines[0], margin + 8, customerDetailY);
+    customerDetailY += 6;
+  }
+  
+  if (data.customerEmail) {
+    doc.text(data.customerEmail, margin + 8, customerDetailY);
+  }
+
   // Device Box - same approach
   const deviceBoxX = margin + boxWidth + 10;
   
@@ -213,7 +243,9 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   // Border around entire box
   doc.setDrawColor(...lightGray);
   doc.setLineWidth(0.5);
-  doc.roundedRect(deviceBoxX, y, boxWidth, 45, 4, 4, 'S')
+  doc.roundedRect(deviceBoxX, y, boxWidth, 45, 4, 4, 'S');
+  
+  // Device header text
   
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
