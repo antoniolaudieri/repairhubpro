@@ -714,6 +714,8 @@ export function EditQuoteDialog({
                             <SelectItem value="tablet">Tablet</SelectItem>
                             <SelectItem value="laptop">Laptop</SelectItem>
                             <SelectItem value="desktop">Desktop</SelectItem>
+                            <SelectItem value="servizio a domicilio">Servizio a Domicilio</SelectItem>
+                            <SelectItem value="altro">Altro</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
