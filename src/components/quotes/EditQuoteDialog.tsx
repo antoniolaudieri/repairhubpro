@@ -488,7 +488,7 @@ export function EditQuoteDialog({
         quantity: i.quantity,
         unitPrice: i.unitPrice,
       })),
-      laborCost: getLaborCost() + getServicesCost(),
+      laborCost: 0, // All items (including labor and services) are already in items array with details
       partsCost: getPartsPurchaseCost(),
       totalCost: getTotalCost(),
       centroInfo: centroInfo || undefined,
