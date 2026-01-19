@@ -15,7 +15,8 @@ import {
   ChevronLeft,
   Eye,
   Printer,
-  Loader2
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { downloadQuotePDF, getQuotePDFDataUrl } from "./QuotePDFGenerator";
@@ -198,7 +199,7 @@ export function QuotePDFPreview({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh] sm:h-auto sm:max-h-[95vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="max-w-6xl h-[90vh] sm:h-auto sm:max-h-[95vh] overflow-hidden flex flex-col p-0">
         {/* Header */}
         <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-6 border-b">
           <div className="flex items-center justify-between">
@@ -219,27 +220,11 @@ export function QuotePDFPreview({
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-          {/* PDF Preview - Hidden on small screens, show button on mobile */}
-          <div className="lg:hidden p-4 border-b">
-            <Button
-              variant="outline"
-              className="w-full h-12"
-              onClick={() => pdfUrl && window.open(pdfUrl, '_blank')}
-              disabled={isGenerating || !pdfUrl}
-            >
-              {isGenerating ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Eye className="h-4 w-4 mr-2" />
-              )}
-              Visualizza Anteprima PDF
-            </Button>
-          </div>
           
-          <div className="hidden lg:flex flex-1 bg-muted/30 p-4 overflow-hidden min-h-[500px]">
-            <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border bg-white" style={{ minHeight: '500px' }}>
+          <div className="flex flex-1 bg-muted/30 p-4 overflow-hidden" style={{ minHeight: '600px' }}>
+            <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border bg-white flex flex-col" style={{ minHeight: '600px' }}>
               {isGenerating ? (
-                <div className="h-full flex items-center justify-center">
+                <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">Generazione PDF...</p>
@@ -248,13 +233,19 @@ export function QuotePDFPreview({
               ) : pdfUrl ? (
                 <iframe
                   src={pdfUrl}
-                  className="w-full h-full"
-                  style={{ minHeight: '500px', height: '100%' }}
+                  width="100%"
+                  height="600"
+                  className="flex-1 border-0"
+                  style={{ minHeight: '600px' }}
                   title="Anteprima PDF"
                 />
               ) : (
-                <div className="h-full flex items-center justify-center">
-                  <p className="text-sm text-muted-foreground">Nessuna anteprima disponibile</p>
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Errore nella generazione del PDF</p>
+                    <p className="text-xs text-muted-foreground mt-1">Riprova a riaprire l'anteprima</p>
+                  </div>
                 </div>
               )}
             </div>
