@@ -638,46 +638,46 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   return (
     <>
       <Dialog open={open && !showPreview} onOpenChange={(o) => { onOpenChange(o); if (!o) resetForm(); }}>
-        <DialogContent className="w-[95vw] max-w-4xl h-[90dvh] max-h-[90dvh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="p-3 pb-2 sm:p-4 sm:pb-2 shrink-0 border-b">
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
-                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+        <DialogContent className="w-[95vw] max-w-4xl h-[85dvh] max-h-[600px] sm:max-h-[85dvh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="p-2 pb-1.5 sm:p-4 sm:pb-2 shrink-0 border-b">
+            <DialogTitle className="flex items-center gap-2 text-sm sm:text-lg">
+              <div className="p-1 sm:p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                <Sparkles className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-primary" />
               </div>
               Nuovo Preventivo
             </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
+            <DialogDescription className="text-[10px] sm:text-sm hidden sm:block">
               Crea un nuovo preventivo per il cliente selezionato
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+          <ScrollArea className="flex-1 min-h-0 overflow-auto">
+            <div className="p-2 sm:p-4 space-y-2 sm:space-y-4">
               <Card className="border-primary/20">
-                <CardContent className="p-3 sm:p-4">
-                  <Label className="flex items-center gap-2 mb-2">
-                    <User className="h-4 w-4 text-primary" />
+                <CardContent className="p-2 sm:p-4">
+                  <Label className="flex items-center gap-2 mb-1.5 sm:mb-2 text-xs sm:text-sm">
+                    <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                     Cliente
                   </Label>
                   <div className="relative">
-                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 sm:left-3 sm:top-3 sm:h-4 sm:w-4 text-muted-foreground" />
                     <Input
                       placeholder="Cerca cliente..."
                       value={customerSearch}
                       onChange={(e) => setCustomerSearch(e.target.value)}
-                      className="pl-10"
+                      className="pl-8 sm:pl-10 h-8 sm:h-10 text-sm"
                     />
                     {showCustomerDropdown && filteredCustomers.length > 0 && (
                       <Card className="absolute z-50 w-full mt-1 shadow-lg">
-                        <CardContent className="p-1 max-h-40 overflow-y-auto">
+                        <CardContent className="p-1 max-h-32 sm:max-h-40 overflow-y-auto">
                           {filteredCustomers.map((customer) => (
                             <button
                               key={customer.id}
                               onClick={() => handleSelectCustomer(customer)}
-                              className="w-full text-left p-2 hover:bg-muted rounded-lg transition-colors"
+                              className="w-full text-left p-1.5 sm:p-2 hover:bg-muted rounded-lg transition-colors"
                             >
-                              <p className="font-medium text-sm">{customer.name}</p>
-                              <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                              <p className="font-medium text-xs sm:text-sm">{customer.name}</p>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground">{customer.phone}</p>
                             </button>
                           ))}
                         </CardContent>
@@ -685,15 +685,15 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                     )}
                   </div>
                   {selectedCustomer && (
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <Badge variant="secondary" className="flex items-center gap-1">
+                    <div className="flex flex-wrap items-center gap-1.5 mt-1.5 sm:mt-2">
+                      <Badge variant="secondary" className="flex items-center gap-1 text-xs">
                         <CheckCircle2 className="h-3 w-3" />
                         {selectedCustomer.name}
                       </Badge>
                       {selectedCustomer.email && (
-                        <Badge variant="outline" className="text-xs">
+                        <Badge variant="outline" className="text-[10px] sm:text-xs hidden sm:flex">
                           <Mail className="h-3 w-3 mr-1" />
-                          <span className="truncate max-w-[120px]">{selectedCustomer.email}</span>
+                          <span className="truncate max-w-[100px]">{selectedCustomer.email}</span>
                         </Badge>
                       )}
                     </div>
@@ -703,22 +703,22 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
 
               {/* Device Info */}
               <Card className="border-primary/20">
-                <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
+                <CardContent className="p-2 sm:p-4 space-y-1.5 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2 text-sm">
-                      <Smartphone className="h-4 w-4 text-primary" />
+                    <Label className="flex items-center gap-1.5 text-xs sm:text-sm">
+                      <Smartphone className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                       Dispositivo
                     </Label>
                     {isLookingUpDevice && (
-                      <Badge variant="outline" className="text-xs animate-pulse">
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        Riconoscimento...
+                      <Badge variant="outline" className="text-[10px] sm:text-xs animate-pulse">
+                        <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5" />
+                        AI...
                       </Badge>
                     )}
                   </div>
                   
-                  {/* Device Type Selection - Grid on mobile, flex on desktop */}
-                  <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
+                  {/* Device Type Selection */}
+                  <div className="grid grid-cols-3 gap-1 sm:flex sm:flex-wrap sm:gap-2">
                     {deviceTypes.map(({ value, icon: Icon }) => (
                       <Button
                         key={value}
@@ -726,60 +726,59 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                         variant={deviceType === value ? "default" : "outline"}
                         size="sm"
                         onClick={() => setDeviceType(value)}
-                        className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3 sm:flex-1 sm:min-w-[80px]"
+                        className="h-7 sm:h-9 text-[10px] sm:text-sm px-1 sm:px-3 sm:flex-1 sm:min-w-[80px]"
                       >
-                        <Icon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                        <span className="truncate">{value}</span>
+                        <Icon className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                        <span className="hidden sm:inline">{value}</span>
                       </Button>
                     ))}
                   </div>
 
-                  {/* Brand and Model - Stack on very small screens */}
-                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3">
+                  {/* Brand and Model */}
+                  <div className="grid grid-cols-2 gap-1.5 sm:gap-3">
                     <div>
-                      <Label className="text-xs text-muted-foreground">Marca</Label>
+                      <Label className="text-[10px] sm:text-xs text-muted-foreground">Marca</Label>
                       <Input 
                         placeholder="es. Apple" 
                         value={deviceBrand}
                         onChange={(e) => setDeviceBrand(e.target.value)}
-                        className="h-9 text-sm"
+                        className="h-7 sm:h-9 text-xs sm:text-sm"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Modello</Label>
+                      <Label className="text-[10px] sm:text-xs text-muted-foreground">Modello</Label>
                       <Input 
                         placeholder="es. iPhone 14" 
                         value={deviceModel}
                         onChange={(e) => setDeviceModel(e.target.value)}
-                        className="h-9 text-sm"
+                        className="h-7 sm:h-9 text-xs sm:text-sm"
                       />
                     </div>
                   </div>
 
-                  {/* AI Detected Info - Compact on mobile */}
+                  {/* AI Detected Info */}
                   <AnimatePresence>
                     {detectedDevice && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-primary/5 rounded-lg border border-primary/20"
+                        className="flex items-center gap-1.5 sm:gap-3 p-1.5 sm:p-3 bg-primary/5 rounded-lg border border-primary/20"
                       >
                         {detectedDevice.imageUrl && (
                           <img 
                             src={detectedDevice.imageUrl} 
                             alt={detectedDevice.fullName}
-                            className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-lg bg-white shrink-0"
+                            className="w-8 h-8 sm:w-12 sm:h-12 object-contain rounded bg-white shrink-0"
                           />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-xs sm:text-sm truncate">{detectedDevice.fullName}</p>
+                          <p className="font-medium text-[10px] sm:text-sm truncate">{detectedDevice.fullName}</p>
                           {detectedDevice.year && detectedDevice.year !== 'N/A' && (
-                            <p className="text-xs text-muted-foreground">Anno: {detectedDevice.year}</p>
+                            <p className="text-[10px] sm:text-xs text-muted-foreground">Anno: {detectedDevice.year}</p>
                           )}
                         </div>
-                        <Badge variant="secondary" className="shrink-0 text-xs">
-                          <Sparkles className="h-3 w-3 mr-1" />
+                        <Badge variant="secondary" className="shrink-0 text-[10px] sm:text-xs px-1 sm:px-2">
                           AI
                         </Badge>
                       </motion.div>
@@ -790,23 +789,23 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
 
               {/* Issue Description */}
               <Card className="border-primary/20">
-                <CardContent className="p-3 sm:p-4 space-y-3">
+                <CardContent className="p-2 sm:p-4 space-y-1.5 sm:space-y-3">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Problema riscontrato *</Label>
+                    <Label className="text-[10px] sm:text-xs text-muted-foreground">Problema riscontrato *</Label>
                     <Textarea 
                       placeholder="Descrivi il problema..." 
                       value={issueDescription}
                       onChange={(e) => setIssueDescription(e.target.value)}
-                      className="min-h-[60px]"
+                      className="min-h-[40px] sm:min-h-[60px] text-xs sm:text-sm"
                     />
                   </div>
-                  <div>
+                  <div className="hidden sm:block">
                     <Label className="text-xs text-muted-foreground">Diagnosi (opzionale)</Label>
                     <Textarea 
                       placeholder="Diagnosi tecnica..." 
                       value={diagnosis}
                       onChange={(e) => setDiagnosis(e.target.value)}
-                      className="min-h-[40px]"
+                      className="min-h-[40px] text-sm"
                     />
                   </div>
                 </CardContent>
@@ -814,22 +813,22 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
 
               {/* Markup Percentage */}
               <Card className="border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-amber-500/5">
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                      <Euro className="h-4 w-4 text-amber-600" />
-                      <Label className="text-sm font-medium">Ricarico %</Label>
+                <CardContent className="p-2 sm:p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Euro className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600" />
+                      <Label className="text-xs sm:text-sm font-medium">Ricarico</Label>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <Input
                         type="number"
                         value={markupPercentage}
                         onChange={(e) => setMarkupPercentage(Number(e.target.value))}
-                        className="w-20 text-center"
+                        className="w-14 sm:w-20 h-7 sm:h-9 text-center text-xs sm:text-sm"
                         min={0}
                         max={200}
                       />
-                      <span className="text-sm text-muted-foreground">%</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">%</span>
                     </div>
                   </div>
                 </CardContent>
@@ -837,9 +836,9 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
 
               {/* Items Selection with Tabs */}
               <Card className="border-primary/20">
-                <CardContent className="p-3 sm:p-4">
-                  <Label className="flex items-center gap-2 mb-3">
-                    <Package className="h-4 w-4 text-primary" />
+                <CardContent className="p-2 sm:p-4">
+                  <Label className="flex items-center gap-1.5 mb-2 text-xs sm:text-sm">
+                    <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
                     Aggiungi Articoli
                   </Label>
 
@@ -847,134 +846,138 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                   <Button
                     variant="outline"
                     size="sm"
-                    className="w-full mb-3 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5"
+                    className="w-full mb-2 sm:mb-3 h-7 sm:h-9 text-xs sm:text-sm border-dashed border-primary/50 hover:border-primary hover:bg-primary/5"
                     onClick={() => setShowProductImportDialog(true)}
                   >
-                    <Link2 className="h-4 w-4 mr-2 text-primary" />
-                    Importa Prodotto da Link (Amazon, eBay...)
+                    <Link2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-primary" />
+                    <span className="sm:hidden">Importa da Link</span>
+                    <span className="hidden sm:inline">Importa Prodotto da Link (Amazon, eBay...)</span>
                   </Button>
 
                   <Tabs defaultValue="utopya" className="w-full">
                     <TabsList className="grid w-full grid-cols-4 h-auto">
-                      <TabsTrigger value="utopya" className="text-xs px-2 py-1.5">
-                        <Search className="h-3 w-3 mr-1" />
-                        Utopya
+                      <TabsTrigger value="utopya" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1 sm:py-1.5">
+                        <Search className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Utopya</span>
                       </TabsTrigger>
-                      <TabsTrigger value="inventory" className="text-xs px-2 py-1.5">
-                        <Package className="h-3 w-3 mr-1" />
-                        Inventario
+                      <TabsTrigger value="inventory" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1 sm:py-1.5">
+                        <Package className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Inventario</span>
                       </TabsTrigger>
-                      <TabsTrigger value="labor" className="text-xs px-2 py-1.5">
-                        <Wrench className="h-3 w-3 mr-1" />
-                        Lavorazioni
+                      <TabsTrigger value="labor" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1 sm:py-1.5">
+                        <Wrench className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Lavorazioni</span>
                       </TabsTrigger>
-                      <TabsTrigger value="services" className="text-xs px-2 py-1.5">
-                        <Headphones className="h-3 w-3 mr-1" />
-                        Servizi
+                      <TabsTrigger value="services" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1 sm:py-1.5">
+                        <Headphones className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Servizi</span>
                       </TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="utopya" className="mt-3 space-y-2">
-                      <div className="flex gap-2">
+                    <TabsContent value="utopya" className="mt-2 sm:mt-3 space-y-1.5 sm:space-y-2">
+                      <div className="flex gap-1.5 sm:gap-2">
                         <Input
                           placeholder="Cerca su Utopya..."
                           value={utopyaSearchQuery}
                           onChange={(e) => setUtopyaSearchQuery(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && searchUtopya()}
+                          className="h-7 sm:h-9 text-xs sm:text-sm"
                         />
                         <Button 
                           onClick={searchUtopya} 
                           disabled={utopyaSearchLoading}
                           size="sm"
+                          className="h-7 sm:h-9 w-7 sm:w-9 p-0"
                         >
-                          {utopyaSearchLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                          {utopyaSearchLoading ? <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" /> : <Search className="h-3 w-3 sm:h-4 sm:w-4" />}
                         </Button>
                       </div>
-                      <ScrollArea className="h-[150px]">
-                        <div className="space-y-1">
+                      <ScrollArea className="h-[100px] sm:h-[150px]">
+                        <div className="space-y-0.5 sm:space-y-1">
                           {utopyaSearchResults.map((product, idx) => (
                             <div 
                               key={idx}
-                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer"
+                              className="flex items-center justify-between p-1.5 sm:p-2 rounded-lg hover:bg-muted cursor-pointer"
                               onClick={() => addUtopyaProduct(product)}
                             >
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{product.name}</p>
-                                <p className="text-xs text-muted-foreground">€{product.priceNumeric?.toFixed(2) || '0.00'}</p>
+                                <p className="text-xs sm:text-sm font-medium truncate">{product.name}</p>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">€{product.priceNumeric?.toFixed(2) || '0.00'}</p>
                               </div>
-                              <Plus className="h-4 w-4 text-primary shrink-0" />
+                              <Plus className="h-3 w-3 sm:h-4 sm:w-4 text-primary shrink-0" />
                             </div>
                           ))}
                         </div>
                       </ScrollArea>
                     </TabsContent>
 
-                    <TabsContent value="inventory" className="mt-3 space-y-2">
+                    <TabsContent value="inventory" className="mt-2 sm:mt-3 space-y-1.5 sm:space-y-2">
                       <Input
                         placeholder="Cerca nell'inventario..."
                         value={inventorySearch}
                         onChange={(e) => setInventorySearch(e.target.value)}
+                        className="h-7 sm:h-9 text-xs sm:text-sm"
                       />
-                      <ScrollArea className="h-[150px]">
-                        <div className="space-y-1">
+                      <ScrollArea className="h-[100px] sm:h-[150px]">
+                        <div className="space-y-0.5 sm:space-y-1">
                           {filteredInventory.map((part) => (
                             <div 
                               key={part.id}
-                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer"
+                              className="flex items-center justify-between p-1.5 sm:p-2 rounded-lg hover:bg-muted cursor-pointer"
                               onClick={() => addInventoryPart(part)}
                             >
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{part.name}</p>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs sm:text-sm font-medium truncate">{part.name}</p>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">
                                   €{(part.selling_price || part.cost || 0).toFixed(2)} - Qta: {part.stock_quantity}
                                 </p>
                               </div>
-                              <Plus className="h-4 w-4 text-primary shrink-0" />
+                              <Plus className="h-3 w-3 sm:h-4 sm:w-4 text-primary shrink-0" />
                             </div>
                           ))}
                           {inventorySearch && filteredInventory.length === 0 && (
-                            <p className="text-sm text-muted-foreground text-center py-4">Nessun risultato</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground text-center py-2 sm:py-4">Nessun risultato</p>
                           )}
                         </div>
                       </ScrollArea>
                     </TabsContent>
 
-                    <TabsContent value="labor" className="mt-3">
-                      <ScrollArea className="h-[150px]">
-                        <div className="space-y-1">
+                    <TabsContent value="labor" className="mt-2 sm:mt-3">
+                      <ScrollArea className="h-[100px] sm:h-[150px]">
+                        <div className="space-y-0.5 sm:space-y-1">
                           {filteredLaborPrices.map((labor) => (
                             <div 
                               key={labor.id}
-                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer"
+                              className="flex items-center justify-between p-1.5 sm:p-2 rounded-lg hover:bg-muted cursor-pointer"
                               onClick={() => addLabor(labor)}
                             >
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{labor.name}</p>
-                                <p className="text-xs text-muted-foreground">{labor.category}</p>
+                                <p className="text-xs sm:text-sm font-medium truncate">{labor.name}</p>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">{labor.category}</p>
                               </div>
-                              <Badge variant="secondary">€{labor.price.toFixed(2)}</Badge>
+                              <Badge variant="secondary" className="text-[10px] sm:text-xs">€{labor.price.toFixed(2)}</Badge>
                             </div>
                           ))}
                         </div>
                       </ScrollArea>
                     </TabsContent>
 
-                    <TabsContent value="services" className="mt-3">
-                      <ScrollArea className="h-[150px]">
-                        <div className="space-y-1">
+                    <TabsContent value="services" className="mt-2 sm:mt-3">
+                      <ScrollArea className="h-[100px] sm:h-[150px]">
+                        <div className="space-y-0.5 sm:space-y-1">
                           {availableServices.map((service) => (
                             <div 
                               key={service.id}
-                              className="flex items-center justify-between p-2 rounded-lg hover:bg-muted cursor-pointer"
+                              className="flex items-center justify-between p-1.5 sm:p-2 rounded-lg hover:bg-muted cursor-pointer"
                               onClick={() => addService(service)}
                             >
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{service.name}</p>
+                                <p className="text-xs sm:text-sm font-medium truncate">{service.name}</p>
                                 {service.description && (
-                                  <p className="text-xs text-muted-foreground truncate">{service.description}</p>
+                                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{service.description}</p>
                                 )}
                               </div>
-                              <Badge variant="secondary">€{service.price.toFixed(2)}</Badge>
+                              <Badge variant="secondary" className="text-[10px] sm:text-xs">€{service.price.toFixed(2)}</Badge>
                             </div>
                           ))}
                         </div>
@@ -987,57 +990,57 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
               {/* Selected Items */}
               {items.length > 0 && (
                 <Card className="border-emerald-500/30">
-                  <CardContent className="p-3 sm:p-4">
-                    <Label className="flex items-center gap-2 mb-3">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                      Articoli Selezionati ({items.length})
+                  <CardContent className="p-2 sm:p-4">
+                    <Label className="flex items-center gap-1.5 mb-2 text-xs sm:text-sm">
+                      <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-600" />
+                      Articoli ({items.length})
                     </Label>
-                    <div className="space-y-2">
+                    <div className="space-y-1 sm:space-y-2">
                       {items.map((item) => (
                         <div 
                           key={item.id}
-                          className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg overflow-hidden"
+                          className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 bg-muted/50 rounded-lg overflow-hidden"
                         >
                           {item.imageUrl ? (
                             <img 
                               src={item.imageUrl} 
                               alt={item.description}
-                              className="w-10 h-10 object-contain rounded bg-white shrink-0"
+                              className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded bg-white shrink-0"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                               }}
                             />
                           ) : (
-                            <Badge variant="outline" className="shrink-0 text-xs">
-                              {item.type === 'part' ? 'Ricambio' : item.type === 'labor' ? 'Lavorazione' : 'Servizio'}
+                            <Badge variant="outline" className="shrink-0 text-[10px] sm:text-xs px-1 sm:px-2">
+                              {item.type === 'part' ? 'R' : item.type === 'labor' ? 'L' : 'S'}
                             </Badge>
                           )}
-                          <p className="flex-1 min-w-0 text-sm truncate">{item.description}</p>
-                          <div className="flex items-center gap-1 shrink-0">
+                          <p className="flex-1 min-w-0 text-[10px] sm:text-sm truncate">{item.description}</p>
+                          <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                             <Input
                               type="number"
                               value={item.quantity}
                               onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))}
-                              className="w-12 h-7 text-center text-xs"
+                              className="w-8 sm:w-12 h-6 sm:h-7 text-center text-[10px] sm:text-xs"
                               min={1}
                             />
-                            <span className="text-xs text-muted-foreground">x</span>
+                            <span className="text-[10px] sm:text-xs text-muted-foreground">x</span>
                             <Input
                               type="number"
                               value={item.unitPrice}
                               onChange={(e) => updateItemPrice(item.id, Number(e.target.value))}
-                              className="w-16 h-7 text-center text-xs"
+                              className="w-12 sm:w-16 h-6 sm:h-7 text-center text-[10px] sm:text-xs"
                               step={0.01}
                             />
                           </div>
-                          <p className="text-sm font-medium w-14 text-right shrink-0">€{item.total.toFixed(2)}</p>
+                          <p className="text-[10px] sm:text-sm font-medium w-10 sm:w-14 text-right shrink-0">€{item.total.toFixed(2)}</p>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 shrink-0"
+                            className="h-5 w-5 sm:h-7 sm:w-7 shrink-0"
                             onClick={() => removeItem(item.id)}
                           >
-                            <Trash2 className="h-3 w-3 text-destructive" />
+                            <Trash2 className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-destructive" />
                           </Button>
                         </div>
                       ))}
@@ -1046,40 +1049,32 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                 </Card>
               )}
 
-              {/* Cost Summary */}
+              {/* Cost Summary - Compact */}
               <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-primary/10">
-                <CardContent className="p-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Ricambi:</span>
-                      <span>€{getPartsCost().toFixed(2)}</span>
+                <CardContent className="p-2 sm:p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="hidden sm:flex flex-col gap-0.5 text-xs text-muted-foreground">
+                      <span>Ricambi: €{getPartsCost().toFixed(2)}</span>
+                      <span>Lavorazioni: €{getLaborCost().toFixed(2)}</span>
+                      <span>Servizi: €{getServicesCost().toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Lavorazioni:</span>
-                      <span>€{getLaborCost().toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Servizi:</span>
-                      <span>€{getServicesCost().toFixed(2)}</span>
-                    </div>
-                    <div className="h-px bg-border my-2" />
-                    <div className="flex justify-between text-lg font-bold">
-                      <span>Totale:</span>
-                      <span className="text-primary">€{getTotalCost().toFixed(2)}</span>
+                    <div className="flex items-center gap-2 sm:gap-4 ml-auto">
+                      <span className="text-xs sm:text-sm font-medium">Totale:</span>
+                      <span className="text-base sm:text-xl font-bold text-primary">€{getTotalCost().toFixed(2)}</span>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Notes */}
-              <Card className="border-primary/20">
+              {/* Notes - Hidden on mobile */}
+              <Card className="border-primary/20 hidden sm:block">
                 <CardContent className="p-3 sm:p-4">
                   <Label className="text-xs text-muted-foreground">Note aggiuntive</Label>
                   <Textarea 
                     placeholder="Note per il cliente..." 
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="min-h-[40px]"
+                    className="min-h-[40px] text-sm"
                   />
                 </CardContent>
               </Card>
