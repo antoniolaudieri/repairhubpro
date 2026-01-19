@@ -33,8 +33,10 @@ import {
   Package,
   Wrench,
   Headphones,
-  Save
+  Save,
+  Link2
 } from "lucide-react";
+import { ProductImportDialog } from "./ProductImportDialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { QuotePDFPreview } from "./QuotePDFPreview";
 
@@ -160,6 +162,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   const [isSending, setIsSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [centroInfo, setCentroInfo] = useState<CentroInfo | null>(null);
+  const [showProductImportDialog, setShowProductImportDialog] = useState(false);
 
   useEffect(() => {
     if (open && centroId) {
@@ -378,6 +381,18 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
       type: 'service',
     }]);
     toast.success(`${service.name} aggiunto`);
+  };
+
+  const addImportedProduct = (product: { description: string; quantity: number; unitPrice: number; imageUrl?: string; sourceUrl?: string }) => {
+    setItems([...items, {
+      id: `imported-${Date.now()}`,
+      description: product.description,
+      quantity: product.quantity,
+      unitPrice: product.unitPrice,
+      total: product.unitPrice * product.quantity,
+      type: 'part',
+      purchaseCost: product.unitPrice * 0.7, // Estimate 30% margin
+    }]);
   };
 
   const removeItem = (id: string) => {
@@ -824,6 +839,17 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                     Aggiungi Articoli
                   </Label>
 
+                  {/* Import from Link Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mb-3 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5"
+                    onClick={() => setShowProductImportDialog(true)}
+                  >
+                    <Link2 className="h-4 w-4 mr-2 text-primary" />
+                    Importa Prodotto da Link (Amazon, eBay...)
+                  </Button>
+
                   <Tabs defaultValue="utopya" className="w-full">
                     <TabsList className="grid w-full grid-cols-4 h-auto">
                       <TabsTrigger value="utopya" className="text-xs px-2 py-1.5">
@@ -1092,6 +1118,12 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
           isSending={isSending}
         />
       )}
+
+      <ProductImportDialog
+        open={showProductImportDialog}
+        onOpenChange={setShowProductImportDialog}
+        onProductImport={addImportedProduct}
+      />
     </>
   );
 }

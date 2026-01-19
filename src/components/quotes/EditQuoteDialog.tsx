@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Plus, Trash2, Loader2, Search, Package, Wrench, Headphones, Send, Save, Eye, Mail, MessageCircle, Download, ChevronLeft, Printer } from "lucide-react";
+import { Plus, Trash2, Loader2, Search, Package, Wrench, Headphones, Send, Save, Eye, Mail, MessageCircle, Download, ChevronLeft, Printer, Link2 } from "lucide-react";
+import { ProductImportDialog } from "./ProductImportDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -145,6 +146,7 @@ export function EditQuoteDialog({
   const [showSendOptions, setShowSendOptions] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showProductImportDialog, setShowProductImportDialog] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(quoteSchema),
@@ -368,6 +370,18 @@ export function EditQuoteDialog({
       type: 'service',
     }]);
     toast.success(`${service.name} aggiunto`);
+  };
+
+  const addImportedProduct = (product: { description: string; quantity: number; unitPrice: number; imageUrl?: string; sourceUrl?: string }) => {
+    setItems([...items, {
+      id: `imported-${Date.now()}`,
+      description: product.description,
+      quantity: product.quantity,
+      unitPrice: product.unitPrice,
+      total: product.unitPrice * product.quantity,
+      type: 'part',
+      purchaseCost: product.unitPrice * 0.7,
+    }]);
   };
 
   const removeItem = (id: string) => {
@@ -765,6 +779,17 @@ export function EditQuoteDialog({
                       <TabsTrigger value="services">Servizi</TabsTrigger>
                     </TabsList>
 
+                    {/* Import from Link Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-3 border-dashed border-primary/50 hover:border-primary hover:bg-primary/5"
+                      onClick={() => setShowProductImportDialog(true)}
+                    >
+                      <Link2 className="h-4 w-4 mr-2 text-primary" />
+                      Importa Prodotto da Link
+                    </Button>
+
                     <TabsContent value="utopya" className="space-y-4">
                       <div className="flex gap-2">
                         <div className="relative flex-1">
@@ -1102,6 +1127,12 @@ export function EditQuoteDialog({
           )}
         </AnimatePresence>
       </DialogContent>
+
+      <ProductImportDialog
+        open={showProductImportDialog}
+        onOpenChange={setShowProductImportDialog}
+        onProductImport={addImportedProduct}
+      />
     </Dialog>
   );
 }
