@@ -181,29 +181,25 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   // ==================== CUSTOMER & DEVICE SECTION ====================
   const boxWidth = (pageWidth - margin * 2 - 10) / 2;
   
-  // Customer Box - draw header first, then white body below
-  // Header colored strip (full width, flat bottom)
-  doc.setFillColor(...primary);
-  doc.roundedRect(margin, y, boxWidth, 14, 4, 4, 'F');
-  doc.rect(margin, y + 4, boxWidth, 10, 'F'); // Fill bottom part to make flat bottom edge
-  
-  // White body below header
+  // Customer Box
+  // 1. Draw white background with border first
   doc.setFillColor(...white);
-  doc.roundedRect(margin, y + 12, boxWidth, 33, 4, 4, 'F');
-  doc.rect(margin, y + 12, boxWidth, 4, 'F'); // Fill top to make flat top edge
-  
-  // Border around entire box
   doc.setDrawColor(...lightGray);
   doc.setLineWidth(0.5);
-  doc.roundedRect(margin, y, boxWidth, 45, 4, 4, 'S');
-
-  // Customer header text
+  doc.roundedRect(margin, y, boxWidth, 45, 4, 4, 'FD');
+  
+  // 2. Draw colored header strip on top (with rounded top corners)
+  doc.setFillColor(...primary);
+  doc.roundedRect(margin, y, boxWidth, 14, 4, 4, 'F');
+  doc.rect(margin, y + 6, boxWidth, 8, 'F'); // Extend to cover the rounded bottom corners
+  
+  // 3. Customer header text
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
   doc.text("CLIENTE", margin + 8, y + 9);
   
-  // Customer data
+  // 4. Customer data
   doc.setTextColor(...dark);
   doc.setFontSize(13);
   doc.setFont("helvetica", "bold");
@@ -227,30 +223,25 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
     doc.text(data.customerEmail, margin + 8, customerDetailY);
   }
 
-  // Device Box - same approach
+  // Device Box
   const deviceBoxX = margin + boxWidth + 10;
   
-  // Header colored strip (full width, flat bottom)  
-  doc.setFillColor(...accent);
-  doc.roundedRect(deviceBoxX, y, boxWidth, 14, 4, 4, 'F');
-  doc.rect(deviceBoxX, y + 4, boxWidth, 10, 'F'); // Fill bottom part to make flat bottom edge
-  
-  // White body below header
+  // 1. Draw white background with border first
   doc.setFillColor(...white);
-  doc.roundedRect(deviceBoxX, y + 12, boxWidth, 33, 4, 4, 'F');
-  doc.rect(deviceBoxX, y + 12, boxWidth, 4, 'F'); // Fill top to make flat top edge
-  
-  // Border around entire box
   doc.setDrawColor(...lightGray);
   doc.setLineWidth(0.5);
-  doc.roundedRect(deviceBoxX, y, boxWidth, 45, 4, 4, 'S');
+  doc.roundedRect(deviceBoxX, y, boxWidth, 45, 4, 4, 'FD');
   
-  // Device header text
+  // 2. Draw colored header strip on top (with rounded top corners)
+  doc.setFillColor(...accent);
+  doc.roundedRect(deviceBoxX, y, boxWidth, 14, 4, 4, 'F');
+  doc.rect(deviceBoxX, y + 6, boxWidth, 8, 'F'); // Extend to cover the rounded bottom corners
   
+  // 3. Device header text
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
   doc.setFont("helvetica", "bold");
-  doc.text("DISPOSITIVO", deviceBoxX + 8, y + 8);
+  doc.text("DISPOSITIVO", deviceBoxX + 8, y + 9);
   
   // Device name - show full info
   const deviceNameParts = [];
