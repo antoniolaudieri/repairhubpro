@@ -703,9 +703,9 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
 
               {/* Device Info */}
               <Card className="border-primary/20">
-                <CardContent className="p-3 sm:p-4 space-y-3">
+                <CardContent className="p-3 sm:p-4 space-y-2 sm:space-y-3">
                   <div className="flex items-center justify-between">
-                    <Label className="flex items-center gap-2">
+                    <Label className="flex items-center gap-2 text-sm">
                       <Smartphone className="h-4 w-4 text-primary" />
                       Dispositivo
                     </Label>
@@ -717,8 +717,8 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                     )}
                   </div>
                   
-                  {/* Device Type Selection */}
-                  <div className="flex flex-wrap gap-2">
+                  {/* Device Type Selection - Grid on mobile, flex on desktop */}
+                  <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1.5 sm:gap-2">
                     {deviceTypes.map(({ value, icon: Icon }) => (
                       <Button
                         key={value}
@@ -726,21 +726,23 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                         variant={deviceType === value ? "default" : "outline"}
                         size="sm"
                         onClick={() => setDeviceType(value)}
-                        className="flex-1 min-w-[80px]"
+                        className="h-8 sm:h-9 text-xs sm:text-sm px-2 sm:px-3 sm:flex-1 sm:min-w-[80px]"
                       >
-                        <Icon className="h-4 w-4 mr-1" />
-                        {value}
+                        <Icon className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                        <span className="truncate">{value}</span>
                       </Button>
                     ))}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* Brand and Model - Stack on very small screens */}
+                  <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 sm:gap-3">
                     <div>
                       <Label className="text-xs text-muted-foreground">Marca</Label>
                       <Input 
                         placeholder="es. Apple" 
                         value={deviceBrand}
                         onChange={(e) => setDeviceBrand(e.target.value)}
+                        className="h-9 text-sm"
                       />
                     </div>
                     <div>
@@ -749,33 +751,34 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                         placeholder="es. iPhone 14" 
                         value={deviceModel}
                         onChange={(e) => setDeviceModel(e.target.value)}
+                        className="h-9 text-sm"
                       />
                     </div>
                   </div>
 
-                  {/* AI Detected Info */}
+                  {/* AI Detected Info - Compact on mobile */}
                   <AnimatePresence>
                     {detectedDevice && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="flex items-center gap-3 p-3 bg-primary/5 rounded-lg border border-primary/20"
+                        className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-primary/5 rounded-lg border border-primary/20"
                       >
                         {detectedDevice.imageUrl && (
                           <img 
                             src={detectedDevice.imageUrl} 
                             alt={detectedDevice.fullName}
-                            className="w-12 h-12 object-contain rounded-lg bg-white"
+                            className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-lg bg-white shrink-0"
                           />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{detectedDevice.fullName}</p>
+                          <p className="font-medium text-xs sm:text-sm truncate">{detectedDevice.fullName}</p>
                           {detectedDevice.year && detectedDevice.year !== 'N/A' && (
                             <p className="text-xs text-muted-foreground">Anno: {detectedDevice.year}</p>
                           )}
                         </div>
-                        <Badge variant="secondary" className="shrink-0">
+                        <Badge variant="secondary" className="shrink-0 text-xs">
                           <Sparkles className="h-3 w-3 mr-1" />
                           AI
                         </Badge>
