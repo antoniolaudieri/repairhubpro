@@ -223,10 +223,10 @@ export function QuotePDFPreview({
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
           
-          <div className="flex-1 min-w-0 bg-muted/30 p-4 overflow-hidden flex" style={{ minHeight: '600px' }}>
-            <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border bg-white flex flex-col">
+          <div className="flex-1 min-w-0 bg-muted/30 p-4 overflow-hidden flex flex-col" style={{ minHeight: '500px', height: '100%' }}>
+            <div className="flex-1 rounded-xl overflow-hidden shadow-lg border bg-white" style={{ minHeight: '500px' }}>
               {isGenerating ? (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="h-full flex items-center justify-center">
                   <div className="text-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">Generazione PDF...</p>
@@ -235,14 +235,12 @@ export function QuotePDFPreview({
               ) : pdfUrl ? (
                 <iframe
                   src={pdfUrl}
-                  width="100%"
-                  height="600"
-                  className="flex-1 border-0"
-                  style={{ minHeight: '600px' }}
+                  className="w-full h-full border-0"
+                  style={{ minHeight: '500px', height: '100%' }}
                   title="Anteprima PDF"
                 />
               ) : (
-                <div className="flex-1 flex items-center justify-center">
+                <div className="h-full flex items-center justify-center">
                   <div className="text-center">
                     <AlertCircle className="h-8 w-8 text-amber-500 mx-auto mb-2" />
                     <p className="text-sm text-muted-foreground">Errore nella generazione del PDF</p>
