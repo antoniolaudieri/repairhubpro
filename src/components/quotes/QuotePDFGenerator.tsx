@@ -204,9 +204,19 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(...gray);
-  doc.text(`Tel: ${data.customerPhone}`, margin + 8, y + 30);
+  
+  let customerDetailY = y + 30;
+  doc.text(`Tel: ${data.customerPhone}`, margin + 8, customerDetailY);
+  customerDetailY += 6;
+  
+  if (data.customerAddress) {
+    const addressLines = doc.splitTextToSize(data.customerAddress, boxWidth - 16);
+    doc.text(addressLines[0], margin + 8, customerDetailY);
+    customerDetailY += 6;
+  }
+  
   if (data.customerEmail) {
-    doc.text(data.customerEmail, margin + 8, y + 38);
+    doc.text(data.customerEmail, margin + 8, customerDetailY);
   }
 
   // Device Box
