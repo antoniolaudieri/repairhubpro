@@ -614,7 +614,9 @@ export function downloadQuotePDF(data: QuotePDFData, filename?: string) {
 
 export async function getQuotePDFDataUrl(data: QuotePDFData): Promise<string> {
   const doc = await generateQuotePDF(data);
-  return doc.output('dataurlstring');
+  // Use blob URL instead of data URL for better browser compatibility with large PDFs
+  const blob = doc.output('blob');
+  return URL.createObjectURL(blob);
 }
 
 export async function getQuotePDFBase64(data: QuotePDFData): Promise<string> {

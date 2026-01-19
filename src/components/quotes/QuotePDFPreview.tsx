@@ -105,6 +105,8 @@ export function QuotePDFPreview({
   useEffect(() => {
     if (!open || !customer) return;
     
+    let currentUrl: string | null = null;
+    
     const generatePDF = async () => {
       setIsGenerating(true);
       setPdfUrl(null);
@@ -139,7 +141,8 @@ export function QuotePDFPreview({
         
         console.log("Generating PDF with data:", pdfData);
         const url = await getQuotePDFDataUrl(pdfData);
-        console.log("PDF generated successfully, URL length:", url?.length);
+        currentUrl = url;
+        console.log("PDF generated successfully, blob URL created");
         setPdfUrl(url);
       } catch (error) {
         console.error("Error generating PDF:", error);
@@ -149,6 +152,13 @@ export function QuotePDFPreview({
     };
     
     generatePDF();
+    
+    // Cleanup blob URL when component unmounts or dialog closes
+    return () => {
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
+      }
+    };
   }, [open, customer, deviceType, deviceBrand, deviceModel, issueDescription, diagnosis, notes, items, laborCost, partsCost, totalCost, centroInfo, deviceInfo, quoteNumber]);
 
   const getPdfData = () => ({
