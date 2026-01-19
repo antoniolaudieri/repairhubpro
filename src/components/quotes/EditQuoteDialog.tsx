@@ -1036,7 +1036,7 @@ export function EditQuoteDialog({
                       disabled={loading || items.length === 0}
                     >
                       {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
-                      Anteprima e Invia
+                      Anteprima
                     </Button>
                   </div>
                 </form>
