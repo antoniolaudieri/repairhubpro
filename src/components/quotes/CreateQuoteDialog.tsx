@@ -638,26 +638,21 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   return (
     <>
       <Dialog open={open && !showPreview} onOpenChange={(o) => { onOpenChange(o); if (!o) resetForm(); }}>
-        <DialogContent className="max-w-3xl h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
-          <DialogHeader className="p-4 pb-2 sm:p-6 sm:pb-2 shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
-                <Sparkles className="h-5 w-5 text-primary" />
+        <DialogContent className="w-[95vw] max-w-4xl h-[90dvh] max-h-[90dvh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="p-3 pb-2 sm:p-4 sm:pb-2 shrink-0 border-b">
+            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <div className="p-1.5 sm:p-2 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
+                <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
               Nuovo Preventivo
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               Crea un nuovo preventivo per il cliente selezionato
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4 pt-4"
-            >
-              {/* Customer Selection */}
+          <ScrollArea className="flex-1 min-h-0">
+            <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
               <Card className="border-primary/20">
                 <CardContent className="p-3 sm:p-4">
                   <Label className="flex items-center gap-2 mb-2">
@@ -1086,15 +1081,16 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                 </CardContent>
               </Card>
 
-            </motion.div>
+            </div>
           </ScrollArea>
 
           {/* Action Buttons - Fixed at bottom */}
-          <div className="flex gap-2 p-4 sm:p-6 pt-3 border-t shrink-0 bg-background">
+          <div className="flex gap-2 p-3 sm:p-4 border-t shrink-0 bg-background">
             <Button 
               variant="outline" 
               onClick={() => { onOpenChange(false); resetForm(); }}
               className="flex-1"
+              size="sm"
             >
               Annulla
             </Button>
@@ -1102,9 +1098,11 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
               onClick={handleShowPreview}
               className="flex-1 bg-gradient-to-r from-primary to-primary-glow"
               disabled={!selectedCustomer || items.length === 0}
+              size="sm"
             >
-              <Eye className="h-4 w-4 mr-2" />
-              Anteprima
+              <Eye className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Anteprima</span>
+              <span className="sm:hidden">Vedi</span>
             </Button>
           </div>
         </DialogContent>
