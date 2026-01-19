@@ -31,6 +31,7 @@ interface Customer {
   name: string;
   email: string | null;
   phone: string;
+  address?: string;
 }
 
 interface DeviceInfo {
@@ -100,6 +101,7 @@ export function QuotePDFPreview({
     customerName: customer?.name || "",
     customerEmail: customer?.email || undefined,
     customerPhone: customer?.phone || "",
+    customerAddress: customer?.address || undefined,
     deviceType,
     deviceBrand,
     deviceModel,
@@ -176,7 +178,23 @@ export function QuotePDFPreview({
 
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-          {/* PDF Preview - Hidden on small screens */}
+          {/* PDF Preview - Hidden on small screens, show button on mobile */}
+          <div className="lg:hidden p-4 border-b">
+            <Button
+              variant="outline"
+              className="w-full h-12"
+              onClick={() => pdfUrl && window.open(pdfUrl, '_blank')}
+              disabled={isGenerating || !pdfUrl}
+            >
+              {isGenerating ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Eye className="h-4 w-4 mr-2" />
+              )}
+              Visualizza Anteprima PDF
+            </Button>
+          </div>
+          
           <div className="hidden lg:flex flex-1 bg-muted/30 p-4 overflow-hidden">
             <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border bg-white">
               {isGenerating ? (
