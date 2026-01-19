@@ -381,8 +381,18 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   
   const validItems = data.items.filter(i => i.description);
   
-  // Pre-load all images for items with proper timeout handling
+  // Pre-load all images for items using proxy for external images
   const itemImages: (HTMLImageElement | null)[] = [];
+  
+  const getProxiedImageUrl = (originalUrl: string): string => {
+    // Check if it's an external URL that needs proxying (Amazon, etc.)
+    if (originalUrl.includes('amazon') || originalUrl.includes('m.media-amazon')) {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      return `${supabaseUrl}/functions/v1/proxy-image?url=${encodeURIComponent(originalUrl)}`;
+    }
+    return originalUrl;
+  };
+  
   for (const item of validItems) {
     if (item.imageUrl) {
       try {
@@ -390,23 +400,27 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
         img.crossOrigin = "anonymous";
         let resolved = false;
         
+        const proxiedUrl = getProxiedImageUrl(item.imageUrl);
+        console.log("Loading image:", item.imageUrl, "->", proxiedUrl);
+        
         await new Promise<void>((resolve) => {
           img.onload = () => {
             if (!resolved) {
               resolved = true;
+              console.log("Image loaded successfully:", item.imageUrl);
               itemImages.push(img);
               resolve();
             }
           };
-          img.onerror = () => {
+          img.onerror = (e) => {
             if (!resolved) {
               resolved = true;
-              console.log("Image load error for:", item.imageUrl);
+              console.log("Image load error for:", item.imageUrl, e);
               itemImages.push(null);
               resolve();
             }
           };
-          img.src = item.imageUrl!;
+          img.src = proxiedUrl;
           setTimeout(() => {
             if (!resolved) {
               resolved = true;
@@ -414,9 +428,10 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
               itemImages.push(null);
               resolve();
             }
-          }, 3000); // Increased timeout for remote images
+          }, 5000); // Increased timeout for proxied images
         });
-      } catch {
+      } catch (e) {
+        console.log("Image catch error:", e);
         itemImages.push(null);
       }
     } else {
