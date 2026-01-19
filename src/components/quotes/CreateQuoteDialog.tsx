@@ -998,7 +998,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                       {items.map((item) => (
                         <div 
                           key={item.id}
-                          className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg"
+                          className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg overflow-hidden"
                         >
                           {item.imageUrl ? (
                             <img 
@@ -1014,13 +1014,13 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                               {item.type === 'part' ? 'Ricambio' : item.type === 'labor' ? 'Lavorazione' : 'Servizio'}
                             </Badge>
                           )}
-                          <p className="flex-1 text-sm truncate">{item.description}</p>
-                          <div className="flex items-center gap-1">
+                          <p className="flex-1 min-w-0 text-sm truncate">{item.description}</p>
+                          <div className="flex items-center gap-1 shrink-0">
                             <Input
                               type="number"
                               value={item.quantity}
                               onChange={(e) => updateItemQuantity(item.id, Number(e.target.value))}
-                              className="w-14 h-7 text-center text-xs"
+                              className="w-12 h-7 text-center text-xs"
                               min={1}
                             />
                             <span className="text-xs text-muted-foreground">x</span>
@@ -1028,11 +1028,11 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                               type="number"
                               value={item.unitPrice}
                               onChange={(e) => updateItemPrice(item.id, Number(e.target.value))}
-                              className="w-20 h-7 text-center text-xs"
+                              className="w-16 h-7 text-center text-xs"
                               step={0.01}
                             />
                           </div>
-                          <p className="text-sm font-medium w-16 text-right">€{item.total.toFixed(2)}</p>
+                          <p className="text-sm font-medium w-14 text-right shrink-0">€{item.total.toFixed(2)}</p>
                           <Button
                             variant="ghost"
                             size="icon"
