@@ -495,7 +495,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
           diagnosis: diagnosis || null,
           notes: notes || null,
           items: JSON.stringify(quoteItems),
-          labor_cost: laborCost,
+          labor_cost: 0, // All labor details are in items array
           parts_cost: partsPurchaseCost,
           total_cost: totalCost,
           valid_until: quoteValidUntil,
