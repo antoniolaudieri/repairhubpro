@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
 
     console.log('Scraping product URL:', formattedUrl);
 
-    // Use JSON extraction for structured product data
+    // Use extract format for structured product data
     const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
       headers: {
@@ -44,28 +44,25 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url: formattedUrl,
-        formats: [
-          'markdown',
-          {
-            type: 'json',
-            schema: {
-              type: 'object',
-              properties: {
-                title: { type: 'string', description: 'Product title or name' },
-                description: { type: 'string', description: 'Product description' },
-                price: { type: 'number', description: 'Product price as a number (without currency symbol)' },
-                currency: { type: 'string', description: 'Currency symbol or code (e.g., EUR, USD, €)' },
-                imageUrl: { type: 'string', description: 'Main product image URL' },
-                brand: { type: 'string', description: 'Product brand name' },
-                sku: { type: 'string', description: 'Product SKU or ASIN' },
-              },
-              required: ['title'],
+        formats: ['markdown', 'extract'],
+        extract: {
+          schema: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: 'Product title or name' },
+              description: { type: 'string', description: 'Product description' },
+              price: { type: 'number', description: 'Product price as a number (without currency symbol)' },
+              currency: { type: 'string', description: 'Currency symbol or code (e.g., EUR, USD, €)' },
+              imageUrl: { type: 'string', description: 'Main product image URL' },
+              brand: { type: 'string', description: 'Product brand name' },
+              sku: { type: 'string', description: 'Product SKU or ASIN' },
             },
-            prompt: 'Extract the main product information from this e-commerce page. Get the title, description, price (as a number without currency), currency, main image URL, brand, and SKU/ASIN if available.',
+            required: ['title'],
           },
-        ],
+          prompt: 'Extract the main product information from this e-commerce page. Get the title, description, price (as a number without currency), currency, main image URL, brand, and SKU/ASIN if available.',
+        },
         onlyMainContent: true,
-        waitFor: 2000, // Wait for dynamic content
+        waitFor: 2000,
       }),
     });
 
@@ -80,17 +77,17 @@ Deno.serve(async (req) => {
     }
 
     // Extract product data from response
-    const jsonData = data.data?.json || data.json || {};
+    const extractData = data.data?.extract || data.extract || {};
     const metadata = data.data?.metadata || data.metadata || {};
 
     const product = {
-      title: jsonData.title || metadata.title || 'Prodotto senza nome',
-      description: jsonData.description || metadata.description || '',
-      price: typeof jsonData.price === 'number' ? jsonData.price : parsePrice(jsonData.price),
-      currency: jsonData.currency || '€',
-      imageUrl: jsonData.imageUrl || metadata.ogImage || '',
-      brand: jsonData.brand || '',
-      sku: jsonData.sku || '',
+      title: extractData.title || metadata.title || 'Prodotto senza nome',
+      description: extractData.description || metadata.description || '',
+      price: typeof extractData.price === 'number' ? extractData.price : parsePrice(extractData.price),
+      currency: extractData.currency || '€',
+      imageUrl: extractData.imageUrl || metadata.ogImage || '',
+      brand: extractData.brand || '',
+      sku: extractData.sku || '',
       sourceUrl: formattedUrl,
     };
 
