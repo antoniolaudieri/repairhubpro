@@ -65,6 +65,7 @@ interface Quote {
     name: string;
     email: string | null;
     phone: string;
+    address?: string | null;
   } | null;
 }
 
@@ -113,6 +114,7 @@ export default function CentroPreventivi() {
         customerName: selectedQuote.customers.name,
         customerEmail: selectedQuote.customers.email || "",
         customerPhone: selectedQuote.customers.phone,
+        customerAddress: selectedQuote.customers.address || "",
         deviceType: selectedQuote.device_type,
         deviceBrand: selectedQuote.device_brand || "",
         deviceModel: selectedQuote.device_model || "",
@@ -215,6 +217,7 @@ export default function CentroPreventivi() {
           name,
           email,
           phone,
+          address,
           centro_id
         )
       `)
@@ -232,7 +235,8 @@ export default function CentroPreventivi() {
         customers (
           name,
           email,
-          phone
+          phone,
+          address
         )
       `)
       .not("repair_request_id", "is", null)
@@ -752,7 +756,8 @@ export default function CentroPreventivi() {
               id: selectedQuote.customer_id,
               name: selectedQuote.customers?.name || "",
               email: selectedQuote.customers?.email || null,
-              phone: selectedQuote.customers?.phone || ""
+              phone: selectedQuote.customers?.phone || "",
+              address: selectedQuote.customers?.address || ""
             }}
             deviceType={selectedQuote.device_type}
             deviceBrand={selectedQuote.device_brand || ""}
