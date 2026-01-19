@@ -4,6 +4,8 @@ interface QuoteItem {
   description: string;
   quantity: number;
   unitPrice: number;
+  imageUrl?: string;
+  sourceUrl?: string;
 }
 
 interface DeviceInfo {
@@ -378,29 +380,75 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setFontSize(9);
   
   const validItems = data.items.filter(i => i.description);
+  
+  // Pre-load all images for items
+  const itemImages: (HTMLImageElement | null)[] = [];
+  for (const item of validItems) {
+    if (item.imageUrl) {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        await new Promise<void>((resolve) => {
+          img.onload = () => {
+            itemImages.push(img);
+            resolve();
+          };
+          img.onerror = () => {
+            itemImages.push(null);
+            resolve();
+          };
+          img.src = item.imageUrl!;
+          setTimeout(() => {
+            itemImages.push(null);
+            resolve();
+          }, 1500);
+        });
+      } catch {
+        itemImages.push(null);
+      }
+    } else {
+      itemImages.push(null);
+    }
+  }
+  
   validItems.forEach((item, index) => {
     const itemTotal = item.quantity * item.unitPrice;
     const isEven = index % 2 === 0;
+    const hasImage = itemImages[index] !== null;
+    const rowHeight = hasImage ? 18 : 10;
     
     if (isEven) {
       doc.setFillColor(...lightGray);
-      doc.rect(margin, y, pageWidth - margin * 2, 10, 'F');
+      doc.rect(margin, y, pageWidth - margin * 2, rowHeight, 'F');
     }
     
+    // Draw image if available
+    if (hasImage && itemImages[index]) {
+      try {
+        doc.addImage(itemImages[index]!, "JPEG", margin + 3, y + 1, 16, 16);
+      } catch {
+        // Ignore image errors
+      }
+    }
+    
+    const textX = hasImage ? margin + 22 : margin + 5;
+    const textY = hasImage ? y + rowHeight / 2 + 2 : y + 7;
+    
     doc.setTextColor(...dark);
-    const descLines = doc.splitTextToSize(item.description, 90);
-    doc.text(descLines[0], margin + 5, y + 7);
+    const maxDescWidth = hasImage ? 72 : 90;
+    const descLines = doc.splitTextToSize(item.description, maxDescWidth);
+    doc.text(descLines[0], textX, textY);
     
     doc.setTextColor(...gray);
-    doc.text(item.quantity.toString(), pageWidth - 72, y + 7, { align: "center" });
-    doc.text(`€${item.unitPrice.toFixed(2)}`, pageWidth - 48, y + 7, { align: "center" });
+    doc.text(item.quantity.toString(), pageWidth - 72, textY, { align: "center" });
+    doc.text(`€${item.unitPrice.toFixed(2)}`, pageWidth - 48, textY, { align: "center" });
     
     doc.setTextColor(...dark);
     doc.setFont("helvetica", "bold");
-    doc.text(`€${itemTotal.toFixed(2)}`, pageWidth - margin - 5, y + 7, { align: "right" });
+    doc.text(`€${itemTotal.toFixed(2)}`, pageWidth - margin - 5, textY, { align: "right" });
     doc.setFont("helvetica", "normal");
     
-    y += 10;
+    y += rowHeight;
   });
 
   // Labor cost row
