@@ -62,6 +62,8 @@ interface QuoteItem {
   total: number;
   type: 'part' | 'labor' | 'service';
   purchaseCost?: number;
+  imageUrl?: string;
+  sourceUrl?: string;
 }
 
 interface CentroInfo {
@@ -392,6 +394,8 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
       total: product.unitPrice * product.quantity,
       type: 'part',
       purchaseCost: product.unitPrice * 0.7, // Estimate 30% margin
+      imageUrl: product.imageUrl,
+      sourceUrl: product.sourceUrl,
     }]);
   };
 
@@ -994,9 +998,20 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                           key={item.id}
                           className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg"
                         >
-                          <Badge variant="outline" className="shrink-0 text-xs">
-                            {item.type === 'part' ? 'Ricambio' : item.type === 'labor' ? 'Lavorazione' : 'Servizio'}
-                          </Badge>
+                          {item.imageUrl ? (
+                            <img 
+                              src={item.imageUrl} 
+                              alt={item.description}
+                              className="w-10 h-10 object-contain rounded bg-white shrink-0"
+                              onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                              }}
+                            />
+                          ) : (
+                            <Badge variant="outline" className="shrink-0 text-xs">
+                              {item.type === 'part' ? 'Ricambio' : item.type === 'labor' ? 'Lavorazione' : 'Servizio'}
+                            </Badge>
+                          )}
                           <p className="flex-1 text-sm truncate">{item.description}</p>
                           <div className="flex items-center gap-1">
                             <Input

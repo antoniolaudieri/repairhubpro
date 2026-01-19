@@ -25,6 +25,8 @@ interface QuoteItem {
   description: string;
   quantity: number;
   unitPrice: number;
+  imageUrl?: string;
+  sourceUrl?: string;
 }
 
 interface Customer {

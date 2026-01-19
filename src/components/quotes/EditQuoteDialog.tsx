@@ -39,6 +39,8 @@ interface QuoteItem {
   total: number;
   type: 'part' | 'labor' | 'service';
   purchaseCost?: number;
+  imageUrl?: string;
+  sourceUrl?: string;
 }
 
 interface Quote {
@@ -381,6 +383,8 @@ export function EditQuoteDialog({
       total: product.unitPrice * product.quantity,
       type: 'part',
       purchaseCost: product.unitPrice * 0.7,
+      imageUrl: product.imageUrl,
+      sourceUrl: product.sourceUrl,
     }]);
   };
 
@@ -938,11 +942,22 @@ export function EditQuoteDialog({
                         {items.map((item) => (
                           <Card key={item.id} className="p-3">
                             <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded flex items-center justify-center bg-muted">
-                                {item.type === 'part' && <Package className="h-4 w-4 text-blue-600" />}
-                                {item.type === 'labor' && <Wrench className="h-4 w-4 text-amber-600" />}
-                                {item.type === 'service' && <Headphones className="h-4 w-4 text-purple-600" />}
-                              </div>
+                              {item.imageUrl ? (
+                                <img 
+                                  src={item.imageUrl} 
+                                  alt={item.description}
+                                  className="w-10 h-10 object-contain rounded bg-white shrink-0"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = 'none';
+                                  }}
+                                />
+                              ) : (
+                                <div className="h-8 w-8 rounded flex items-center justify-center bg-muted shrink-0">
+                                  {item.type === 'part' && <Package className="h-4 w-4 text-blue-600" />}
+                                  {item.type === 'labor' && <Wrench className="h-4 w-4 text-amber-600" />}
+                                  {item.type === 'service' && <Headphones className="h-4 w-4 text-purple-600" />}
+                                </div>
+                              )}
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-medium truncate">{item.description}</p>
                               </div>
