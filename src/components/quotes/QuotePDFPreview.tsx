@@ -223,8 +223,8 @@ export function QuotePDFPreview({
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
           
-          <div className="flex flex-1 bg-muted/30 p-4 overflow-hidden" style={{ minHeight: '600px' }}>
-            <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border bg-white flex flex-col" style={{ minHeight: '600px' }}>
+          <div className="flex-1 min-w-0 bg-muted/30 p-4 overflow-hidden flex" style={{ minHeight: '600px' }}>
+            <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border bg-white flex flex-col">
               {isGenerating ? (
                 <div className="flex-1 flex items-center justify-center">
                   <div className="text-center">
@@ -254,7 +254,7 @@ export function QuotePDFPreview({
           </div>
 
           {/* Sidebar / Main content on mobile */}
-          <div className="w-full lg:w-80 border-t lg:border-t-0 lg:border-l flex-1 overflow-hidden">
+          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l overflow-hidden">
             <ScrollArea className="h-full">
               <div className="p-4 space-y-4">
                 {/* Device Preview Card */}
