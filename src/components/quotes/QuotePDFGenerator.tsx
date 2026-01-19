@@ -381,27 +381,40 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   
   const validItems = data.items.filter(i => i.description);
   
-  // Pre-load all images for items
+  // Pre-load all images for items with proper timeout handling
   const itemImages: (HTMLImageElement | null)[] = [];
   for (const item of validItems) {
     if (item.imageUrl) {
       try {
         const img = new Image();
         img.crossOrigin = "anonymous";
+        let resolved = false;
+        
         await new Promise<void>((resolve) => {
           img.onload = () => {
-            itemImages.push(img);
-            resolve();
+            if (!resolved) {
+              resolved = true;
+              itemImages.push(img);
+              resolve();
+            }
           };
           img.onerror = () => {
-            itemImages.push(null);
-            resolve();
+            if (!resolved) {
+              resolved = true;
+              console.log("Image load error for:", item.imageUrl);
+              itemImages.push(null);
+              resolve();
+            }
           };
           img.src = item.imageUrl!;
           setTimeout(() => {
-            itemImages.push(null);
-            resolve();
-          }, 1500);
+            if (!resolved) {
+              resolved = true;
+              console.log("Image load timeout for:", item.imageUrl);
+              itemImages.push(null);
+              resolve();
+            }
+          }, 3000); // Increased timeout for remote images
         });
       } catch {
         itemImages.push(null);
