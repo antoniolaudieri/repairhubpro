@@ -187,11 +187,13 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setLineWidth(1);
   doc.roundedRect(margin, y, boxWidth, 45, 4, 4, 'FD');
   
-  // Customer header strip
+  // Customer header strip - draw colored rectangle only at top
   doc.setFillColor(...primary);
+  doc.rect(margin + 0.5, y + 0.5, boxWidth - 1, 12, 'F');
+  // Round top corners by drawing small corner fills
   doc.roundedRect(margin, y, boxWidth, 12, 4, 4, 'F');
   doc.setFillColor(...white);
-  doc.rect(margin, y + 8, boxWidth, 4, 'F');
+  doc.rect(margin, y + 8, boxWidth, 5, 'F'); // Cover bottom of rounded rect to make it flat bottom
   
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
@@ -227,11 +229,12 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
   doc.setDrawColor(...lightGray);
   doc.roundedRect(deviceBoxX, y, boxWidth, 45, 4, 4, 'FD');
   
-  // Device header strip
+  // Device header strip - draw colored rectangle only at top
   doc.setFillColor(...accent);
+  doc.rect(deviceBoxX + 0.5, y + 0.5, boxWidth - 1, 12, 'F');
   doc.roundedRect(deviceBoxX, y, boxWidth, 12, 4, 4, 'F');
   doc.setFillColor(...white);
-  doc.rect(deviceBoxX, y + 8, boxWidth, 4, 'F');
+  doc.rect(deviceBoxX, y + 8, boxWidth, 5, 'F'); // Cover bottom of rounded rect to make it flat bottom
   
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
