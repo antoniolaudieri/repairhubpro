@@ -1,4 +1,4 @@
-import { Smartphone, Tablet, Laptop, Monitor, Watch, HelpCircle } from "lucide-react";
+import { Smartphone, Tablet, Laptop, Monitor, Watch, HelpCircle, Home } from "lucide-react";
 
 export const DeviceIcon = ({ type, className = "h-20 w-20" }: { type: string; className?: string }) => {
   const iconClass = `${className} text-primary`;
@@ -14,6 +14,8 @@ export const DeviceIcon = ({ type, className = "h-20 w-20" }: { type: string; cl
       return <Monitor className={iconClass} strokeWidth={1.5} />;
     case "smartwatch":
       return <Watch className={iconClass} strokeWidth={1.5} />;
+    case "servizio a domicilio":
+      return <Home className={iconClass} strokeWidth={1.5} />;
     default:
       return <HelpCircle className={iconClass} strokeWidth={1.5} />;
   }

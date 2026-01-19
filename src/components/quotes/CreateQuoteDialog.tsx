@@ -112,11 +112,14 @@ interface AdditionalService {
   is_active: boolean;
 }
 
+import { Home } from "lucide-react";
+
 const deviceTypes = [
   { value: "Smartphone", icon: Smartphone },
   { value: "Tablet", icon: Tablet },
   { value: "Laptop", icon: Laptop },
   { value: "PC", icon: Monitor },
+  { value: "Servizio a Domicilio", icon: Home },
   { value: "Altro", icon: HelpCircle },
 ];
 
