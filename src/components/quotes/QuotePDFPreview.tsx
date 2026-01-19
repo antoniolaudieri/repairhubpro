@@ -211,30 +211,31 @@ export function QuotePDFPreview({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl h-[90vh] sm:h-auto sm:max-h-[95vh] overflow-hidden flex flex-col p-0">
+      <DialogContent className="w-[95vw] max-w-6xl h-[90dvh] sm:h-[85dvh] overflow-hidden flex flex-col p-0">
         {/* Header */}
-        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-4 sm:p-6 border-b">
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 sm:p-6 border-b shrink-0">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 sm:p-2.5 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-1.5 sm:p-2.5 rounded-xl bg-gradient-to-br from-primary to-primary/80 shadow-lg">
                 <Eye className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
               <div>
-                <h2 className="text-lg sm:text-xl font-bold">Anteprima Preventivo</h2>
-                <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Verifica e invia al cliente</p>
+                <h2 className="text-base sm:text-xl font-bold">Anteprima Preventivo</h2>
+                <p className="text-xs text-muted-foreground hidden sm:block">Verifica e invia al cliente</p>
               </div>
             </div>
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className="text-[10px] sm:text-xs">
               {quoteNumber}
             </Badge>
           </div>
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
+        {/* Content - Mobile: stacked, Desktop: side by side */}
+        <div className="flex-1 min-h-0 overflow-hidden flex flex-col-reverse lg:flex-row">
           
-          <div className="flex-1 min-w-0 bg-muted/30 p-4 overflow-hidden flex flex-col" style={{ minHeight: '500px', height: '100%' }}>
-            <div className="flex-1 rounded-xl overflow-hidden shadow-lg border bg-white" style={{ minHeight: '500px' }}>
+          {/* PDF Preview - Hidden on mobile, shown on desktop */}
+          <div className="hidden lg:flex flex-1 min-w-0 bg-muted/30 p-4 flex-col">
+            <div className="flex-1 rounded-xl overflow-hidden shadow-lg border bg-white">
               {isGenerating ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-center">
@@ -246,7 +247,6 @@ export function QuotePDFPreview({
                 <iframe
                   src={pdfUrl}
                   className="w-full h-full border-0"
-                  style={{ minHeight: '500px', height: '100%' }}
                   title="Anteprima PDF"
                 />
               ) : (
@@ -262,19 +262,18 @@ export function QuotePDFPreview({
           </div>
 
           {/* Sidebar / Main content on mobile */}
-          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-4 space-y-4">
+          <div className="flex-1 lg:flex-none lg:w-80 shrink-0 overflow-y-auto lg:border-l">
+              <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
                 {/* Device Preview Card */}
                 <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 overflow-hidden">
-                  <CardContent className="p-4">
-                    <div className="flex gap-3">
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex gap-2 sm:gap-3">
                       {deviceInfo?.imageUrl && (
                         <div className="relative flex-shrink-0">
                           <img
                             src={deviceInfo.imageUrl}
                             alt={deviceName}
-                            className="h-16 w-16 object-contain rounded-lg bg-white p-1 shadow-sm"
+                            className="h-12 w-12 sm:h-16 sm:w-16 object-contain rounded-lg bg-white p-1 shadow-sm"
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
                             }}
@@ -288,29 +287,46 @@ export function QuotePDFPreview({
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-0.5 sm:mb-1">
                           <User className="h-3 w-3 text-primary flex-shrink-0" />
-                          <span className="font-medium text-sm truncate">{customer.name}</span>
+                          <span className="font-medium text-xs sm:text-sm truncate">{customer.name}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs text-muted-foreground">
                           <Smartphone className="h-3 w-3 flex-shrink-0" />
                           <span className="truncate">{deviceName}</span>
                         </div>
                         {deviceInfo?.year && deviceInfo.year !== "N/A" && (
-                          <p className="text-[10px] text-muted-foreground mt-1">Anno: {deviceInfo.year}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5 sm:mt-1">Anno: {deviceInfo.year}</p>
                         )}
                       </div>
                     </div>
                     
                     {/* Total */}
-                    <div className="mt-4 pt-3 border-t border-primary/20">
+                    <div className="mt-2 sm:mt-4 pt-2 sm:pt-3 border-t border-primary/20">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Totale Preventivo</span>
-                        <span className="text-2xl font-bold text-primary">€{totalCost.toFixed(2)}</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">Totale</span>
+                        <span className="text-xl sm:text-2xl font-bold text-primary">€{totalCost.toFixed(2)}</span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Mobile PDF Preview Button */}
+                <div className="lg:hidden">
+                  <Button
+                    variant="outline"
+                    className="w-full h-10 border-primary/30"
+                    onClick={() => pdfUrl && window.open(pdfUrl, '_blank')}
+                    disabled={isGenerating || !pdfUrl}
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Eye className="h-4 w-4 mr-2" />
+                    )}
+                    {isGenerating ? "Generazione..." : "Visualizza PDF"}
+                  </Button>
+                </div>
 
                 {/* Quick Actions */}
                 <div className="space-y-2">
@@ -319,22 +335,22 @@ export function QuotePDFPreview({
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
-                      className="h-10"
+                      className="h-9 sm:h-10"
                       onClick={handleDownload}
                       disabled={isGenerating}
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      Scarica
+                      <Download className="h-4 w-4 mr-1 sm:mr-2" />
+                      <span className="text-xs sm:text-sm">Scarica</span>
                     </Button>
 
                     <Button
                       variant="outline"
-                      className="h-10"
+                      className="h-9 sm:h-10"
                       onClick={handlePrint}
                       disabled={isGenerating || !pdfUrl}
                     >
-                      <Printer className="h-4 w-4 mr-2" />
-                      Stampa
+                      <Printer className="h-4 w-4 mr-1 sm:mr-2" />
+                      <span className="text-xs sm:text-sm">Stampa</span>
                     </Button>
                   </div>
                 </div>
@@ -349,11 +365,11 @@ export function QuotePDFPreview({
                       exit={{ opacity: 0, y: -10 }}
                     >
                       <Button
-                        className="w-full h-12 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 shadow-lg"
+                        className="w-full h-10 sm:h-12 bg-gradient-to-r from-primary to-primary/80 hover:opacity-90 shadow-lg"
                         onClick={() => setShowSendOptions(true)}
                       >
-                        <Send className="h-5 w-5 mr-2" />
-                        Invia al Cliente
+                        <Send className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
+                        <span className="text-sm sm:text-base">Invia al Cliente</span>
                       </Button>
                     </motion.div>
                   ) : (
@@ -362,17 +378,18 @@ export function QuotePDFPreview({
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="space-y-3"
+                      className="space-y-2 sm:space-y-3"
                     >
                       <div className="flex items-center gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => { setShowSendOptions(false); setSendMethod(null); }}
+                          className="h-7 w-7 p-0"
                         >
                           <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <p className="text-sm font-medium">Scegli come inviare</p>
+                        <p className="text-xs sm:text-sm font-medium">Scegli come inviare</p>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
@@ -381,28 +398,28 @@ export function QuotePDFPreview({
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setSendMethod("email")}
                           disabled={!customer.email}
-                          className={`p-3 rounded-xl border-2 transition-all text-center ${
+                          className={`p-2 sm:p-3 rounded-xl border-2 transition-all text-center ${
                             sendMethod === "email" 
                               ? "border-primary bg-primary/10" 
                               : "border-muted hover:border-primary/50"
                           } ${!customer.email ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
-                          <Mail className={`h-5 w-5 mx-auto mb-1 ${sendMethod === "email" ? "text-primary" : "text-muted-foreground"}`} />
-                          <p className="text-xs font-medium">Email</p>
+                          <Mail className={`h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 ${sendMethod === "email" ? "text-primary" : "text-muted-foreground"}`} />
+                          <p className="text-[10px] sm:text-xs font-medium">Email</p>
                         </motion.button>
 
                         <motion.button
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
                           onClick={() => setSendMethod("whatsapp")}
-                          className={`p-3 rounded-xl border-2 transition-all text-center ${
+                          className={`p-2 sm:p-3 rounded-xl border-2 transition-all text-center ${
                             sendMethod === "whatsapp" 
                               ? "border-green-500 bg-green-500/10" 
                               : "border-muted hover:border-green-500/50"
                           }`}
                         >
-                          <MessageCircle className={`h-5 w-5 mx-auto mb-1 ${sendMethod === "whatsapp" ? "text-green-500" : "text-muted-foreground"}`} />
-                          <p className="text-xs font-medium">WhatsApp</p>
+                          <MessageCircle className={`h-4 w-4 sm:h-5 sm:w-5 mx-auto mb-0.5 sm:mb-1 ${sendMethod === "whatsapp" ? "text-green-500" : "text-muted-foreground"}`} />
+                          <p className="text-[10px] sm:text-xs font-medium">WhatsApp</p>
                         </motion.button>
                       </div>
 
@@ -412,18 +429,18 @@ export function QuotePDFPreview({
                           animate={{ opacity: 1, height: "auto" }}
                         >
                           <Card className={`${sendMethod === "email" ? "bg-primary/5 border-primary/20" : "bg-green-500/5 border-green-500/20"}`}>
-                            <CardContent className="p-3">
-                              <p className="text-xs text-muted-foreground">
+                            <CardContent className="p-2 sm:p-3">
+                              <p className="text-[10px] sm:text-xs text-muted-foreground">
                                 {sendMethod === "email" 
-                                  ? `Invieremo il preventivo a: ${customer.email}`
-                                  : `Apriremo WhatsApp con il numero: ${customer.phone}`
+                                  ? `Invieremo a: ${customer.email}`
+                                  : `WhatsApp: ${customer.phone}`
                                 }
                               </p>
                             </CardContent>
                           </Card>
 
                           <Button
-                            className={`w-full h-11 mt-2 ${
+                            className={`w-full h-9 sm:h-11 mt-2 ${
                               sendMethod === "whatsapp" 
                                 ? "bg-green-500 hover:bg-green-600" 
                                 : "bg-gradient-to-r from-primary to-primary/80 hover:opacity-90"
@@ -432,11 +449,11 @@ export function QuotePDFPreview({
                             disabled={isSending}
                           >
                             {isSending ? (
-                              <Loader2 className="h-5 w-5 animate-spin" />
+                              <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                             ) : (
                               <>
-                                {sendMethod === "email" ? <Mail className="h-4 w-4 mr-2" /> : <MessageCircle className="h-4 w-4 mr-2" />}
-                                Conferma Invio
+                                {sendMethod === "email" ? <Mail className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" /> : <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />}
+                                <span className="text-xs sm:text-sm">Conferma Invio</span>
                               </>
                             )}
                           </Button>
@@ -446,8 +463,8 @@ export function QuotePDFPreview({
                   )}
                 </AnimatePresence>
 
-                {/* Tips */}
-                <Card className="bg-amber-500/5 border-amber-500/20">
+                {/* Tips - Hidden on mobile */}
+                <Card className="hidden sm:block bg-amber-500/5 border-amber-500/20">
                   <CardContent className="p-3">
                     <div className="flex gap-2">
                       <Sparkles className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
@@ -461,7 +478,6 @@ export function QuotePDFPreview({
                   </CardContent>
                 </Card>
               </div>
-            </ScrollArea>
           </div>
         </div>
       </DialogContent>
