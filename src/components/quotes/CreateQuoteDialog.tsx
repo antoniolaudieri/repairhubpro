@@ -501,6 +501,8 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
         total: i.total,
         type: i.type,
         purchaseCost: i.purchaseCost || 0,
+        imageUrl: i.imageUrl,
+        sourceUrl: i.sourceUrl,
       }));
 
       const { data: quote, error: quoteError } = await supabase
@@ -1124,6 +1126,8 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
             description: i.description,
             quantity: i.quantity,
             unitPrice: i.unitPrice,
+            imageUrl: i.imageUrl,
+            sourceUrl: i.sourceUrl,
           }))}
           laborCost={0} // All items (including labor and services) are already in items array with details
           partsCost={getPartsPurchaseCost()}

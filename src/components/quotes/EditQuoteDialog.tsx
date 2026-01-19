@@ -449,6 +449,8 @@ export function EditQuoteDialog({
         total: i.total,
         type: i.type,
         purchaseCost: i.purchaseCost || 0,
+        imageUrl: i.imageUrl,
+        sourceUrl: i.sourceUrl,
       }));
 
       const updateData: any = {
@@ -505,6 +507,8 @@ export function EditQuoteDialog({
         description: i.description,
         quantity: i.quantity,
         unitPrice: i.unitPrice,
+        imageUrl: i.imageUrl,
+        sourceUrl: i.sourceUrl,
       })),
       laborCost: 0, // All items (including labor and services) are already in items array with details
       partsCost: getPartsPurchaseCost(),
