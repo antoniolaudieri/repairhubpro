@@ -97,7 +97,58 @@ export function QuotePDFPreview({
   const [showSendOptions, setShowSendOptions] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const pdfData = {
+  const [quoteNumber] = useState(() => `PRV-${Date.now().toString().slice(-6)}`);
+
+  useEffect(() => {
+    if (!open || !customer) return;
+    
+    const generatePDF = async () => {
+      setIsGenerating(true);
+      setPdfUrl(null);
+      
+      try {
+        const pdfData = {
+          customerName: customer.name || "",
+          customerEmail: customer.email || undefined,
+          customerPhone: customer.phone || "",
+          customerAddress: customer.address || undefined,
+          deviceType,
+          deviceBrand,
+          deviceModel,
+          issueDescription,
+          diagnosis: diagnosis || undefined,
+          notes: notes || undefined,
+          items,
+          laborCost,
+          partsCost,
+          totalCost,
+          centroInfo: centroInfo ? {
+            name: centroInfo.name,
+            address: centroInfo.address,
+            phone: centroInfo.phone,
+            email: centroInfo.email,
+            vatNumber: centroInfo.vatNumber,
+            logoUrl: centroInfo.logoUrl,
+          } : undefined,
+          quoteNumber,
+          deviceInfo: deviceInfo || undefined,
+        };
+        
+        console.log("Generating PDF with data:", pdfData);
+        const url = await getQuotePDFDataUrl(pdfData);
+        console.log("PDF generated successfully, URL length:", url?.length);
+        setPdfUrl(url);
+      } catch (error) {
+        console.error("Error generating PDF:", error);
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+    
+    generatePDF();
+  }, [open, customer, deviceType, deviceBrand, deviceModel, issueDescription, diagnosis, notes, items, laborCost, partsCost, totalCost, centroInfo, deviceInfo, quoteNumber]);
+
+  const getPdfData = () => ({
     customerName: customer?.name || "",
     customerEmail: customer?.email || undefined,
     customerPhone: customer?.phone || "",
@@ -120,22 +171,12 @@ export function QuotePDFPreview({
       vatNumber: centroInfo.vatNumber,
       logoUrl: centroInfo.logoUrl,
     } : undefined,
-    quoteNumber: `PRV-${Date.now().toString().slice(-6)}`,
+    quoteNumber,
     deviceInfo: deviceInfo || undefined,
-  };
-
-  useEffect(() => {
-    if (open && customer) {
-      setIsGenerating(true);
-      getQuotePDFDataUrl(pdfData).then(url => {
-        setPdfUrl(url);
-        setIsGenerating(false);
-      }).catch(() => setIsGenerating(false));
-    }
-  }, [open, customer, items, laborCost, totalCost, deviceInfo]);
+  });
 
   const handleDownload = () => {
-    downloadQuotePDF(pdfData);
+    downloadQuotePDF(getPdfData());
   };
 
   const handlePrint = () => {
@@ -171,7 +212,7 @@ export function QuotePDFPreview({
               </div>
             </div>
             <Badge variant="secondary" className="text-xs">
-              {pdfData.quoteNumber}
+              {quoteNumber}
             </Badge>
           </div>
         </div>
