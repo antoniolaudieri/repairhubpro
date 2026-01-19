@@ -116,7 +116,7 @@ export function ProductImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md z-[60]">
+      <DialogContent className="max-w-md z-[100]" style={{ position: 'fixed' }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5 text-primary" />
