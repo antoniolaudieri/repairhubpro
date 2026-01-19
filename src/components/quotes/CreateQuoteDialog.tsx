@@ -636,8 +636,8 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   return (
     <>
       <Dialog open={open && !showPreview} onOpenChange={(o) => { onOpenChange(o); if (!o) resetForm(); }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden">
-          <DialogHeader className="p-4 pb-0 sm:p-6 sm:pb-0">
+        <DialogContent className="max-w-3xl h-[90vh] max-h-[90vh] p-0 flex flex-col overflow-hidden">
+          <DialogHeader className="p-4 pb-2 sm:p-6 sm:pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
               <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
                 <Sparkles className="h-5 w-5 text-primary" />
@@ -649,7 +649,7 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-4 pb-4 sm:px-6 sm:pb-6" style={{ maxHeight: 'calc(90vh - 100px)' }}>
+          <ScrollArea className="flex-1 min-h-0 px-4 sm:px-6">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1084,26 +1084,27 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                 </CardContent>
               </Card>
 
-              {/* Action Buttons */}
-              <div className="flex gap-2 pt-2">
-                <Button 
-                  variant="outline" 
-                  onClick={() => { onOpenChange(false); resetForm(); }}
-                  className="flex-1"
-                >
-                  Annulla
-                </Button>
-                <Button 
-                  onClick={handleShowPreview}
-                  className="flex-1 bg-gradient-to-r from-primary to-primary-glow"
-                  disabled={!selectedCustomer || items.length === 0}
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Anteprima
-                </Button>
-              </div>
             </motion.div>
           </ScrollArea>
+
+          {/* Action Buttons - Fixed at bottom */}
+          <div className="flex gap-2 p-4 sm:p-6 pt-3 border-t shrink-0 bg-background">
+            <Button 
+              variant="outline" 
+              onClick={() => { onOpenChange(false); resetForm(); }}
+              className="flex-1"
+            >
+              Annulla
+            </Button>
+            <Button 
+              onClick={handleShowPreview}
+              className="flex-1 bg-gradient-to-r from-primary to-primary-glow"
+              disabled={!selectedCustomer || items.length === 0}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              Anteprima
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
