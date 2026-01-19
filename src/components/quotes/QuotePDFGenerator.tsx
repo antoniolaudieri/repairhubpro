@@ -443,7 +443,23 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
     const itemTotal = item.quantity * item.unitPrice;
     const isEven = index % 2 === 0;
     const hasImage = itemImages[index] !== null;
-    const rowHeight = hasImage ? 18 : 10;
+    
+    // Split description by newline to separate title from description
+    const descParts = item.description.split('\n');
+    const title = descParts[0] || '';
+    const descText = descParts.slice(1).join(' ').trim();
+    
+    const textX = hasImage ? margin + 22 : margin + 5;
+    const maxDescWidth = hasImage ? 72 : 90;
+    
+    // Calculate row height based on content
+    doc.setFontSize(9);
+    const titleLines = doc.splitTextToSize(title, maxDescWidth);
+    const descLines = descText ? doc.splitTextToSize(descText, maxDescWidth) : [];
+    const totalTextLines = titleLines.length + Math.min(descLines.length, 2); // Max 2 lines for description
+    const textHeight = totalTextLines * 4;
+    const minRowHeight = hasImage ? 18 : 12;
+    const rowHeight = Math.max(minRowHeight, textHeight + 4);
     
     if (isEven) {
       doc.setFillColor(...lightGray);
@@ -459,21 +475,42 @@ export async function generateQuotePDF(data: QuotePDFData): Promise<jsPDF> {
       }
     }
     
-    const textX = hasImage ? margin + 22 : margin + 5;
-    const textY = hasImage ? y + rowHeight / 2 + 2 : y + 7;
-    
+    // Draw title (bold)
+    let textY = y + 5;
     doc.setTextColor(...dark);
-    const maxDescWidth = hasImage ? 72 : 90;
-    const descLines = doc.splitTextToSize(item.description, maxDescWidth);
-    doc.text(descLines[0], textX, textY);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.text(titleLines[0], textX, textY);
+    if (titleLines.length > 1) {
+      textY += 4;
+      doc.text(titleLines[1], textX, textY);
+    }
     
+    // Draw description (normal, gray, smaller)
+    if (descLines.length > 0) {
+      textY += 4;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(...gray);
+      doc.text(descLines[0], textX, textY);
+      if (descLines.length > 1) {
+        textY += 3;
+        const truncatedLine = descLines[1].length > 60 ? descLines[1].substring(0, 57) + '...' : descLines[1];
+        doc.text(truncatedLine, textX, textY);
+      }
+    }
+    
+    // Right side: quantity, unit price, total
+    const rightY = y + rowHeight / 2 + 1;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
     doc.setTextColor(...gray);
-    doc.text(item.quantity.toString(), pageWidth - 72, textY, { align: "center" });
-    doc.text(`€${item.unitPrice.toFixed(2)}`, pageWidth - 48, textY, { align: "center" });
+    doc.text(item.quantity.toString(), pageWidth - 72, rightY, { align: "center" });
+    doc.text(`€${item.unitPrice.toFixed(2)}`, pageWidth - 48, rightY, { align: "center" });
     
     doc.setTextColor(...dark);
     doc.setFont("helvetica", "bold");
-    doc.text(`€${itemTotal.toFixed(2)}`, pageWidth - margin - 5, textY, { align: "right" });
+    doc.text(`€${itemTotal.toFixed(2)}`, pageWidth - margin - 5, rightY, { align: "right" });
     doc.setFont("helvetica", "normal");
     
     y += rowHeight;

@@ -60,7 +60,11 @@ export function ProductImportDialog({
       if (response.success && response.product) {
         setProduct(response.product);
         setEditedPrice(response.product.price.toFixed(2));
-        setEditedDescription(response.product.title);
+        // Combine title and description, separated by newline
+        const fullDescription = response.product.description 
+          ? `${response.product.title}\n${response.product.description}`
+          : response.product.title;
+        setEditedDescription(fullDescription);
         toast.success("Prodotto importato con successo");
       } else {
         setError(response.error || "Impossibile estrarre i dati del prodotto");
