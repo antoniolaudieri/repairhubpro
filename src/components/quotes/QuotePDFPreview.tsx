@@ -236,8 +236,8 @@ export function QuotePDFPreview({
             </Button>
           </div>
           
-          <div className="hidden lg:flex flex-1 bg-muted/30 p-4 overflow-hidden">
-            <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border bg-white">
+          <div className="hidden lg:flex flex-1 bg-muted/30 p-4 overflow-hidden min-h-[500px]">
+            <div className="h-full w-full rounded-xl overflow-hidden shadow-lg border bg-white" style={{ minHeight: '500px' }}>
               {isGenerating ? (
                 <div className="h-full flex items-center justify-center">
                   <div className="text-center">
@@ -248,10 +248,15 @@ export function QuotePDFPreview({
               ) : pdfUrl ? (
                 <iframe
                   src={pdfUrl}
-                  className="w-full h-full min-h-[400px]"
+                  className="w-full h-full"
+                  style={{ minHeight: '500px', height: '100%' }}
                   title="Anteprima PDF"
                 />
-              ) : null}
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <p className="text-sm text-muted-foreground">Nessuna anteprima disponibile</p>
+                </div>
+              )}
             </div>
           </div>
 
