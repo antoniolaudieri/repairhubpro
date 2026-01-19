@@ -116,7 +116,7 @@ export function ProductImportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-md z-[60]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Link2 className="h-5 w-5 text-primary" />
@@ -127,17 +127,19 @@ export function ProductImportDialog({
         <div className="space-y-4">
           {/* URL Input */}
           <div className="space-y-2">
-            <Label>URL del prodotto (Amazon, eBay, ecc.)</Label>
+            <Label>URL del prodotto</Label>
             <div className="flex gap-2">
               <Input
                 placeholder="https://www.amazon.it/dp/..."
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 disabled={isLoading}
+                className="text-sm"
               />
               <Button 
                 onClick={handleScrape} 
                 disabled={isLoading || !url.trim()}
+                size="sm"
                 className="shrink-0"
               >
                 {isLoading ? (
@@ -151,143 +153,101 @@ export function ProductImportDialog({
 
           {/* Error State */}
           {error && (
-            <Card className="border-destructive/50 bg-destructive/5">
-              <CardContent className="p-4 flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-destructive">Errore</p>
-                  <p className="text-sm text-muted-foreground">{error}</p>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="p-3 rounded-lg border border-destructive/50 bg-destructive/5">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                <p className="text-sm text-destructive">{error}</p>
+              </div>
+            </div>
           )}
 
-          {/* Product Preview */}
+          {/* Product Preview - Compact */}
           {product && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardContent className="p-4 space-y-4">
-                {/* Product Header */}
-                <div className="flex gap-4">
-                  {product.imageUrl ? (
-                    <img
-                      src={product.imageUrl}
-                      alt={product.title}
-                      className="w-20 h-20 object-contain rounded-lg bg-white border shadow-sm"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-20 h-20 rounded-lg bg-muted flex items-center justify-center">
-                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                    </div>
+            <div className="p-3 rounded-lg border border-primary/20 bg-primary/5 space-y-3">
+              {/* Product Info Row */}
+              <div className="flex gap-3">
+                {product.imageUrl ? (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.title}
+                    className="w-14 h-14 object-contain rounded bg-white border"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded bg-muted flex items-center justify-center">
+                    <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium line-clamp-2">{product.title}</p>
+                  {product.price > 0 && (
+                    <p className="text-sm font-bold text-primary mt-0.5">
+                      €{product.price.toFixed(2)}
+                    </p>
                   )}
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm line-clamp-2">{product.title}</h3>
-                    {product.brand && (
-                      <Badge variant="secondary" className="mt-1 text-xs">
-                        {product.brand}
-                      </Badge>
-                    )}
-                    {product.price > 0 && (
-                      <p className="text-lg font-bold text-primary mt-1">
-                        {product.currency}{product.price.toFixed(2)}
-                      </p>
-                    )}
-                  </div>
+                </div>
+              </div>
+
+              {/* Editable Fields - Compact Grid */}
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs">Descrizione</Label>
+                  <Textarea
+                    value={editedDescription}
+                    onChange={(e) => setEditedDescription(e.target.value)}
+                    placeholder="Descrizione..."
+                    rows={2}
+                    className="text-sm mt-1"
+                  />
                 </div>
 
-                {/* Source Link */}
-                <a
-                  href={product.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-                >
-                  <ExternalLink className="h-3 w-3" />
-                  Vedi prodotto originale
-                </a>
-
-                {/* Editable Fields */}
-                <div className="space-y-3 pt-2 border-t">
-                  <div className="space-y-2">
-                    <Label>Descrizione nel preventivo</Label>
-                    <Textarea
-                      value={editedDescription}
-                      onChange={(e) => setEditedDescription(e.target.value)}
-                      placeholder="Descrizione del prodotto..."
-                      rows={2}
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-xs">Prezzo (€)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editedPrice}
+                      onChange={(e) => setEditedPrice(e.target.value)}
+                      className="text-sm mt-1"
+                      placeholder="0.00"
                     />
                   </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>Prezzo (€)</Label>
-                      <div className="relative">
-                        <Euro className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={editedPrice}
-                          onChange={(e) => setEditedPrice(e.target.value)}
-                          className="pl-9"
-                          placeholder="0.00"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Quantità</Label>
-                      <Input
-                        type="number"
-                        min="1"
-                        value={quantity}
-                        onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
-                      />
-                    </div>
+                  <div>
+                    <Label className="text-xs">Quantità</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={quantity}
+                      onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                      className="text-sm mt-1"
+                    />
                   </div>
                 </div>
+              </div>
 
-                {/* Actions */}
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleReset}
-                    className="flex-1"
-                  >
-                    Cerca altro
-                  </Button>
-                  <Button
-                    onClick={handleAddToQuote}
-                    className="flex-1 bg-gradient-to-r from-primary to-primary/80"
-                  >
-                    <Check className="h-4 w-4 mr-2" />
-                    Aggiungi
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+              {/* Actions */}
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" size="sm" onClick={handleReset} className="flex-1">
+                  Cerca altro
+                </Button>
+                <Button size="sm" onClick={handleAddToQuote} className="flex-1">
+                  <Check className="h-4 w-4 mr-1" />
+                  Aggiungi
+                </Button>
+              </div>
+            </div>
           )}
 
-          {/* Help Text */}
+          {/* Help Text - Compact */}
           {!product && !error && !isLoading && (
-            <Card className="bg-muted/50">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-3">
-                  <Package className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
-                  <div className="text-sm text-muted-foreground">
-                    <p className="font-medium mb-1">Come funziona:</p>
-                    <ol className="list-decimal list-inside space-y-1">
-                      <li>Incolla il link del prodotto da un sito e-commerce</li>
-                      <li>I dati verranno estratti automaticamente</li>
-                      <li>Modifica il prezzo se necessario</li>
-                      <li>Aggiungi il prodotto al preventivo</li>
-                    </ol>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div className="p-3 rounded-lg bg-muted/50 text-xs text-muted-foreground">
+              <p className="font-medium mb-1">Incolla un link da Amazon, eBay o altri siti.</p>
+              <p>I dati verranno estratti automaticamente.</p>
+            </div>
           )}
         </div>
       </DialogContent>
