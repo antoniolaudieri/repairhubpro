@@ -34,7 +34,8 @@ import {
   Wrench,
   Headphones,
   Save,
-  Link2
+  Link2,
+  PenLine
 } from "lucide-react";
 import { ProductImportDialog } from "./ProductImportDialog";
 import { motion, AnimatePresence } from "framer-motion";
@@ -161,6 +162,10 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
   const [utopyaSearchLoading, setUtopyaSearchLoading] = useState(false);
   const [inventorySearch, setInventorySearch] = useState("");
   
+  // Manual item form
+  const [manualDescription, setManualDescription] = useState("");
+  const [manualPrice, setManualPrice] = useState("");
+  const [manualType, setManualType] = useState<'labor' | 'service' | 'part'>('labor');
   const [isSending, setIsSending] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [centroInfo, setCentroInfo] = useState<CentroInfo | null>(null);
@@ -399,6 +404,31 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
     }]);
   };
 
+  const addManualItem = () => {
+    if (!manualDescription.trim()) {
+      toast.error("Inserisci una descrizione");
+      return;
+    }
+    const price = parseFloat(manualPrice) || 0;
+    if (price <= 0) {
+      toast.error("Inserisci un prezzo valido");
+      return;
+    }
+    
+    setItems([...items, {
+      id: `manual-${Date.now()}`,
+      description: manualDescription.trim(),
+      quantity: 1,
+      unitPrice: price,
+      total: price,
+      type: manualType,
+    }]);
+    
+    setManualDescription("");
+    setManualPrice("");
+    toast.success("Voce aggiunta");
+  };
+
   const removeItem = (id: string) => {
     setItems(items.filter(i => i.id !== id));
   };
@@ -460,6 +490,9 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
     setUtopyaSearchQuery("");
     setUtopyaSearchResults([]);
     setInventorySearch("");
+    setManualDescription("");
+    setManualPrice("");
+    setManualType('labor');
   };
 
   const handleShowPreview = () => {
@@ -854,8 +887,12 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                     <span className="hidden sm:inline">Importa Prodotto da Link (Amazon, eBay...)</span>
                   </Button>
 
-                  <Tabs defaultValue="utopya" className="w-full">
-                    <TabsList className="grid w-full grid-cols-4 h-auto">
+                  <Tabs defaultValue="manual" className="w-full">
+                    <TabsList className="grid w-full grid-cols-5 h-auto">
+                      <TabsTrigger value="manual" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1 sm:py-1.5">
+                        <PenLine className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
+                        <span className="hidden sm:inline">Manuale</span>
+                      </TabsTrigger>
                       <TabsTrigger value="utopya" className="text-[10px] sm:text-xs px-1 sm:px-2 py-1 sm:py-1.5">
                         <Search className="h-2.5 w-2.5 sm:h-3 sm:w-3 sm:mr-1" />
                         <span className="hidden sm:inline">Utopya</span>
@@ -873,6 +910,69 @@ export function CreateQuoteDialog({ open, onOpenChange, centroId, onSuccess }: C
                         <span className="hidden sm:inline">Servizi</span>
                       </TabsTrigger>
                     </TabsList>
+
+                    {/* Manual Entry Tab */}
+                    <TabsContent value="manual" className="mt-2 sm:mt-3 space-y-2">
+                      <div className="grid grid-cols-3 gap-1">
+                        <Button
+                          type="button"
+                          variant={manualType === 'labor' ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setManualType('labor')}
+                          className="h-7 text-[10px] sm:text-xs"
+                        >
+                          <Wrench className="h-2.5 w-2.5 mr-0.5 sm:mr-1" />
+                          Manodopera
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={manualType === 'service' ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setManualType('service')}
+                          className="h-7 text-[10px] sm:text-xs"
+                        >
+                          <Headphones className="h-2.5 w-2.5 mr-0.5 sm:mr-1" />
+                          Servizio
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={manualType === 'part' ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setManualType('part')}
+                          className="h-7 text-[10px] sm:text-xs"
+                        >
+                          <Package className="h-2.5 w-2.5 mr-0.5 sm:mr-1" />
+                          Ricambio
+                        </Button>
+                      </div>
+                      <Input
+                        placeholder="Descrizione (es. Configurazione sistema, Setup email...)"
+                        value={manualDescription}
+                        onChange={(e) => setManualDescription(e.target.value)}
+                        className="h-8 sm:h-9 text-xs sm:text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            placeholder="Prezzo €"
+                            value={manualPrice}
+                            onChange={(e) => setManualPrice(e.target.value)}
+                            className="h-8 sm:h-9 text-xs sm:text-sm"
+                            step={0.01}
+                            min={0}
+                          />
+                        </div>
+                        <Button 
+                          onClick={addManualItem}
+                          size="sm"
+                          className="h-8 sm:h-9 px-3"
+                        >
+                          <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                          Aggiungi
+                        </Button>
+                      </div>
+                    </TabsContent>
 
                     <TabsContent value="utopya" className="mt-2 sm:mt-3 space-y-1.5 sm:space-y-2">
                       <div className="flex gap-1.5 sm:gap-2">
