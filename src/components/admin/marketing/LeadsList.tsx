@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { MarketingLead } from "@/pages/admin/AdminMarketing";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -29,7 +31,8 @@ import {
   Calendar,
   ChevronRight,
   Filter,
-  Trash2
+  Trash2,
+  Search
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -79,6 +82,20 @@ export function LeadsList({
   onDeleteAll,
   isDeletingAll,
 }: LeadsListProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter leads by search query
+  const filteredLeads = leads.filter(lead => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      lead.business_name?.toLowerCase().includes(query) ||
+      lead.email?.toLowerCase().includes(query) ||
+      lead.phone?.toLowerCase().includes(query) ||
+      lead.address?.toLowerCase().includes(query)
+    );
+  });
+
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -91,8 +108,17 @@ export function LeadsList({
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
+      {/* Search and Filters */}
       <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca lead..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <div className="flex items-center gap-2">
           <Filter className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">Filtra:</span>
@@ -129,10 +155,10 @@ export function LeadsList({
         
         <div className="flex items-center gap-2 ml-auto">
           <span className="text-sm text-muted-foreground">
-            {leads.length} lead
+            {filteredLeads.length} lead
           </span>
           
-          {leads.length > 0 && onDeleteAll && (
+          {filteredLeads.length > 0 && onDeleteAll && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button 
@@ -149,7 +175,7 @@ export function LeadsList({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Eliminare tutti i lead?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Questa azione eliminerà permanentemente tutti i {leads.length} lead.
+                    Questa azione eliminerà permanentemente tutti i {filteredLeads.length} lead.
                     Non sarà possibile annullare questa operazione.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
@@ -169,13 +195,13 @@ export function LeadsList({
       </div>
 
       {/* Lead cards */}
-      {leads.length === 0 ? (
+      {filteredLeads.length === 0 ? (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground">Nessun lead trovato</p>
         </Card>
       ) : (
         <div className="space-y-3">
-          {leads.map((lead, index) => {
+          {filteredLeads.map((lead, index) => {
             const status = statusLabels[lead.status] || statusLabels.new;
             const type = typeLabels[lead.business_type] || typeLabels.altro;
             const TypeIcon = type.icon;
