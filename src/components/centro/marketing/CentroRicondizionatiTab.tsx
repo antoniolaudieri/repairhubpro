@@ -270,6 +270,24 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                     <TableCell className="text-sm text-muted-foreground">
                       {c.sent_at ? format(new Date(c.sent_at), "dd MMM yyyy", { locale: it }) : "-"}
                     </TableCell>
+                    <TableCell className="text-right">
+                      {c.status === "sent" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          disabled={resendingId === c.id}
+                          onClick={() => handleResend(c)}
+                        >
+                          {resendingId === c.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                          Reinvia
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
