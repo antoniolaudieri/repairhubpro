@@ -252,6 +252,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                   <TableHead className="text-center">Aperti</TableHead>
                   <TableHead className="text-center">Click</TableHead>
                   <TableHead>Data</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
