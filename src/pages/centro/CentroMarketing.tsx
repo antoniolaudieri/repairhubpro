@@ -9,10 +9,11 @@ import { LoyaltyEmailCampaign } from "@/components/marketing/LoyaltyEmailCampaig
 import { EmailCampaignAnalytics } from "@/components/marketing/EmailCampaignAnalytics";
 import { PromoManager } from "@/components/marketing/PromoManager";
 import WhatsAppCampaign from "@/components/marketing/WhatsAppCampaign";
+import { CentroRicondizionatiTab } from "@/components/centro/marketing/CentroRicondizionatiTab";
 import { useLoyaltyProgramSettings } from "@/hooks/useLoyaltyProgramSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag, Settings, UserCheck, Send, MessageSquare } from "lucide-react";
+import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag, Settings, UserCheck, Send, MessageSquare, Smartphone } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LoyaltyStats {
@@ -214,7 +215,7 @@ export default function CentroMarketing() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="loyalty" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 max-w-lg">
+          <TabsList className="grid w-full grid-cols-5 max-w-2xl">
             <TabsTrigger value="loyalty" className="flex items-center gap-1">
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">Fedeltà</span>
@@ -230,6 +231,10 @@ export default function CentroMarketing() {
             <TabsTrigger value="promos" className="flex items-center gap-1">
               <Tag className="h-4 w-4" />
               <span className="hidden sm:inline">Promo</span>
+            </TabsTrigger>
+            <TabsTrigger value="ricondizionati" className="flex items-center gap-1">
+              <Smartphone className="h-4 w-4" />
+              <span className="hidden sm:inline">Ricondizionati</span>
             </TabsTrigger>
           </TabsList>
 
@@ -304,6 +309,10 @@ export default function CentroMarketing() {
 
           <TabsContent value="promos" className="mt-6">
             <PromoManager centroId={centroId} />
+          </TabsContent>
+
+          <TabsContent value="ricondizionati" className="mt-6">
+            <CentroRicondizionatiTab centroId={centroId} />
           </TabsContent>
         </Tabs>
       </div>
