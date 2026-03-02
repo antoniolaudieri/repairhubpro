@@ -562,7 +562,72 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
         </CardContent>
       </Card>
 
-      {/* Create Campaign Dialog */}
+      {/* WhatsApp Templates */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-green-600" />
+            Template WhatsApp
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Copia il testo e incollalo su WhatsApp per inviare la promo ai tuoi clienti
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {WHATSAPP_TEMPLATES.map((tpl) => (
+            <div key={tpl.id} className="border rounded-lg overflow-hidden">
+              <div
+                className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => setWaPreviewId(waPreviewId === tpl.id ? null : tpl.id)}
+              >
+                <p className="font-medium text-sm">{tpl.name}</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const text = tpl.buildText("[Nome Cliente]");
+                      navigator.clipboard.writeText(text).then(() => {
+                        setCopiedWaId(tpl.id);
+                        toast.success("Testo copiato! Incollalo su WhatsApp");
+                        setTimeout(() => setCopiedWaId(null), 2000);
+                      }).catch(() => toast.error("Copia fallita"));
+                    }}
+                  >
+                    {copiedWaId === tpl.id ? (
+                      <><Check className="h-3 w-3 text-green-600" /> Copiato!</>
+                    ) : (
+                      <><Copy className="h-3 w-3" /> Copia Testo</>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setWaPreviewId(waPreviewId === tpl.id ? null : tpl.id);
+                    }}
+                  >
+                    <Eye className="h-3 w-3" /> {waPreviewId === tpl.id ? "Nascondi" : "Anteprima"}
+                  </Button>
+                </div>
+              </div>
+              {waPreviewId === tpl.id && (
+                <div className="border-t bg-muted/20 p-4">
+                  <pre className="whitespace-pre-wrap text-sm text-foreground font-sans leading-relaxed">
+                    {tpl.buildText("Mario Rossi")}
+                  </pre>
+                </div>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
