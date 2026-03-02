@@ -87,6 +87,8 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
   // Filter
   const filtered = useMemo(() => {
     switch (filter) {
+      case "delivered": return recipients.filter((r) => r.sent_at);
+      case "not_delivered": return recipients.filter((r) => !r.sent_at);
       case "opened": return recipients.filter((r) => r.opened_at);
       case "not_opened": return recipients.filter((r) => !r.opened_at);
       case "clicked": return recipients.filter((r) => r.clicked_at);
