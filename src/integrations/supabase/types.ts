@@ -4786,6 +4786,8 @@ export type Database = {
           centro_id: string | null
           click_count: number | null
           clicked_at: string | null
+          copied_coupon_at: string | null
+          copy_count: number | null
           created_at: string | null
           customer_email: string
           customer_id: string | null
@@ -4801,6 +4803,8 @@ export type Database = {
           centro_id?: string | null
           click_count?: number | null
           clicked_at?: string | null
+          copied_coupon_at?: string | null
+          copy_count?: number | null
           created_at?: string | null
           customer_email: string
           customer_id?: string | null
@@ -4816,6 +4820,8 @@ export type Database = {
           centro_id?: string | null
           click_count?: number | null
           clicked_at?: string | null
+          copied_coupon_at?: string | null
+          copy_count?: number | null
           created_at?: string | null
           customer_email?: string
           customer_id?: string | null
@@ -4864,6 +4870,7 @@ export type Database = {
           status: string
           title: string
           total_clicked: number | null
+          total_copied: number | null
           total_opened: number | null
           total_sent: number | null
           updated_at: string | null
@@ -4881,6 +4888,7 @@ export type Database = {
           status?: string
           title: string
           total_clicked?: number | null
+          total_copied?: number | null
           total_opened?: number | null
           total_sent?: number | null
           updated_at?: string | null
@@ -4898,6 +4906,7 @@ export type Database = {
           status?: string
           title?: string
           total_clicked?: number | null
+          total_copied?: number | null
           total_opened?: number | null
           total_sent?: number | null
           updated_at?: string | null
