@@ -242,6 +242,10 @@ export default function AdminMarketing() {
             <TemplatesManager />
           </TabsContent>
 
+          <TabsContent value="ricondizionati" className="space-y-4">
+            <RicondizionatiCampaignsTab />
+          </TabsContent>
+
           <TabsContent value="analytics" className="space-y-4">
             <AnalyticsTab />
           </TabsContent>

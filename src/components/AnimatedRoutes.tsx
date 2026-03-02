@@ -126,6 +126,9 @@ export const AnimatedRoutes = () => {
         <Route path="/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />
         <Route path="/customer/device-health" element={<ProtectedRoute><PageTransition><DeviceHealthQuiz /></PageTransition></ProtectedRoute>} />
         
+        {/* Promo Redirect for Ricondizionati campaigns */}
+        <Route path="/promo-redirect" element={<PageTransition><PromoRedirect /></PageTransition>} />
+        
         {/* Software Protection Subscription */}
         <Route path="/software-protection" element={<PageTransition><SoftwareProtection /></PageTransition>} />
         
