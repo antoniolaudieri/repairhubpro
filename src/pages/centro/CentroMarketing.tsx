@@ -310,6 +310,10 @@ export default function CentroMarketing() {
           <TabsContent value="promos" className="mt-6">
             <PromoManager centroId={centroId} />
           </TabsContent>
+
+          <TabsContent value="ricondizionati" className="mt-6">
+            <CentroRicondizionatiTab centroId={centroId} />
+          </TabsContent>
         </Tabs>
       </div>
     </CentroLayout>
