@@ -173,3 +173,6 @@ verify_jwt = false
 
 [functions.assign-trial-role]
 verify_jwt = false
+
+[functions.ricondizionati-track]
+verify_jwt = false
