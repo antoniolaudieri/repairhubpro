@@ -176,6 +176,51 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
     }
   };
 
+  const handleResend = async (campaign: any) => {
+    if (!centroId) return;
+    setResendingId(campaign.id);
+    try {
+      // Fetch recipients for this campaign
+      const { data: recipients, error } = await supabase
+        .from("ricondizionati_campaign_recipients")
+        .select("*")
+        .eq("campaign_id", campaign.id)
+        .eq("centro_id", centroId);
+      if (error) throw error;
+      if (!recipients || recipients.length === 0) {
+        toast.error("Nessun destinatario trovato per questa campagna");
+        return;
+      }
+
+      const tpl = EMAIL_TEMPLATES.find(t => t.id === (campaign.template_id || "promo_standard")) || EMAIL_TEMPLATES[0];
+      let sentCount = 0;
+
+      for (const r of recipients) {
+        const trackBase = `${SUPABASE_URL}/functions/v1/ricondizionati-track`;
+        const openPixel = `${trackBase}?a=open&t=${r.tracking_id}`;
+        const clickLink = `${window.location.origin}/promo-redirect?t=${r.tracking_id}`;
+        const html = tpl.buildHtml(r.customer_name || "Cliente", clickLink, openPixel);
+
+        await supabase.functions.invoke("send-email-smtp", {
+          body: {
+            centro_id: centroId,
+            to: r.customer_email,
+            subject: tpl.subject,
+            html,
+            marketing: true,
+          },
+        });
+        sentCount++;
+      }
+
+      toast.success(`Campagna reinviata a ${sentCount} destinatari!`);
+    } catch (err: any) {
+      toast.error("Errore reinvio: " + (err.message || "Fallito"));
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
