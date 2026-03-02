@@ -90,6 +90,7 @@ import LoyaltySuccess from "@/pages/LoyaltySuccess";
 import InstallCentro from "@/pages/InstallCentro";
 import DeviceHealthQuiz from "@/pages/customer/DeviceHealthQuiz";
 import Disiscrizione from "@/pages/Disiscrizione";
+import PromoRedirect from "@/pages/PromoRedirect";
 import DeviceMonitor from "@/pages/DeviceMonitor";
 import SoftwareProtection from "@/pages/SoftwareProtection";
 
