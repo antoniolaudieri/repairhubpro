@@ -567,6 +567,8 @@ export default function UsatoCatalog() {
             </motion.div>
           </section>
         )}
+        </>
+        )}
       </main>
 
       <NotifyInterestDialog 
