@@ -14,7 +14,8 @@ import { FunnelTab } from "@/components/admin/marketing/FunnelTab";
 import { EmailQueueTab } from "@/components/admin/marketing/EmailQueueTab";
 import { AnalyticsTab } from "@/components/admin/marketing/AnalyticsTab";
 import { TemplatesManager } from "@/components/admin/marketing/TemplatesManager";
-import { Target, Users, MessageSquare, Plus, Zap, MapPin, Mail, Filter, BarChart3, Send } from "lucide-react";
+import { RicondizionatiCampaignsTab } from "@/components/admin/marketing/RicondizionatiCampaignsTab";
+import { Target, Users, MessageSquare, Plus, Zap, MapPin, Mail, Filter, BarChart3, Send, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -192,6 +193,10 @@ export default function AdminMarketing() {
               <MessageSquare className="h-4 w-4" />
               Template
             </TabsTrigger>
+            <TabsTrigger value="ricondizionati" className="gap-2">
+              <Smartphone className="h-4 w-4" />
+              Promo Ricondizionati
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
@@ -235,6 +240,10 @@ export default function AdminMarketing() {
 
           <TabsContent value="templates" className="space-y-4">
             <TemplatesManager />
+          </TabsContent>
+
+          <TabsContent value="ricondizionati" className="space-y-4">
+            <RicondizionatiCampaignsTab />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-4">
