@@ -12,6 +12,7 @@ export default function PromoRedirect() {
   const [searchParams] = useSearchParams();
   const [copied, setCopied] = useState(false);
   const [redirectPaused, setRedirectPaused] = useState(false);
+  const [tracked, setTracked] = useState(false);
   const trackingId = searchParams.get("t");
 
   const copyToClipboard = useCallback(async () => {
