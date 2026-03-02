@@ -2,94 +2,20 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Smartphone,
-  Tablet,
-  Laptop,
-  Gamepad2,
-  Watch,
-  Headphones,
-  ExternalLink,
   Copy,
   Check,
   Tag,
   Gift,
   ShieldCheck,
+  ExternalLink,
   Sparkles,
 } from "lucide-react";
 
 const COUPON_CODE = "EVLZBANT";
 const BASE_URL = "https://ricondizionati.evolutionlevel.it";
-
-const categories = [
-  {
-    id: "iphone",
-    label: "iPhone",
-    icon: Smartphone,
-    url: `${BASE_URL}/collections/iphone`,
-    description: "iPhone ricondizionati con garanzia 12 mesi",
-    color: "from-slate-600 to-slate-800",
-  },
-  {
-    id: "samsung",
-    label: "Samsung Galaxy",
-    icon: Smartphone,
-    url: `${BASE_URL}/collections/samsung`,
-    description: "Galaxy S e A Series ricondizionati",
-    color: "from-blue-600 to-blue-800",
-  },
-  {
-    id: "ipad",
-    label: "iPad",
-    icon: Tablet,
-    url: `${BASE_URL}/collections/ipad`,
-    description: "iPad ricondizionati per ogni esigenza",
-    color: "from-gray-600 to-gray-800",
-  },
-  {
-    id: "macbook",
-    label: "MacBook",
-    icon: Laptop,
-    url: `${BASE_URL}/collections/macbook`,
-    description: "MacBook Air e Pro ricondizionati",
-    color: "from-zinc-600 to-zinc-800",
-  },
-  {
-    id: "console",
-    label: "Console",
-    icon: Gamepad2,
-    url: `${BASE_URL}/collections/console`,
-    description: "PlayStation, Xbox, Nintendo ricondizionate",
-    color: "from-indigo-600 to-indigo-800",
-  },
-  {
-    id: "smartwatch",
-    label: "Smartwatch",
-    icon: Watch,
-    url: `${BASE_URL}/collections/smartwatch`,
-    description: "Apple Watch e smartwatch ricondizionati",
-    color: "from-emerald-600 to-emerald-800",
-  },
-  {
-    id: "airpods",
-    label: "AirPods & Audio",
-    icon: Headphones,
-    url: `${BASE_URL}/collections/airpods`,
-    description: "AirPods e cuffie ricondizionate",
-    color: "from-violet-600 to-violet-800",
-  },
-  {
-    id: "tutti",
-    label: "Tutti i Prodotti",
-    icon: Sparkles,
-    url: BASE_URL,
-    description: "Scopri l'intero catalogo ricondizionati",
-    color: "from-primary to-primary/80",
-  },
-];
 
 export function RicondizionatiSection() {
   const [copiedCoupon, setCopiedCoupon] = useState(false);
@@ -105,22 +31,19 @@ export function RicondizionatiSection() {
     }
   };
 
-  const handleCategoryClick = async (category: typeof categories[0]) => {
-    // Track click
+  const handleOpenShop = async () => {
     try {
       await supabase.from("affiliate_clicks" as any).insert({
         affiliate_program: "evolution_level",
         coupon_code: COUPON_CODE,
-        category_clicked: category.id,
-        destination_url: category.url,
+        category_clicked: "catalogo_completo",
+        destination_url: BASE_URL,
         user_agent: navigator.userAgent,
       });
     } catch (e) {
       console.error("Click tracking error:", e);
     }
-
-    // Open in new tab
-    window.open(category.url, "_blank", "noopener,noreferrer");
+    window.open(BASE_URL, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -198,83 +121,26 @@ export function RicondizionatiSection() {
         </Card>
       </motion.div>
 
-      {/* Embedded Partner Site */}
+      {/* Big CTA to open shop */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
+        className="flex flex-col items-center gap-4"
       >
-        <Card className="overflow-hidden border-border/50">
-          <CardContent className="p-0">
-            <iframe
-              src="https://ricondizionati.evolutionlevel.it"
-              title="Catalogo Ricondizionati Evolution Level"
-              className="w-full border-0 rounded-lg"
-              style={{ height: "75vh", minHeight: "500px" }}
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation-by-user-activation"
-              loading="lazy"
-              onError={() => {}}
-            />
-          </CardContent>
-        </Card>
-        <p className="text-xs text-muted-foreground text-center mt-2">
-          Se il catalogo non si carica,{" "}
-          <a
-            href="https://ricondizionati.evolutionlevel.it"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline hover:text-primary/80"
-          >
-            aprilo in una nuova scheda
-          </a>
+        <Button
+          size="lg"
+          onClick={handleOpenShop}
+          className="gap-3 text-lg px-8 py-6 rounded-2xl shadow-lg hover:shadow-xl transition-all"
+        >
+          <Sparkles className="h-5 w-5" />
+          Sfoglia il Catalogo Ricondizionati
+          <ExternalLink className="h-5 w-5" />
+        </Button>
+        <p className="text-sm text-muted-foreground text-center max-w-md">
+          Verrai reindirizzato al sito Evolution Level. Ricorda di applicare il coupon <strong className="text-primary">{COUPON_CODE}</strong> al carrello per lo sconto di €10!
         </p>
       </motion.div>
-
-      {/* Categories Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-        {categories.map((category, index) => {
-          const Icon = category.icon;
-          return (
-            <motion.div
-              key={category.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05, duration: 0.4 }}
-            >
-              <Card
-                className="group cursor-pointer overflow-hidden border-border/50 hover:border-primary/40 hover:shadow-lg transition-all duration-300 h-full"
-                onClick={() => handleCategoryClick(category)}
-              >
-                <CardContent className="p-0 h-full flex flex-col">
-                  {/* Icon Header */}
-                  <div
-                    className={`bg-gradient-to-br ${category.color} p-6 sm:p-8 flex items-center justify-center`}
-                  >
-                    <Icon className="h-12 w-12 sm:h-16 sm:w-16 text-white opacity-90 group-hover:scale-110 transition-transform duration-300" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="p-4 flex flex-col flex-1">
-                    <h3 className="font-bold text-foreground mb-1 group-hover:text-primary transition-colors">
-                      {category.label}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mb-3 flex-1">
-                      {category.description}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <Badge variant="secondary" className="text-xs gap-1">
-                        <Tag className="h-3 w-3" />
-                        -€10
-                      </Badge>
-                      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
 
       {/* How it works */}
       <motion.div
@@ -287,7 +153,7 @@ export function RicondizionatiSection() {
             <h3 className="font-bold text-foreground mb-4 text-center">Come funziona?</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { step: "1", title: "Scegli il prodotto", desc: "Sfoglia le categorie e trova il ricondizionato perfetto per te" },
+                { step: "1", title: "Scegli il prodotto", desc: "Sfoglia il catalogo e trova il ricondizionato perfetto per te" },
                 { step: "2", title: "Applica il coupon", desc: `Inserisci il codice ${COUPON_CODE} al checkout per lo sconto di €10` },
                 { step: "3", title: "Ricevi a casa", desc: "Spedizione veloce con garanzia 12 mesi inclusa" },
               ].map((item) => (
