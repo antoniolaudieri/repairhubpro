@@ -112,6 +112,8 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
 
   const filterButtons: { key: FilterType; label: string; count: number; icon: any }[] = [
     { key: "all", label: "Tutti", count: stats.total, icon: Users },
+    { key: "delivered", label: "Recapitati", count: stats.delivered, icon: CheckCircle },
+    { key: "not_delivered", label: "Non recapitati", count: stats.total - stats.delivered, icon: Send },
     { key: "opened", label: "Aperti", count: stats.opened, icon: Eye },
     { key: "not_opened", label: "Non aperti", count: stats.total - stats.opened, icon: Mail },
     { key: "clicked", label: "Click", count: stats.clicked, icon: MousePointer },
