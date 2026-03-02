@@ -79,6 +79,7 @@ export default function UsatoCatalog() {
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
   const [brands, setBrands] = useState<string[]>([]);
   const [selectedBrand, setSelectedBrand] = useState("all");
+  const [activeTab, setActiveTab] = useState<"usati" | "ricondizionati">("usati");
 
   useEffect(() => {
     fetchDevices();
