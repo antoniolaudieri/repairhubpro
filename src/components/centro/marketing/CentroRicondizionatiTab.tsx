@@ -67,6 +67,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
       return data || [];
     },
     enabled: !!centroId,
+    refetchInterval: 10000, // aggiorna ogni 10 secondi
   });
 
   // Fetch customers of this centro with email
