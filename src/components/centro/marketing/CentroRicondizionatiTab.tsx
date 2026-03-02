@@ -154,8 +154,15 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
 
   const selectedTemplate = EMAIL_TEMPLATES.find(t => t.id === templateId) || EMAIL_TEMPLATES[0];
 
+  const buildHtmlForTemplate = (tpl: typeof EMAIL_TEMPLATES[0], name: string, clickLink: string, openPixel: string) => {
+    if (tpl.id === "custom_images") {
+      return buildCustomImagesHtml(name, clickLink, openPixel, customImages);
+    }
+    return tpl.buildHtml(name, clickLink, openPixel);
+  };
+
   const showPreview = (tpl = selectedTemplate) => {
-    const html = tpl.buildHtml("Mario Rossi", "#", "");
+    const html = buildHtmlForTemplate(tpl, "Mario Rossi", "#", "");
     setPreviewHtml(html);
     setPreviewOpen(true);
   };
