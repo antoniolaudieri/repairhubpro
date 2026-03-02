@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/dialog";
 import { BookingWizard, CustomerData } from "@/components/booking/BookingWizard";
 import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
+import { RicondizionatiSection } from "@/components/usato/RicondizionatiSection";
 import { ScrollingBrandLogos } from "@/components/display/ScrollingBrandLogos";
 import { format } from "date-fns";
 
