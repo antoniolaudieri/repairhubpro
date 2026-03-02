@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     // Get recipient
     const { data: recipient, error } = await supabase
       .from('ricondizionati_campaign_recipients')
-      .select('id, campaign_id, opened_at, open_count, clicked_at, click_count')
+      .select('id, campaign_id, opened_at, open_count, clicked_at, click_count, copied_coupon_at, copy_count')
       .eq('tracking_id', trackingId)
       .single();
 
