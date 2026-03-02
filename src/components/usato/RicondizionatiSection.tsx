@@ -272,9 +272,9 @@ export function RicondizionatiSection() {
             <h3 className="font-bold text-foreground mb-4 text-center">Come funziona?</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
-                { step: "1", title: "Scegli il prodotto", desc: "Sfoglia le categorie e trova il ricondizionato perfetto per te" },
-                { step: "2", title: "Applica il coupon", desc: `Inserisci il codice ${COUPON_CODE} al checkout per lo sconto di €10` },
-                { step: "3", title: "Ricevi a casa", desc: "Spedizione gratuita con garanzia 24 mesi e sostituzione diretta" },
+                { step: "1", title: "Clicca il pulsante", desc: "Premi 'Apri il Catalogo' e il coupon viene copiato in automatico" },
+                { step: "2", title: "Scegli il prodotto", desc: "Sfoglia il catalogo e aggiungi al carrello il ricondizionato che preferisci" },
+                { step: "3", title: "Incolla il coupon", desc: `Al checkout incolla il codice ${COUPON_CODE} per ottenere subito €10 di sconto` },
               ].map((item) => (
                 <div key={item.step} className="text-center">
                   <div className="w-10 h-10 rounded-full bg-gradient-primary text-primary-foreground font-bold flex items-center justify-center mx-auto mb-3 text-lg">
