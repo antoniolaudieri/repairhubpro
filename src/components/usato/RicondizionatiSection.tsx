@@ -241,51 +241,25 @@ export function RicondizionatiSection() {
         ))}
       </div>
 
-      {/* Categories Grid */}
-      <div>
-        <h3 className="font-bold text-foreground mb-4 text-lg">Scegli la categoria</h3>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-          {categories.map((category, index) => {
-            const Icon = category.icon;
-            return (
-              <motion.div
-                key={category.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + index * 0.05, duration: 0.4 }}
-              >
-                <Card
-                  className="group cursor-pointer overflow-hidden border-border/50 hover:border-primary/40 hover:shadow-lg transition-all duration-300 h-full"
-                  onClick={() => handleCategoryClick(category)}
-                >
-                  <CardContent className="p-0 h-full flex flex-col">
-                    <div
-                      className={`bg-gradient-to-br ${category.color} p-6 sm:p-8 flex items-center justify-center`}
-                    >
-                      <Icon className="h-12 w-12 sm:h-14 sm:w-14 text-white opacity-90 group-hover:scale-110 transition-transform duration-300" />
-                    </div>
-                    <div className="p-4 flex flex-col flex-1">
-                      <h3 className="font-bold text-foreground mb-1 group-hover:text-primary transition-colors">
-                        {category.label}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mb-3 flex-1">
-                        {category.description}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary" className="text-xs gap-1">
-                          <Tag className="h-3 w-3" />
-                          -€10
-                        </Badge>
-                        <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
+      {/* CTA Button */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="text-center"
+      >
+        <Button
+          size="lg"
+          onClick={handleOpenShop}
+          className="gap-3 text-lg px-10 py-7 rounded-2xl bg-gradient-primary hover:opacity-90 shadow-lg"
+        >
+          <ExternalLink className="h-6 w-6" />
+          Apri il Catalogo Ricondizionati
+        </Button>
+        <p className="text-xs text-muted-foreground mt-3">
+          Il coupon <strong>EVLZBANT</strong> verrà copiato automaticamente nei tuoi appunti
+        </p>
+      </motion.div>
 
       {/* How it works */}
       <motion.div
