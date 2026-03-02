@@ -225,22 +225,37 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
       const tpl = EMAIL_TEMPLATES.find(t => t.id === (campaign.template_id || "promo_standard")) || EMAIL_TEMPLATES[0];
       let sentCount = 0;
 
-      for (const r of recipients) {
+      for (let i = 0; i < recipients.length; i++) {
+        const r = recipients[i];
         const trackBase = `${SUPABASE_URL}/functions/v1/ricondizionati-track`;
         const openPixel = `${trackBase}?a=open&t=${r.tracking_id}`;
         const clickLink = `${window.location.origin}/promo-redirect?t=${r.tracking_id}`;
         const html = tpl.buildHtml(r.customer_name || "Cliente", clickLink, openPixel);
 
-        await supabase.functions.invoke("send-email-smtp", {
-          body: {
-            centro_id: centroId,
-            to: r.customer_email,
-            subject: tpl.subject,
-            html,
-            marketing: true,
-          },
-        });
-        sentCount++;
+        try {
+          await supabase.functions.invoke("send-email-smtp", {
+            body: {
+              centro_id: centroId,
+              to: r.customer_email,
+              subject: tpl.subject,
+              html,
+              marketing: true,
+            },
+          });
+
+          await supabase
+            .from("ricondizionati_campaign_recipients")
+            .update({ sent_at: new Date().toISOString() } as any)
+            .eq("id", r.id);
+          sentCount++;
+        } catch {
+          // Skip failed sends
+        }
+
+        // Delay 3s between sends
+        if (i < recipients.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
       }
 
       toast.success(`Campagna reinviata a ${sentCount} destinatari!`);
