@@ -191,6 +191,7 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead className="text-center">Stato</TableHead>
+                <TableHead className="text-center">Recapitata</TableHead>
                 <TableHead className="text-center">Aperta</TableHead>
                 <TableHead className="text-center">Click</TableHead>
                 <TableHead className="text-center">Copiato</TableHead>
