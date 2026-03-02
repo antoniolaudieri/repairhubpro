@@ -56,6 +56,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [detailCampaign, setDetailCampaign] = useState<any>(null);
 
   // Fetch campaigns created by this centro (filter by checking recipients)
   const { data: campaigns = [] } = useQuery({
