@@ -14,7 +14,8 @@ import { FunnelTab } from "@/components/admin/marketing/FunnelTab";
 import { EmailQueueTab } from "@/components/admin/marketing/EmailQueueTab";
 import { AnalyticsTab } from "@/components/admin/marketing/AnalyticsTab";
 import { TemplatesManager } from "@/components/admin/marketing/TemplatesManager";
-import { Target, Users, MessageSquare, Plus, Zap, MapPin, Mail, Filter, BarChart3, Send } from "lucide-react";
+import { RicondizionatiCampaignsTab } from "@/components/admin/marketing/RicondizionatiCampaignsTab";
+import { Target, Users, MessageSquare, Plus, Zap, MapPin, Mail, Filter, BarChart3, Send, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
