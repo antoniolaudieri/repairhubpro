@@ -115,6 +115,35 @@ Deno.serve(async (req) => {
         status: 302,
         headers: { ...corsHeaders, 'Location': redirectUrl },
       });
+    } else if (action === 'copy') {
+      // Track coupon copy
+      await supabase
+        .from('ricondizionati_campaign_recipients')
+        .update({
+          copied_coupon_at: recipient.copied_coupon_at || new Date().toISOString(),
+          copy_count: (recipient.copy_count || 0) + 1,
+        })
+        .eq('id', recipient.id);
+
+      // Update campaign aggregate (first copy only)
+      if (!recipient.copied_coupon_at) {
+        const { data: campaign } = await supabase
+          .from('ricondizionati_campaigns')
+          .select('total_copied')
+          .eq('id', recipient.campaign_id)
+          .single();
+
+        if (campaign) {
+          await supabase
+            .from('ricondizionati_campaigns')
+            .update({ total_copied: (campaign.total_copied || 0) + 1 })
+            .eq('id', recipient.campaign_id);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     return new Response('Invalid action', { status: 400, headers: corsHeaders });
