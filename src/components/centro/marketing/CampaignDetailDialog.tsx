@@ -74,11 +74,12 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
   // Stats
   const stats = useMemo(() => {
     const total = recipients.length;
+    const delivered = recipients.filter((r) => r.sent_at).length;
     const opened = recipients.filter((r) => r.opened_at).length;
     const clicked = recipients.filter((r) => r.clicked_at).length;
     const copied = recipients.filter((r) => r.copied_coupon_at).length;
     const unsub = recipients.filter((r) => r.unsubscribed_at).length;
-    return { total, opened, clicked, copied, unsub };
+    return { total, delivered, opened, clicked, copied, unsub };
   }, [recipients]);
 
   const pct = (n: number) => (stats.total > 0 ? Math.round((n / stats.total) * 100) : 0);
