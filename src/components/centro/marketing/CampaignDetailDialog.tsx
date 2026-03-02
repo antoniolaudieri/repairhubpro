@@ -8,9 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Mail, Eye, MousePointer, Copy, UserX, Users, Filter } from "lucide-react";
+import { Mail, Eye, MousePointer, Copy, UserX, Users, Filter, CheckCircle, Send } from "lucide-react";
 
-type FilterType = "all" | "opened" | "not_opened" | "clicked" | "copied" | "unsubscribed";
+type FilterType = "all" | "delivered" | "not_delivered" | "opened" | "not_opened" | "clicked" | "copied" | "unsubscribed";
 
 interface CampaignDetailDialogProps {
   campaign: any;
@@ -74,11 +74,12 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
   // Stats
   const stats = useMemo(() => {
     const total = recipients.length;
+    const delivered = recipients.filter((r) => r.sent_at).length;
     const opened = recipients.filter((r) => r.opened_at).length;
     const clicked = recipients.filter((r) => r.clicked_at).length;
     const copied = recipients.filter((r) => r.copied_coupon_at).length;
     const unsub = recipients.filter((r) => r.unsubscribed_at).length;
-    return { total, opened, clicked, copied, unsub };
+    return { total, delivered, opened, clicked, copied, unsub };
   }, [recipients]);
 
   const pct = (n: number) => (stats.total > 0 ? Math.round((n / stats.total) * 100) : 0);
@@ -86,6 +87,8 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
   // Filter
   const filtered = useMemo(() => {
     switch (filter) {
+      case "delivered": return recipients.filter((r) => r.sent_at);
+      case "not_delivered": return recipients.filter((r) => !r.sent_at);
       case "opened": return recipients.filter((r) => r.opened_at);
       case "not_opened": return recipients.filter((r) => !r.opened_at);
       case "clicked": return recipients.filter((r) => r.clicked_at);
@@ -100,7 +103,8 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
     if (r.copied_coupon_at) return <Badge className="bg-emerald-500 text-[10px]">Coupon Copiato</Badge>;
     if (r.clicked_at) return <Badge className="bg-blue-500 text-[10px]">Cliccata</Badge>;
     if (r.opened_at) return <Badge className="bg-amber-500 text-[10px]">Aperta</Badge>;
-    return <Badge variant="secondary" className="text-[10px]">Inviata</Badge>;
+    if (r.sent_at) return <Badge className="bg-green-600 text-[10px]">Recapitata</Badge>;
+    return <Badge variant="secondary" className="text-[10px]">In coda</Badge>;
   };
 
   const fmtDate = (d: string | null) =>
@@ -108,6 +112,8 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
 
   const filterButtons: { key: FilterType; label: string; count: number; icon: any }[] = [
     { key: "all", label: "Tutti", count: stats.total, icon: Users },
+    { key: "delivered", label: "Recapitati", count: stats.delivered, icon: CheckCircle },
+    { key: "not_delivered", label: "Non recapitati", count: stats.total - stats.delivered, icon: Send },
     { key: "opened", label: "Aperti", count: stats.opened, icon: Eye },
     { key: "not_opened", label: "Non aperti", count: stats.total - stats.opened, icon: Mail },
     { key: "clicked", label: "Click", count: stats.clicked, icon: MousePointer },
@@ -127,9 +133,10 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
         </DialogHeader>
 
         {/* Funnel */}
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-6 gap-3">
           {[
             { label: "Inviati", value: stats.total, color: "bg-muted-foreground" },
+            { label: "Recapitati", value: stats.delivered, color: "bg-green-600" },
             { label: "Aperti", value: stats.opened, color: "bg-amber-500" },
             { label: "Click", value: stats.clicked, color: "bg-blue-500" },
             { label: "Copiati", value: stats.copied, color: "bg-emerald-500" },
@@ -151,7 +158,9 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
 
         {/* Conversion arrows */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground py-1">
-          <span>Tasso apertura: <strong className="text-foreground">{pct(stats.opened)}%</strong></span>
+          <span>Recapito: <strong className="text-foreground">{pct(stats.delivered)}%</strong></span>
+          <span>→</span>
+          <span>Tasso apertura: <strong className="text-foreground">{stats.delivered > 0 ? Math.round((stats.opened / stats.delivered) * 100) : 0}%</strong></span>
           <span>→</span>
           <span>CTR: <strong className="text-foreground">{stats.opened > 0 ? Math.round((stats.clicked / stats.opened) * 100) : 0}%</strong></span>
           <span>→</span>
@@ -182,6 +191,7 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead className="text-center">Stato</TableHead>
+                <TableHead className="text-center">Recapitata</TableHead>
                 <TableHead className="text-center">Aperta</TableHead>
                 <TableHead className="text-center">Click</TableHead>
                 <TableHead className="text-center">Copiato</TableHead>
@@ -191,7 +201,7 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     Nessun destinatario per questo filtro
                   </TableCell>
                 </TableRow>
@@ -201,6 +211,13 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
                     <TableCell className="font-medium text-sm">{r.customer_name || "—"}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{r.customer_email}</TableCell>
                     <TableCell className="text-center">{getStatusBadge(r)}</TableCell>
+                    <TableCell className="text-center text-xs">
+                      {r.sent_at ? (
+                        <span className="text-green-600 font-medium">{fmtDate(r.sent_at)}</span>
+                      ) : (
+                        <span className="text-destructive">✗ Non recapitata</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-center text-xs">
                       {r.opened_at ? (
                         <span title={`${r.open_count || 1}x`}>

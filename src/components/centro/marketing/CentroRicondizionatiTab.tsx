@@ -135,8 +135,11 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
         .single();
       if (cErr) throw cErr;
 
-      // Create recipients and send emails
+      // Create recipients and send emails with delay to avoid SMTP rate limits
       const recipientCustomers = customers.filter(c => selectedCustomers.includes(c.id));
+      let sentCount = 0;
+      let failCount = 0;
+
       for (const cust of recipientCustomers) {
         const { data: recipient } = await supabase
           .from("ricondizionati_campaign_recipients")
@@ -156,19 +159,42 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
           const clickLink = `${window.location.origin}/promo-redirect?t=${recipient.tracking_id}`;
           const html = selectedTemplate.buildHtml(cust.name || "Cliente", clickLink, openPixel);
 
-          await supabase.functions.invoke("send-email-smtp", {
-            body: {
-              centro_id: centroId,
-              to: cust.email,
-              subject: selectedTemplate.subject,
-              html,
-              marketing: true,
-            },
-          });
+          try {
+            const { error: sendErr } = await supabase.functions.invoke("send-email-smtp", {
+              body: {
+                centro_id: centroId,
+                to: cust.email,
+                subject: selectedTemplate.subject,
+                html,
+                marketing: true,
+              },
+            });
+
+            if (!sendErr) {
+              // Mark as delivered
+              await supabase
+                .from("ricondizionati_campaign_recipients")
+                .update({ sent_at: new Date().toISOString() } as any)
+                .eq("id", recipient.id);
+              sentCount++;
+            } else {
+              failCount++;
+            }
+          } catch {
+            failCount++;
+          }
+
+          // Delay 3 seconds between sends to avoid SMTP rate limits
+          if (recipientCustomers.indexOf(cust) < recipientCustomers.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
         }
       }
 
-      toast.success(`Campagna inviata a ${selectedCustomers.length} clienti!`);
+      const msg = failCount > 0 
+        ? `Campagna: ${sentCount} inviate, ${failCount} fallite (rate limit SMTP)`
+        : `Campagna inviata a ${sentCount} clienti!`;
+      if (failCount > 0) toast.warning(msg); else toast.success(msg);
       setCreateOpen(false);
       setTitle("");
       setSelectedCustomers([]);
@@ -199,22 +225,37 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
       const tpl = EMAIL_TEMPLATES.find(t => t.id === (campaign.template_id || "promo_standard")) || EMAIL_TEMPLATES[0];
       let sentCount = 0;
 
-      for (const r of recipients) {
+      for (let i = 0; i < recipients.length; i++) {
+        const r = recipients[i];
         const trackBase = `${SUPABASE_URL}/functions/v1/ricondizionati-track`;
         const openPixel = `${trackBase}?a=open&t=${r.tracking_id}`;
         const clickLink = `${window.location.origin}/promo-redirect?t=${r.tracking_id}`;
         const html = tpl.buildHtml(r.customer_name || "Cliente", clickLink, openPixel);
 
-        await supabase.functions.invoke("send-email-smtp", {
-          body: {
-            centro_id: centroId,
-            to: r.customer_email,
-            subject: tpl.subject,
-            html,
-            marketing: true,
-          },
-        });
-        sentCount++;
+        try {
+          await supabase.functions.invoke("send-email-smtp", {
+            body: {
+              centro_id: centroId,
+              to: r.customer_email,
+              subject: tpl.subject,
+              html,
+              marketing: true,
+            },
+          });
+
+          await supabase
+            .from("ricondizionati_campaign_recipients")
+            .update({ sent_at: new Date().toISOString() } as any)
+            .eq("id", r.id);
+          sentCount++;
+        } catch {
+          // Skip failed sends
+        }
+
+        // Delay 3s between sends
+        if (i < recipients.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
       }
 
       toast.success(`Campagna reinviata a ${sentCount} destinatari!`);
