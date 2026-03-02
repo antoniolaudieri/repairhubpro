@@ -193,6 +193,10 @@ export default function AdminMarketing() {
               <MessageSquare className="h-4 w-4" />
               Template
             </TabsTrigger>
+            <TabsTrigger value="ricondizionati" className="gap-2">
+              <Smartphone className="h-4 w-4" />
+              Promo Ricondizionati
+            </TabsTrigger>
             <TabsTrigger value="analytics" className="gap-2">
               <BarChart3 className="h-4 w-4" />
               Analytics
