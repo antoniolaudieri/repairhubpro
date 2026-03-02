@@ -15,13 +15,21 @@ export default function PromoRedirect() {
   const [tracked, setTracked] = useState(false);
   const trackingId = searchParams.get("t");
 
+  const trackCopy = useCallback(async () => {
+    if (!trackingId || tracked) return;
+    setTracked(true);
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/ricondizionati-track?a=copy&t=${trackingId}`);
+    } catch { /* ignore */ }
+  }, [trackingId, tracked]);
+
   const copyToClipboard = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(COUPON_CODE);
       setCopied(true);
+      trackCopy();
       return true;
     } catch {
-      // Fallback: textarea trick
       try {
         const ta = document.createElement("textarea");
         ta.value = COUPON_CODE;
@@ -32,11 +40,11 @@ export default function PromoRedirect() {
         ta.select();
         const ok = document.execCommand("copy");
         document.body.removeChild(ta);
-        if (ok) { setCopied(true); return true; }
+        if (ok) { setCopied(true); trackCopy(); return true; }
       } catch { /* ignore */ }
     }
     return false;
-  }, []);
+  }, [trackCopy]);
 
   // Try auto-copy on mount
   useEffect(() => {
