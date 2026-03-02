@@ -4780,6 +4780,130 @@ export type Database = {
           },
         ]
       }
+      ricondizionati_campaign_recipients: {
+        Row: {
+          campaign_id: string | null
+          centro_id: string | null
+          click_count: number | null
+          clicked_at: string | null
+          created_at: string | null
+          customer_email: string
+          customer_id: string | null
+          customer_name: string | null
+          id: string
+          open_count: number | null
+          opened_at: string | null
+          sent_at: string | null
+          tracking_id: string | null
+        }
+        Insert: {
+          campaign_id?: string | null
+          centro_id?: string | null
+          click_count?: number | null
+          clicked_at?: string | null
+          created_at?: string | null
+          customer_email: string
+          customer_id?: string | null
+          customer_name?: string | null
+          id?: string
+          open_count?: number | null
+          opened_at?: string | null
+          sent_at?: string | null
+          tracking_id?: string | null
+        }
+        Update: {
+          campaign_id?: string | null
+          centro_id?: string | null
+          click_count?: number | null
+          clicked_at?: string | null
+          created_at?: string | null
+          customer_email?: string
+          customer_id?: string | null
+          customer_name?: string | null
+          id?: string
+          open_count?: number | null
+          opened_at?: string | null
+          sent_at?: string | null
+          tracking_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ricondizionati_campaign_recipients_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "ricondizionati_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ricondizionati_campaign_recipients_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ricondizionati_campaign_recipients_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ricondizionati_campaigns: {
+        Row: {
+          coupon_code: string
+          created_at: string | null
+          description: string | null
+          destination_url: string
+          discount_amount: number | null
+          id: string
+          image_url: string | null
+          offer_text: string
+          sent_at: string | null
+          status: string
+          title: string
+          total_clicked: number | null
+          total_opened: number | null
+          total_sent: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          coupon_code?: string
+          created_at?: string | null
+          description?: string | null
+          destination_url?: string
+          discount_amount?: number | null
+          id?: string
+          image_url?: string | null
+          offer_text: string
+          sent_at?: string | null
+          status?: string
+          title: string
+          total_clicked?: number | null
+          total_opened?: number | null
+          total_sent?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          coupon_code?: string
+          created_at?: string | null
+          description?: string | null
+          destination_url?: string
+          discount_amount?: number | null
+          id?: string
+          image_url?: string | null
+          offer_text?: string
+          sent_at?: string | null
+          status?: string
+          title?: string
+          total_clicked?: number | null
+          total_opened?: number | null
+          total_sent?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       riparatori: {
         Row: {
           address: string | null
