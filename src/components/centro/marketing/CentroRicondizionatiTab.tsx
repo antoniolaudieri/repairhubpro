@@ -135,8 +135,11 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
         .single();
       if (cErr) throw cErr;
 
-      // Create recipients and send emails
+      // Create recipients and send emails with delay to avoid SMTP rate limits
       const recipientCustomers = customers.filter(c => selectedCustomers.includes(c.id));
+      let sentCount = 0;
+      let failCount = 0;
+
       for (const cust of recipientCustomers) {
         const { data: recipient } = await supabase
           .from("ricondizionati_campaign_recipients")
@@ -156,15 +159,35 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
           const clickLink = `${window.location.origin}/promo-redirect?t=${recipient.tracking_id}`;
           const html = selectedTemplate.buildHtml(cust.name || "Cliente", clickLink, openPixel);
 
-          await supabase.functions.invoke("send-email-smtp", {
-            body: {
-              centro_id: centroId,
-              to: cust.email,
-              subject: selectedTemplate.subject,
-              html,
-              marketing: true,
-            },
-          });
+          try {
+            const { error: sendErr } = await supabase.functions.invoke("send-email-smtp", {
+              body: {
+                centro_id: centroId,
+                to: cust.email,
+                subject: selectedTemplate.subject,
+                html,
+                marketing: true,
+              },
+            });
+
+            if (!sendErr) {
+              // Mark as delivered
+              await supabase
+                .from("ricondizionati_campaign_recipients")
+                .update({ sent_at: new Date().toISOString() } as any)
+                .eq("id", recipient.id);
+              sentCount++;
+            } else {
+              failCount++;
+            }
+          } catch {
+            failCount++;
+          }
+
+          // Delay 3 seconds between sends to avoid SMTP rate limits
+          if (recipientCustomers.indexOf(cust) < recipientCustomers.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
         }
       }
 
