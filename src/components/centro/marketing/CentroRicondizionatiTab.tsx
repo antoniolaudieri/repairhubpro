@@ -256,13 +256,20 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                   <TableHead className="text-center">Aperti</TableHead>
                   <TableHead className="text-center">Click</TableHead>
                   <TableHead className="text-center">Copiati</TableHead>
+                  <TableHead className="text-center">Disiscritti</TableHead>
+                  <TableHead>Funnel</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {campaigns.map((c: any) => (
-                  <TableRow key={c.id}>
+                {campaigns.map((c: any) => {
+                  const total = c.total_sent || 1;
+                  const openPct = Math.round(((c.total_opened || 0) / total) * 100);
+                  const clickPct = Math.round(((c.total_clicked || 0) / total) * 100);
+                  const copyPct = Math.round(((c.total_copied || 0) / total) * 100);
+                  return (
+                  <TableRow key={c.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setDetailCampaign(c)}>
                     <TableCell className="font-medium">{c.title}</TableCell>
                     <TableCell>
                       <Badge variant={c.status === "sent" ? "default" : "secondary"}>
@@ -273,6 +280,18 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                     <TableCell className="text-center">{c.total_opened || 0}</TableCell>
                     <TableCell className="text-center">{c.total_clicked || 0}</TableCell>
                     <TableCell className="text-center font-semibold text-primary">{c.total_copied || 0}</TableCell>
+                    <TableCell className="text-center">
+                      {(c.total_unsubscribed || 0) > 0 ? (
+                        <span className="text-destructive font-semibold">{c.total_unsubscribed}</span>
+                      ) : "0"}
+                    </TableCell>
+                    <TableCell>
+                      <div className="w-24 space-y-0.5">
+                        <Progress value={openPct} className="h-1.5" indicatorClassName="bg-amber-500" />
+                        <Progress value={clickPct} className="h-1.5" indicatorClassName="bg-blue-500" />
+                        <Progress value={copyPct} className="h-1.5" indicatorClassName="bg-emerald-500" />
+                      </div>
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {c.sent_at ? format(new Date(c.sent_at), "dd MMM yyyy", { locale: it }) : "-"}
                     </TableCell>
@@ -283,7 +302,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                           size="sm"
                           className="gap-1"
                           disabled={resendingId === c.id}
-                          onClick={() => handleResend(c)}
+                          onClick={(e) => { e.stopPropagation(); handleResend(c); }}
                         >
                           {resendingId === c.id ? (
                             <Loader2 className="h-3 w-3 animate-spin" />
@@ -295,7 +314,8 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
