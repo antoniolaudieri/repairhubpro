@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone, RefreshCw, UserX, Upload, X, Image } from "lucide-react";
+import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone, RefreshCw, UserX, Upload, X, Image, MessageCircle, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { CampaignDetailDialog } from "./CampaignDetailDialog";
@@ -20,6 +20,93 @@ import { CampaignDetailDialog } from "./CampaignDetailDialog";
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const COUPON = "EVLZBANT";
 const SHOP_URL = "https://ricondizionati.evolutionlevel.it";
+
+const WHATSAPP_TEMPLATES = [
+  {
+    id: "wa_standard",
+    name: "📱 Promo Standard",
+    buildText: (name: string) =>
+`Ciao ${name}! 👋
+
+🎁 *Sconto esclusivo di 10€* sui ricondizionati certificati DEKA con *24 mesi di garanzia*!
+
+📋 *Come usarlo:*
+1️⃣ Apri il catalogo: ${SHOP_URL}
+2️⃣ Scegli il tuo dispositivo e aggiungilo al carrello
+3️⃣ Al checkout inserisci il codice: *${COUPON}*
+4️⃣ Clicca *"Applica"* e risparmia subito 10€!
+
+✅ Garanzia 24 mesi
+✅ 56 controlli certificati DEKA
+✅ Spedizione gratuita
+✅ Sostituzione diretta
+
+Lo sconto è *illimitato e senza scadenza* — condividilo con chi vuoi! 🤝
+Anche chi lo riceve avrà lo stesso vantaggio. Più persone lo usano, più tutti risparmiano! 💰`,
+  },
+  {
+    id: "wa_flash",
+    name: "⚡ Offerta Lampo",
+    buildText: (name: string) =>
+`⚡ *OFFERTA LAMPO* ⚡
+
+Ciao ${name}! Non farti scappare questa occasione!
+
+🏷️ Usa il codice *${COUPON}* per ottenere *10€ di sconto* sui ricondizionati certificati!
+
+👉 Vai al catalogo: ${SHOP_URL}
+
+📋 *Inserisci il codice ${COUPON} al checkout e clicca "Applica"* per attivare lo sconto!
+
+🔒 Garanzia 24 mesi | 📦 Spedizione gratis | 🔄 Sostituzione diretta
+
+💡 *Non ti interessa?* Inoltra questo messaggio a un amico! Lo sconto è illimitato, senza scadenza, e vale per tutti! 🎉`,
+  },
+  {
+    id: "wa_risparmio",
+    name: "💰 Risparmio",
+    buildText: (name: string) =>
+`Ciao ${name}! 💰
+
+Lo sapevi che puoi avere uno smartphone *come nuovo* risparmiando fino al *50%*?
+
+I nostri ricondizionati certificati *DEKA* hanno *24 mesi di garanzia completa*.
+
+E con il tuo codice sconto risparmi ancora di più! 🎁
+
+🏷️ Codice: *${COUPON}*
+💶 Sconto: *-10€ sul tuo ordine*
+🛒 Catalogo: ${SHOP_URL}
+
+📋 *Come fare:* inserisci *${COUPON}* al checkout → clicca *"Applica"* → sconto applicato! ✅
+
+🤝 Condividi con amici e familiari — lo sconto è *illimitato, senza scadenza*, e vale per tutti!`,
+  },
+  {
+    id: "wa_condivisione",
+    name: "🤝 Focus Condivisione",
+    buildText: (name: string) =>
+`Ciao ${name}! 🎉
+
+Ho un *codice sconto speciale* per te e per chi vuoi!
+
+🏷️ Codice: *${COUPON}*
+💶 Vale: *10€ di sconto* sui ricondizionati certificati
+
+👉 ${SHOP_URL}
+
+📋 Al checkout, inserisci il codice *${COUPON}* e clicca *"Applica"*.
+
+✨ *La cosa bella?*
+• Lo sconto è *ILLIMITATO* — usalo quante volte vuoi
+• *NON SCADE MAI* — nessuna fretta
+• Puoi *condividerlo con chiunque* — amici, familiari, colleghi
+• Anche chi lo riceve avrà *lo stesso identico vantaggio*
+
+Più lo condividi, più tutti risparmiano! 💪
+Inoltra questo messaggio a chi potrebbe essere interessato! 📲`,
+  },
+];
 
 interface CustomImages {
   banner?: string;
@@ -97,6 +184,8 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
   const [detailCampaign, setDetailCampaign] = useState<any>(null);
   const [customImages, setCustomImages] = useState<CustomImages>({});
   const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+  const [copiedWaId, setCopiedWaId] = useState<string | null>(null);
+  const [waPreviewId, setWaPreviewId] = useState<string | null>(null);
 
   const handleImageUpload = async (file: File, slot: keyof CustomImages) => {
     if (file.size > 2 * 1024 * 1024) {
@@ -473,7 +562,72 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
         </CardContent>
       </Card>
 
-      {/* Create Campaign Dialog */}
+      {/* WhatsApp Templates */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <MessageCircle className="h-5 w-5 text-green-600" />
+            Template WhatsApp
+          </CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Copia il testo e incollalo su WhatsApp per inviare la promo ai tuoi clienti
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {WHATSAPP_TEMPLATES.map((tpl) => (
+            <div key={tpl.id} className="border rounded-lg overflow-hidden">
+              <div
+                className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => setWaPreviewId(waPreviewId === tpl.id ? null : tpl.id)}
+              >
+                <p className="font-medium text-sm">{tpl.name}</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const text = tpl.buildText("[Nome Cliente]");
+                      navigator.clipboard.writeText(text).then(() => {
+                        setCopiedWaId(tpl.id);
+                        toast.success("Testo copiato! Incollalo su WhatsApp");
+                        setTimeout(() => setCopiedWaId(null), 2000);
+                      }).catch(() => toast.error("Copia fallita"));
+                    }}
+                  >
+                    {copiedWaId === tpl.id ? (
+                      <><Check className="h-3 w-3 text-green-600" /> Copiato!</>
+                    ) : (
+                      <><Copy className="h-3 w-3" /> Copia Testo</>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setWaPreviewId(waPreviewId === tpl.id ? null : tpl.id);
+                    }}
+                  >
+                    <Eye className="h-3 w-3" /> {waPreviewId === tpl.id ? "Nascondi" : "Anteprima"}
+                  </Button>
+                </div>
+              </div>
+              {waPreviewId === tpl.id && (
+                <div className="border-t bg-muted/20 p-4">
+                  <pre className="whitespace-pre-wrap text-sm text-foreground font-sans leading-relaxed">
+                    {tpl.buildText("Mario Rossi")}
+                  </pre>
+                </div>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
