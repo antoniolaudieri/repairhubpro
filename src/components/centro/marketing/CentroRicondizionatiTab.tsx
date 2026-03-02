@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone, RefreshCw, UserX, Upload, X, Image } from "lucide-react";
+import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone, RefreshCw, UserX, Upload, X, Image, MessageCircle, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { CampaignDetailDialog } from "./CampaignDetailDialog";
