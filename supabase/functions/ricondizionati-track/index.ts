@@ -30,7 +30,7 @@ Deno.serve(async (req) => {
     // Get recipient
     const { data: recipient, error } = await supabase
       .from('ricondizionati_campaign_recipients')
-      .select('id, campaign_id, opened_at, open_count, clicked_at, click_count')
+      .select('id, campaign_id, opened_at, open_count, clicked_at, click_count, copied_coupon_at, copy_count')
       .eq('tracking_id', trackingId)
       .single();
 
@@ -114,6 +114,35 @@ Deno.serve(async (req) => {
       return new Response(null, {
         status: 302,
         headers: { ...corsHeaders, 'Location': redirectUrl },
+      });
+    } else if (action === 'copy') {
+      // Track coupon copy
+      await supabase
+        .from('ricondizionati_campaign_recipients')
+        .update({
+          copied_coupon_at: recipient.copied_coupon_at || new Date().toISOString(),
+          copy_count: (recipient.copy_count || 0) + 1,
+        })
+        .eq('id', recipient.id);
+
+      // Update campaign aggregate (first copy only)
+      if (!recipient.copied_coupon_at) {
+        const { data: campaign } = await supabase
+          .from('ricondizionati_campaigns')
+          .select('total_copied')
+          .eq('id', recipient.campaign_id)
+          .single();
+
+        if (campaign) {
+          await supabase
+            .from('ricondizionati_campaigns')
+            .update({ total_copied: (campaign.total_copied || 0) + 1 })
+            .eq('id', recipient.campaign_id);
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 

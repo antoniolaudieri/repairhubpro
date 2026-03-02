@@ -251,6 +251,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                   <TableHead className="text-center">Inviati</TableHead>
                   <TableHead className="text-center">Aperti</TableHead>
                   <TableHead className="text-center">Click</TableHead>
+                  <TableHead className="text-center">Copiati</TableHead>
                   <TableHead>Data</TableHead>
                   <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
@@ -267,6 +268,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                     <TableCell className="text-center">{c.total_sent || 0}</TableCell>
                     <TableCell className="text-center">{c.total_opened || 0}</TableCell>
                     <TableCell className="text-center">{c.total_clicked || 0}</TableCell>
+                    <TableCell className="text-center font-semibold text-primary">{c.total_copied || 0}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {c.sent_at ? format(new Date(c.sent_at), "dd MMM yyyy", { locale: it }) : "-"}
                     </TableCell>
