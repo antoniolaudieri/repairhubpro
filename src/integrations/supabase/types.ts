@@ -92,6 +92,75 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_clicks: {
+        Row: {
+          affiliate_program: string
+          category_clicked: string | null
+          coupon_code: string
+          created_at: string
+          destination_url: string
+          id: string
+          ip_hash: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          affiliate_program?: string
+          category_clicked?: string | null
+          coupon_code?: string
+          created_at?: string
+          destination_url: string
+          id?: string
+          ip_hash?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          affiliate_program?: string
+          category_clicked?: string | null
+          coupon_code?: string
+          created_at?: string
+          destination_url?: string
+          id?: string
+          ip_hash?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      affiliate_sales: {
+        Row: {
+          affiliate_program: string
+          commission_earned: number
+          commission_rate: number
+          coupon_code: string
+          created_at: string
+          id: string
+          notes: string | null
+          sale_amount: number
+          sale_date: string
+        }
+        Insert: {
+          affiliate_program?: string
+          commission_earned?: number
+          commission_rate?: number
+          coupon_code?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sale_amount?: number
+          sale_date?: string
+        }
+        Update: {
+          affiliate_program?: string
+          commission_earned?: number
+          commission_rate?: number
+          coupon_code?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          sale_amount?: number
+          sale_date?: string
+        }
+        Relationships: []
+      }
       appointments: {
         Row: {
           centro_id: string | null
