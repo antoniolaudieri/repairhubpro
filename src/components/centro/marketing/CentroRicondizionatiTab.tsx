@@ -478,7 +478,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
             </div>
             <div>
               <Label>Template email</Label>
-              <div className="grid grid-cols-3 gap-2 mt-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2">
                 {EMAIL_TEMPLATES.map(tpl => (
                   <button
                     key={tpl.id}
@@ -496,11 +496,61 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
               </Button>
             </div>
 
+            {/* Custom Images Upload - only for custom_images template */}
+            {templateId === "custom_images" && (
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                <Label className="flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  Immagini Custom (opzionali)
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Le immagini vengono hostate come URL — nessun impatto sulla deliverability. Max 2MB ciascuna.
+                </p>
+                {([
+                  { slot: "banner" as const, label: "Banner Header", hint: "600×200px consigliato", accept: "image/jpeg,image/png,image/webp" },
+                  { slot: "product" as const, label: "Immagine Prodotto", hint: "400×300px consigliato", accept: "image/jpeg,image/png,image/webp" },
+                  { slot: "footerLogo" as const, label: "Logo Footer", hint: "150×50px consigliato", accept: "image/jpeg,image/png,image/webp,image/svg+xml" },
+                ]).map(({ slot, label, hint, accept }) => (
+                  <div key={slot} className="flex items-center gap-3">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{label}</p>
+                      <p className="text-xs text-muted-foreground">{hint}</p>
+                    </div>
+                    {customImages[slot] ? (
+                      <div className="flex items-center gap-2">
+                        <img src={customImages[slot]} alt={label} className="h-10 w-16 object-cover rounded border" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeImage(slot)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept={accept}
+                          className="hidden"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            if (f) handleImageUpload(f, slot);
+                            e.target.value = "";
+                          }}
+                        />
+                        <Button variant="outline" size="sm" className="gap-1 pointer-events-none" disabled={uploadingImage === slot}>
+                          {uploadingImage === slot ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                          Carica
+                        </Button>
+                      </label>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Inline preview */}
             <div className="border rounded-lg overflow-hidden">
               <div className="bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">Anteprima</div>
               <iframe
-                srcDoc={selectedTemplate.buildHtml("Mario Rossi", "#", "")}
+                srcDoc={buildHtmlForTemplate(selectedTemplate, "Mario Rossi", "#", "")}
                 className="w-full h-[300px] border-0"
                 title="Preview"
               />
