@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Gift, CheckCircle, ExternalLink, Copy } from "lucide-react";
+import { Gift, CheckCircle, ExternalLink, Copy, Share2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const DESTINATION_URL = "https://ricondizionati.evolutionlevel.it";
@@ -13,6 +13,7 @@ export default function PromoRedirect() {
   const [copied, setCopied] = useState(false);
   const [redirectPaused, setRedirectPaused] = useState(false);
   const [tracked, setTracked] = useState(false);
+  const [shared, setShared] = useState(false);
   const trackingId = searchParams.get("t");
 
   const trackCopy = useCallback(async () => {
@@ -71,9 +72,30 @@ export default function PromoRedirect() {
     }, 1000);
   };
 
+  const handleShare = async () => {
+    const shareData = {
+      title: "🎁 Sconto 10€ su Ricondizionati Certificati!",
+      text: `Usa il codice ${COUPON_CODE} al checkout su Evolution Level per ricevere subito 10€ di sconto sui ricondizionati certificati DEKA con 24 mesi di garanzia! Lo sconto è illimitato e senza scadenza. 🛒`,
+      url: DESTINATION_URL,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        setShared(true);
+      } else {
+        // Fallback: copy share text
+        await navigator.clipboard.writeText(
+          `${shareData.text}\n\n👉 ${shareData.url}`
+        );
+        setShared(true);
+      }
+    } catch { /* user cancelled */ }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
-      <div className="text-center space-y-6 max-w-md">
+      <div className="text-center space-y-6 max-w-md w-full">
         <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center animate-pulse">
           <Gift className="h-10 w-10 text-primary" />
         </div>
@@ -95,6 +117,17 @@ export default function PromoRedirect() {
             <p className="text-xs text-muted-foreground mb-1">Il tuo codice sconto</p>
             <p className="text-3xl font-mono font-bold tracking-widest text-foreground select-all">{COUPON_CODE}</p>
             <p className="text-sm text-primary font-semibold mt-1">-10€ sul tuo ordine</p>
+          </div>
+
+          {/* Explicit instructions */}
+          <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 rounded-lg p-4 text-left">
+            <p className="text-sm font-bold text-amber-800 dark:text-amber-300 mb-2">📋 Come utilizzare lo sconto:</p>
+            <ol className="text-xs text-amber-700 dark:text-amber-400 space-y-1 list-decimal list-inside">
+              <li>Apri il catalogo ricondizionati</li>
+              <li>Scegli il dispositivo e aggiungilo al carrello</li>
+              <li>Al checkout, inserisci il codice <strong className="font-mono text-sm">{COUPON_CODE}</strong></li>
+              <li>Clicca <strong>"Applica"</strong> per ricevere subito <strong>10€ di sconto</strong></li>
+            </ol>
           </div>
 
           {!copied && (
@@ -120,6 +153,27 @@ export default function PromoRedirect() {
         >
           Clicca qui se non vieni reindirizzato
         </a>
+
+        {/* Share with friends section */}
+        <div className="bg-card border-2 border-dashed border-purple-300 dark:border-purple-700 rounded-xl p-5 space-y-3">
+          <div className="flex items-center justify-center gap-2">
+            <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+            <h3 className="font-bold text-foreground">Non ti interessa? Condividilo!</h3>
+          </div>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Lo sconto è <strong className="text-foreground">illimitato e senza scadenza</strong>. 
+            Condividilo con amici e familiari — anche chi lo riceve avrà lo stesso vantaggio e potrà 
+            condividerlo a sua volta. <strong className="text-foreground">Più persone lo usano, più tutti risparmiano!</strong>
+          </p>
+          <Button
+            variant="outline"
+            onClick={handleShare}
+            className="w-full gap-2 border-purple-300 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/30"
+          >
+            <Share2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            {shared ? "✅ Condiviso!" : "Condividi con un Amico"}
+          </Button>
+        </div>
       </div>
     </div>
   );
