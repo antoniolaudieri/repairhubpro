@@ -133,9 +133,10 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
         </DialogHeader>
 
         {/* Funnel */}
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-6 gap-3">
           {[
             { label: "Inviati", value: stats.total, color: "bg-muted-foreground" },
+            { label: "Recapitati", value: stats.delivered, color: "bg-green-600" },
             { label: "Aperti", value: stats.opened, color: "bg-amber-500" },
             { label: "Click", value: stats.clicked, color: "bg-blue-500" },
             { label: "Copiati", value: stats.copied, color: "bg-emerald-500" },
