@@ -439,6 +439,13 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
           <iframe srcDoc={previewHtml} className="w-full h-[70vh] border rounded-lg" title="Email Preview" />
         </DialogContent>
       </Dialog>
+
+      {/* Campaign Detail Dialog */}
+      <CampaignDetailDialog
+        campaign={detailCampaign}
+        open={!!detailCampaign}
+        onOpenChange={(open) => { if (!open) setDetailCampaign(null); }}
+      />
     </div>
   );
 }
