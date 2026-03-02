@@ -83,6 +83,41 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
   const [sending, setSending] = useState(false);
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [detailCampaign, setDetailCampaign] = useState<any>(null);
+  const [customImages, setCustomImages] = useState<CustomImages>({});
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
+
+  const handleImageUpload = async (file: File, slot: keyof CustomImages) => {
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Immagine troppo grande. Max 2MB per deliverability ottimale.");
+      return;
+    }
+    setUploadingImage(slot);
+    try {
+      const ext = file.name.split('.').pop() || 'jpg';
+      const path = `campaigns/${centroId}/${Date.now()}-${slot}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("marketing-images")
+        .upload(path, file, { cacheControl: "31536000", upsert: false });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage
+        .from("marketing-images")
+        .getPublicUrl(path);
+      setCustomImages(prev => ({ ...prev, [slot]: urlData.publicUrl }));
+      toast.success("Immagine caricata!");
+    } catch (err: any) {
+      toast.error("Upload fallito: " + (err.message || "Errore"));
+    } finally {
+      setUploadingImage(null);
+    }
+  };
+
+  const removeImage = (slot: keyof CustomImages) => {
+    setCustomImages(prev => {
+      const next = { ...prev };
+      delete next[slot];
+      return next;
+    });
+  };
 
   // Fetch campaigns created by this centro (filter by checking recipients)
   const { data: campaigns = [] } = useQuery({
