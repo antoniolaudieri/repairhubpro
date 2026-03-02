@@ -21,6 +21,93 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const COUPON = "EVLZBANT";
 const SHOP_URL = "https://ricondizionati.evolutionlevel.it";
 
+const WHATSAPP_TEMPLATES = [
+  {
+    id: "wa_standard",
+    name: "📱 Promo Standard",
+    buildText: (name: string) =>
+`Ciao ${name}! 👋
+
+🎁 *Sconto esclusivo di 10€* sui ricondizionati certificati DEKA con *24 mesi di garanzia*!
+
+📋 *Come usarlo:*
+1️⃣ Apri il catalogo: ${SHOP_URL}
+2️⃣ Scegli il tuo dispositivo e aggiungilo al carrello
+3️⃣ Al checkout inserisci il codice: *${COUPON}*
+4️⃣ Clicca *"Applica"* e risparmia subito 10€!
+
+✅ Garanzia 24 mesi
+✅ 56 controlli certificati DEKA
+✅ Spedizione gratuita
+✅ Sostituzione diretta
+
+Lo sconto è *illimitato e senza scadenza* — condividilo con chi vuoi! 🤝
+Anche chi lo riceve avrà lo stesso vantaggio. Più persone lo usano, più tutti risparmiano! 💰`,
+  },
+  {
+    id: "wa_flash",
+    name: "⚡ Offerta Lampo",
+    buildText: (name: string) =>
+`⚡ *OFFERTA LAMPO* ⚡
+
+Ciao ${name}! Non farti scappare questa occasione!
+
+🏷️ Usa il codice *${COUPON}* per ottenere *10€ di sconto* sui ricondizionati certificati!
+
+👉 Vai al catalogo: ${SHOP_URL}
+
+📋 *Inserisci il codice ${COUPON} al checkout e clicca "Applica"* per attivare lo sconto!
+
+🔒 Garanzia 24 mesi | 📦 Spedizione gratis | 🔄 Sostituzione diretta
+
+💡 *Non ti interessa?* Inoltra questo messaggio a un amico! Lo sconto è illimitato, senza scadenza, e vale per tutti! 🎉`,
+  },
+  {
+    id: "wa_risparmio",
+    name: "💰 Risparmio",
+    buildText: (name: string) =>
+`Ciao ${name}! 💰
+
+Lo sapevi che puoi avere uno smartphone *come nuovo* risparmiando fino al *50%*?
+
+I nostri ricondizionati certificati *DEKA* hanno *24 mesi di garanzia completa*.
+
+E con il tuo codice sconto risparmi ancora di più! 🎁
+
+🏷️ Codice: *${COUPON}*
+💶 Sconto: *-10€ sul tuo ordine*
+🛒 Catalogo: ${SHOP_URL}
+
+📋 *Come fare:* inserisci *${COUPON}* al checkout → clicca *"Applica"* → sconto applicato! ✅
+
+🤝 Condividi con amici e familiari — lo sconto è *illimitato, senza scadenza*, e vale per tutti!`,
+  },
+  {
+    id: "wa_condivisione",
+    name: "🤝 Focus Condivisione",
+    buildText: (name: string) =>
+`Ciao ${name}! 🎉
+
+Ho un *codice sconto speciale* per te e per chi vuoi!
+
+🏷️ Codice: *${COUPON}*
+💶 Vale: *10€ di sconto* sui ricondizionati certificati
+
+👉 ${SHOP_URL}
+
+📋 Al checkout, inserisci il codice *${COUPON}* e clicca *"Applica"*.
+
+✨ *La cosa bella?*
+• Lo sconto è *ILLIMITATO* — usalo quante volte vuoi
+• *NON SCADE MAI* — nessuna fretta
+• Puoi *condividerlo con chiunque* — amici, familiari, colleghi
+• Anche chi lo riceve avrà *lo stesso identico vantaggio*
+
+Più lo condividi, più tutti risparmiano! 💪
+Inoltra questo messaggio a chi potrebbe essere interessato! 📲`,
+  },
+];
+
 interface CustomImages {
   banner?: string;
   product?: string;
