@@ -4797,6 +4797,7 @@ export type Database = {
           opened_at: string | null
           sent_at: string | null
           tracking_id: string | null
+          unsubscribed_at: string | null
         }
         Insert: {
           campaign_id?: string | null
@@ -4814,6 +4815,7 @@ export type Database = {
           opened_at?: string | null
           sent_at?: string | null
           tracking_id?: string | null
+          unsubscribed_at?: string | null
         }
         Update: {
           campaign_id?: string | null
@@ -4831,6 +4833,7 @@ export type Database = {
           opened_at?: string | null
           sent_at?: string | null
           tracking_id?: string | null
+          unsubscribed_at?: string | null
         }
         Relationships: [
           {
@@ -4873,6 +4876,7 @@ export type Database = {
           total_copied: number | null
           total_opened: number | null
           total_sent: number | null
+          total_unsubscribed: number | null
           updated_at: string | null
         }
         Insert: {
@@ -4891,6 +4895,7 @@ export type Database = {
           total_copied?: number | null
           total_opened?: number | null
           total_sent?: number | null
+          total_unsubscribed?: number | null
           updated_at?: string | null
         }
         Update: {
@@ -4909,6 +4914,7 @@ export type Database = {
           total_copied?: number | null
           total_opened?: number | null
           total_sent?: number | null
+          total_unsubscribed?: number | null
           updated_at?: string | null
         }
         Relationships: []
