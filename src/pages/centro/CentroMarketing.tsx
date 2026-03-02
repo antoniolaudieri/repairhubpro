@@ -215,7 +215,7 @@ export default function CentroMarketing() {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="loyalty" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 max-w-lg">
+          <TabsList className="grid w-full grid-cols-5 max-w-2xl">
             <TabsTrigger value="loyalty" className="flex items-center gap-1">
               <CreditCard className="h-4 w-4" />
               <span className="hidden sm:inline">Fedeltà</span>
@@ -231,6 +231,10 @@ export default function CentroMarketing() {
             <TabsTrigger value="promos" className="flex items-center gap-1">
               <Tag className="h-4 w-4" />
               <span className="hidden sm:inline">Promo</span>
+            </TabsTrigger>
+            <TabsTrigger value="ricondizionati" className="flex items-center gap-1">
+              <Smartphone className="h-4 w-4" />
+              <span className="hidden sm:inline">Ricondizionati</span>
             </TabsTrigger>
           </TabsList>
 
