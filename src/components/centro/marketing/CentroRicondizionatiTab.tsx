@@ -183,6 +183,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [detailCampaign, setDetailCampaign] = useState<any>(null);
   const [customImages, setCustomImages] = useState<CustomImages>({});
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   const [copiedWaId, setCopiedWaId] = useState<string | null>(null);
   const [waPreviewId, setWaPreviewId] = useState<string | null>(null);
 
