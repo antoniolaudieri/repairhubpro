@@ -7,13 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone, RefreshCw } from "lucide-react";
+import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone, RefreshCw, UserX } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { CampaignDetailDialog } from "./CampaignDetailDialog";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const COUPON = "EVLZBANT";

@@ -183,6 +183,36 @@ serve(async (req) => {
         lead_id: leadId || null,
       });
 
+    // Also mark any ricondizionati campaign recipients as unsubscribed
+    await supabase
+      .from("ricondizionati_campaign_recipients")
+      .update({ unsubscribed_at: new Date().toISOString() })
+      .eq("customer_email", email.toLowerCase())
+      .is("unsubscribed_at", null);
+
+    // Update campaign aggregate counters
+    const { data: unsubRecipients } = await supabase
+      .from("ricondizionati_campaign_recipients")
+      .select("campaign_id")
+      .eq("customer_email", email.toLowerCase())
+      .not("unsubscribed_at", "is", null);
+
+    if (unsubRecipients && unsubRecipients.length > 0) {
+      const campaignIds = [...new Set(unsubRecipients.map((r: any) => r.campaign_id))];
+      for (const cid of campaignIds) {
+        const { count } = await supabase
+          .from("ricondizionati_campaign_recipients")
+          .select("id", { count: "exact", head: true })
+          .eq("campaign_id", cid)
+          .not("unsubscribed_at", "is", null);
+        
+        await supabase
+          .from("ricondizionati_campaigns")
+          .update({ total_unsubscribed: count || 0 })
+          .eq("id", cid);
+      }
+    }
+
     console.log("marketing-unsubscribe: Successfully unsubscribed:", email);
 
     return new Response(
