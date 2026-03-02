@@ -9,10 +9,11 @@ import { LoyaltyEmailCampaign } from "@/components/marketing/LoyaltyEmailCampaig
 import { EmailCampaignAnalytics } from "@/components/marketing/EmailCampaignAnalytics";
 import { PromoManager } from "@/components/marketing/PromoManager";
 import WhatsAppCampaign from "@/components/marketing/WhatsAppCampaign";
+import { CentroRicondizionatiTab } from "@/components/centro/marketing/CentroRicondizionatiTab";
 import { useLoyaltyProgramSettings } from "@/hooks/useLoyaltyProgramSettings";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag, Settings, UserCheck, Send, MessageSquare } from "lucide-react";
+import { Megaphone, CreditCard, TrendingUp, Users, Euro, BarChart3, Mail, Tag, Settings, UserCheck, Send, MessageSquare, Smartphone } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface LoyaltyStats {
