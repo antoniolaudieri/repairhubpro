@@ -158,7 +158,9 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
 
         {/* Conversion arrows */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground py-1">
-          <span>Tasso apertura: <strong className="text-foreground">{pct(stats.opened)}%</strong></span>
+          <span>Recapito: <strong className="text-foreground">{pct(stats.delivered)}%</strong></span>
+          <span>→</span>
+          <span>Tasso apertura: <strong className="text-foreground">{stats.delivered > 0 ? Math.round((stats.opened / stats.delivered) * 100) : 0}%</strong></span>
           <span>→</span>
           <span>CTR: <strong className="text-foreground">{stats.opened > 0 ? Math.round((stats.clicked / stats.opened) * 100) : 0}%</strong></span>
           <span>→</span>
