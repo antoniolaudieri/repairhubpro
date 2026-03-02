@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,13 +12,33 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone, RefreshCw, UserX } from "lucide-react";
+import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone, RefreshCw, UserX, Upload, X, Image } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { CampaignDetailDialog } from "./CampaignDetailDialog";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const COUPON = "EVLZBANT";
+
+interface CustomImages {
+  banner?: string;
+  product?: string;
+  footerLogo?: string;
+}
+
+const buildCustomImagesHtml = (name: string, clickLink: string, openPixel: string, images: CustomImages = {}) => {
+  const bannerSection = images.banner
+    ? `<tr><td><img src="${images.banner}" alt="Offerta speciale" width="600" height="200" style="display:block;width:100%;height:auto;max-height:250px;object-fit:cover;" /></td></tr>`
+    : '';
+  const productSection = images.product
+    ? `<tr><td style="padding:24px;text-align:center;"><img src="${images.product}" alt="Prodotto in offerta" width="400" height="300" style="display:block;margin:0 auto;max-width:100%;height:auto;border-radius:8px;" /></td></tr>`
+    : '';
+  const footerLogoSection = images.footerLogo
+    ? `<img src="${images.footerLogo}" alt="Logo" width="120" height="40" style="display:block;margin:0 auto 8px;max-width:120px;height:auto;" />`
+    : '';
+
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background-color:#f4f4f5;"><table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;"><tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;">${bannerSection}<tr><td style="padding:32px;"><h2 style="color:#18181b;margin:0 0 16px;font-size:20px;">Ciao ${name}!</h2><p style="color:#52525b;font-size:15px;line-height:1.6;margin:0 0 24px;">Abbiamo una promozione esclusiva per te sui nostri dispositivi <strong>ricondizionati certificati DEKA</strong> con <strong>24 mesi di garanzia</strong>!</p></td></tr>${productSection}<tr><td style="padding:0 32px 32px;"><div style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:2px solid #10b981;border-radius:12px;padding:24px;margin:0 0 24px;text-align:center;"><p style="color:#065f46;margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:1px;">IL TUO CODICE SCONTO</p><p style="color:#047857;margin:0 0 8px;font-size:40px;font-weight:700;font-family:monospace;letter-spacing:4px;">${COUPON}</p><p style="color:#059669;margin:0;font-size:18px;font-weight:600;">-10€ sul tuo ordine</p></div><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center"><a href="${clickLink}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:8px;font-weight:600;font-size:16px;">Scopri le Offerte →</a></td></tr></table><p style="color:#71717a;font-size:13px;margin:24px 0 0;text-align:center;">Il coupon verrà copiato automaticamente quando clicchi.</p></td></tr><tr><td style="background:#f8fafc;padding:16px 32px;text-align:center;border-top:1px solid #e4e4e7;">${footerLogoSection}<p style="color:#a1a1aa;margin:0;font-size:11px;">Ricevi questa email perché sei cliente del nostro centro.</p></td></tr></table></td></tr></table><img src="${openPixel}" width="1" height="1" style="display:none;" alt="" /></body></html>`;
+};
 
 const EMAIL_TEMPLATES = [
   {
@@ -38,6 +58,12 @@ const EMAIL_TEMPLATES = [
     name: "💰 Risparmia sul Nuovo",
     subject: "💰 Perché pagare di più? Ricondizionati con garanzia 24 mesi",
     buildHtml: (name: string, clickLink: string, openPixel: string) => `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background-color:#f4f4f5;"><table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 20px;"><tr><td align="center"><table width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;max-width:600px;"><tr><td style="background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);padding:32px;text-align:center;"><h1 style="color:#ffffff;margin:0;font-size:24px;">💰 Risparmia senza rinunciare alla qualità</h1><p style="color:rgba(255,255,255,0.9);margin:8px 0 0;font-size:14px;">Ricondizionati certificati con garanzia completa</p></td></tr><tr><td style="padding:32px;"><h2 style="color:#18181b;margin:0 0 16px;font-size:20px;">Ciao ${name}!</h2><p style="color:#52525b;font-size:15px;line-height:1.6;margin:0 0 16px;">Lo sapevi che puoi avere uno smartphone <strong>come nuovo</strong> risparmiando fino al <strong>50%</strong>?</p><p style="color:#52525b;font-size:15px;line-height:1.6;margin:0 0 24px;">I nostri ricondizionati <strong>certificati DEKA</strong> hanno <strong>24 mesi di garanzia</strong>. E con il tuo codice sconto risparmi ancora di più!</p><div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:2px solid #3b82f6;border-radius:12px;padding:24px;margin:0 0 24px;text-align:center;"><p style="color:#1e40af;margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:1px;">IL TUO CODICE SCONTO</p><p style="color:#1d4ed8;margin:0 0 8px;font-size:40px;font-weight:700;font-family:monospace;letter-spacing:4px;">${COUPON}</p><p style="color:#2563eb;margin:0;font-size:18px;font-weight:600;">-10€ sul tuo prossimo acquisto</p></div><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center"><a href="${clickLink}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6,#1d4ed8);color:#ffffff;text-decoration:none;padding:16px 40px;border-radius:8px;font-weight:600;font-size:16px;">Scopri i Prezzi →</a></td></tr></table></td></tr><tr><td style="background:#f8fafc;padding:16px 32px;text-align:center;border-top:1px solid #e4e4e7;"><p style="color:#a1a1aa;margin:0;font-size:11px;">Ricevi questa email perché sei cliente del nostro centro.</p></td></tr></table></td></tr></table><img src="${openPixel}" width="1" height="1" style="display:none;" alt="" /></body></html>`,
+  },
+  {
+    id: "custom_images",
+    name: "🖼️ Custom con Immagini",
+    subject: "🎁 10€ di sconto sui Ricondizionati Certificati!",
+    buildHtml: (name: string, clickLink: string, openPixel: string, images?: CustomImages) => buildCustomImagesHtml(name, clickLink, openPixel, images),
   },
 ];
 
