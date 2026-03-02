@@ -191,7 +191,10 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
         }
       }
 
-      toast.success(`Campagna inviata a ${selectedCustomers.length} clienti!`);
+      const msg = failCount > 0 
+        ? `Campagna: ${sentCount} inviate, ${failCount} fallite (rate limit SMTP)`
+        : `Campagna inviata a ${sentCount} clienti!`;
+      if (failCount > 0) toast.warning(msg); else toast.success(msg);
       setCreateOpen(false);
       setTitle("");
       setSelectedCustomers([]);
