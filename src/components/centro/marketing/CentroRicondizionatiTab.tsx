@@ -153,9 +153,11 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
 
           await supabase.functions.invoke("send-email-smtp", {
             body: {
+              centro_id: centroId,
               to: cust.email,
               subject: selectedTemplate.subject,
               html,
+              marketing: true,
             },
           });
         }
