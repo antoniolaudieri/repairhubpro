@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone } from "lucide-react";
+import { Plus, Send, Eye, MousePointer, BarChart3, Loader2, Smartphone, RefreshCw } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 
@@ -53,6 +53,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
   const [templateId, setTemplateId] = useState("promo_standard");
   const [selectedCustomers, setSelectedCustomers] = useState<string[]>([]);
   const [sending, setSending] = useState(false);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   // Fetch campaigns created by this centro (filter by checking recipients)
   const { data: campaigns = [] } = useQuery({
@@ -175,6 +176,51 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
     }
   };
 
+  const handleResend = async (campaign: any) => {
+    if (!centroId) return;
+    setResendingId(campaign.id);
+    try {
+      // Fetch recipients for this campaign
+      const { data: recipients, error } = await supabase
+        .from("ricondizionati_campaign_recipients")
+        .select("*")
+        .eq("campaign_id", campaign.id)
+        .eq("centro_id", centroId);
+      if (error) throw error;
+      if (!recipients || recipients.length === 0) {
+        toast.error("Nessun destinatario trovato per questa campagna");
+        return;
+      }
+
+      const tpl = EMAIL_TEMPLATES.find(t => t.id === (campaign.template_id || "promo_standard")) || EMAIL_TEMPLATES[0];
+      let sentCount = 0;
+
+      for (const r of recipients) {
+        const trackBase = `${SUPABASE_URL}/functions/v1/ricondizionati-track`;
+        const openPixel = `${trackBase}?a=open&t=${r.tracking_id}`;
+        const clickLink = `${window.location.origin}/promo-redirect?t=${r.tracking_id}`;
+        const html = tpl.buildHtml(r.customer_name || "Cliente", clickLink, openPixel);
+
+        await supabase.functions.invoke("send-email-smtp", {
+          body: {
+            centro_id: centroId,
+            to: r.customer_email,
+            subject: tpl.subject,
+            html,
+            marketing: true,
+          },
+        });
+        sentCount++;
+      }
+
+      toast.success(`Campagna reinviata a ${sentCount} destinatari!`);
+    } catch (err: any) {
+      toast.error("Errore reinvio: " + (err.message || "Fallito"));
+    } finally {
+      setResendingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -206,6 +252,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                   <TableHead className="text-center">Aperti</TableHead>
                   <TableHead className="text-center">Click</TableHead>
                   <TableHead>Data</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -222,6 +269,24 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
                     <TableCell className="text-center">{c.total_clicked || 0}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {c.sent_at ? format(new Date(c.sent_at), "dd MMM yyyy", { locale: it }) : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {c.status === "sent" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1"
+                          disabled={resendingId === c.id}
+                          onClick={() => handleResend(c)}
+                        >
+                          {resendingId === c.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" />
+                          )}
+                          Reinvia
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
