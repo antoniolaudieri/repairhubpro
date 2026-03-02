@@ -79,7 +79,7 @@ export function RicondizionatiSection() {
       category_clicked: "shop_cta",
       destination_url: BASE_URL,
       user_agent: navigator.userAgent,
-    }).then(() => {}).catch((e: any) => console.error("Click tracking error:", e));
+    }).then(() => {}, (e: any) => console.error("Click tracking error:", e));
   };
 
   return (
