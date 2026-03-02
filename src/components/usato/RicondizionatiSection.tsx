@@ -198,25 +198,37 @@ export function RicondizionatiSection() {
         </Card>
       </motion.div>
 
-      {/* Info Pills */}
-      <div className="flex flex-wrap justify-center gap-3">
-        {[
-          { icon: ShieldCheck, label: "Garanzia 12 Mesi", color: "text-success" },
-          { icon: Tag, label: "Sconto €10 con Coupon", color: "text-primary" },
-          { icon: Sparkles, label: "Qualità Certificata", color: "text-warning" },
-        ].map((item, i) => (
-          <motion.div
-            key={item.label}
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 + i * 0.1 }}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border/50 shadow-sm"
+      {/* Embedded Partner Site */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+      >
+        <Card className="overflow-hidden border-border/50">
+          <CardContent className="p-0">
+            <iframe
+              src="https://ricondizionati.evolutionlevel.it"
+              title="Catalogo Ricondizionati Evolution Level"
+              className="w-full border-0 rounded-lg"
+              style={{ height: "75vh", minHeight: "500px" }}
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-top-navigation-by-user-activation"
+              loading="lazy"
+              onError={() => {}}
+            />
+          </CardContent>
+        </Card>
+        <p className="text-xs text-muted-foreground text-center mt-2">
+          Se il catalogo non si carica,{" "}
+          <a
+            href="https://ricondizionati.evolutionlevel.it"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary underline hover:text-primary/80"
           >
-            <item.icon className={`h-4 w-4 ${item.color}`} />
-            <span className="text-sm font-medium">{item.label}</span>
-          </motion.div>
-        ))}
-      </div>
+            aprilo in una nuova scheda
+          </a>
+        </p>
+      </motion.div>
 
       {/* Categories Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
