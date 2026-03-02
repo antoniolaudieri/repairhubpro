@@ -2,23 +2,15 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Smartphone,
-  Tablet,
-  Laptop,
-  Gamepad2,
-  Watch,
-  Headphones,
   ExternalLink,
   Copy,
   Check,
   Tag,
   Gift,
   ShieldCheck,
-  Sparkles,
   RefreshCw,
   Truck,
   ClipboardCheck,
@@ -26,73 +18,6 @@ import {
 
 const COUPON_CODE = "EVLZBANT";
 const BASE_URL = "https://ricondizionati.evolutionlevel.it";
-
-const categories = [
-  {
-    id: "iphone",
-    label: "iPhone",
-    icon: Smartphone,
-    url: `${BASE_URL}/collections/iphone`,
-    description: "iPhone ricondizionati certificati Deka",
-    color: "from-slate-600 to-slate-800",
-  },
-  {
-    id: "samsung",
-    label: "Samsung Galaxy",
-    icon: Smartphone,
-    url: `${BASE_URL}/collections/samsung`,
-    description: "Galaxy S e A Series ricondizionati",
-    color: "from-blue-600 to-blue-800",
-  },
-  {
-    id: "ipad",
-    label: "iPad",
-    icon: Tablet,
-    url: `${BASE_URL}/collections/ipad`,
-    description: "iPad ricondizionati per ogni esigenza",
-    color: "from-gray-600 to-gray-800",
-  },
-  {
-    id: "macbook",
-    label: "MacBook",
-    icon: Laptop,
-    url: `${BASE_URL}/collections/macbook`,
-    description: "MacBook Air e Pro ricondizionati",
-    color: "from-zinc-600 to-zinc-800",
-  },
-  {
-    id: "console",
-    label: "Console",
-    icon: Gamepad2,
-    url: `${BASE_URL}/collections/console`,
-    description: "PlayStation, Xbox, Nintendo ricondizionate",
-    color: "from-indigo-600 to-indigo-800",
-  },
-  {
-    id: "smartwatch",
-    label: "Smartwatch",
-    icon: Watch,
-    url: `${BASE_URL}/collections/smartwatch`,
-    description: "Apple Watch e smartwatch ricondizionati",
-    color: "from-emerald-600 to-emerald-800",
-  },
-  {
-    id: "airpods",
-    label: "AirPods & Audio",
-    icon: Headphones,
-    url: `${BASE_URL}/collections/airpods`,
-    description: "AirPods e cuffie ricondizionate",
-    color: "from-violet-600 to-violet-800",
-  },
-  {
-    id: "tutti",
-    label: "Tutti i Prodotti",
-    icon: Sparkles,
-    url: BASE_URL,
-    description: "Scopri l'intero catalogo ricondizionati",
-    color: "from-primary to-primary/80",
-  },
-];
 
 const guarantees = [
   {
