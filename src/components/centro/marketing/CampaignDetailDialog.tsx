@@ -212,6 +212,13 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
                     <TableCell className="text-sm text-muted-foreground">{r.customer_email}</TableCell>
                     <TableCell className="text-center">{getStatusBadge(r)}</TableCell>
                     <TableCell className="text-center text-xs">
+                      {r.sent_at ? (
+                        <span className="text-green-600 font-medium">{fmtDate(r.sent_at)}</span>
+                      ) : (
+                        <span className="text-destructive">✗ Non recapitata</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center text-xs">
                       {r.opened_at ? (
                         <span title={`${r.open_count || 1}x`}>
                           {fmtDate(r.opened_at)}
