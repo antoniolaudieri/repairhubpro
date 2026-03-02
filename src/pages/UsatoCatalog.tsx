@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { UsedDeviceCard } from "@/components/usato/UsedDeviceCard";
 import { NotifyInterestDialog } from "@/components/usato/NotifyInterestDialog";
+import { RicondizionatiSection } from "@/components/usato/RicondizionatiSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +36,7 @@ import {
   TrendingUp,
   Package,
   CheckCircle2,
+  Recycle,
 } from "lucide-react";
 
 const deviceTypeFilters = [
@@ -77,6 +79,7 @@ export default function UsatoCatalog() {
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false);
   const [brands, setBrands] = useState<string[]>([]);
   const [selectedBrand, setSelectedBrand] = useState("all");
+  const [activeTab, setActiveTab] = useState<"usati" | "ricondizionati">("usati");
 
   useEffect(() => {
     fetchDevices();
@@ -300,6 +303,40 @@ export default function UsatoCatalog() {
           </div>
         </section>
 
+        {/* Tab Switcher */}
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6">
+          <div className="flex gap-2 p-1 rounded-xl bg-muted/50 border border-border/30 w-fit mx-auto">
+            <button
+              onClick={() => setActiveTab("usati")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "usati"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Package className="h-4 w-4" />
+              I Nostri Usati
+            </button>
+            <button
+              onClick={() => setActiveTab("ricondizionati")}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "ricondizionati"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Recycle className="h-4 w-4" />
+              Ricondizionati Certificati
+            </button>
+          </div>
+        </section>
+
+        {activeTab === "ricondizionati" ? (
+          <section className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            <RicondizionatiSection />
+          </section>
+        ) : (
+        <>
         {/* Filters Section */}
         <section className="sticky top-16 z-40 bg-background/95 backdrop-blur-xl border-b border-border/30">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4">
@@ -529,6 +566,8 @@ export default function UsatoCatalog() {
               </Card>
             </motion.div>
           </section>
+        )}
+        </>
         )}
       </main>
 
