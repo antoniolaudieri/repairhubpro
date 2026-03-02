@@ -56,6 +56,7 @@ import {
 } from "@/components/ui/dialog";
 import { BookingWizard, CustomerData } from "@/components/booking/BookingWizard";
 import { UsedDevicesCarousel } from "@/components/usato/UsedDevicesCarousel";
+import { RicondizionatiSection } from "@/components/usato/RicondizionatiSection";
 import { ScrollingBrandLogos } from "@/components/display/ScrollingBrandLogos";
 import { format } from "date-fns";
 
@@ -783,6 +784,37 @@ export default function CustomerHome() {
           </p>
         </motion.div>
         <ScrollingBrandLogos speed={35} />
+      </section>
+
+      {/* Ricondizionati Section */}
+      <section className="py-16 sm:py-20 relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 via-transparent to-primary/5" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="text-center mb-10"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              whileInView={{ scale: 1 }}
+              viewport={{ once: true }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6"
+            >
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Convenzione Esclusiva</span>
+            </motion.div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground mb-4">
+              Ricondizionati <span className="text-gradient">Certificati</span>
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Grazie alla nostra convenzione con Evolution Level, ottieni €10 di sconto su tutti i ricondizionati certificati Deka
+            </p>
+          </motion.div>
+          <RicondizionatiSection />
+        </div>
       </section>
 
       {/* Partners Map Section */}
