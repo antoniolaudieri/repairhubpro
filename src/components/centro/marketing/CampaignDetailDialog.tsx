@@ -103,7 +103,8 @@ export function CampaignDetailDialog({ campaign, open, onOpenChange }: CampaignD
     if (r.copied_coupon_at) return <Badge className="bg-emerald-500 text-[10px]">Coupon Copiato</Badge>;
     if (r.clicked_at) return <Badge className="bg-blue-500 text-[10px]">Cliccata</Badge>;
     if (r.opened_at) return <Badge className="bg-amber-500 text-[10px]">Aperta</Badge>;
-    return <Badge variant="secondary" className="text-[10px]">Inviata</Badge>;
+    if (r.sent_at) return <Badge className="bg-green-600 text-[10px]">Recapitata</Badge>;
+    return <Badge variant="secondary" className="text-[10px]">In coda</Badge>;
   };
 
   const fmtDate = (d: string | null) =>
