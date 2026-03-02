@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Gift, CheckCircle, ExternalLink } from "lucide-react";
+import { Gift, CheckCircle, ExternalLink, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const DESTINATION_URL = "https://ricondizionati.evolutionlevel.it";
 const COUPON_CODE = "EVLZBANT";
@@ -9,23 +10,56 @@ const COUPON_CODE = "EVLZBANT";
 export default function PromoRedirect() {
   const [searchParams] = useSearchParams();
   const [copied, setCopied] = useState(false);
+  const [redirectPaused, setRedirectPaused] = useState(false);
   const trackingId = searchParams.get("t");
 
-  useEffect(() => {
-    // Copy coupon to clipboard
-    navigator.clipboard.writeText(COUPON_CODE).then(() => {
+  const copyToClipboard = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(COUPON_CODE);
       setCopied(true);
-    }).catch(() => {
-      setCopied(true); // proceed anyway
-    });
+      return true;
+    } catch {
+      // Fallback: textarea trick
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = COUPON_CODE;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (ok) { setCopied(true); return true; }
+      } catch { /* ignore */ }
+    }
+    return false;
+  }, []);
 
-    // Redirect after 2.5 seconds
+  // Try auto-copy on mount
+  useEffect(() => {
+    copyToClipboard();
+  }, [copyToClipboard]);
+
+  // Redirect after delay, but pause if user hasn't copied yet
+  useEffect(() => {
     const timer = setTimeout(() => {
-      window.location.href = DESTINATION_URL;
-    }, 2500);
-
+      if (copied) {
+        window.location.href = DESTINATION_URL;
+      } else {
+        setRedirectPaused(true);
+      }
+    }, 3000);
     return () => clearTimeout(timer);
-  }, [trackingId]);
+  }, [copied]);
+
+  const handleManualCopy = async () => {
+    await copyToClipboard();
+    setCopied(true);
+    setTimeout(() => {
+      window.location.href = DESTINATION_URL;
+    }, 1000);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
@@ -39,21 +73,36 @@ export default function PromoRedirect() {
         </h1>
 
         <div className="bg-card border rounded-xl p-6 shadow-lg space-y-3">
-          <div className="flex items-center justify-center gap-2 text-primary">
-            <CheckCircle className="h-5 w-5" />
-            <span className="font-semibold">Coupon copiato negli appunti!</span>
-          </div>
+          {copied ? (
+            <div className="flex items-center justify-center gap-2 text-primary">
+              <CheckCircle className="h-5 w-5" />
+              <span className="font-semibold">Coupon copiato!</span>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">Copia il codice prima di continuare</p>
+          )}
           <div className="bg-muted rounded-lg p-4">
             <p className="text-xs text-muted-foreground mb-1">Il tuo codice sconto</p>
-            <p className="text-3xl font-mono font-bold tracking-widest text-foreground">{COUPON_CODE}</p>
+            <p className="text-3xl font-mono font-bold tracking-widest text-foreground select-all">{COUPON_CODE}</p>
             <p className="text-sm text-primary font-semibold mt-1">-10€ sul tuo ordine</p>
           </div>
+
+          {!copied && (
+            <Button onClick={handleManualCopy} className="w-full gap-2" size="lg">
+              <Copy className="h-4 w-4" />
+              Copia Codice Sconto
+            </Button>
+          )}
         </div>
 
-        <div className="flex items-center justify-center gap-2 text-muted-foreground animate-pulse">
-          <ExternalLink className="h-4 w-4" />
-          <p className="text-sm">Ti stiamo reindirizzando al negozio...</p>
-        </div>
+        {copied && !redirectPaused ? (
+          <div className="flex items-center justify-center gap-2 text-muted-foreground animate-pulse">
+            <ExternalLink className="h-4 w-4" />
+            <p className="text-sm">Ti stiamo reindirizzando al negozio...</p>
+          </div>
+        ) : redirectPaused && !copied ? (
+          <p className="text-sm text-muted-foreground">Copia il coupon, poi verrai reindirizzato automaticamente</p>
+        ) : null}
 
         <a
           href={DESTINATION_URL}
