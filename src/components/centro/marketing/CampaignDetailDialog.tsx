@@ -10,7 +10,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Mail, Eye, MousePointer, Copy, UserX, Users, Filter, CheckCircle, Send } from "lucide-react";
 
-type FilterType = "all" | "opened" | "not_opened" | "clicked" | "copied" | "unsubscribed";
+type FilterType = "all" | "delivered" | "not_delivered" | "opened" | "not_opened" | "clicked" | "copied" | "unsubscribed";
 
 interface CampaignDetailDialogProps {
   campaign: any;
