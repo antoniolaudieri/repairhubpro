@@ -36,6 +36,7 @@ import {
   TrendingUp,
   Package,
   CheckCircle2,
+  Recycle,
 } from "lucide-react";
 
 const deviceTypeFilters = [
