@@ -56,32 +56,30 @@ export function RicondizionatiSection() {
     }
   };
 
-  const handleOpenShop = async () => {
-    try {
-      await navigator.clipboard.writeText(COUPON_CODE);
+  const handleOpenShop = () => {
+    // Open immediately to avoid popup blocker
+    window.open(BASE_URL, "_blank", "noopener,noreferrer");
+
+    navigator.clipboard.writeText(COUPON_CODE).then(() => {
       toast({
         title: "✅ Coupon EVLZBANT copiato!",
         description: "Ricordati di incollarlo al carrello per ottenere €10 di sconto",
       });
-    } catch {
+    }).catch(() => {
       toast({
         title: "Codice sconto: EVLZBANT",
         description: "Copialo e incollalo al carrello per €10 di sconto",
         variant: "destructive",
       });
-    }
-    try {
-      await supabase.from("affiliate_clicks" as any).insert({
-        affiliate_program: "evolution_level",
-        coupon_code: COUPON_CODE,
-        category_clicked: "shop_cta",
-        destination_url: BASE_URL,
-        user_agent: navigator.userAgent,
-      });
-    } catch (e) {
-      console.error("Click tracking error:", e);
-    }
-    window.open(BASE_URL, "_blank", "noopener,noreferrer");
+    });
+
+    supabase.from("affiliate_clicks" as any).insert({
+      affiliate_program: "evolution_level",
+      coupon_code: COUPON_CODE,
+      category_clicked: "shop_cta",
+      destination_url: BASE_URL,
+      user_agent: navigator.userAgent,
+    }).then(() => {}, (e: any) => console.error("Click tracking error:", e));
   };
 
   return (
