@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 
 const DESTINATION_URL = "https://ricondizionati.evolutionlevel.it";
 const COUPON_CODE = "EVLZBANT";
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
 export default function PromoRedirect() {
   const [searchParams] = useSearchParams();
