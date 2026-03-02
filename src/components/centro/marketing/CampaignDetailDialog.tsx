@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Mail, Eye, MousePointer, Copy, UserX, Users, Filter } from "lucide-react";
+import { Mail, Eye, MousePointer, Copy, UserX, Users, Filter, CheckCircle, Send } from "lucide-react";
 
 type FilterType = "all" | "opened" | "not_opened" | "clicked" | "copied" | "unsubscribed";
 
