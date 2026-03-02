@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { UsedDeviceCard } from "@/components/usato/UsedDeviceCard";
 import { NotifyInterestDialog } from "@/components/usato/NotifyInterestDialog";
+import { RicondizionatiSection } from "@/components/usato/RicondizionatiSection";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
