@@ -225,7 +225,7 @@ export function CentroRicondizionatiTab({ centroId }: CentroRicondizionatiTabPro
           const trackBase = `${SUPABASE_URL}/functions/v1/ricondizionati-track`;
           const openPixel = `${trackBase}?a=open&t=${recipient.tracking_id}`;
           const clickLink = `${window.location.origin}/promo-redirect?t=${recipient.tracking_id}`;
-          const html = selectedTemplate.buildHtml(cust.name || "Cliente", clickLink, openPixel);
+          const html = buildHtmlForTemplate(selectedTemplate, cust.name || "Cliente", clickLink, openPixel);
 
           try {
             const { error: sendErr } = await supabase.functions.invoke("send-email-smtp", {
