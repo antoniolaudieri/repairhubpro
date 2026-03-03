@@ -395,7 +395,10 @@ export default function CentroAste() {
                       <div><Label className="text-xs">Partenza (€)</Label><Input type="number" value={itemStartingPrice} onChange={e => setItemStartingPrice(e.target.value)} placeholder="1" /></div>
                       <div><Label className="text-xs">Compra Ora (€)</Label><Input type="number" value={itemBuyNowPrice} onChange={e => setItemBuyNowPrice(e.target.value)} /></div>
                     </div>
-                    <div><Label className="text-xs">Durata (sec)</Label><Input type="number" value={itemDuration} onChange={e => setItemDuration(e.target.value)} /></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-xs">Riserva (€)</Label><Input type="number" value={itemReservePrice} onChange={e => setItemReservePrice(e.target.value)} placeholder="Opzionale" /></div>
+                      <div><Label className="text-xs">Durata (sec)</Label><Input type="number" value={itemDuration} onChange={e => setItemDuration(e.target.value)} /></div>
+                    </div>
                     <Button onClick={addItem} className="w-full">Aggiungi</Button>
                   </div>
                 </DialogContent>
