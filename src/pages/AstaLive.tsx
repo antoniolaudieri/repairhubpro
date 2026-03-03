@@ -403,7 +403,7 @@ export default function AstaLive() {
                 )}
               </div>
             ) : auction.stream_url ? (
-              <div className="aspect-[4/3] sm:aspect-video max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh]">
+              <div className="aspect-video w-full">
                 <iframe
                   src={convertToEmbedUrl(auction.stream_url)}
                   className="w-full h-full border-0"
