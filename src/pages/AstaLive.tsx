@@ -67,6 +67,13 @@ export default function AstaLive() {
     if (!auctionId) return;
     fetchAuction();
 
+    // Increment viewer count
+    supabase.from("live_auctions").select("viewer_count").eq("id", auctionId).single().then(({ data }) => {
+      if (data) {
+        supabase.from("live_auctions").update({ viewer_count: (data.viewer_count || 0) + 1 } as any).eq("id", auctionId).then(() => {});
+      }
+    });
+
     const channel = supabase
       .channel(`public-auction-${auctionId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "auction_items", filter: `auction_id=eq.${auctionId}` },
@@ -81,9 +88,23 @@ export default function AstaLive() {
           ));
         }
       )
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "live_auctions", filter: `id=eq.${auctionId}` },
+        (payload) => {
+          const updated = payload.new as AuctionData;
+          setAuction(prev => prev ? { ...prev, viewer_count: updated.viewer_count, status: updated.status, stream_url: updated.stream_url } : null);
+        }
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Decrement viewer on leave
+    return () => {
+      supabase.from("live_auctions").select("viewer_count").eq("id", auctionId).single().then(({ data }) => {
+        if (data) {
+          supabase.from("live_auctions").update({ viewer_count: Math.max(0, (data.viewer_count || 1) - 1) } as any).eq("id", auctionId).then(() => {});
+        }
+      });
+      supabase.removeChannel(channel);
+    };
   }, [auctionId]);
 
   // Countdown timer
