@@ -413,7 +413,7 @@ export default function AstaLive() {
                 />
               </div>
             ) : activeItem?.image_url ? (
-              <div className="aspect-[4/3] sm:aspect-video max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] flex items-center justify-center bg-black">
+              <div className="aspect-video w-full flex items-center justify-center bg-black">
                 <img src={activeItem.image_url} alt={activeItem.title} className="max-w-full max-h-full object-contain" />
               </div>
             ) : (
