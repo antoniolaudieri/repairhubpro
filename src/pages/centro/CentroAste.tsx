@@ -201,14 +201,42 @@ export default function CentroAste() {
   };
 
   const closeItem = async (item: AuctionItem, sold: boolean) => {
-    const update: any = { status: sold ? "sold" : "unsold", ended_at: new Date().toISOString() };
-    if (sold && item.bid_count > 0) {
+    const reservePrice = (item as any).reserve_price as number | null;
+    const reserveMet = !reservePrice || item.current_price >= reservePrice;
+    const finalSold = sold && reserveMet && item.bid_count > 0;
+    
+    const update: any = { status: finalSold ? "sold" : "unsold", ended_at: new Date().toISOString() };
+    if (finalSold) {
       const { data: topBid } = await supabase.from("auction_bids").select("*").eq("item_id", item.id).order("amount", { ascending: false }).limit(1).single();
       if (topBid) { update.winner_name = topBid.bidder_name; update.winner_email = topBid.bidder_email; update.winner_user_id = topBid.user_id; }
     }
     await supabase.from("auction_items").update(update).eq("id", item.id);
+    
+    if (finalSold) {
+      toast({ title: `🏆 Venduto a ${update.winner_name || "N/A"}!`, description: `Prezzo finale: €${item.current_price}` });
+    } else if (sold && !reserveMet) {
+      toast({ title: "Riserva non raggiunta", description: `Il prezzo €${item.current_price} non ha raggiunto la riserva.`, variant: "destructive" });
+    }
     fetchItems(item.auction_id);
   };
+
+  // Auto-close when countdown reaches 0
+  useEffect(() => {
+    if (!activeItem?.started_at) return;
+    const endTime = new Date(activeItem.started_at).getTime() + activeItem.duration_seconds * 1000;
+    
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+      if (remaining === 0 && autoCloseTriggered !== activeItem.id) {
+        setAutoCloseTriggered(activeItem.id);
+        closeItem(activeItem, true);
+      }
+    };
+    
+    const interval = setInterval(tick, 1000);
+    tick();
+    return () => clearInterval(interval);
+  }, [activeItem?.id, activeItem?.started_at, activeItem?.duration_seconds, autoCloseTriggered]);
 
   const deleteItem = async (itemId: string) => {
     await supabase.from("auction_items").delete().eq("id", itemId);
