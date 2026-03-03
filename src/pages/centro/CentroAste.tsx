@@ -183,6 +183,7 @@ export default function CentroAste() {
       auction_id: selectedAuction.id, centro_id: centroId, title: itemTitle.trim(),
       description: itemDescription.trim() || null, starting_price: startPrice, current_price: startPrice,
       buy_now_price: itemBuyNowPrice ? parseFloat(itemBuyNowPrice) : null,
+      reserve_price: itemReservePrice ? parseFloat(itemReservePrice) : null,
       duration_seconds: parseInt(itemDuration) || 60, status: "pending" as any,
     });
     if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
