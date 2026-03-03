@@ -191,6 +191,7 @@ export default function AstaLive() {
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [presenceCount, setPresenceCount] = useState(0);
+  const [winnerOverlay, setWinnerOverlay] = useState<{ name: string | null; price: number; sold: boolean } | null>(null);
 
   const isCameraStream = auction?.stream_url?.startsWith("camera:");
   const { remoteStream, connectionState } = useWebRTCViewer(auctionId || "", !!isCameraStream);
@@ -253,7 +254,19 @@ export default function AstaLive() {
 
     const channel = supabase
       .channel(`public-auction-${auctionId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "auction_items", filter: `auction_id=eq.${auctionId}` }, () => fetchItems())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "auction_items", filter: `auction_id=eq.${auctionId}` }, (payload) => {
+        const updated = payload.new as any;
+        if (updated.status === "sold" || updated.status === "unsold") {
+          setWinnerOverlay({
+            name: updated.winner_name || null,
+            price: updated.current_price,
+            sold: updated.status === "sold",
+          });
+          setTimeout(() => setWinnerOverlay(null), 6000);
+        }
+        fetchItems();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_items", filter: `auction_id=eq.${auctionId}` }, () => fetchItems())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_bids", filter: `auction_id=eq.${auctionId}` }, (payload) => {
         const bid = payload.new as BidData;
         setBids(prev => {
@@ -424,6 +437,37 @@ export default function AstaLive() {
                 </p>
               </div>
             )}
+
+            {/* Winner Overlay */}
+            <AnimatePresence>
+              {winnerOverlay && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+                >
+                  <div className="text-center text-white space-y-2 p-6">
+                    {winnerOverlay.sold ? (
+                      <>
+                        <Trophy className="h-14 w-14 mx-auto text-chart-4 drop-shadow-lg" />
+                        <p className="text-2xl font-black">VENDUTO!</p>
+                        <p className="text-4xl font-black text-primary">€{winnerOverlay.price}</p>
+                        {winnerOverlay.name && (
+                          <p className="text-lg font-bold text-white/90">🎉 {winnerOverlay.name}</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Gavel className="h-14 w-14 mx-auto text-white/50" />
+                        <p className="text-2xl font-black">NON VENDUTO</p>
+                        <p className="text-sm text-white/60">Prezzo di riserva non raggiunto</p>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Price + Timer Overlay */}
             {activeItem && (

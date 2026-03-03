@@ -1,0 +1,1 @@
+ALTER TABLE public.auction_items ADD COLUMN reserve_price numeric DEFAULT null;

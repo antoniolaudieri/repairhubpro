@@ -76,7 +76,9 @@ export default function CentroAste() {
   const [itemDescription, setItemDescription] = useState("");
   const [itemStartingPrice, setItemStartingPrice] = useState("");
   const [itemBuyNowPrice, setItemBuyNowPrice] = useState("");
+  const [itemReservePrice, setItemReservePrice] = useState("");
   const [itemDuration, setItemDuration] = useState("60");
+  const [autoCloseTriggered, setAutoCloseTriggered] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) fetchCentroId();
@@ -181,12 +183,13 @@ export default function CentroAste() {
       auction_id: selectedAuction.id, centro_id: centroId, title: itemTitle.trim(),
       description: itemDescription.trim() || null, starting_price: startPrice, current_price: startPrice,
       buy_now_price: itemBuyNowPrice ? parseFloat(itemBuyNowPrice) : null,
+      reserve_price: itemReservePrice ? parseFloat(itemReservePrice) : null,
       duration_seconds: parseInt(itemDuration) || 60, status: "pending" as any,
     });
     if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Prodotto aggiunto!" });
     setAddItemOpen(false);
-    setItemTitle(""); setItemDescription(""); setItemStartingPrice(""); setItemBuyNowPrice(""); setItemDuration("60");
+    setItemTitle(""); setItemDescription(""); setItemStartingPrice(""); setItemBuyNowPrice(""); setItemReservePrice(""); setItemDuration("60");
     fetchItems(selectedAuction.id);
   };
 
@@ -198,14 +201,25 @@ export default function CentroAste() {
   };
 
   const closeItem = async (item: AuctionItem, sold: boolean) => {
-    const update: any = { status: sold ? "sold" : "unsold", ended_at: new Date().toISOString() };
-    if (sold && item.bid_count > 0) {
+    const reservePrice = (item as any).reserve_price as number | null;
+    const reserveMet = !reservePrice || item.current_price >= reservePrice;
+    const finalSold = sold && reserveMet && item.bid_count > 0;
+    
+    const update: any = { status: finalSold ? "sold" : "unsold", ended_at: new Date().toISOString() };
+    if (finalSold) {
       const { data: topBid } = await supabase.from("auction_bids").select("*").eq("item_id", item.id).order("amount", { ascending: false }).limit(1).single();
       if (topBid) { update.winner_name = topBid.bidder_name; update.winner_email = topBid.bidder_email; update.winner_user_id = topBid.user_id; }
     }
     await supabase.from("auction_items").update(update).eq("id", item.id);
+    
+    if (finalSold) {
+      toast({ title: `🏆 Venduto a ${update.winner_name || "N/A"}!`, description: `Prezzo finale: €${item.current_price}` });
+    } else if (sold && !reserveMet) {
+      toast({ title: "Riserva non raggiunta", description: `Il prezzo €${item.current_price} non ha raggiunto la riserva.`, variant: "destructive" });
+    }
     fetchItems(item.auction_id);
   };
+
 
   const deleteItem = async (itemId: string) => {
     await supabase.from("auction_items").delete().eq("id", itemId);
@@ -236,6 +250,24 @@ export default function CentroAste() {
 
   const publicUrl = selectedAuction ? `${window.location.origin}/aste/${selectedAuction.id}` : "";
   const activeItem = auctionItems.find(i => i.status === "active");
+
+  // Auto-close when countdown reaches 0
+  useEffect(() => {
+    if (!activeItem?.started_at) return;
+    const endTime = new Date(activeItem.started_at).getTime() + activeItem.duration_seconds * 1000;
+    
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+      if (remaining === 0 && autoCloseTriggered !== activeItem.id) {
+        setAutoCloseTriggered(activeItem.id);
+        closeItem(activeItem, true);
+      }
+    };
+    
+    const interval = setInterval(tick, 1000);
+    tick();
+    return () => clearInterval(interval);
+  }, [activeItem?.id, activeItem?.started_at, activeItem?.duration_seconds, autoCloseTriggered]);
 
   return (
     <CentroLayout>
@@ -364,7 +396,10 @@ export default function CentroAste() {
                       <div><Label className="text-xs">Partenza (€)</Label><Input type="number" value={itemStartingPrice} onChange={e => setItemStartingPrice(e.target.value)} placeholder="1" /></div>
                       <div><Label className="text-xs">Compra Ora (€)</Label><Input type="number" value={itemBuyNowPrice} onChange={e => setItemBuyNowPrice(e.target.value)} /></div>
                     </div>
-                    <div><Label className="text-xs">Durata (sec)</Label><Input type="number" value={itemDuration} onChange={e => setItemDuration(e.target.value)} /></div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div><Label className="text-xs">Riserva (€)</Label><Input type="number" value={itemReservePrice} onChange={e => setItemReservePrice(e.target.value)} placeholder="Opzionale" /></div>
+                      <div><Label className="text-xs">Durata (sec)</Label><Input type="number" value={itemDuration} onChange={e => setItemDuration(e.target.value)} /></div>
+                    </div>
                     <Button onClick={addItem} className="w-full">Aggiungi</Button>
                   </div>
                 </DialogContent>
@@ -407,6 +442,11 @@ export default function CentroAste() {
                                 <span className="text-muted-foreground">Da €{item.starting_price}</span>
                                 <span className="text-primary font-bold text-sm">€{item.current_price}</span>
                                 {item.buy_now_price && <span className="text-muted-foreground">CN €{item.buy_now_price}</span>}
+                                {(item as any).reserve_price && (
+                                  <span className={`text-xs font-medium ${item.current_price >= (item as any).reserve_price ? "text-chart-2" : "text-destructive"}`}>
+                                    R €{(item as any).reserve_price} {item.current_price >= (item as any).reserve_price ? "✓" : "✗"}
+                                  </span>
+                                )}
                                 <span className="text-muted-foreground flex items-center gap-0.5"><Users className="h-3 w-3" />{item.bid_count}</span>
                                 <span className="text-muted-foreground flex items-center gap-0.5"><Timer className="h-3 w-3" />{item.duration_seconds}s</span>
                               </div>
