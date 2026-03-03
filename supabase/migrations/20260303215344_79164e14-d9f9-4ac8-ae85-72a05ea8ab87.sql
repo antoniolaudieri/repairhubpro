@@ -1,0 +1,1 @@
+ALTER TABLE public.live_auctions ADD COLUMN stream_url TEXT DEFAULT NULL;
