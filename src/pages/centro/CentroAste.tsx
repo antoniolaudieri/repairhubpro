@@ -441,6 +441,11 @@ export default function CentroAste() {
                                 <span className="text-muted-foreground">Da €{item.starting_price}</span>
                                 <span className="text-primary font-bold text-sm">€{item.current_price}</span>
                                 {item.buy_now_price && <span className="text-muted-foreground">CN €{item.buy_now_price}</span>}
+                                {(item as any).reserve_price && (
+                                  <span className={`text-xs font-medium ${item.current_price >= (item as any).reserve_price ? "text-chart-2" : "text-destructive"}`}>
+                                    R €{(item as any).reserve_price} {item.current_price >= (item as any).reserve_price ? "✓" : "✗"}
+                                  </span>
+                                )}
                                 <span className="text-muted-foreground flex items-center gap-0.5"><Users className="h-3 w-3" />{item.bid_count}</span>
                                 <span className="text-muted-foreground flex items-center gap-0.5"><Timer className="h-3 w-3" />{item.duration_seconds}s</span>
                               </div>

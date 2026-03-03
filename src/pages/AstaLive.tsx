@@ -438,6 +438,37 @@ export default function AstaLive() {
               </div>
             )}
 
+            {/* Winner Overlay */}
+            <AnimatePresence>
+              {winnerOverlay && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+                >
+                  <div className="text-center text-white space-y-2 p-6">
+                    {winnerOverlay.sold ? (
+                      <>
+                        <Trophy className="h-14 w-14 mx-auto text-yellow-400 drop-shadow-lg" />
+                        <p className="text-2xl font-black">VENDUTO!</p>
+                        <p className="text-4xl font-black text-primary">€{winnerOverlay.price}</p>
+                        {winnerOverlay.name && (
+                          <p className="text-lg font-bold text-white/90">🎉 {winnerOverlay.name}</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Gavel className="h-14 w-14 mx-auto text-white/50" />
+                        <p className="text-2xl font-black">NON VENDUTO</p>
+                        <p className="text-sm text-white/60">Prezzo di riserva non raggiunto</p>
+                      </>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* Price + Timer Overlay */}
             {activeItem && (
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 pt-8">
