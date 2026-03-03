@@ -300,6 +300,7 @@ export type Database = {
           ended_at: string | null
           id: string
           image_url: string | null
+          reserve_price: number | null
           started_at: string | null
           starting_price: number
           status: Database["public"]["Enums"]["auction_item_status"]
@@ -321,6 +322,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           image_url?: string | null
+          reserve_price?: number | null
           started_at?: string | null
           starting_price?: number
           status?: Database["public"]["Enums"]["auction_item_status"]
@@ -342,6 +344,7 @@ export type Database = {
           ended_at?: string | null
           id?: string
           image_url?: string | null
+          reserve_price?: number | null
           started_at?: string | null
           starting_price?: number
           status?: Database["public"]["Enums"]["auction_item_status"]
