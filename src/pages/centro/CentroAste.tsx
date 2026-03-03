@@ -16,6 +16,7 @@ import {
   Gavel, Plus, Play, Square, Eye, Clock, Users, Package,
   Trash2, ChevronRight, Radio, Trophy, ArrowRight, Timer
 } from "lucide-react";
+import { AuctionBroadcast } from "@/components/centro/AuctionBroadcast";
 
 interface Auction {
   id: string;
