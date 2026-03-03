@@ -55,6 +55,8 @@ import CentroPrenotazioni from "@/pages/centro/CentroPrenotazioni";
 import CentroFinanza from "@/pages/centro/CentroFinanza";
 import CentroPrintAgent from "@/pages/centro/CentroPrintAgent";
 import CentroOpportunita from "@/pages/centro/CentroOpportunita";
+import CentroAste from "@/pages/centro/CentroAste";
+import AstaLive from "@/pages/AstaLive";
 import UsatoCatalog from "@/pages/UsatoCatalog";
 import UsatoDetail from "@/pages/UsatoDetail";
 // Admin pages
