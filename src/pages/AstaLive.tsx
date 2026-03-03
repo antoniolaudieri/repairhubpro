@@ -189,6 +189,8 @@ export default function AstaLive() {
   const [authOpen, setAuthOpen] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const [isMuted, setIsMuted] = useState(true);
+  const [presenceCount, setPresenceCount] = useState(0);
 
   const isCameraStream = auction?.stream_url?.startsWith("camera:");
   const { remoteStream, connectionState } = useWebRTCViewer(auctionId || "", !!isCameraStream);
@@ -234,10 +236,20 @@ export default function AstaLive() {
     if (!auctionId) return;
     fetchAuction();
 
-    // Viewer count increment
-    supabase.from("live_auctions").select("viewer_count").eq("id", auctionId).single().then(({ data }) => {
-      if (data) supabase.from("live_auctions").update({ viewer_count: (data.viewer_count || 0) + 1 } as any).eq("id", auctionId).then(() => {});
+    // Presence-based viewer tracking
+    const presenceChannel = supabase.channel(`presence-auction-${auctionId}`, {
+      config: { presence: { key: `viewer-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` } },
     });
+    presenceChannel
+      .on("presence", { event: "sync" }, () => {
+        const state = presenceChannel.presenceState();
+        setPresenceCount(Object.keys(state).length);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await presenceChannel.track({ type: "viewer" });
+        }
+      });
 
     const channel = supabase
       .channel(`public-auction-${auctionId}`)
@@ -245,7 +257,6 @@ export default function AstaLive() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_bids", filter: `auction_id=eq.${auctionId}` }, (payload) => {
         const bid = payload.new as BidData;
         setBids(prev => {
-          // Avoid duplicates
           if (prev.some(b => b.id === bid.id)) return prev;
           return [bid, ...prev.slice(0, 99)];
         });
@@ -258,9 +269,7 @@ export default function AstaLive() {
       .subscribe();
 
     return () => {
-      supabase.from("live_auctions").select("viewer_count").eq("id", auctionId).single().then(({ data }) => {
-        if (data) supabase.from("live_auctions").update({ viewer_count: Math.max(0, (data.viewer_count || 1) - 1) } as any).eq("id", auctionId).then(() => {});
-      });
+      supabase.removeChannel(presenceChannel);
       supabase.removeChannel(channel);
     };
   }, [auctionId, fetchAuction, fetchItems, fetchBids]);
@@ -349,8 +358,8 @@ export default function AstaLive() {
           {isEnded && <Badge variant="secondary" className="text-[10px] h-5">Terminata</Badge>}
           <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
             <Eye className="h-3 w-3" />
-            <motion.span key={auction.viewer_count} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="font-bold text-foreground">
-              {auction.viewer_count}
+            <motion.span key={presenceCount} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="font-bold text-foreground">
+              {presenceCount}
             </motion.span>
           </div>
         </div>
@@ -364,9 +373,22 @@ export default function AstaLive() {
           {/* Stream / Product Hero */}
           <div className="relative bg-black flex-shrink-0">
             {isCameraStream ? (
-              <div className="aspect-[4/3] sm:aspect-video max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] flex items-center justify-center bg-black relative">
+              <div className="aspect-video w-full flex items-center justify-center bg-black relative">
                 {remoteStream ? (
-                  <video ref={cameraVideoRef} autoPlay playsInline muted controls className="w-full h-full object-cover" />
+                  <>
+                    <video ref={cameraVideoRef} autoPlay playsInline muted={isMuted} className="w-full h-full object-cover" />
+                    {isMuted && (
+                      <button
+                        onClick={() => {
+                          setIsMuted(false);
+                          if (cameraVideoRef.current) cameraVideoRef.current.muted = false;
+                        }}
+                        className="absolute top-3 right-3 z-10 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1"
+                      >
+                        🔇 Tocca per audio
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center text-white/60 space-y-2 p-4">
                     <Video className="h-10 w-10 mx-auto opacity-40 animate-pulse" />
@@ -381,7 +403,7 @@ export default function AstaLive() {
                 )}
               </div>
             ) : auction.stream_url ? (
-              <div className="aspect-[4/3] sm:aspect-video max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh]">
+              <div className="aspect-video w-full">
                 <iframe
                   src={convertToEmbedUrl(auction.stream_url)}
                   className="w-full h-full border-0"
@@ -391,11 +413,11 @@ export default function AstaLive() {
                 />
               </div>
             ) : activeItem?.image_url ? (
-              <div className="aspect-[4/3] sm:aspect-video max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] flex items-center justify-center bg-black">
+              <div className="aspect-video w-full flex items-center justify-center bg-black">
                 <img src={activeItem.image_url} alt={activeItem.title} className="max-w-full max-h-full object-contain" />
               </div>
             ) : (
-              <div className="aspect-[4/3] sm:aspect-video max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] flex flex-col items-center justify-center bg-muted gap-2">
+              <div className="aspect-video w-full flex flex-col items-center justify-center bg-muted gap-2">
                 <Video className="h-12 w-12 text-muted-foreground/30" />
                 <p className="text-xs text-muted-foreground">
                   {isLive ? "Stream in arrivo..." : "In attesa dello stream"}
