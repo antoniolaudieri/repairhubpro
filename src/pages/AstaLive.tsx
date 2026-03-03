@@ -236,10 +236,20 @@ export default function AstaLive() {
     if (!auctionId) return;
     fetchAuction();
 
-    // Viewer count increment
-    supabase.from("live_auctions").select("viewer_count").eq("id", auctionId).single().then(({ data }) => {
-      if (data) supabase.from("live_auctions").update({ viewer_count: (data.viewer_count || 0) + 1 } as any).eq("id", auctionId).then(() => {});
+    // Presence-based viewer tracking
+    const presenceChannel = supabase.channel(`presence-auction-${auctionId}`, {
+      config: { presence: { key: `viewer-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` } },
     });
+    presenceChannel
+      .on("presence", { event: "sync" }, () => {
+        const state = presenceChannel.presenceState();
+        setPresenceCount(Object.keys(state).length);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await presenceChannel.track({ type: "viewer" });
+        }
+      });
 
     const channel = supabase
       .channel(`public-auction-${auctionId}`)
@@ -247,7 +257,6 @@ export default function AstaLive() {
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_bids", filter: `auction_id=eq.${auctionId}` }, (payload) => {
         const bid = payload.new as BidData;
         setBids(prev => {
-          // Avoid duplicates
           if (prev.some(b => b.id === bid.id)) return prev;
           return [bid, ...prev.slice(0, 99)];
         });
@@ -260,9 +269,7 @@ export default function AstaLive() {
       .subscribe();
 
     return () => {
-      supabase.from("live_auctions").select("viewer_count").eq("id", auctionId).single().then(({ data }) => {
-        if (data) supabase.from("live_auctions").update({ viewer_count: Math.max(0, (data.viewer_count || 1) - 1) } as any).eq("id", auctionId).then(() => {});
-      });
+      supabase.removeChannel(presenceChannel);
       supabase.removeChannel(channel);
     };
   }, [auctionId, fetchAuction, fetchItems, fetchBids]);
