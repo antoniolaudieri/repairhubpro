@@ -230,6 +230,50 @@ export default function AstaLive() {
         <div className="grid md:grid-cols-3 gap-6">
           {/* Main area - Active item */}
           <div className="md:col-span-2 space-y-4">
+            {/* Stream Embed */}
+            {isLive && auction.stream_url && (
+              <Card className="overflow-hidden border-destructive/20">
+                <div className="aspect-video bg-black">
+                  <iframe
+                    src={auction.stream_url}
+                    className="w-full h-full"
+                    allowFullScreen
+                    allow="autoplay; encrypted-media; fullscreen"
+                  />
+                </div>
+              </Card>
+            )}
+
+            {/* Live Stats Bar */}
+            {isLive && activeItem && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-between bg-destructive/5 border border-destructive/20 rounded-xl px-4 py-3"
+              >
+                <div className="flex items-center gap-4">
+                  <Badge className="bg-destructive text-destructive-foreground animate-pulse gap-1">
+                    <Radio className="h-3 w-3" /> LIVE
+                  </Badge>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Eye className="h-4 w-4" />
+                    <motion.span key={auction.viewer_count} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="font-bold text-foreground">
+                      {auction.viewer_count}
+                    </motion.span>
+                    spettatori
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-muted-foreground">{activeItem.bid_count} offerte</span>
+                  {countdown !== null && (
+                    <span className={`font-bold tabular-nums ${countdown <= 10 ? "text-destructive animate-pulse" : "text-foreground"}`}>
+                      <Timer className="h-4 w-4 inline mr-1" />{countdown}s
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
             {activeItem ? (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                 <Card className="border-destructive/30 shadow-xl overflow-hidden">
