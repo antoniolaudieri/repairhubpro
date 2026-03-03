@@ -10,7 +10,39 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gavel, Eye, Radio, Timer, ArrowUp, ShoppingCart, Building2, ChevronRight, Sparkles, Lock } from "lucide-react";
+import { Gavel, Eye, Radio, Timer, ArrowUp, ShoppingCart, Building2, ChevronRight, Sparkles, Lock, Video } from "lucide-react";
+
+// --- Stream URL helper ---
+function convertToEmbedUrl(url: string): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  
+  // Already an embed URL
+  if (trimmed.includes("/embed/") || trimmed.includes("player.twitch.tv")) return trimmed;
+  
+  // YouTube: various formats
+  const ytMatch = trimmed.match(/(?:youtube\.com\/(?:watch\?v=|live\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=0`;
+  
+  // YouTube Studio live stream URL
+  const ytStudioMatch = trimmed.match(/studio\.youtube\.com\/video\/([\w-]{11})/);
+  if (ytStudioMatch) return `https://www.youtube.com/embed/${ytStudioMatch[1]}?autoplay=1&mute=0`;
+  
+  // Twitch channel
+  const twitchMatch = trimmed.match(/twitch\.tv\/([\w]+)/);
+  if (twitchMatch) return `https://player.twitch.tv/?channel=${twitchMatch[1]}&parent=${window.location.hostname}`;
+  
+  // Facebook video
+  const fbMatch = trimmed.match(/facebook\.com.*\/videos\//);
+  if (fbMatch) return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(trimmed)}&autoplay=true&mute=false`;
+  
+  // Kick
+  const kickMatch = trimmed.match(/kick\.com\/([\w]+)/);
+  if (kickMatch) return `https://player.kick.com/${kickMatch[1]}`;
+  
+  // Fallback: use as-is (user may paste direct embed)
+  return trimmed;
+}
 
 // --- Types ---
 interface AuctionData {
