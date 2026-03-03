@@ -189,7 +189,7 @@ export default function CentroAste() {
     if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
     toast({ title: "Prodotto aggiunto!" });
     setAddItemOpen(false);
-    setItemTitle(""); setItemDescription(""); setItemStartingPrice(""); setItemBuyNowPrice(""); setItemDuration("60");
+    setItemTitle(""); setItemDescription(""); setItemStartingPrice(""); setItemBuyNowPrice(""); setItemReservePrice(""); setItemDuration("60");
     fetchItems(selectedAuction.id);
   };
 
