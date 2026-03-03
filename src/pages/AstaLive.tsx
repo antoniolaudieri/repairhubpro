@@ -345,18 +345,27 @@ export default function AstaLive() {
         <div className="flex-1 flex flex-col min-w-0">
 
           {/* Stream / Product Hero */}
-          <div className="relative bg-muted">
-            {isLive && auction.stream_url ? (
-              <div className="aspect-[4/3] md:aspect-video">
-                <iframe src={auction.stream_url} className="w-full h-full" allowFullScreen allow="autoplay; encrypted-media; fullscreen" />
+          <div className="relative bg-black">
+            {auction.stream_url ? (
+              <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh]">
+                <iframe 
+                  src={convertToEmbedUrl(auction.stream_url)} 
+                  className="w-full h-full border-0" 
+                  allowFullScreen 
+                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
               </div>
             ) : activeItem?.image_url ? (
-              <div className="aspect-[4/3] md:aspect-video flex items-center justify-center bg-muted">
+              <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh] flex items-center justify-center bg-black">
                 <img src={activeItem.image_url} alt={activeItem.title} className="max-w-full max-h-full object-contain" />
               </div>
             ) : (
-              <div className="aspect-[4/3] md:aspect-video flex items-center justify-center bg-muted">
-                <Gavel className="h-20 w-20 text-muted-foreground/20" />
+              <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh] flex flex-col items-center justify-center bg-muted gap-3">
+                <Video className="h-16 w-16 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">
+                  {isLive ? "Stream in arrivo..." : "In attesa dello stream"}
+                </p>
               </div>
             )}
 
