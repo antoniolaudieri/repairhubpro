@@ -278,7 +278,12 @@ export default function AstaLive() {
   // Attach remote WebRTC stream
   useEffect(() => {
     if (cameraVideoRef.current && remoteStream) {
-      cameraVideoRef.current.srcObject = remoteStream;
+      const video = cameraVideoRef.current;
+      video.srcObject = remoteStream;
+      video.muted = true; // iPad/Safari autoplay compatibility
+      void video.play().catch(() => {
+        // Safari may still require user gesture in some cases
+      });
     }
   }, [remoteStream]);
 
