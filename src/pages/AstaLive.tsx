@@ -10,7 +10,39 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gavel, Eye, Radio, Timer, ArrowUp, ShoppingCart, Building2, ChevronRight, Sparkles, Lock } from "lucide-react";
+import { Gavel, Eye, Radio, Timer, ArrowUp, ShoppingCart, Building2, ChevronRight, Sparkles, Lock, Video } from "lucide-react";
+
+// --- Stream URL helper ---
+function convertToEmbedUrl(url: string): string {
+  if (!url) return "";
+  const trimmed = url.trim();
+  
+  // Already an embed URL
+  if (trimmed.includes("/embed/") || trimmed.includes("player.twitch.tv")) return trimmed;
+  
+  // YouTube: various formats
+  const ytMatch = trimmed.match(/(?:youtube\.com\/(?:watch\?v=|live\/|shorts\/)|youtu\.be\/)([\w-]{11})/);
+  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=0`;
+  
+  // YouTube Studio live stream URL
+  const ytStudioMatch = trimmed.match(/studio\.youtube\.com\/video\/([\w-]{11})/);
+  if (ytStudioMatch) return `https://www.youtube.com/embed/${ytStudioMatch[1]}?autoplay=1&mute=0`;
+  
+  // Twitch channel
+  const twitchMatch = trimmed.match(/twitch\.tv\/([\w]+)/);
+  if (twitchMatch) return `https://player.twitch.tv/?channel=${twitchMatch[1]}&parent=${window.location.hostname}`;
+  
+  // Facebook video
+  const fbMatch = trimmed.match(/facebook\.com.*\/videos\//);
+  if (fbMatch) return `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(trimmed)}&autoplay=true&mute=false`;
+  
+  // Kick
+  const kickMatch = trimmed.match(/kick\.com\/([\w]+)/);
+  if (kickMatch) return `https://player.kick.com/${kickMatch[1]}`;
+  
+  // Fallback: use as-is (user may paste direct embed)
+  return trimmed;
+}
 
 // --- Types ---
 interface AuctionData {
@@ -313,18 +345,27 @@ export default function AstaLive() {
         <div className="flex-1 flex flex-col min-w-0">
 
           {/* Stream / Product Hero */}
-          <div className="relative bg-muted">
-            {isLive && auction.stream_url ? (
-              <div className="aspect-[4/3] md:aspect-video">
-                <iframe src={auction.stream_url} className="w-full h-full" allowFullScreen allow="autoplay; encrypted-media; fullscreen" />
+          <div className="relative bg-black">
+            {auction.stream_url ? (
+              <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh]">
+                <iframe 
+                  src={convertToEmbedUrl(auction.stream_url)} 
+                  className="w-full h-full border-0" 
+                  allowFullScreen 
+                  allow="autoplay; encrypted-media; fullscreen; picture-in-picture" 
+                  referrerPolicy="no-referrer-when-downgrade"
+                />
               </div>
             ) : activeItem?.image_url ? (
-              <div className="aspect-[4/3] md:aspect-video flex items-center justify-center bg-muted">
+              <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh] flex items-center justify-center bg-black">
                 <img src={activeItem.image_url} alt={activeItem.title} className="max-w-full max-h-full object-contain" />
               </div>
             ) : (
-              <div className="aspect-[4/3] md:aspect-video flex items-center justify-center bg-muted">
-                <Gavel className="h-20 w-20 text-muted-foreground/20" />
+              <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh] flex flex-col items-center justify-center bg-muted gap-3">
+                <Video className="h-16 w-16 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">
+                  {isLive ? "Stream in arrivo..." : "In attesa dello stream"}
+                </p>
               </div>
             )}
 
