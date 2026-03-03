@@ -417,7 +417,7 @@ export default function AstaLive() {
                 <img src={activeItem.image_url} alt={activeItem.title} className="max-w-full max-h-full object-contain" />
               </div>
             ) : (
-              <div className="aspect-[4/3] sm:aspect-video max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] flex flex-col items-center justify-center bg-muted gap-2">
+              <div className="aspect-video w-full flex flex-col items-center justify-center bg-muted gap-2">
                 <Video className="h-12 w-12 text-muted-foreground/30" />
                 <p className="text-xs text-muted-foreground">
                   {isLive ? "Stream in arrivo..." : "In attesa dello stream"}

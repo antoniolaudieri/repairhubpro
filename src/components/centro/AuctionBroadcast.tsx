@@ -175,8 +175,8 @@ export function AuctionBroadcast({
                   </div>
                   {/* Connection badge */}
                   <div className="absolute top-3 right-3">
-                    <Badge className="bg-chart-2/90 text-white gap-1 shadow-lg">
-                      <Wifi className="h-3 w-3" /> {viewerConnections} connessi
+                     <Badge className="bg-chart-2/90 text-white gap-1 shadow-lg">
+                      <Wifi className="h-3 w-3" /> {viewerConnections} WebRTC
                     </Badge>
                   </div>
                 </>
