@@ -563,6 +563,16 @@ export const AnimatedRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/centro/aste"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroAste />
+            </ProtectedRoute>
+          }
+        />
+        {/* Public Auction Route */}
+        <Route path="/aste/:auctionId" element={<PageTransition><AstaLive /></PageTransition>} />
         {/* Public Usato Routes */}
         <Route path="/usato" element={<PageTransition><UsatoCatalog /></PageTransition>} />
         <Route path="/usato/:id" element={<PageTransition><UsatoDetail /></PageTransition>} />

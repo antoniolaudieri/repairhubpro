@@ -69,6 +69,7 @@ const menuItems = [
   { title: "Usato", url: "/centro/usato", icon: Smartphone },
   { title: "Marketing", url: "/centro/marketing", icon: Megaphone },
   { title: "Opportunità", url: "/centro/opportunita", icon: TrendingUp },
+  { title: "Aste Live", url: "/centro/aste", icon: Gavel },
   { title: "Finanza", url: "/centro/finanza", icon: Wallet },
   { title: "Commissioni", url: "/centro/commissioni", icon: DollarSign },
   { title: "Print Agent", url: "/centro/print-agent", icon: Printer },
