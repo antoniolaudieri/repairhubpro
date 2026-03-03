@@ -357,7 +357,25 @@ export default function AstaLive() {
 
           {/* Stream / Product Hero */}
           <div className="relative bg-black">
-            {auction.stream_url ? (
+            {isCameraStream ? (
+              /* WebRTC Camera Stream */
+              <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh] flex items-center justify-center bg-black relative">
+                {remoteStream ? (
+                  <video ref={cameraVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center text-white/60 space-y-3 p-6">
+                    <Video className="h-12 w-12 mx-auto opacity-40 animate-pulse" />
+                    <p className="text-sm font-medium text-white/70">
+                      {connectionState === "connecting" ? "Connessione alla diretta camera..." : "In attesa della diretta camera..."}
+                    </p>
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-white/40">
+                      {connectionState === "connected" ? <Wifi className="h-3 w-3 text-chart-2" /> : <WifiOff className="h-3 w-3" />}
+                      <span>{connectionState === "connected" ? "Connesso" : connectionState === "connecting" ? "Connessione..." : "In attesa"}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : auction.stream_url ? (
               <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh]">
                 <iframe 
                   src={convertToEmbedUrl(auction.stream_url)} 
