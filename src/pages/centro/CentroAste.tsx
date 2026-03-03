@@ -220,6 +220,24 @@ export default function CentroAste() {
     fetchItems(item.auction_id);
   };
 
+  // Auto-close when countdown reaches 0
+  useEffect(() => {
+    if (!activeItem?.started_at) return;
+    const endTime = new Date(activeItem.started_at).getTime() + activeItem.duration_seconds * 1000;
+    
+    const tick = () => {
+      const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+      if (remaining === 0 && autoCloseTriggered !== activeItem.id) {
+        setAutoCloseTriggered(activeItem.id);
+        closeItem(activeItem, true);
+      }
+    };
+    
+    const interval = setInterval(tick, 1000);
+    tick();
+    return () => clearInterval(interval);
+  }, [activeItem?.id, activeItem?.started_at, activeItem?.duration_seconds, autoCloseTriggered]);
+
 
   const deleteItem = async (itemId: string) => {
     await supabase.from("auction_items").delete().eq("id", itemId);
