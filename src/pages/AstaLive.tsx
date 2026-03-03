@@ -10,7 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gavel, Eye, Radio, Timer, ArrowUp, ShoppingCart, Building2, ChevronRight, Sparkles, Lock, Video } from "lucide-react";
+import { Gavel, Eye, Radio, Timer, ArrowUp, ShoppingCart, Building2, ChevronRight, Sparkles, Lock, Video, Wifi, WifiOff } from "lucide-react";
+import { useWebRTCViewer } from "@/hooks/useWebRTCViewer";
 
 // --- Stream URL helper ---
 function convertToEmbedUrl(url: string): string {
@@ -203,7 +204,10 @@ export default function AstaLive() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
 
+  const isCameraStream = auction?.stream_url?.startsWith("camera:");
+  const { remoteStream, connectionState } = useWebRTCViewer(auctionId || "", !!isCameraStream);
   const activeItem = items.find(i => i.status === "active");
   const minBid = activeItem ? activeItem.current_price + 5 : 0;
   const pendingItems = items.filter(i => i.status === "pending");
@@ -271,6 +275,13 @@ export default function AstaLive() {
     const interval = setInterval(tick, 1000);
     return () => clearInterval(interval);
   }, [activeItem?.started_at, activeItem?.duration_seconds]);
+
+  // Attach remote WebRTC stream to video element
+  useEffect(() => {
+    if (cameraVideoRef.current && remoteStream) {
+      cameraVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
 
   // --- Actions ---
   const requireAuth = (cb: () => void) => {
@@ -346,7 +357,25 @@ export default function AstaLive() {
 
           {/* Stream / Product Hero */}
           <div className="relative bg-black">
-            {auction.stream_url ? (
+            {isCameraStream ? (
+              /* WebRTC Camera Stream */
+              <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh] flex items-center justify-center bg-black relative">
+                {remoteStream ? (
+                  <video ref={cameraVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-center text-white/60 space-y-3 p-6">
+                    <Video className="h-12 w-12 mx-auto opacity-40 animate-pulse" />
+                    <p className="text-sm font-medium text-white/70">
+                      {connectionState === "connecting" ? "Connessione alla diretta camera..." : "In attesa della diretta camera..."}
+                    </p>
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-white/40">
+                      {connectionState === "connected" ? <Wifi className="h-3 w-3 text-chart-2" /> : <WifiOff className="h-3 w-3" />}
+                      <span>{connectionState === "connected" ? "Connesso" : connectionState === "connecting" ? "Connessione..." : "In attesa"}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : auction.stream_url ? (
               <div className="aspect-[9/16] sm:aspect-[4/3] md:aspect-video max-h-[70vh] sm:max-h-[60vh]">
                 <iframe 
                   src={convertToEmbedUrl(auction.stream_url)} 

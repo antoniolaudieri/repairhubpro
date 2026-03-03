@@ -7,11 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Video, VideoOff, Mic, MicOff, MonitorPlay, Eye, Timer,
-  Gavel, Radio, Link2, Users
+  Radio, Link2, Users, Camera, CameraOff, SwitchCamera, Wifi
 } from "lucide-react";
+import { useWebRTCBroadcast } from "@/hooks/useWebRTCBroadcast";
 
 interface AuctionItem {
   id: string;
@@ -38,13 +39,14 @@ export function AuctionBroadcast({
   streamUrl,
   onStreamUrlChange,
 }: AuctionBroadcastProps) {
-  const [mode, setMode] = useState<"webcam" | "external">(streamUrl ? "external" : "webcam");
-  const [cameraOn, setCameraOn] = useState(false);
+  const [mode, setMode] = useState<"camera" | "external">(streamUrl && !streamUrl.startsWith("camera:") ? "external" : "camera");
   const [micOn, setMicOn] = useState(true);
-  const [externalUrl, setExternalUrl] = useState(streamUrl || "");
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
+  const [externalUrl, setExternalUrl] = useState(streamUrl && !streamUrl.startsWith("camera:") ? streamUrl : "");
   const [countdown, setCountdown] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+
+  const { isStreaming, viewerConnections, startBroadcast, stopBroadcast } = useWebRTCBroadcast(auctionId);
 
   // Countdown
   useEffect(() => {
@@ -56,32 +58,45 @@ export function AuctionBroadcast({
     return () => clearInterval(interval);
   }, [activeItem?.started_at, activeItem?.duration_seconds]);
 
-  const startCamera = useCallback(async () => {
+  const handleStartCamera = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: micOn });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-      setCameraOn(true);
+      const stream = await startBroadcast(facingMode);
+      if (videoRef.current && stream) videoRef.current.srcObject = stream;
+      onStreamUrlChange("camera:live");
+      toast({ title: "📹 Camera attiva!", description: "Gli spettatori vedranno la tua camera in diretta." });
     } catch {
-      toast({ title: "Errore Camera", description: "Impossibile accedere alla webcam.", variant: "destructive" });
+      toast({ title: "Errore Camera", description: "Impossibile accedere alla camera.", variant: "destructive" });
     }
-  }, [micOn]);
+  }, [startBroadcast, facingMode, onStreamUrlChange]);
 
-  const stopCamera = useCallback(() => {
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    streamRef.current = null;
+  const handleStopCamera = useCallback(async () => {
+    await stopBroadcast();
     if (videoRef.current) videoRef.current.srcObject = null;
-    setCameraOn(false);
-  }, []);
+    onStreamUrlChange(null);
+  }, [stopBroadcast, onStreamUrlChange]);
+
+  const handleFlipCamera = useCallback(async () => {
+    const newMode = facingMode === "user" ? "environment" : "user";
+    setFacingMode(newMode);
+    if (isStreaming) {
+      await handleStopCamera();
+      setTimeout(async () => {
+        try {
+          const stream = await startBroadcast(newMode);
+          if (videoRef.current && stream) videoRef.current.srcObject = stream;
+          onStreamUrlChange("camera:live");
+        } catch {}
+      }, 300);
+    }
+  }, [facingMode, isStreaming, handleStopCamera, startBroadcast, onStreamUrlChange]);
 
   const toggleMic = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getAudioTracks().forEach(t => { t.enabled = !micOn; });
+    if (videoRef.current?.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getAudioTracks().forEach(t => { t.enabled = !micOn; });
     }
     setMicOn(prev => !prev);
   }, [micOn]);
-
-  useEffect(() => () => { streamRef.current?.getTracks().forEach(t => t.stop()); }, []);
 
   const saveStreamUrl = async () => {
     const url = externalUrl.trim() || null;
@@ -98,37 +113,66 @@ export function AuctionBroadcast({
           <Radio className="h-5 w-5 text-destructive animate-pulse" />
           <span className="font-semibold text-foreground text-sm">Broadcast</span>
           <div className="flex items-center gap-2 ml-auto">
-            <span className={`text-xs ${mode === "webcam" ? "text-foreground font-medium" : "text-muted-foreground"}`}>Webcam</span>
-            <Switch checked={mode === "external"} onCheckedChange={v => { if (v) { stopCamera(); setMode("external"); } else setMode("webcam"); }} />
-            <span className={`text-xs ${mode === "external" ? "text-foreground font-medium" : "text-muted-foreground"}`}>Stream Esterno</span>
+            <span className={`text-xs ${mode === "camera" ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+              <Camera className="h-3 w-3 inline mr-0.5" />Camera
+            </span>
+            <Switch checked={mode === "external"} onCheckedChange={v => { 
+              if (v) { 
+                if (isStreaming) handleStopCamera(); 
+                setMode("external"); 
+              } else setMode("camera"); 
+            }} />
+            <span className={`text-xs ${mode === "external" ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+              <MonitorPlay className="h-3 w-3 inline mr-0.5" />Esterno
+            </span>
           </div>
         </div>
 
         <div className="relative">
-          {/* Video area */}
-          {mode === "webcam" ? (
+          {mode === "camera" ? (
             <div className="relative bg-black aspect-video max-h-[360px] flex items-center justify-center">
-              {cameraOn ? (
-                <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+              {isStreaming ? (
+                <>
+                  <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover" />
+                  {/* Camera controls overlay */}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2">
+                    <Button size="sm" variant="destructive" className="gap-1.5 rounded-full shadow-lg" onClick={handleStopCamera}>
+                      <CameraOff className="h-4 w-4" /> Stop
+                    </Button>
+                    <Button size="sm" variant={micOn ? "secondary" : "outline"} className="rounded-full shadow-lg" onClick={toggleMic}>
+                      {micOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+                    </Button>
+                    <Button size="sm" variant="secondary" className="rounded-full shadow-lg" onClick={handleFlipCamera}>
+                      <SwitchCamera className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {/* Connection badge */}
+                  <div className="absolute top-3 right-3">
+                    <Badge className="bg-chart-2/90 text-white gap-1 shadow-lg">
+                      <Wifi className="h-3 w-3" /> {viewerConnections} connessi
+                    </Badge>
+                  </div>
+                </>
               ) : (
-                <div className="text-center text-white/60 space-y-3">
-                  <Video className="h-12 w-12 mx-auto opacity-40" />
-                  <p className="text-sm">Attiva la webcam per l'anteprima locale</p>
-                  <p className="text-xs text-white/40">Gli spettatori vedranno il prodotto in tempo reale.<br />Per lo streaming video, usa un link esterno (YouTube/Twitch).</p>
+                <div className="text-center text-white/60 space-y-4 p-6">
+                  <Camera className="h-16 w-16 mx-auto opacity-50" />
+                  <div>
+                    <p className="text-base font-semibold text-white/80">Trasmetti dalla Camera</p>
+                    <p className="text-sm text-white/40 mt-1">
+                      Gli spettatori vedranno il video della tua camera in diretta.<br />
+                      Perfetto per mostrare i prodotti dal vivo!
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-2">
+                    <Button size="lg" className="gap-2 rounded-full px-6" onClick={handleStartCamera}>
+                      <Camera className="h-5 w-5" /> Avvia Diretta Camera
+                    </Button>
+                  </div>
+                  <p className="text-xs text-white/30">
+                    Puoi usare la camera frontale o posteriore del tuo dispositivo
+                  </p>
                 </div>
               )}
-              {/* Camera controls */}
-              <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2">
-                <Button size="sm" variant={cameraOn ? "destructive" : "default"} className="gap-1.5 rounded-full" onClick={cameraOn ? stopCamera : startCamera}>
-                  {cameraOn ? <VideoOff className="h-4 w-4" /> : <Video className="h-4 w-4" />}
-                  {cameraOn ? "Spegni" : "Attiva Camera"}
-                </Button>
-                {cameraOn && (
-                  <Button size="sm" variant={micOn ? "secondary" : "outline"} className="rounded-full" onClick={toggleMic}>
-                    {micOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
-                  </Button>
-                )}
-              </div>
             </div>
           ) : (
             <div className="p-4 space-y-3">
@@ -147,7 +191,7 @@ export function AuctionBroadcast({
                   <Link2 className="h-4 w-4" /> Salva
                 </Button>
               </div>
-              {streamUrl && (
+              {streamUrl && !streamUrl.startsWith("camera:") && (
                 <div className="aspect-video max-h-[320px] rounded-lg overflow-hidden bg-black">
                   <iframe src={streamUrl} className="w-full h-full" allowFullScreen allow="autoplay; encrypted-media" />
                 </div>
@@ -158,9 +202,11 @@ export function AuctionBroadcast({
           {/* Stats overlay */}
           <div className="absolute top-3 left-3 right-3 flex items-start justify-between pointer-events-none">
             <div className="flex flex-col gap-2">
-              <Badge className="bg-destructive text-destructive-foreground gap-1 pointer-events-none shadow-lg">
-                <Radio className="h-3 w-3" /> LIVE
-              </Badge>
+              {isStreaming && (
+                <Badge className="bg-destructive text-destructive-foreground gap-1 pointer-events-none shadow-lg">
+                  <Radio className="h-3 w-3" /> LIVE
+                </Badge>
+              )}
               <Badge className="bg-background/80 text-foreground backdrop-blur-sm gap-1 shadow pointer-events-none">
                 <Eye className="h-3 w-3" /> {viewerCount} spettatori
               </Badge>
