@@ -410,6 +410,17 @@ export default function CentroAste() {
               </Dialog>
             </div>
 
+            {/* Broadcast Console */}
+            {selectedAuction.status === "live" && (
+              <AuctionBroadcast
+                auctionId={selectedAuction.id}
+                viewerCount={selectedAuction.viewer_count}
+                activeItem={auctionItems.find(i => i.status === "active") || null}
+                streamUrl={selectedAuction.stream_url}
+                onStreamUrlChange={(url) => setSelectedAuction(prev => prev ? { ...prev, stream_url: url } : null)}
+              />
+            )}
+
             {/* Items + Bids Grid */}
             <div className="grid md:grid-cols-3 gap-6">
               {/* Items list */}
