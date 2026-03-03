@@ -358,8 +358,8 @@ export default function AstaLive() {
           {isEnded && <Badge variant="secondary" className="text-[10px] h-5">Terminata</Badge>}
           <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
             <Eye className="h-3 w-3" />
-            <motion.span key={auction.viewer_count} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="font-bold text-foreground">
-              {auction.viewer_count}
+            <motion.span key={presenceCount} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="font-bold text-foreground">
+              {presenceCount}
             </motion.span>
           </div>
         </div>
