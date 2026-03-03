@@ -287,6 +287,41 @@ export type Database = {
           },
         ]
       }
+      auction_chat_messages: {
+        Row: {
+          auction_id: string
+          created_at: string
+          id: string
+          message: string
+          sender_name: string
+          user_id: string | null
+        }
+        Insert: {
+          auction_id: string
+          created_at?: string
+          id?: string
+          message: string
+          sender_name: string
+          user_id?: string | null
+        }
+        Update: {
+          auction_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          sender_name?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_chat_messages_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "live_auctions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auction_items: {
         Row: {
           auction_id: string

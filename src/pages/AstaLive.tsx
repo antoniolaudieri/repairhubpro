@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { motion, AnimatePresence } from "framer-motion";
-import { Gavel, Eye, Radio, Timer, ArrowUp, ShoppingCart, Building2, Sparkles, Lock, Video, Wifi, WifiOff, Trophy } from "lucide-react";
+import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "framer-motion";
+import { Gavel, Eye, Radio, Timer, ShoppingCart, Building2, Sparkles, Lock, Video, Wifi, WifiOff, Trophy, Send, ChevronsRight, MessageCircle } from "lucide-react";
 import { useWebRTCViewer } from "@/hooks/useWebRTCViewer";
 
 // --- Stream URL helper ---
@@ -68,6 +68,20 @@ interface BidData {
   amount: number;
   created_at: string;
 }
+
+interface ChatMessage {
+  id: string;
+  auction_id: string;
+  sender_name: string;
+  message: string;
+  created_at: string;
+  user_id: string | null;
+}
+
+// Feed item: either a bid or a chat message
+type FeedItem = 
+  | { type: "bid"; data: BidData }
+  | { type: "chat"; data: ChatMessage };
 
 // --- Inline Auth Dialog ---
 function InlineAuthDialog({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (v: boolean) => void; onSuccess: () => void }) {
@@ -139,27 +153,148 @@ function InlineAuthDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
   );
 }
 
-// --- Bid Feed Bubble (Whatnot-style) ---
-function BidBubble({ bid, isLatest }: { bid: BidData; isLatest: boolean }) {
-  const initials = bid.bidder_name.slice(0, 2).toUpperCase();
+// --- Feed Bubble (chat or bid) ---
+function FeedBubble({ item }: { item: FeedItem }) {
+  if (item.type === "bid") {
+    const bid = item.data;
+    const initials = bid.bidder_name.slice(0, 2).toUpperCase();
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.9 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        className="flex items-center gap-2 px-2.5 py-1"
+      >
+        <div className="h-6 w-6 rounded-full bg-green-500/30 flex items-center justify-center flex-shrink-0">
+          <span className="text-[9px] font-bold text-green-300">{initials}</span>
+        </div>
+        <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-3 py-1.5 flex items-center gap-2">
+          <span className="font-semibold text-xs text-white/90">{bid.bidder_name}</span>
+          <span className="font-black text-sm tabular-nums text-green-400">€{bid.amount}</span>
+        </div>
+      </motion.div>
+    );
+  }
 
+  const chat = item.data;
+  const initials = chat.sender_name.slice(0, 1).toUpperCase();
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.9 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className="flex items-center gap-2 px-2.5 py-1.5"
+      className="flex items-start gap-2 px-2.5 py-1"
     >
-      <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-        <span className="text-[9px] font-bold text-white">{initials}</span>
+      <div className="h-6 w-6 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0 mt-0.5">
+        <span className="text-[9px] font-bold text-white/70">{initials}</span>
       </div>
-      <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-3 py-1.5 flex items-center gap-2">
-        <span className="font-semibold text-xs text-white/90">{bid.bidder_name}</span>
-        <span className={`font-black text-sm tabular-nums ${isLatest ? "text-green-400" : "text-white"}`}>
-          €{bid.amount}
-        </span>
+      <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-3 py-1.5 max-w-[85%]">
+        <span className="font-semibold text-xs text-white/70">{chat.sender_name}</span>
+        <p className="text-xs text-white/90 leading-snug">{chat.message}</p>
       </div>
     </motion.div>
+  );
+}
+
+// --- Swipe to Bid Button ---
+function SwipeBidButton({ amount, onBid }: { amount: number; onBid: () => void }) {
+  const x = useMotionValue(0);
+  const maxDrag = 180;
+  const background = useTransform(x, [0, maxDrag], ["hsl(48, 96%, 53%)", "hsl(142, 71%, 45%)"]);
+  const chevronOpacity = useTransform(x, [0, maxDrag * 0.7], [1, 0]);
+  const checkScale = useTransform(x, [maxDrag * 0.7, maxDrag], [0, 1]);
+  const [swiped, setSwiped] = useState(false);
+
+  const handleDragEnd = (_: any, info: PanInfo) => {
+    if (info.offset.x >= maxDrag * 0.7) {
+      setSwiped(true);
+      onBid();
+      setTimeout(() => setSwiped(false), 600);
+    }
+  };
+
+  return (
+    <motion.div
+      className="relative h-14 rounded-2xl overflow-hidden flex items-center flex-1"
+      style={{ backgroundColor: "hsl(48, 96%, 53%)" }}
+    >
+      {/* Track text */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+        <span className="font-black text-base text-black/80">
+          Offri: €{amount}
+        </span>
+        <ChevronsRight className="h-5 w-5 text-black/40 ml-1 animate-pulse" />
+      </div>
+      {/* Draggable thumb */}
+      <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: maxDrag }}
+        dragElastic={0.05}
+        onDragEnd={handleDragEnd}
+        style={{ x, background }}
+        className="relative z-10 h-12 w-14 rounded-xl mx-1 flex items-center justify-center cursor-grab active:cursor-grabbing shadow-lg"
+        whileTap={{ scale: 0.95 }}
+      >
+        <motion.div style={{ opacity: chevronOpacity }}>
+          <ChevronsRight className="h-6 w-6 text-black" />
+        </motion.div>
+        <motion.div style={{ scale: checkScale }} className="absolute">
+          <span className="text-xl">✓</span>
+        </motion.div>
+      </motion.div>
+      {swiped && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="absolute inset-0 bg-green-500 flex items-center justify-center rounded-2xl z-20"
+        >
+          <span className="font-black text-white text-base">Offerta inviata! ✓</span>
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
+
+// --- Custom Bid Dialog ---
+function CustomBidDialog({ open, onOpenChange, minBid, onBid }: { open: boolean; onOpenChange: (v: boolean) => void; minBid: number; onBid: (amount: number) => void }) {
+  const [customAmount, setCustomAmount] = useState("");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseFloat(customAmount);
+    if (amount >= minBid) {
+      onBid(amount);
+      onOpenChange(false);
+      setCustomAmount("");
+    } else {
+      toast({ title: "Offerta troppo bassa", description: `L'offerta minima è €${minBid}`, variant: "destructive" });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[90vw] sm:max-w-xs rounded-2xl bg-card border-border">
+        <DialogHeader>
+          <DialogTitle className="text-base font-black">Offerta Personalizzata</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <p className="text-xs text-muted-foreground">Offerta minima: €{minBid}</p>
+          <Input
+            type="number"
+            placeholder={`€${minBid}`}
+            value={customAmount}
+            onChange={e => setCustomAmount(e.target.value)}
+            className="h-12 text-lg font-bold text-center"
+            min={minBid}
+            step="1"
+            autoFocus
+          />
+          <Button type="submit" className="w-full h-12 font-bold text-base" disabled={!customAmount || parseFloat(customAmount) < minBid}>
+            Offri €{customAmount || minBid}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -171,11 +306,13 @@ export default function AstaLive() {
   const [centro, setCentro] = useState<CentroInfo | null>(null);
   const [items, setItems] = useState<ItemData[]>([]);
   const [bids, setBids] = useState<BidData[]>([]);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [bidderName, setBidderName] = useState("");
+  const [chatInput, setChatInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
-  const feedRef = useRef<HTMLDivElement>(null);
+  const [customBidOpen, setCustomBidOpen] = useState(false);
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [presenceCount, setPresenceCount] = useState(0);
@@ -185,10 +322,18 @@ export default function AstaLive() {
   const { remoteStream, connectionState } = useWebRTCViewer(auctionId || "", !!isCameraStream);
   const activeItem = items.find(i => i.status === "active");
   const minBid = activeItem ? activeItem.current_price + 5 : 0;
-  const pendingItems = items.filter(i => i.status === "pending");
-  const soldItems = items.filter(i => i.status === "sold");
   const isLive = auction?.status === "live";
   const isEnded = auction?.status === "ended";
+
+  // Combined feed: bids + chat sorted by time (newest first)
+  const feedItems: FeedItem[] = [
+    ...bids.filter(b => activeItem ? b.item_id === activeItem.id : true).map(b => ({ type: "bid" as const, data: b })),
+    ...chatMessages.map(c => ({ type: "chat" as const, data: c })),
+  ].sort((a, b) => new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()).slice(0, 20);
+
+  // Leading bidder
+  const activeBids = activeItem ? bids.filter(b => b.item_id === activeItem.id) : [];
+  const leadingBidder = activeBids.length > 0 ? activeBids[0] : null;
 
   // --- Data fetching ---
   const fetchBids = useCallback(async () => {
@@ -200,6 +345,17 @@ export default function AstaLive() {
       .order("created_at", { ascending: false })
       .limit(100);
     setBids((data as BidData[]) || []);
+  }, [auctionId]);
+
+  const fetchChat = useCallback(async () => {
+    if (!auctionId) return;
+    const { data } = await supabase
+      .from("auction_chat_messages")
+      .select("*")
+      .eq("auction_id", auctionId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    setChatMessages((data as ChatMessage[]) || []);
   }, [auctionId]);
 
   const fetchItems = useCallback(async () => {
@@ -217,15 +373,15 @@ export default function AstaLive() {
       const { data: cd } = await supabase.from("centri_assistenza").select("business_name, logo_url").eq("id", data.centro_id).single();
       if (cd) setCentro(cd);
     }
-    await Promise.all([fetchItems(), fetchBids()]);
+    await Promise.all([fetchItems(), fetchBids(), fetchChat()]);
     setLoading(false);
-  }, [auctionId, fetchItems, fetchBids]);
+  }, [auctionId, fetchItems, fetchBids, fetchChat]);
 
   useEffect(() => {
     if (!auctionId) return;
     fetchAuction();
 
-    // Presence-based viewer tracking
+    // Presence
     const presenceChannel = supabase.channel(`presence-auction-${auctionId}`, {
       config: { presence: { key: `viewer-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` } },
     });
@@ -263,9 +419,15 @@ export default function AstaLive() {
         });
         setItems(prev => prev.map(item => item.id === bid.item_id ? { ...item, current_price: bid.amount, bid_count: item.bid_count + 1 } : item));
       })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_chat_messages", filter: `auction_id=eq.${auctionId}` }, (payload) => {
+        const msg = payload.new as ChatMessage;
+        setChatMessages(prev => {
+          if (prev.some(m => m.id === msg.id)) return prev;
+          return [msg, ...prev.slice(0, 49)];
+        });
+      })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "live_auctions", filter: `id=eq.${auctionId}` }, (payload) => {
-        const updated = payload.new as AuctionData;
-        setAuction(updated);
+        setAuction(payload.new as AuctionData);
       })
       .subscribe();
 
@@ -273,7 +435,7 @@ export default function AstaLive() {
       supabase.removeChannel(presenceChannel);
       supabase.removeChannel(channel);
     };
-  }, [auctionId, fetchAuction, fetchItems, fetchBids]);
+  }, [auctionId, fetchAuction, fetchItems, fetchBids, fetchChat]);
 
   // Countdown
   useEffect(() => {
@@ -290,10 +452,8 @@ export default function AstaLive() {
     if (cameraVideoRef.current && remoteStream) {
       const video = cameraVideoRef.current;
       video.srcObject = remoteStream;
-      video.muted = true; // iPad/Safari autoplay compatibility
-      void video.play().catch(() => {
-        // Safari may still require user gesture in some cases
-      });
+      video.muted = true;
+      void video.play().catch(() => {});
     }
   }, [remoteStream]);
 
@@ -311,6 +471,17 @@ export default function AstaLive() {
       bidder_name: name, bidder_email: user.email, amount,
     });
     if (error) toast({ title: "Errore", description: error.message, variant: "destructive" });
+  };
+
+  const sendChat = async () => {
+    if (!user || !chatInput.trim()) return;
+    const name = bidderName.trim() || user.email?.split("@")[0] || "Anonimo";
+    const { error } = await supabase.from("auction_chat_messages").insert({
+      auction_id: auctionId!, user_id: user.id,
+      sender_name: name, message: chatInput.trim(),
+    });
+    if (!error) setChatInput("");
+    else toast({ title: "Errore", description: error.message, variant: "destructive" });
   };
 
   // --- Render ---
@@ -331,11 +502,10 @@ export default function AstaLive() {
     );
   }
 
-  const activeBids = activeItem ? bids.filter(b => b.item_id === activeItem.id) : bids;
-
   return (
     <div className="h-[100dvh] w-full relative overflow-hidden bg-black">
       <InlineAuthDialog open={authOpen} onOpenChange={setAuthOpen} onSuccess={() => setAuthOpen(false)} />
+      <CustomBidDialog open={customBidOpen} onOpenChange={setCustomBidOpen} minBid={minBid} onBid={(amount) => requireAuth(() => placeBid(amount))} />
 
       {/* ===== FULLSCREEN VIDEO BACKGROUND ===== */}
       <div className="absolute inset-0 z-0">
@@ -345,10 +515,7 @@ export default function AstaLive() {
               <video ref={cameraVideoRef} autoPlay playsInline muted={isMuted} className="w-full h-full object-cover" />
               {isMuted && (
                 <button
-                  onClick={() => {
-                    setIsMuted(false);
-                    if (cameraVideoRef.current) cameraVideoRef.current.muted = false;
-                  }}
+                  onClick={() => { setIsMuted(false); if (cameraVideoRef.current) cameraVideoRef.current.muted = false; }}
                   className="absolute top-16 right-3 z-10 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1"
                 >
                   🔇 Tocca per audio
@@ -380,9 +547,7 @@ export default function AstaLive() {
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2">
             <Video className="h-12 w-12 text-white/20" />
-            <p className="text-xs text-white/40">
-              {isLive ? "Stream in arrivo..." : "In attesa dello stream"}
-            </p>
+            <p className="text-xs text-white/40">{isLive ? "Stream in arrivo..." : "In attesa dello stream"}</p>
           </div>
         )}
       </div>
@@ -409,9 +574,7 @@ export default function AstaLive() {
                 <Radio className="h-2.5 w-2.5" /> LIVE
               </Badge>
             )}
-            {isEnded && (
-              <Badge className="bg-white/20 text-white border-0 text-[10px] h-5">Terminata</Badge>
-            )}
+            {isEnded && <Badge className="bg-white/20 text-white border-0 text-[10px] h-5">Terminata</Badge>}
             <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-full px-2 py-1">
               <Eye className="h-3 w-3 text-white/80" />
               <motion.span key={presenceCount} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="font-bold text-white text-[11px]">
@@ -421,13 +584,11 @@ export default function AstaLive() {
           </div>
         </div>
 
-        {/* Countdown + Price in header area (top right) */}
+        {/* Countdown */}
         {activeItem && countdown !== null && (
           <div className="absolute top-14 right-3">
             <motion.div
-              className={`text-center px-3 py-1.5 rounded-xl backdrop-blur-sm ${
-                countdown <= 10 ? "bg-red-600/80 text-white" : "bg-black/40 text-white"
-              }`}
+              className={`text-center px-3 py-1.5 rounded-xl backdrop-blur-sm ${countdown <= 10 ? "bg-red-600/80 text-white" : "bg-black/40 text-white"}`}
             >
               <Timer className="h-3 w-3 mx-auto mb-0.5" />
               <p className={`text-xl font-black tabular-nums leading-none ${countdown <= 10 ? "animate-pulse" : ""}`}>
@@ -438,7 +599,7 @@ export default function AstaLive() {
         )}
       </div>
 
-      {/* ===== WINNER OVERLAY (fullscreen) ===== */}
+      {/* ===== WINNER OVERLAY ===== */}
       <AnimatePresence>
         {winnerOverlay && (
           <motion.div
@@ -453,9 +614,7 @@ export default function AstaLive() {
                   <Trophy className="h-16 w-16 mx-auto text-yellow-400 drop-shadow-lg" />
                   <p className="text-3xl font-black">VENDUTO!</p>
                   <p className="text-5xl font-black text-green-400">€{winnerOverlay.price}</p>
-                  {winnerOverlay.name && (
-                    <p className="text-xl font-bold text-white/90">🎉 {winnerOverlay.name}</p>
-                  )}
+                  {winnerOverlay.name && <p className="text-xl font-bold text-white/90">🎉 {winnerOverlay.name}</p>}
                 </>
               ) : (
                 <>
@@ -469,93 +628,157 @@ export default function AstaLive() {
         )}
       </AnimatePresence>
 
-      {/* ===== BID FEED (left side overlay) ===== */}
-      <div className="absolute left-0 bottom-[240px] z-20 w-[75%] max-w-[320px] max-h-[35vh] overflow-hidden pointer-events-none">
+      {/* ===== CHAT + BID FEED (left side overlay) ===== */}
+      <div className="absolute left-0 bottom-[280px] z-20 w-[80%] max-w-[340px] max-h-[30vh] overflow-hidden pointer-events-none">
         <div className="flex flex-col-reverse">
           <AnimatePresence>
-            {activeBids.slice(0, 15).map((bid, i) => (
-              <BidBubble key={bid.id} bid={bid} isLatest={i === 0} />
+            {feedItems.slice(0, 15).map((item) => (
+              <FeedBubble key={item.data.id} item={item} />
             ))}
           </AnimatePresence>
         </div>
-        {activeBids.length === 0 && isLive && (
+        {feedItems.length === 0 && isLive && (
           <div className="px-3 py-2">
             <span className="bg-black/40 backdrop-blur-sm rounded-2xl px-3 py-1.5 text-xs text-white/50">
-              Fai la prima offerta! 🔥
+              Scrivi qualcosa o fai un'offerta! 🔥
             </span>
           </div>
         )}
       </div>
 
-      {/* ===== BOTTOM AREA: Winner bar + Product card + Bid buttons ===== */}
+      {/* ===== BOTTOM AREA ===== */}
       <div className="absolute bottom-0 left-0 right-0 z-30 safe-area-bottom">
-        {/* Winner bar (compact) */}
+
+        {/* "Say something..." chat input */}
+        {isLive && (
+          <div className="mx-3 mb-2">
+            {user ? (
+              <form
+                onSubmit={e => { e.preventDefault(); sendChat(); }}
+                className="flex items-center gap-2"
+              >
+                <div className="flex-1 relative">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    placeholder="Say something..."
+                    className="w-full h-9 bg-black/30 backdrop-blur-sm border border-white/15 rounded-full px-4 pr-10 text-xs text-white placeholder:text-white/40 outline-none focus:border-white/30"
+                  />
+                  {chatInput.trim() && (
+                    <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 text-white/70 hover:text-white">
+                      <Send className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => setAuthOpen(true)}
+                className="w-full h-9 bg-black/30 backdrop-blur-sm border border-white/15 rounded-full px-4 text-xs text-white/40 text-left flex items-center gap-2"
+              >
+                <MessageCircle className="h-3.5 w-3.5" /> Accedi per commentare...
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* "is winning!" banner */}
+        <AnimatePresence>
+          {leadingBidder && activeItem && !winnerOverlay && (
+            <motion.div
+              key={leadingBidder.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              className="mx-3 mb-2 flex items-center gap-2"
+            >
+              <div className="h-5 w-5 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0">
+                <span className="text-[8px] font-black text-black">{leadingBidder.bidder_name.slice(0, 1).toUpperCase()}</span>
+              </div>
+              <span className="text-white text-xs font-bold">
+                {leadingBidder.bidder_name} is <span className="text-yellow-400 font-black">winning!</span>
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Winner bar */}
         <AnimatePresence>
           {winnerOverlay && winnerOverlay.sold && winnerOverlay.name && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="mx-3 mb-2 bg-green-500/90 backdrop-blur-sm rounded-xl px-3 py-2 flex items-center gap-2"
+              className="mx-3 mb-2 flex items-center gap-2"
             >
-              <span className="text-white text-xs font-bold">🟢 {winnerOverlay.name} won!</span>
-              <span className="text-white/80 text-xs ml-auto font-bold">€{winnerOverlay.price}</span>
+              <div className="h-5 w-5 rounded-full bg-green-400 flex items-center justify-center flex-shrink-0">
+                <span className="text-[8px] font-black text-black">{winnerOverlay.name.slice(0, 1).toUpperCase()}</span>
+              </div>
+              <span className="text-white text-xs font-bold">
+                {winnerOverlay.name} <span className="text-green-400 font-black">won!</span>
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Active product card */}
+        {/* Product card */}
         {activeItem && (
           <div className="mx-3 mb-2 bg-black/50 backdrop-blur-xl rounded-xl p-2.5 flex items-center gap-3">
             {activeItem.image_url ? (
-              <img src={activeItem.image_url} alt="" className="h-12 w-12 rounded-lg object-cover flex-shrink-0" />
+              <img src={activeItem.image_url} alt="" className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />
             ) : (
-              <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+              <div className="h-14 w-14 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
                 <Gavel className="h-5 w-5 text-white/40" />
               </div>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-white text-xs font-bold truncate">{activeItem.title}</p>
-              <div className="flex items-center gap-2 mt-0.5">
-                <motion.span
-                  key={activeItem.current_price}
-                  initial={{ scale: 1.2, color: "#4ade80" }}
-                  animate={{ scale: 1, color: "#ffffff" }}
-                  className="text-lg font-black text-white"
-                >
-                  €{activeItem.current_price}
-                </motion.span>
-                <span className="text-[10px] text-white/50">{activeItem.bid_count} offerte</span>
-              </div>
+              <p className="text-[10px] text-white/50 mt-0.5">{activeItem.bid_count} offerte</p>
             </div>
-            {activeItem.buy_now_price && (
-              <Button
-                size="sm"
-                className="bg-yellow-500 hover:bg-yellow-400 text-black font-black text-[10px] h-8 rounded-lg px-2.5 flex-shrink-0"
-                onClick={() => requireAuth(() => placeBid(activeItem.buy_now_price!))}
+            <div className="text-right flex-shrink-0">
+              <motion.p
+                key={activeItem.current_price}
+                initial={{ scale: 1.2, color: "#4ade80" }}
+                animate={{ scale: 1, color: "#ffffff" }}
+                className="text-lg font-black text-white"
               >
-                <ShoppingCart className="h-3 w-3 mr-0.5" /> €{activeItem.buy_now_price}
-              </Button>
+                €{activeItem.current_price}
+              </motion.p>
+              {countdown !== null && (
+                <p className={`text-[10px] font-bold tabular-nums ${countdown <= 10 ? "text-red-400 animate-pulse" : "text-white/50"}`}>
+                  ⏱ {String(Math.floor(countdown / 60)).padStart(2, "0")}:{String(countdown % 60).padStart(2, "0")}
+                </p>
+              )}
+              {activeItem.status === "sold" && <span className="text-[10px] font-black text-red-400">Sold</span>}
+            </div>
+          </div>
+        )}
+
+        {/* No active item / ended */}
+        {!activeItem && (
+          <div className="mx-3 mb-2">
+            {isEnded ? (
+              <div className="bg-white/10 backdrop-blur-xl rounded-xl px-4 py-3 text-center">
+                <p className="text-white/70 text-sm font-bold">Auction Ended</p>
+              </div>
+            ) : (
+              <div className="bg-black/50 backdrop-blur-xl rounded-xl px-4 py-3 text-center">
+                <p className="text-white/70 text-xs font-semibold">
+                  {isLive ? "In attesa del prossimo lotto..." : "L'asta non è ancora iniziata"}
+                </p>
+              </div>
             )}
           </div>
         )}
 
-        {/* No active item message */}
-        {!activeItem && (
-          <div className="mx-3 mb-2 bg-black/50 backdrop-blur-xl rounded-xl px-4 py-3 text-center">
-            <p className="text-white/70 text-xs font-semibold">
-              {isLive ? "In attesa del prossimo lotto..." : isEnded ? "Asta terminata" : "L'asta non è ancora iniziata"}
-            </p>
-          </div>
-        )}
-
-        {/* Bid buttons */}
+        {/* Bid controls: Custom + Swipe-to-Bid */}
         {isLive && activeItem && (
           <div className="bg-black/60 backdrop-blur-xl px-3 py-3 border-t border-white/10">
             {!user ? (
               <Button
                 size="lg"
-                className="w-full h-12 text-sm font-black gap-2 rounded-xl bg-white text-black hover:bg-white/90"
+                className="w-full h-14 text-sm font-black gap-2 rounded-2xl bg-white text-black hover:bg-white/90"
                 onClick={() => setAuthOpen(true)}
               >
                 <Lock className="h-4 w-4" />
@@ -563,37 +786,36 @@ export default function AstaLive() {
               </Button>
             ) : (
               <div className="space-y-2">
-                <div className="flex items-center gap-1.5">
+                {/* Name input (first time) */}
+                {!bidderName && (
                   <Input
                     placeholder="Il tuo nome"
                     value={bidderName}
                     onChange={e => setBidderName(e.target.value)}
-                    className="h-9 text-xs flex-1 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                    className="h-9 text-xs bg-white/10 border-white/20 text-white placeholder:text-white/40 rounded-xl"
                   />
+                )}
+                <div className="flex items-center gap-2">
+                  {/* Custom bid button */}
+                  <button
+                    onClick={() => requireAuth(() => setCustomBidOpen(true))}
+                    className="h-14 px-5 rounded-2xl bg-white/10 border-2 border-white/20 text-white font-bold text-sm flex-shrink-0 hover:bg-white/15 active:scale-95 transition-all"
+                  >
+                    Custom
+                  </button>
+                  {/* Swipe to bid */}
+                  <SwipeBidButton amount={minBid} onBid={() => requireAuth(() => placeBid(minBid))} />
                 </div>
-                <div className="flex items-center gap-1.5">
+                {/* Buy Now */}
+                {activeItem.buy_now_price && (
                   <Button
-                    size="lg"
-                    className="flex-1 h-12 text-base font-black gap-1.5 rounded-xl bg-green-500 hover:bg-green-400 text-white"
-                    onClick={() => requireAuth(() => placeBid(minBid))}
+                    size="default"
+                    className="w-full h-10 font-bold gap-1.5 rounded-xl text-sm bg-yellow-500 hover:bg-yellow-400 text-black"
+                    onClick={() => requireAuth(() => placeBid(activeItem.buy_now_price!))}
                   >
-                    <ArrowUp className="h-4 w-4" /> €{minBid}
+                    <ShoppingCart className="h-4 w-4" /> Compra Ora €{activeItem.buy_now_price}
                   </Button>
-                  <Button
-                    size="lg"
-                    className="h-12 text-base font-bold rounded-xl px-4 bg-white/15 hover:bg-white/25 text-white border-0"
-                    onClick={() => requireAuth(() => placeBid(minBid + 5))}
-                  >
-                    +€5
-                  </Button>
-                  <Button
-                    size="lg"
-                    className="h-12 text-base font-bold rounded-xl px-4 bg-white/15 hover:bg-white/25 text-white border-0"
-                    onClick={() => requireAuth(() => placeBid(minBid + 10))}
-                  >
-                    +€10
-                  </Button>
-                </div>
+                )}
               </div>
             )}
           </div>
