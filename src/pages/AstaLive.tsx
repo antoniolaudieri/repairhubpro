@@ -373,9 +373,22 @@ export default function AstaLive() {
           {/* Stream / Product Hero */}
           <div className="relative bg-black flex-shrink-0">
             {isCameraStream ? (
-              <div className="aspect-[4/3] sm:aspect-video max-h-[45vh] sm:max-h-[55vh] md:max-h-[65vh] flex items-center justify-center bg-black relative">
+              <div className="aspect-video w-full flex items-center justify-center bg-black relative">
                 {remoteStream ? (
-                  <video ref={cameraVideoRef} autoPlay playsInline muted controls className="w-full h-full object-cover" />
+                  <>
+                    <video ref={cameraVideoRef} autoPlay playsInline muted={isMuted} className="w-full h-full object-cover" />
+                    {isMuted && (
+                      <button
+                        onClick={() => {
+                          setIsMuted(false);
+                          if (cameraVideoRef.current) cameraVideoRef.current.muted = false;
+                        }}
+                        className="absolute top-3 right-3 z-10 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1"
+                      >
+                        🔇 Tocca per audio
+                      </button>
+                    )}
+                  </>
                 ) : (
                   <div className="text-center text-white/60 space-y-2 p-4">
                     <Video className="h-10 w-10 mx-auto opacity-40 animate-pulse" />
