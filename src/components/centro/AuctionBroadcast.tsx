@@ -46,7 +46,34 @@ export function AuctionBroadcast({
   const [countdown, setCountdown] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  const { isStreaming, viewerConnections, startBroadcast, stopBroadcast } = useWebRTCBroadcast(auctionId);
+  const { isStreaming, viewerConnections, stream, startBroadcast, stopBroadcast } = useWebRTCBroadcast(auctionId);
+
+  // Re-attach stream to video when stream changes
+  useEffect(() => {
+    if (videoRef.current && stream && isStreaming) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream, isStreaming]);
+
+  // Presence-based viewer count
+  const [presenceCount, setPresenceCount] = useState(0);
+  useEffect(() => {
+    const channel = supabase.channel(`presence-auction-${auctionId}`, {
+      config: { presence: { key: `host-${auctionId}` } },
+    });
+    channel
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const count = Object.keys(state).length;
+        setPresenceCount(Math.max(0, count - 1)); // exclude host
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ type: "host" });
+        }
+      });
+    return () => { supabase.removeChannel(channel); };
+  }, [auctionId]);
 
   // Countdown
   useEffect(() => {
