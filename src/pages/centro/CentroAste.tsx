@@ -429,7 +429,10 @@ export default function CentroAste() {
                 ) : (
                   auctionItems.map(item => (
                     <motion.div key={item.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                      <Card className={item.status === "active" ? "border-destructive shadow-lg ring-1 ring-destructive/20" : ""}>
+                      <Card className={`transition-all ${
+                        item.status === "active" ? "border-destructive shadow-lg ring-1 ring-destructive/20" : 
+                        item.status === "sold" ? "border-primary/30 bg-primary/5" : ""
+                      }`}>
                         <CardContent className="p-3">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1 min-w-0">
@@ -450,9 +453,39 @@ export default function CentroAste() {
                                 <span className="text-muted-foreground flex items-center gap-0.5"><Users className="h-3 w-3" />{item.bid_count}</span>
                                 <span className="text-muted-foreground flex items-center gap-0.5"><Timer className="h-3 w-3" />{item.duration_seconds}s</span>
                               </div>
+
+                              {/* Winner card - prominent display */}
                               {item.status === "sold" && item.winner_name && (
-                                <div className="mt-1.5 flex items-center gap-1.5 text-xs text-primary">
-                                  <Trophy className="h-3.5 w-3.5" /> <strong>{item.winner_name}</strong> {item.winner_email && <span className="text-muted-foreground">({item.winner_email})</span>}
+                                <motion.div 
+                                  initial={{ opacity: 0, y: 5 }} 
+                                  animate={{ opacity: 1, y: 0 }}
+                                  className="mt-2.5 p-2.5 rounded-lg bg-primary/10 border border-primary/20"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
+                                      <Trophy className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-bold text-foreground text-sm">{item.winner_name}</p>
+                                      {item.winner_email && (
+                                        <p className="text-xs text-muted-foreground truncate">{item.winner_email}</p>
+                                      )}
+                                    </div>
+                                    <div className="text-right flex-shrink-0">
+                                      <p className="font-black text-primary text-lg leading-none">€{item.current_price}</p>
+                                      <p className="text-[10px] text-muted-foreground mt-0.5">{item.bid_count} offerte</p>
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                              {/* Unsold indicator */}
+                              {item.status === "unsold" && (
+                                <div className="mt-2 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground flex items-center gap-1.5">
+                                  <Gavel className="h-3.5 w-3.5" />
+                                  {(item as any).reserve_price && item.current_price < (item as any).reserve_price 
+                                    ? "Riserva non raggiunta" 
+                                    : "Nessuna offerta valida"}
                                 </div>
                               )}
                             </div>
