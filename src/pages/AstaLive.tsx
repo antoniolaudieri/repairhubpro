@@ -254,7 +254,19 @@ export default function AstaLive() {
 
     const channel = supabase
       .channel(`public-auction-${auctionId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "auction_items", filter: `auction_id=eq.${auctionId}` }, () => fetchItems())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "auction_items", filter: `auction_id=eq.${auctionId}` }, (payload) => {
+        const updated = payload.new as any;
+        if (updated.status === "sold" || updated.status === "unsold") {
+          setWinnerOverlay({
+            name: updated.winner_name || null,
+            price: updated.current_price,
+            sold: updated.status === "sold",
+          });
+          setTimeout(() => setWinnerOverlay(null), 6000);
+        }
+        fetchItems();
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_items", filter: `auction_id=eq.${auctionId}` }, () => fetchItems())
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_bids", filter: `auction_id=eq.${auctionId}` }, (payload) => {
         const bid = payload.new as BidData;
         setBids(prev => {
