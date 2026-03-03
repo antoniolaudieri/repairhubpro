@@ -21,11 +21,10 @@ export function useWebRTCBroadcast(auctionId: string) {
   const broadcasterId = useRef(`host-${Date.now()}`);
 
   const createPeerForViewer = useCallback((viewerId: string, stream: MediaStream, channel: ReturnType<typeof supabase.channel>) => {
-    // Don't create duplicate peers
-    const existing = peersRef.current.find(p => p.viewerId === viewerId);
+    const existing = peersRef.current.find((p) => p.viewerId === viewerId);
     if (existing) {
       existing.pc.close();
-      peersRef.current = peersRef.current.filter(p => p.viewerId !== viewerId);
+      peersRef.current = peersRef.current.filter((p) => p.viewerId !== viewerId);
     }
 
     console.log("[WebRTC Host] Creating peer for viewer:", viewerId);
@@ -48,92 +47,120 @@ export function useWebRTCBroadcast(auctionId: string) {
       if (["disconnected", "failed", "closed"].includes(pc.connectionState)) {
         peersRef.current = peersRef.current.filter((p) => p.viewerId !== viewerId);
         setViewerConnections(peersRef.current.length);
-        try { pc.close(); } catch {}
+        try {
+          pc.close();
+        } catch {}
       }
     };
 
     return pc;
   }, []);
 
-  const startBroadcast = useCallback(async (facingMode: "user" | "environment" = "environment") => {
+  const getCameraStream = useCallback(async (facingMode: "user" | "environment") => {
     try {
-      console.log("[WebRTC Host] Starting broadcast, facingMode:", facingMode);
-      const stream = await navigator.mediaDevices.getUserMedia({
+      return await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: true,
       });
-      streamRef.current = stream;
+    } catch (primaryError) {
+      console.warn("[WebRTC Host] Primary camera constraint failed, fallback to generic camera", primaryError);
+      return await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    }
+  }, []);
 
-      await supabase.from("live_auctions").update({ stream_url: "camera:live" } as any).eq("id", auctionId);
+  const startBroadcast = useCallback(
+    async (facingMode: "user" | "environment" = "environment") => {
+      try {
+        console.log("[WebRTC Host] Starting broadcast, facingMode:", facingMode);
 
-      const channel = supabase.channel(`webrtc-${auctionId}`, {
-        config: { broadcast: { self: false } },
-      });
+        const stream = await getCameraStream(facingMode);
+        streamRef.current = stream;
 
-      channel
-        .on("broadcast", { event: "viewer-join" }, async ({ payload }) => {
-          const { viewerId } = payload;
-          const currentStream = streamRef.current;
-          if (!currentStream) return;
+        const { error: updateError } = await supabase
+          .from("live_auctions")
+          .update({ stream_url: "camera:live" } as any)
+          .eq("id", auctionId);
 
-          const pc = createPeerForViewer(viewerId, currentStream, channel);
+        if (updateError) {
+          throw updateError;
+        }
 
-          try {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            channel.send({
-              type: "broadcast",
-              event: "offer",
-              payload: { sdp: offer, from: broadcasterId.current, to: viewerId },
-            });
-            console.log("[WebRTC Host] Sent offer to:", viewerId);
-
-            peersRef.current.push({ pc, viewerId });
-            setViewerConnections(peersRef.current.length);
-          } catch (err) {
-            console.error("[WebRTC Host] Error creating offer:", err);
-            pc.close();
-          }
-        })
-        .on("broadcast", { event: "answer" }, async ({ payload }) => {
-          if (payload.to !== broadcasterId.current) return;
-          const peer = peersRef.current.find((p) => p.viewerId === payload.from);
-          if (peer && peer.pc.signalingState === "have-local-offer") {
-            try {
-              await peer.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
-              console.log("[WebRTC Host] Set answer from:", payload.from);
-            } catch (err) {
-              console.error("[WebRTC Host] Error setting answer:", err);
-            }
-          }
-        })
-        .on("broadcast", { event: "ice-candidate" }, async ({ payload }) => {
-          if (payload.to !== broadcasterId.current) return;
-          const peer = peersRef.current.find((p) => p.viewerId === payload.from);
-          if (peer) {
-            try { await peer.pc.addIceCandidate(new RTCIceCandidate(payload.candidate)); } catch {}
-          }
-        })
-        .subscribe((status) => {
-          console.log("[WebRTC Host] Channel status:", status);
+        const channel = supabase.channel(`webrtc-${auctionId}`, {
+          config: { broadcast: { self: false } },
         });
 
-      channelRef.current = channel;
-      setIsStreaming(true);
-      console.log("[WebRTC Host] Broadcast started successfully");
+        channel
+          .on("broadcast", { event: "viewer-join" }, async ({ payload }) => {
+            const { viewerId } = payload;
+            const currentStream = streamRef.current;
+            if (!currentStream) return;
 
-      return stream;
-    } catch (err) {
-      console.error("[WebRTC Host] Camera broadcast error:", err);
-      throw err;
-    }
-  }, [auctionId, createPeerForViewer]);
+            const pc = createPeerForViewer(viewerId, currentStream, channel);
+
+            try {
+              const offer = await pc.createOffer();
+              await pc.setLocalDescription(offer);
+              channel.send({
+                type: "broadcast",
+                event: "offer",
+                payload: { sdp: offer, from: broadcasterId.current, to: viewerId },
+              });
+              console.log("[WebRTC Host] Sent offer to:", viewerId);
+
+              peersRef.current.push({ pc, viewerId });
+              setViewerConnections(peersRef.current.length);
+            } catch (err) {
+              console.error("[WebRTC Host] Error creating offer:", err);
+              pc.close();
+            }
+          })
+          .on("broadcast", { event: "answer" }, async ({ payload }) => {
+            if (payload.to !== broadcasterId.current) return;
+            const peer = peersRef.current.find((p) => p.viewerId === payload.from);
+            if (peer && peer.pc.signalingState === "have-local-offer") {
+              try {
+                await peer.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+                console.log("[WebRTC Host] Set answer from:", payload.from);
+              } catch (err) {
+                console.error("[WebRTC Host] Error setting answer:", err);
+              }
+            }
+          })
+          .on("broadcast", { event: "ice-candidate" }, async ({ payload }) => {
+            if (payload.to !== broadcasterId.current) return;
+            const peer = peersRef.current.find((p) => p.viewerId === payload.from);
+            if (peer) {
+              try {
+                await peer.pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+              } catch {}
+            }
+          })
+          .subscribe((status) => {
+            console.log("[WebRTC Host] Channel status:", status);
+          });
+
+        channelRef.current = channel;
+        setIsStreaming(true);
+        console.log("[WebRTC Host] Broadcast started successfully");
+
+        return stream;
+      } catch (err) {
+        console.error("[WebRTC Host] Camera broadcast error:", err);
+        throw err;
+      }
+    },
+    [auctionId, createPeerForViewer, getCameraStream]
+  );
 
   const stopBroadcast = useCallback(async () => {
     console.log("[WebRTC Host] Stopping broadcast");
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
-    peersRef.current.forEach((p) => { try { p.pc.close(); } catch {} });
+    peersRef.current.forEach((p) => {
+      try {
+        p.pc.close();
+      } catch {}
+    });
     peersRef.current = [];
     setViewerConnections(0);
 
@@ -149,7 +176,11 @@ export function useWebRTCBroadcast(auctionId: string) {
   useEffect(() => {
     return () => {
       streamRef.current?.getTracks().forEach((t) => t.stop());
-      peersRef.current.forEach((p) => { try { p.pc.close(); } catch {} });
+      peersRef.current.forEach((p) => {
+        try {
+          p.pc.close();
+        } catch {}
+      });
       if (channelRef.current) supabase.removeChannel(channelRef.current);
     };
   }, []);
