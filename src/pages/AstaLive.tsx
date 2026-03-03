@@ -276,6 +276,13 @@ export default function AstaLive() {
     return () => clearInterval(interval);
   }, [activeItem?.started_at, activeItem?.duration_seconds]);
 
+  // Attach remote WebRTC stream to video element
+  useEffect(() => {
+    if (cameraVideoRef.current && remoteStream) {
+      cameraVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream]);
+
   // --- Actions ---
   const requireAuth = (cb: () => void) => {
     if (!user) { setAuthOpen(true); return; }
