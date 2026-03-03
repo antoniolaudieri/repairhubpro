@@ -450,7 +450,7 @@ export default function AstaLive() {
                   <div className="text-center text-white space-y-2 p-6">
                     {winnerOverlay.sold ? (
                       <>
-                        <Trophy className="h-14 w-14 mx-auto text-yellow-400 drop-shadow-lg" />
+                        <Trophy className="h-14 w-14 mx-auto text-chart-4 drop-shadow-lg" />
                         <p className="text-2xl font-black">VENDUTO!</p>
                         <p className="text-4xl font-black text-primary">€{winnerOverlay.price}</p>
                         {winnerOverlay.name && (
