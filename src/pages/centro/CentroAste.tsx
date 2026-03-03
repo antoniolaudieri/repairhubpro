@@ -76,7 +76,9 @@ export default function CentroAste() {
   const [itemDescription, setItemDescription] = useState("");
   const [itemStartingPrice, setItemStartingPrice] = useState("");
   const [itemBuyNowPrice, setItemBuyNowPrice] = useState("");
+  const [itemReservePrice, setItemReservePrice] = useState("");
   const [itemDuration, setItemDuration] = useState("60");
+  const [autoCloseTriggered, setAutoCloseTriggered] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) fetchCentroId();
