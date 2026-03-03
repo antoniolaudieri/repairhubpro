@@ -29,6 +29,7 @@ interface Auction {
   viewer_count: number;
   created_at: string;
   centro_id: string;
+  stream_url: string | null;
 }
 
 interface AuctionItem {
