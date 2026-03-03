@@ -191,6 +191,7 @@ export default function AstaLive() {
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [presenceCount, setPresenceCount] = useState(0);
+  const [winnerOverlay, setWinnerOverlay] = useState<{ name: string | null; price: number; sold: boolean } | null>(null);
 
   const isCameraStream = auction?.stream_url?.startsWith("camera:");
   const { remoteStream, connectionState } = useWebRTCViewer(auctionId || "", !!isCameraStream);
