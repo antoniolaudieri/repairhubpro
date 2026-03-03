@@ -17,6 +17,7 @@ interface AuctionData {
   status: string;
   viewer_count: number;
   centro_id: string;
+  stream_url: string | null;
 }
 
 interface CentroInfo {
@@ -66,6 +67,13 @@ export default function AstaLive() {
     if (!auctionId) return;
     fetchAuction();
 
+    // Increment viewer count
+    supabase.from("live_auctions").select("viewer_count").eq("id", auctionId).single().then(({ data }) => {
+      if (data) {
+        supabase.from("live_auctions").update({ viewer_count: (data.viewer_count || 0) + 1 } as any).eq("id", auctionId).then(() => {});
+      }
+    });
+
     const channel = supabase
       .channel(`public-auction-${auctionId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "auction_items", filter: `auction_id=eq.${auctionId}` },
@@ -80,9 +88,23 @@ export default function AstaLive() {
           ));
         }
       )
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "live_auctions", filter: `id=eq.${auctionId}` },
+        (payload) => {
+          const updated = payload.new as AuctionData;
+          setAuction(prev => prev ? { ...prev, viewer_count: updated.viewer_count, status: updated.status, stream_url: updated.stream_url } : null);
+        }
+      )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    // Decrement viewer on leave
+    return () => {
+      supabase.from("live_auctions").select("viewer_count").eq("id", auctionId).single().then(({ data }) => {
+        if (data) {
+          supabase.from("live_auctions").update({ viewer_count: Math.max(0, (data.viewer_count || 1) - 1) } as any).eq("id", auctionId).then(() => {});
+        }
+      });
+      supabase.removeChannel(channel);
+    };
   }, [auctionId]);
 
   // Countdown timer
@@ -208,6 +230,50 @@ export default function AstaLive() {
         <div className="grid md:grid-cols-3 gap-6">
           {/* Main area - Active item */}
           <div className="md:col-span-2 space-y-4">
+            {/* Stream Embed */}
+            {isLive && auction.stream_url && (
+              <Card className="overflow-hidden border-destructive/20">
+                <div className="aspect-video bg-black">
+                  <iframe
+                    src={auction.stream_url}
+                    className="w-full h-full"
+                    allowFullScreen
+                    allow="autoplay; encrypted-media; fullscreen"
+                  />
+                </div>
+              </Card>
+            )}
+
+            {/* Live Stats Bar */}
+            {isLive && activeItem && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-between bg-destructive/5 border border-destructive/20 rounded-xl px-4 py-3"
+              >
+                <div className="flex items-center gap-4">
+                  <Badge className="bg-destructive text-destructive-foreground animate-pulse gap-1">
+                    <Radio className="h-3 w-3" /> LIVE
+                  </Badge>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <Eye className="h-4 w-4" />
+                    <motion.span key={auction.viewer_count} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="font-bold text-foreground">
+                      {auction.viewer_count}
+                    </motion.span>
+                    spettatori
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-sm">
+                  <span className="text-muted-foreground">{activeItem.bid_count} offerte</span>
+                  {countdown !== null && (
+                    <span className={`font-bold tabular-nums ${countdown <= 10 ? "text-destructive animate-pulse" : "text-foreground"}`}>
+                      <Timer className="h-4 w-4 inline mr-1" />{countdown}s
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            )}
+
             {activeItem ? (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
                 <Card className="border-destructive/30 shadow-xl overflow-hidden">

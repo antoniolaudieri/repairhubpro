@@ -16,6 +16,7 @@ import {
   Gavel, Plus, Play, Square, Eye, Clock, Users, Package,
   Trash2, ChevronRight, Radio, Trophy, ArrowRight, Timer
 } from "lucide-react";
+import { AuctionBroadcast } from "@/components/centro/AuctionBroadcast";
 
 interface Auction {
   id: string;
@@ -28,6 +29,7 @@ interface Auction {
   viewer_count: number;
   created_at: string;
   centro_id: string;
+  stream_url: string | null;
 }
 
 interface AuctionItem {
@@ -407,6 +409,17 @@ export default function CentroAste() {
                 </DialogContent>
               </Dialog>
             </div>
+
+            {/* Broadcast Console */}
+            {selectedAuction.status === "live" && (
+              <AuctionBroadcast
+                auctionId={selectedAuction.id}
+                viewerCount={selectedAuction.viewer_count}
+                activeItem={auctionItems.find(i => i.status === "active") || null}
+                streamUrl={selectedAuction.stream_url}
+                onStreamUrlChange={(url) => setSelectedAuction(prev => prev ? { ...prev, stream_url: url } : null)}
+              />
+            )}
 
             {/* Items + Bids Grid */}
             <div className="grid md:grid-cols-3 gap-6">

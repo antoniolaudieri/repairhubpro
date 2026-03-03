@@ -2984,6 +2984,7 @@ export type Database = {
           scheduled_at: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["auction_status"]
+          stream_url: string | null
           title: string
           viewer_count: number
         }
@@ -2996,6 +2997,7 @@ export type Database = {
           scheduled_at?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["auction_status"]
+          stream_url?: string | null
           title: string
           viewer_count?: number
         }
@@ -3008,6 +3010,7 @@ export type Database = {
           scheduled_at?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["auction_status"]
+          stream_url?: string | null
           title?: string
           viewer_count?: number
         }
