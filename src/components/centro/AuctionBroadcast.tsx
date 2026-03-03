@@ -235,7 +235,7 @@ export function AuctionBroadcast({
                 </Badge>
               )}
               <Badge className="bg-background/80 text-foreground backdrop-blur-sm gap-1 shadow pointer-events-none">
-                <Eye className="h-3 w-3" /> {viewerCount} spettatori
+                <Eye className="h-3 w-3" /> {presenceCount} spettatori
               </Badge>
             </div>
             {activeItem && (
