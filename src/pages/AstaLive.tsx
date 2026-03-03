@@ -141,36 +141,26 @@ function InlineAuthDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
   );
 }
 
-// --- Bid Feed Item ---
-function BidFeedItem({ bid, isLatest }: { bid: BidData; isLatest: boolean }) {
+// --- Bid Feed Bubble (Whatnot-style) ---
+function BidBubble({ bid, isLatest }: { bid: BidData; isLatest: boolean }) {
   const initials = bid.bidder_name.slice(0, 2).toUpperCase();
-  const colors = ["bg-primary/20 text-primary", "bg-chart-2/20 text-chart-2", "bg-chart-4/20 text-chart-4", "bg-chart-5/20 text-chart-5"];
-  const colorIdx = bid.bidder_name.charCodeAt(0) % colors.length;
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 30, scale: 0.95 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
+      initial={{ opacity: 0, y: 20, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
-      className={`flex items-center gap-2.5 px-3 py-2 ${isLatest ? "bg-primary/10" : ""}`}
+      className="flex items-center gap-2 px-2.5 py-1.5"
     >
-      <Avatar className="h-7 w-7 flex-shrink-0">
-        <AvatarFallback className={`text-[10px] font-bold ${colors[colorIdx]}`}>{initials}</AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <span className="font-semibold text-xs text-foreground">{bid.bidder_name}</span>
-        <span className="text-[10px] text-muted-foreground ml-1.5">
-          {new Date(bid.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+      <div className="h-6 w-6 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+        <span className="text-[9px] font-bold text-white">{initials}</span>
+      </div>
+      <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-3 py-1.5 flex items-center gap-2">
+        <span className="font-semibold text-xs text-white/90">{bid.bidder_name}</span>
+        <span className={`font-black text-sm tabular-nums ${isLatest ? "text-green-400" : "text-white"}`}>
+          €{bid.amount}
         </span>
       </div>
-      <motion.span
-        key={bid.amount}
-        initial={{ scale: 1.3 }}
-        animate={{ scale: 1 }}
-        className={`font-black text-sm tabular-nums ${isLatest ? "text-primary" : "text-foreground"}`}
-      >
-        €{bid.amount}
-      </motion.span>
     </motion.div>
   );
 }
