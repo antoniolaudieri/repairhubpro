@@ -55,6 +55,8 @@ import CentroPrenotazioni from "@/pages/centro/CentroPrenotazioni";
 import CentroFinanza from "@/pages/centro/CentroFinanza";
 import CentroPrintAgent from "@/pages/centro/CentroPrintAgent";
 import CentroOpportunita from "@/pages/centro/CentroOpportunita";
+import CentroAste from "@/pages/centro/CentroAste";
+import AstaLive from "@/pages/AstaLive";
 import UsatoCatalog from "@/pages/UsatoCatalog";
 import UsatoDetail from "@/pages/UsatoDetail";
 // Admin pages
@@ -561,6 +563,16 @@ export const AnimatedRoutes = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/centro/aste"
+          element={
+            <ProtectedRoute requireCentro>
+              <CentroAste />
+            </ProtectedRoute>
+          }
+        />
+        {/* Public Auction Route */}
+        <Route path="/aste/:auctionId" element={<PageTransition><AstaLive /></PageTransition>} />
         {/* Public Usato Routes */}
         <Route path="/usato" element={<PageTransition><UsatoCatalog /></PageTransition>} />
         <Route path="/usato/:id" element={<PageTransition><UsatoDetail /></PageTransition>} />
