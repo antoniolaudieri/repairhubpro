@@ -204,7 +204,10 @@ export default function AstaLive() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
   const feedRef = useRef<HTMLDivElement>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
 
+  const isCameraStream = auction?.stream_url?.startsWith("camera:");
+  const { remoteStream, connectionState } = useWebRTCViewer(auctionId || "", !!isCameraStream);
   const activeItem = items.find(i => i.status === "active");
   const minBid = activeItem ? activeItem.current_price + 5 : 0;
   const pendingItems = items.filter(i => i.status === "pending");
