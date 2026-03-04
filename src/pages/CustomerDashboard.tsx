@@ -115,6 +115,7 @@ export default function CustomerDashboard() {
     inProgress: 0,
     completed: 0,
   });
+  const [auctionWins, setAuctionWins] = useState<AuctionWin[]>([]);
 
   // Loyalty cards for this customer
   const { cards: loyaltyCards, loading: loyaltyLoading } = useCustomerLoyaltyCards(user?.email || null);
@@ -122,8 +123,38 @@ export default function CustomerDashboard() {
   useEffect(() => {
     if (user) {
       fetchCustomerData();
+      fetchAuctionWins();
     }
   }, [user]);
+
+  const fetchAuctionWins = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from("auction_sales")
+        .select("id, product_title, product_description, sale_price, sold_at, fulfillment_status, fulfillment_notes, auction_item_id")
+        .eq("winner_user_id", user.id)
+        .order("sold_at", { ascending: false });
+      
+      if (data && data.length > 0) {
+        // Fetch item images
+        const itemIds = data.map(d => d.auction_item_id).filter(Boolean);
+        const { data: itemsData } = await supabase
+          .from("auction_items")
+          .select("id, image_url")
+          .in("id", itemIds);
+        
+        const itemMap = new Map(itemsData?.map(i => [i.id, i]) || []);
+        
+        setAuctionWins(data.map(d => ({
+          ...d,
+          auction_item: itemMap.get(d.auction_item_id) || null,
+        })) as AuctionWin[]);
+      }
+    } catch (error) {
+      console.error("Error fetching auction wins:", error);
+    }
+  };
 
   const fetchCustomerData = async () => {
     try {
