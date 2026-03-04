@@ -597,7 +597,7 @@ export default function AstaLive() {
         void video.play().catch(() => {});
       });
     }
-  }, [remoteStream]);
+  }, [remoteStream, isMuted]);
 
   // --- Actions ---
   const requireAuth = (cb: () => void) => {
