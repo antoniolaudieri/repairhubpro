@@ -775,10 +775,10 @@ export default function AstaLive() {
       </AnimatePresence>
 
       {/* ===== CHAT + BID FEED (left side overlay) ===== */}
-      <div className="absolute left-0 bottom-[280px] z-20 w-[80%] max-w-[340px] max-h-[30vh] overflow-hidden pointer-events-none">
+      <div className="absolute left-0 bottom-[280px] z-20 w-[80%] max-w-[340px] max-h-[30vh] overflow-y-auto pointer-events-auto overscroll-contain scrollbar-hide">
         <div className="flex flex-col-reverse">
           <AnimatePresence>
-            {feedItems.slice(0, 15).map((item) => (
+            {feedItems.slice(0, 30).map((item) => (
               <FeedBubble key={item.data.id} item={item} />
             ))}
           </AnimatePresence>
