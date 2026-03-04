@@ -589,8 +589,13 @@ export default function AstaLive() {
     if (cameraVideoRef.current && remoteStream) {
       const video = cameraVideoRef.current;
       video.srcObject = remoteStream;
-      video.muted = true;
-      void video.play().catch(() => {});
+      video.muted = isMuted;
+      void video.play().catch(() => {
+        // Autoplay blocked — keep muted and retry
+        video.muted = true;
+        setIsMuted(true);
+        void video.play().catch(() => {});
+      });
     }
   }, [remoteStream]);
 
