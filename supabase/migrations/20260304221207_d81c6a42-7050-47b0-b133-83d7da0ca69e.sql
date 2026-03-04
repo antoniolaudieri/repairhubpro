@@ -1,0 +1,1 @@
+ALTER TABLE public.live_auctions ADD COLUMN IF NOT EXISTS cover_url TEXT;
