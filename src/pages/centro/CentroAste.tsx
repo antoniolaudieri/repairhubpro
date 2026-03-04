@@ -419,14 +419,17 @@ export default function CentroAste() {
   return (
     <CentroLayout>
       <PageTransition>
-        <div className="space-y-4">
+        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-                <Gavel className="h-6 w-6 text-primary flex-shrink-0" /> Aste Live
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Gavel className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                </div>
+                Aste Live
               </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gestisci le tue aste in diretta</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 ml-12">Gestisci le tue aste in diretta</p>
             </div>
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
