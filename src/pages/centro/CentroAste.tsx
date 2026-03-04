@@ -449,18 +449,23 @@ export default function CentroAste() {
 
           {!selectedAuction ? (
             /* ===== AUCTION LIST ===== */
-            <div className="grid gap-3">
+            <div className="grid gap-3 sm:gap-4">
               {loading ? (
-                <div className="text-center py-12 text-muted-foreground text-sm">Caricamento...</div>
+                <div className="text-center py-16 text-muted-foreground text-sm">Caricamento...</div>
               ) : auctions.length === 0 ? (
-                <Card className="border-dashed"><CardContent className="py-10 text-center"><Gavel className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" /><p className="text-sm text-muted-foreground">Nessuna asta. Crea la tua prima asta live!</p></CardContent></Card>
+                <Card className="border-dashed"><CardContent className="py-12 sm:py-16 text-center">
+                  <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                    <Gavel className="h-7 w-7 text-muted-foreground/40" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Nessuna asta. Crea la tua prima asta live!</p>
+                </CardContent></Card>
               ) : (
                 auctions.map((auction, i) => (
                   <motion.div key={auction.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]" onClick={() => setSelectedAuction(auction)}>
-                      <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-3">
+                    <Card className="hover:shadow-md transition-all cursor-pointer active:scale-[0.99]" onClick={() => setSelectedAuction(auction)}>
+                      <CardContent className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                             {auction.status === "live" ? <Radio className="h-5 w-5 text-destructive animate-pulse" /> : <Gavel className="h-5 w-5 text-primary" />}
                           </div>
                           <div className="min-w-0">
