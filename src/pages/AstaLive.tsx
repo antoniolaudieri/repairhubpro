@@ -196,62 +196,51 @@ function FeedBubble({ item }: { item: FeedItem }) {
   );
 }
 
-// --- Swipe to Bid Button ---
-function SwipeBidButton({ amount, onBid }: { amount: number; onBid: () => void }) {
-  const x = useMotionValue(0);
-  const maxDrag = 180;
-  const background = useTransform(x, [0, maxDrag], ["hsl(48, 96%, 53%)", "hsl(142, 71%, 45%)"]);
-  const chevronOpacity = useTransform(x, [0, maxDrag * 0.7], [1, 0]);
-  const checkScale = useTransform(x, [maxDrag * 0.7, maxDrag], [0, 1]);
-  const [swiped, setSwiped] = useState(false);
+// --- Tap to Bid Button ---
+function TapBidButton({ amount, onBid }: { amount: number; onBid: () => void }) {
+  const [confirmed, setConfirmed] = useState(false);
 
-  const handleDragEnd = (_: any, info: PanInfo) => {
-    if (info.offset.x >= maxDrag * 0.7) {
-      setSwiped(true);
-      onBid();
-      setTimeout(() => setSwiped(false), 600);
-    }
+  const handleTap = () => {
+    if (confirmed) return;
+    onBid();
+    setConfirmed(true);
+    setTimeout(() => setConfirmed(false), 1200);
   };
 
   return (
-    <motion.div
-      className="relative h-14 rounded-2xl overflow-hidden flex items-center flex-1"
-      style={{ backgroundColor: "hsl(48, 96%, 53%)" }}
+    <motion.button
+      onClick={handleTap}
+      whileTap={{ scale: 0.95 }}
+      className={`relative h-14 rounded-2xl flex-1 font-black text-base transition-colors overflow-hidden ${
+        confirmed
+          ? "bg-green-500 text-white"
+          : "bg-yellow-400 hover:bg-yellow-300 text-black active:bg-yellow-500"
+      }`}
     >
-      {/* Track text */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-        <span className="font-black text-base text-black/80">
-          Offri: €{amount}
-        </span>
-        <ChevronsRight className="h-5 w-5 text-black/40 ml-1 animate-pulse" />
-      </div>
-      {/* Draggable thumb */}
-      <motion.div
-        drag="x"
-        dragConstraints={{ left: 0, right: maxDrag }}
-        dragElastic={0.05}
-        onDragEnd={handleDragEnd}
-        style={{ x, background }}
-        className="relative z-10 h-12 w-14 rounded-xl mx-1 flex items-center justify-center cursor-grab active:cursor-grabbing shadow-lg"
-        whileTap={{ scale: 0.95 }}
-      >
-        <motion.div style={{ opacity: chevronOpacity }}>
-          <ChevronsRight className="h-6 w-6 text-black" />
-        </motion.div>
-        <motion.div style={{ scale: checkScale }} className="absolute">
-          <span className="text-xl">✓</span>
-        </motion.div>
-      </motion.div>
-      {swiped && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="absolute inset-0 bg-green-500 flex items-center justify-center rounded-2xl z-20"
-        >
-          <span className="font-black text-white text-base">Offerta inviata! ✓</span>
-        </motion.div>
-      )}
-    </motion.div>
+      <AnimatePresence mode="wait">
+        {confirmed ? (
+          <motion.span
+            key="ok"
+            initial={{ opacity: 0, scale: 0.7 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center justify-center gap-1.5"
+          >
+            ✓ Offerta inviata!
+          </motion.span>
+        ) : (
+          <motion.span
+            key="bid"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex items-center justify-center gap-1.5"
+          >
+            <Gavel className="h-4 w-4" /> Offri €{amount}
+          </motion.span>
+        )}
+      </AnimatePresence>
+    </motion.button>
   );
 }
 
