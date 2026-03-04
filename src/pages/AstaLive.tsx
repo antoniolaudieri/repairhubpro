@@ -40,6 +40,8 @@ interface AuctionData {
   viewer_count: number;
   centro_id: string;
   stream_url: string | null;
+  cover_url: string | null;
+  scheduled_at: string | null;
 }
 
 interface CentroInfo {
@@ -732,6 +734,39 @@ export default function AstaLive() {
           />
         ) : activeItem?.image_url ? (
           <img src={activeItem.image_url} alt={activeItem.title} className="w-full h-full object-cover" />
+        ) : auction.cover_url ? (
+          <>
+            <img src={auction.cover_url} alt={auction.title} className="w-full h-full object-cover" />
+            {/* Dark overlay for cover */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30" />
+            {/* Centered info on cover */}
+            {!isLive && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-6">
+                {centro?.logo_url && (
+                  <img src={centro.logo_url} alt="" className="h-16 w-16 rounded-2xl object-cover border-2 border-white/20 shadow-2xl mb-4" />
+                )}
+                <h2 className="text-white font-black text-xl sm:text-2xl text-center mb-2 drop-shadow-lg">{auction.title}</h2>
+                {auction.status === "scheduled" && (
+                  <div className="bg-white/10 backdrop-blur-xl rounded-2xl px-6 py-4 border border-white/20 mt-3">
+                    <div className="flex items-center gap-2 justify-center mb-1">
+                      <Timer className="h-4 w-4 text-amber-400" />
+                      <span className="text-white/80 text-sm font-semibold">Prossimamente</span>
+                    </div>
+                    {auction.scheduled_at && (
+                      <p className="text-white font-bold text-lg text-center tabular-nums">
+                        {new Date(auction.scheduled_at).toLocaleString("it-IT", { day: "2-digit", month: "long", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {isEnded && (
+                  <Badge className="bg-white/15 backdrop-blur-sm text-white border-white/20 text-sm px-4 py-2 mt-3">
+                    <Trophy className="h-4 w-4 mr-2" /> Asta Terminata
+                  </Badge>
+                )}
+              </div>
+            )}
+          </>
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center gap-2">
             <Video className="h-12 w-12 text-white/20" />

@@ -3094,6 +3094,7 @@ export type Database = {
       live_auctions: {
         Row: {
           centro_id: string
+          cover_url: string | null
           created_at: string
           description: string | null
           ended_at: string | null
@@ -3107,6 +3108,7 @@ export type Database = {
         }
         Insert: {
           centro_id: string
+          cover_url?: string | null
           created_at?: string
           description?: string | null
           ended_at?: string | null
@@ -3120,6 +3122,7 @@ export type Database = {
         }
         Update: {
           centro_id?: string
+          cover_url?: string | null
           created_at?: string
           description?: string | null
           ended_at?: string | null

@@ -35,6 +35,7 @@ interface Auction {
   created_at: string;
   centro_id: string;
   stream_url: string | null;
+  cover_url: string | null;
 }
 
 interface AuctionItem {
@@ -239,6 +240,10 @@ export default function CentroAste() {
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [itemImagePreview, setItemImagePreview] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState("");
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const [autoCloseTriggered, setAutoCloseTriggered] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -384,16 +389,57 @@ export default function CentroAste() {
     else toast({ title: "Errore", description: error.message, variant: "destructive" });
   };
 
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File troppo grande", description: "Max 10MB", variant: "destructive" });
+      return;
+    }
+    setCoverFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setCoverPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadCover = async (auctionId: string): Promise<string | null> => {
+    if (!coverFile) return null;
+    setUploadingCover(true);
+    try {
+      const ext = coverFile.name.split(".").pop() || "jpg";
+      const path = `covers/${auctionId}.${ext}`;
+      const { error } = await supabase.storage.from("auction-images").upload(path, coverFile, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("auction-images").getPublicUrl(path);
+      return urlData.publicUrl;
+    } catch (err: any) {
+      toast({ title: "Errore upload copertina", description: err.message, variant: "destructive" });
+      return null;
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
   const createAuction = async () => {
     if (!centroId || !newTitle.trim()) return;
-    const { error } = await supabase.from("live_auctions").insert({
+    const { data, error } = await supabase.from("live_auctions").insert({
       centro_id: centroId, title: newTitle.trim(),
       description: newDescription.trim() || null,
       scheduled_at: newScheduledAt || null, status: "scheduled" as any,
-    });
-    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+    }).select("id").single();
+    if (error || !data) { toast({ title: "Errore", description: error?.message || "Errore sconosciuto", variant: "destructive" }); return; }
+
+    // Upload cover if selected
+    if (coverFile) {
+      const coverUrl = await uploadCover(data.id);
+      if (coverUrl) {
+        await supabase.from("live_auctions").update({ cover_url: coverUrl } as any).eq("id", data.id);
+      }
+    }
+
     toast({ title: "Asta creata!" });
     setCreateOpen(false); setNewTitle(""); setNewDescription(""); setNewScheduledAt("");
+    setCoverFile(null); setCoverPreview("");
     fetchAuctions();
   };
 
@@ -645,7 +691,27 @@ export default function CentroAste() {
                   <div><Label>Titolo *</Label><Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Es. Asta iPhone Ricondizionati" /></div>
                   <div><Label>Descrizione</Label><Textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Descrivi cosa venderai..." /></div>
                   <div><Label>Programmata per</Label><Input type="datetime-local" value={newScheduledAt} onChange={e => setNewScheduledAt(e.target.value)} /></div>
-                  <Button onClick={createAuction} className="w-full">Crea Asta</Button>
+                  {/* Cover Image Upload */}
+                  <div>
+                    <Label>Copertina Asta</Label>
+                    <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverSelect} className="hidden" />
+                    {coverPreview ? (
+                      <div className="relative mt-1.5">
+                        <img src={coverPreview} alt="Cover preview" className="w-full h-36 object-cover rounded-lg border border-border" />
+                        <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => { setCoverFile(null); setCoverPreview(""); if (coverInputRef.current) coverInputRef.current.value = ""; }}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button type="button" variant="outline" className="w-full mt-1.5 gap-2 h-10" onClick={() => coverInputRef.current?.click()}>
+                        <ImageIcon className="h-4 w-4" /> Carica Copertina
+                      </Button>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-1">Sfondo visibile quando l'asta è offline</p>
+                  </div>
+                  <Button onClick={createAuction} className="w-full" disabled={uploadingCover}>
+                    {uploadingCover ? "Caricamento..." : "Crea Asta"}
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -669,11 +735,15 @@ export default function CentroAste() {
                     <Card className="hover:shadow-md transition-all cursor-pointer active:scale-[0.99]" onClick={() => setSelectedAuction(auction)}>
                       <CardContent className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            auction.status === "live" ? "bg-destructive/10" : "bg-primary/10"
-                          }`}>
-                            {auction.status === "live" ? <Radio className="h-5 w-5 text-destructive animate-pulse" /> : <Gavel className="h-5 w-5 text-primary" />}
-                          </div>
+                          {(auction as any).cover_url ? (
+                            <img src={(auction as any).cover_url} alt="" className="h-11 w-11 rounded-xl object-cover flex-shrink-0 border border-border" />
+                          ) : (
+                            <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                              auction.status === "live" ? "bg-destructive/10" : "bg-primary/10"
+                            }`}>
+                              {auction.status === "live" ? <Radio className="h-5 w-5 text-destructive animate-pulse" /> : <Gavel className="h-5 w-5 text-primary" />}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-semibold text-foreground text-sm truncate">{auction.title}</h3>
