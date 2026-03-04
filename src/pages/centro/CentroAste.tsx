@@ -389,16 +389,57 @@ export default function CentroAste() {
     else toast({ title: "Errore", description: error.message, variant: "destructive" });
   };
 
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File troppo grande", description: "Max 10MB", variant: "destructive" });
+      return;
+    }
+    setCoverFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setCoverPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadCover = async (auctionId: string): Promise<string | null> => {
+    if (!coverFile) return null;
+    setUploadingCover(true);
+    try {
+      const ext = coverFile.name.split(".").pop() || "jpg";
+      const path = `covers/${auctionId}.${ext}`;
+      const { error } = await supabase.storage.from("auction-images").upload(path, coverFile, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from("auction-images").getPublicUrl(path);
+      return urlData.publicUrl;
+    } catch (err: any) {
+      toast({ title: "Errore upload copertina", description: err.message, variant: "destructive" });
+      return null;
+    } finally {
+      setUploadingCover(false);
+    }
+  };
+
   const createAuction = async () => {
     if (!centroId || !newTitle.trim()) return;
-    const { error } = await supabase.from("live_auctions").insert({
+    const { data, error } = await supabase.from("live_auctions").insert({
       centro_id: centroId, title: newTitle.trim(),
       description: newDescription.trim() || null,
       scheduled_at: newScheduledAt || null, status: "scheduled" as any,
-    });
-    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+    }).select("id").single();
+    if (error || !data) { toast({ title: "Errore", description: error?.message || "Errore sconosciuto", variant: "destructive" }); return; }
+
+    // Upload cover if selected
+    if (coverFile) {
+      const coverUrl = await uploadCover(data.id);
+      if (coverUrl) {
+        await supabase.from("live_auctions").update({ cover_url: coverUrl } as any).eq("id", data.id);
+      }
+    }
+
     toast({ title: "Asta creata!" });
     setCreateOpen(false); setNewTitle(""); setNewDescription(""); setNewScheduledAt("");
+    setCoverFile(null); setCoverPreview("");
     fetchAuctions();
   };
 
