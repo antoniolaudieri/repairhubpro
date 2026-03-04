@@ -691,7 +691,27 @@ export default function CentroAste() {
                   <div><Label>Titolo *</Label><Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Es. Asta iPhone Ricondizionati" /></div>
                   <div><Label>Descrizione</Label><Textarea value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Descrivi cosa venderai..." /></div>
                   <div><Label>Programmata per</Label><Input type="datetime-local" value={newScheduledAt} onChange={e => setNewScheduledAt(e.target.value)} /></div>
-                  <Button onClick={createAuction} className="w-full">Crea Asta</Button>
+                  {/* Cover Image Upload */}
+                  <div>
+                    <Label>Copertina Asta</Label>
+                    <input ref={coverInputRef} type="file" accept="image/*" onChange={handleCoverSelect} className="hidden" />
+                    {coverPreview ? (
+                      <div className="relative mt-1.5">
+                        <img src={coverPreview} alt="Cover preview" className="w-full h-36 object-cover rounded-lg border border-border" />
+                        <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => { setCoverFile(null); setCoverPreview(""); if (coverInputRef.current) coverInputRef.current.value = ""; }}>
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button type="button" variant="outline" className="w-full mt-1.5 gap-2 h-10" onClick={() => coverInputRef.current?.click()}>
+                        <ImageIcon className="h-4 w-4" /> Carica Copertina
+                      </Button>
+                    )}
+                    <p className="text-[10px] text-muted-foreground mt-1">Sfondo visibile quando l'asta è offline</p>
+                  </div>
+                  <Button onClick={createAuction} className="w-full" disabled={uploadingCover}>
+                    {uploadingCover ? "Caricamento..." : "Crea Asta"}
+                  </Button>
                 </div>
               </DialogContent>
             </Dialog>
