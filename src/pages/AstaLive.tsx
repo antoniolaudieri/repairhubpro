@@ -597,7 +597,7 @@ export default function AstaLive() {
         void video.play().catch(() => {});
       });
     }
-  }, [remoteStream]);
+  }, [remoteStream, isMuted]);
 
   // --- Actions ---
   const requireAuth = (cb: () => void) => {
@@ -658,7 +658,7 @@ export default function AstaLive() {
               <video ref={cameraVideoRef} autoPlay playsInline muted={isMuted} className="w-full h-full object-cover" />
               {isMuted && (
                 <button
-                  onClick={() => { setIsMuted(false); if (cameraVideoRef.current) cameraVideoRef.current.muted = false; }}
+                  onClick={() => { setIsMuted(false); if (cameraVideoRef.current) { cameraVideoRef.current.muted = false; void cameraVideoRef.current.play().catch(() => {}); } }}
                   className="absolute top-16 right-3 z-10 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-3 py-1.5 rounded-full flex items-center gap-1"
                 >
                   🔇 Tocca per audio
