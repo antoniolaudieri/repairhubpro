@@ -93,7 +93,10 @@ export default function CentroAste() {
   const [itemReservePrice, setItemReservePrice] = useState("");
   const [itemDuration, setItemDuration] = useState("60");
   const [autoCloseTriggered, setAutoCloseTriggered] = useState<string | null>(null);
-
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [centroName, setCentroName] = useState("");
+  const feedEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (user) fetchCentroId();
   }, [user]);
