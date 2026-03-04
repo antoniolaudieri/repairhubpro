@@ -735,11 +735,15 @@ export default function CentroAste() {
                     <Card className="hover:shadow-md transition-all cursor-pointer active:scale-[0.99]" onClick={() => setSelectedAuction(auction)}>
                       <CardContent className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                            auction.status === "live" ? "bg-destructive/10" : "bg-primary/10"
-                          }`}>
-                            {auction.status === "live" ? <Radio className="h-5 w-5 text-destructive animate-pulse" /> : <Gavel className="h-5 w-5 text-primary" />}
-                          </div>
+                          {(auction as any).cover_url ? (
+                            <img src={(auction as any).cover_url} alt="" className="h-11 w-11 rounded-xl object-cover flex-shrink-0 border border-border" />
+                          ) : (
+                            <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                              auction.status === "live" ? "bg-destructive/10" : "bg-primary/10"
+                            }`}>
+                              {auction.status === "live" ? <Radio className="h-5 w-5 text-destructive animate-pulse" /> : <Gavel className="h-5 w-5 text-primary" />}
+                            </div>
+                          )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
                               <h3 className="font-semibold text-foreground text-sm truncate">{auction.title}</h3>
