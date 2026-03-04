@@ -240,6 +240,10 @@ export default function CentroAste() {
   const [itemImageFile, setItemImageFile] = useState<File | null>(null);
   const [itemImagePreview, setItemImagePreview] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState("");
+  const [uploadingCover, setUploadingCover] = useState(false);
+  const coverInputRef = useRef<HTMLInputElement>(null);
 
   const [autoCloseTriggered, setAutoCloseTriggered] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
