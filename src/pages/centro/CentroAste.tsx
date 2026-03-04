@@ -276,14 +276,25 @@ export default function CentroAste() {
 
   const closeItem = async (item: AuctionItem, sold: boolean) => {
     // Always fetch the latest item data from DB to get accurate current_price/bid_count
-    const { data: freshItem } = await supabase.from("auction_items").select("*").eq("id", item.id).single();
+    const { data: freshItem, error: freshItemError } = await supabase.from("auction_items").select("*").eq("id", item.id).maybeSingle();
+    if (freshItemError) console.error("[closeItem] Error fetching fresh item:", freshItemError);
     const itemData = freshItem || item;
     
-    // Also fetch top bid directly from auction_bids as source of truth
-    const { data: topBid } = await supabase.from("auction_bids").select("*").eq("item_id", item.id).order("amount", { ascending: false }).limit(1).single();
+    // Fetch ALL bids for this item, sorted by amount desc — use array instead of .single()
+    const { data: allBids, error: bidsError } = await supabase
+      .from("auction_bids")
+      .select("*")
+      .eq("item_id", item.id)
+      .order("amount", { ascending: false })
+      .limit(10);
     
-    const actualPrice = topBid ? topBid.amount : (itemData as any).current_price || 0;
+    if (bidsError) console.error("[closeItem] Error fetching bids:", bidsError);
+    
+    const topBid = allBids && allBids.length > 0 ? allBids[0] : null;
     const hasBids = !!topBid;
+    const actualPrice = topBid ? topBid.amount : (itemData as any).current_price || 0;
+    
+    console.log("[closeItem]", { itemId: item.id, title: item.title, sold, hasBids, topBidAmount: topBid?.amount, bidsCount: allBids?.length || 0, actualPrice });
     
     const reservePrice = (itemData as any).reserve_price as number | null;
     const reserveMet = !reservePrice || actualPrice >= reservePrice;
@@ -295,11 +306,12 @@ export default function CentroAste() {
       update.winner_email = topBid.bidder_email;
       update.winner_user_id = topBid.user_id;
     }
-    await supabase.from("auction_items").update(update).eq("id", item.id);
+    const { error: updateError } = await supabase.from("auction_items").update(update).eq("id", item.id);
+    if (updateError) console.error("[closeItem] Error updating item:", updateError);
 
     // Register sale in auction_sales
     if (finalSold && centroId && selectedAuction) {
-      await supabase.from("auction_sales").insert({
+      const { error: saleError } = await supabase.from("auction_sales").insert({
         auction_id: selectedAuction.id,
         auction_item_id: item.id,
         centro_id: centroId,
@@ -311,8 +323,11 @@ export default function CentroAste() {
         fulfillment_status: "pending" as any,
         sold_at: new Date().toISOString(),
       });
+      if (saleError) console.error("[closeItem] Error creating sale:", saleError);
       fetchSales(selectedAuction.id);
       toast({ title: `🏆 Venduto a ${update.winner_name || "N/A"}!`, description: `Prezzo finale: €${actualPrice}` });
+    } else if (sold && !hasBids) {
+      toast({ title: "Nessuna offerta", description: "Nessuna offerta ricevuta per questo articolo." });
     } else if (sold && !reserveMet) {
       toast({ title: "Riserva non raggiunta", description: `Il prezzo €${actualPrice} non ha raggiunto la riserva.`, variant: "destructive" });
     }
