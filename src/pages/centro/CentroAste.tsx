@@ -168,6 +168,28 @@ export default function CentroAste() {
     setLoading(false);
   };
 
+  const fetchChatMessages = async (auctionId: string) => {
+    const { data } = await supabase
+      .from("auction_chat_messages")
+      .select("*")
+      .eq("auction_id", auctionId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    setChatMessages((data as ChatMessage[]) || []);
+  };
+
+  const sendChatMessage = async () => {
+    if (!user || !selectedAuction || !chatInput.trim()) return;
+    const { error } = await supabase.from("auction_chat_messages").insert({
+      auction_id: selectedAuction.id,
+      user_id: user.id,
+      sender_name: centroName || "Centro",
+      message: chatInput.trim(),
+    });
+    if (!error) setChatInput("");
+    else toast({ title: "Errore", description: error.message, variant: "destructive" });
+  };
+
   const fetchItems = async (auctionId: string) => {
     const [{ data: items }, { data: bids }] = await Promise.all([
       supabase.from("auction_items").select("*").eq("auction_id", auctionId).order("created_at", { ascending: true }),
