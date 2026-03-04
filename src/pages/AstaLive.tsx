@@ -161,29 +161,32 @@ function FeedBubble({ item }: { item: FeedItem }) {
     const initials = bid.bidder_name.slice(0, 2).toUpperCase();
     return (
       <motion.div
-        initial={{ opacity: 0, x: -40, scale: 0.8 }}
-        animate={{ opacity: 1, x: 0, scale: 1 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+        layout
+        initial={{ opacity: 0, y: 30, scale: 0.85 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -10, scale: 0.9 }}
+        transition={{ type: "spring", stiffness: 500, damping: 28 }}
         className="flex items-center gap-2 px-2.5 py-1"
       >
         <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 600, damping: 15, delay: 0.1 }}
+          initial={{ scale: 0, rotate: -90 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 600, damping: 14, delay: 0.08 }}
           className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400/40 to-green-600/30 flex items-center justify-center flex-shrink-0 ring-1 ring-emerald-400/30"
         >
           <span className="text-[9px] font-bold text-emerald-300">{initials}</span>
         </motion.div>
         <motion.div
-          initial={{ scale: 0.9 }}
-          animate={{ scale: 1 }}
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 22, delay: 0.05 }}
           className="bg-gradient-to-r from-emerald-900/50 to-black/40 backdrop-blur-md rounded-2xl px-3 py-1.5 flex items-center gap-2 border border-emerald-500/20"
         >
           <span className="font-semibold text-xs text-white/90">{bid.bidder_name}</span>
           <motion.span
-            initial={{ scale: 1.3 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 10 }}
+            initial={{ scale: 1.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 350, damping: 12, delay: 0.12 }}
             className="font-black text-sm tabular-nums text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"
           >
             €{bid.amount}
@@ -197,18 +200,30 @@ function FeedBubble({ item }: { item: FeedItem }) {
   const initials = chat.sender_name.slice(0, 1).toUpperCase();
   return (
     <motion.div
-      initial={{ opacity: 0, x: -30, scale: 0.9 }}
-      animate={{ opacity: 1, x: 0, scale: 1 }}
-      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      layout
+      initial={{ opacity: 0, y: 24, scale: 0.92 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ type: "spring", stiffness: 420, damping: 26 }}
       className="flex items-start gap-2 px-2.5 py-1"
     >
-      <div className="h-6 w-6 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-0.5 ring-1 ring-white/10">
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 500, damping: 16, delay: 0.06 }}
+        className="h-6 w-6 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-0.5 ring-1 ring-white/10"
+      >
         <span className="text-[9px] font-bold text-white/60">{initials}</span>
-      </div>
-      <div className="bg-white/[0.08] backdrop-blur-md rounded-2xl px-3 py-1.5 max-w-[85%] border border-white/[0.06]">
+      </motion.div>
+      <motion.div
+        initial={{ opacity: 0, x: -16 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ type: "spring", stiffness: 380, damping: 24, delay: 0.04 }}
+        className="bg-white/[0.08] backdrop-blur-md rounded-2xl px-3 py-1.5 max-w-[85%] border border-white/[0.06]"
+      >
         <span className="font-semibold text-[10px] text-white/50">{chat.sender_name}</span>
         <p className="text-xs text-white/85 leading-snug">{chat.message}</p>
-      </div>
+      </motion.div>
     </motion.div>
   );
 }
