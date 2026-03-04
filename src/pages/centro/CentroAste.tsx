@@ -1545,6 +1545,46 @@ export default function CentroAste() {
             </div>
           )}
         </div>
+
+        {/* Reopen Auction Dialog */}
+        <Dialog open={reopenOpen} onOpenChange={setReopenOpen}>
+          <DialogContent className="max-w-[95vw] sm:max-w-sm">
+            <DialogHeader><DialogTitle>Riapri Asta</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Riprogramma <strong>{reopenAuction?.title}</strong> con una nuova data. Tutti i lotti verranno resettati.
+              </p>
+              <div>
+                <Label>Nuova data programmata</Label>
+                <Input type="datetime-local" value={reopenDate} onChange={e => setReopenDate(e.target.value)} />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setReopenOpen(false)}>Annulla</Button>
+                <Button size="sm" className="gap-1.5" onClick={reopenAuctionFn}>
+                  <Play className="h-3.5 w-3.5" /> Riapri
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Auction Confirm Dialog */}
+        <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Eliminare questa asta?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Verranno eliminati tutti i prodotti, offerte, chat e vendite associate. Questa azione è irreversibile.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteConfirmId && deleteAuction(deleteConfirmId)}>
+                <Trash2 className="h-4 w-4 mr-1.5" /> Elimina
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </PageTransition>
     </CentroLayout>
   );
