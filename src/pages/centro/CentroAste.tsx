@@ -890,6 +890,16 @@ export default function CentroAste() {
                     </Button>
                   </>
                 )}
+                {selectedAuction.status === "ended" && (
+                  <>
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setReopenAuction(selectedAuction); setReopenDate(""); setReopenOpen(true); }}>
+                      <Play className="h-4 w-4" /> Riapri Asta
+                    </Button>
+                    <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => setDeleteConfirmId(selectedAuction.id)}>
+                      <Trash2 className="h-4 w-4" /> Elimina
+                    </Button>
+                  </>
+                )}
 
                 {/* ===== ENHANCED ADD PRODUCT DIALOG ===== */}
                 <Dialog open={addItemOpen} onOpenChange={(open) => { setAddItemOpen(open); if (!open) resetItemForm(); }}>
