@@ -500,10 +500,10 @@ export default function CentroAste() {
             </div>
           ) : (
             /* ===== AUCTION DETAIL ===== */
-            <div className="space-y-4">
+            <div className="space-y-4 sm:space-y-6">
               {/* Back + Title */}
               <div className="flex items-center gap-2 flex-wrap">
-                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setSelectedAuction(null); setAuctionItems([]); setLiveBids([]); setSales([]); }}>
+                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setSelectedAuction(null); setAuctionItems([]); setLiveBids([]); setSales([]); }}>
                   ← Indietro
                 </Button>
                 <h2 className="text-base sm:text-lg font-bold text-foreground truncate">{selectedAuction.title}</h2>
@@ -511,21 +511,21 @@ export default function CentroAste() {
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {[
-                  { label: "Prodotti", value: auctionItems.length, icon: Package, color: "text-blue-500", bgColor: "bg-blue-500/10" },
-                  { label: "Venduti", value: soldItems.length, icon: Trophy, color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
+                  { label: "Prodotti", value: auctionItems.length, icon: Package, color: "text-primary", bgColor: "bg-primary/10" },
+                  { label: "Venduti", value: soldItems.length, icon: Trophy, color: "text-primary", bgColor: "bg-primary/10" },
                   { label: "Incasso", value: `€${totalRevenue.toFixed(0)}`, icon: DollarSign, color: "text-primary", bgColor: "bg-primary/10" },
-                  { label: "Spettatori", value: selectedAuction.viewer_count, icon: Eye, color: "text-amber-500", bgColor: "bg-amber-500/10" },
+                  { label: "Spettatori", value: selectedAuction.viewer_count, icon: Eye, color: "text-primary", bgColor: "bg-primary/10" },
                 ].map((stat) => (
-                  <Card key={stat.label} className="bg-card/50 backdrop-blur-sm">
-                    <CardContent className="p-3 sm:p-4">
+                  <Card key={stat.label} className="bg-card/80 backdrop-blur-sm">
+                    <CardContent className="p-3.5 sm:p-5">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                        <div className={`p-2.5 rounded-xl ${stat.bgColor}`}>
                           <stat.icon className={`h-5 w-5 ${stat.color}`} />
                         </div>
                         <div>
-                          <p className="text-xl sm:text-2xl font-bold">{stat.value}</p>
+                          <p className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</p>
                           <p className="text-[11px] text-muted-foreground">{stat.label}</p>
                         </div>
                       </div>
