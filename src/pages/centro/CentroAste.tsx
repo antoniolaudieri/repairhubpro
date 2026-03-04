@@ -650,7 +650,7 @@ export default function CentroAste() {
                           item.status === "active" ? "border-destructive shadow-lg ring-1 ring-destructive/20" :
                           item.status === "sold" ? "border-primary/30 bg-primary/5" : ""
                         }`}>
-                          <CardContent className="p-3">
+                          <CardContent className="p-3.5 sm:p-4">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
