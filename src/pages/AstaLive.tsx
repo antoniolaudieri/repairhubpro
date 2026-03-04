@@ -9,9 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gavel, Eye, Radio, Timer, ShoppingCart, Building2, Sparkles, Lock, Video, Wifi, WifiOff, Trophy, Send, MessageCircle, Share2, Copy, Check, ExternalLink } from "lucide-react";
+import { Gavel, Eye, Radio, Timer, ShoppingCart, Building2, Sparkles, Lock, Video, Wifi, WifiOff, Trophy, Send, MessageCircle, Share2, Copy, Check, ExternalLink, Users } from "lucide-react";
 import { useWebRTCViewer } from "@/hooks/useWebRTCViewer";
 import { QRCodeSVG } from "qrcode.react";
+import { safeGetItem, safeSetItem } from "@/utils/safeStorage";
+
+// --- Avatar Constants ---
+const AVATAR_EMOJIS = ["🐱", "🐶", "🦊", "🐸", "🐵", "🐼", "🦁", "🐯", "🐷", "🐻", "🐰", "🐨", "🦄", "🐙", "🐝", "🐲"];
 
 // --- Stream URL helper ---
 function convertToEmbedUrl(url: string): string {
@@ -70,6 +74,7 @@ interface BidData {
   bidder_name: string;
   amount: number;
   created_at: string;
+  avatar_url?: string | null;
 }
 
 interface ChatMessage {
@@ -79,12 +84,40 @@ interface ChatMessage {
   message: string;
   created_at: string;
   user_id: string | null;
+  avatar_url?: string | null;
 }
 
 // Feed item: either a bid or a chat message
 type FeedItem = 
   | { type: "bid"; data: BidData }
   | { type: "chat"; data: ChatMessage };
+
+// Presence viewer type
+interface PresenceViewer {
+  name: string;
+  avatar: string;
+}
+
+// --- Avatar Picker ---
+function AvatarPicker({ selected, onSelect }: { selected: string; onSelect: (emoji: string) => void }) {
+  return (
+    <div className="grid grid-cols-8 gap-1.5">
+      {AVATAR_EMOJIS.map(emoji => (
+        <button
+          key={emoji}
+          onClick={() => onSelect(emoji)}
+          className={`h-9 w-9 rounded-xl text-lg flex items-center justify-center transition-all ${
+            selected === emoji
+              ? "bg-primary/30 ring-2 ring-primary scale-110"
+              : "bg-white/10 hover:bg-white/20 active:scale-95"
+          }`}
+        >
+          {emoji}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 // --- Inline Auth Dialog ---
 function InlineAuthDialog({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (v: boolean) => void; onSuccess: () => void }) {
@@ -160,6 +193,7 @@ function InlineAuthDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
 function FeedBubble({ item }: { item: FeedItem }) {
   if (item.type === "bid") {
     const bid = item.data;
+    const avatar = bid.avatar_url;
     const initials = bid.bidder_name.slice(0, 2).toUpperCase();
     return (
       <motion.div
@@ -176,7 +210,11 @@ function FeedBubble({ item }: { item: FeedItem }) {
           transition={{ type: "spring", stiffness: 600, damping: 14, delay: 0.08 }}
           className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400/40 to-green-600/30 flex items-center justify-center flex-shrink-0 ring-1 ring-emerald-400/30"
         >
-          <span className="text-[9px] font-bold text-emerald-300">{initials}</span>
+          {avatar ? (
+            <span className="text-sm">{avatar}</span>
+          ) : (
+            <span className="text-[9px] font-bold text-emerald-300">{initials}</span>
+          )}
         </motion.div>
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -199,6 +237,7 @@ function FeedBubble({ item }: { item: FeedItem }) {
   }
 
   const chat = item.data;
+  const avatar = chat.avatar_url;
   const initials = chat.sender_name.slice(0, 1).toUpperCase();
   return (
     <motion.div
@@ -215,7 +254,11 @@ function FeedBubble({ item }: { item: FeedItem }) {
         transition={{ type: "spring", stiffness: 500, damping: 16, delay: 0.06 }}
         className="h-6 w-6 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-0.5 ring-1 ring-white/10"
       >
-        <span className="text-[9px] font-bold text-white/60">{initials}</span>
+        {avatar ? (
+          <span className="text-xs">{avatar}</span>
+        ) : (
+          <span className="text-[9px] font-bold text-white/60">{initials}</span>
+        )}
       </motion.div>
       <motion.div
         initial={{ opacity: 0, x: -16 }}
@@ -485,8 +528,11 @@ export default function AstaLive() {
   const feedScrollRef = useRef<HTMLDivElement>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [presenceCount, setPresenceCount] = useState(0);
+  const [presenceViewers, setPresenceViewers] = useState<PresenceViewer[]>([]);
   const [winnerOverlay, setWinnerOverlay] = useState<{ name: string | null; price: number; sold: boolean } | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState(() => safeGetItem("auction_avatar") || "");
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
   const auctionUrl = `${window.location.origin}/asta/${auctionId}`;
   const isCameraStream = auction?.stream_url?.startsWith("camera:");
@@ -495,6 +541,8 @@ export default function AstaLive() {
   const minBid = activeItem ? activeItem.current_price + 5 : 0;
   const isLive = auction?.status === "live";
   const isEnded = auction?.status === "ended";
+  const isScheduled = auction?.status === "scheduled";
+  const canChat = isLive || isScheduled; // Chat available in live AND waiting room
 
   // Combined feed: bids + chat sorted by time (newest first)
   const feedItems: FeedItem[] = [
@@ -505,6 +553,13 @@ export default function AstaLive() {
   // Leading bidder
   const activeBids = activeItem ? bids.filter(b => b.item_id === activeItem.id) : [];
   const leadingBidder = activeBids.length > 0 ? activeBids[0] : null;
+
+  // Avatar selection handler
+  const handleSelectAvatar = (emoji: string) => {
+    setSelectedAvatar(emoji);
+    safeSetItem("auction_avatar", emoji);
+    setAvatarPickerOpen(false);
+  };
 
   // --- Data fetching ---
   const fetchBids = useCallback(async () => {
@@ -552,18 +607,32 @@ export default function AstaLive() {
     if (!auctionId) return;
     fetchAuction();
 
-    // Presence
+    // Presence with avatar
     const presenceChannel = supabase.channel(`presence-auction-${auctionId}`, {
       config: { presence: { key: `viewer-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` } },
     });
     presenceChannel
       .on("presence", { event: "sync" }, () => {
         const state = presenceChannel.presenceState();
-        setPresenceCount(Object.keys(state).length);
+        const keys = Object.keys(state);
+        setPresenceCount(keys.length);
+        // Extract viewer info from presence
+        const viewers: PresenceViewer[] = [];
+        keys.forEach(k => {
+          const presences = state[k] as any[];
+          presences.forEach(p => {
+            if (p.name || p.avatar) {
+              viewers.push({ name: p.name || "", avatar: p.avatar || "" });
+            }
+          });
+        });
+        setPresenceViewers(viewers.slice(0, 20));
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
-          await presenceChannel.track({ type: "viewer" });
+          const name = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "";
+          const avatar = safeGetItem("auction_avatar") || "";
+          await presenceChannel.track({ type: "viewer", name, avatar });
         }
       });
 
@@ -623,19 +692,17 @@ export default function AstaLive() {
     if (!cameraVideoRef.current || !remoteStream) return;
     const video = cameraVideoRef.current;
     video.srcObject = remoteStream;
-    // Try unmuted first (works on desktop / after user gesture)
     video.muted = false;
     void video.play().then(() => {
       setIsMuted(false);
     }).catch(() => {
-      // Autoplay with audio blocked — fallback to muted
       video.muted = true;
       setIsMuted(true);
       void video.play().catch(() => {});
     });
   }, [remoteStream]);
 
-  // Auto-scroll feed to bottom (newest) when new messages arrive
+  // Auto-scroll feed
   useEffect(() => {
     if (feedScrollRef.current) {
       feedScrollRef.current.scrollTop = feedScrollRef.current.scrollHeight;
@@ -654,12 +721,12 @@ export default function AstaLive() {
     const { error } = await supabase.from("auction_bids").insert({
       item_id: activeItem.id, auction_id: auctionId!, user_id: user.id,
       bidder_name: name, bidder_email: user.email, amount,
+      avatar_url: selectedAvatar || null,
     });
     if (error) {
       toast({ title: "Errore", description: error.message, variant: "destructive" });
       return;
     }
-    // DB trigger sync_auction_bid_to_item automatically updates current_price and bid_count
   };
 
   const sendChat = async () => {
@@ -668,6 +735,7 @@ export default function AstaLive() {
     const { error } = await supabase.from("auction_chat_messages").insert({
       auction_id: auctionId!, user_id: user.id,
       sender_name: name, message: chatInput.trim(),
+      avatar_url: selectedAvatar || null,
     });
     if (!error) setChatInput("");
     else toast({ title: "Errore", description: error.message, variant: "destructive" });
@@ -696,6 +764,16 @@ export default function AstaLive() {
       <InlineAuthDialog open={authOpen} onOpenChange={setAuthOpen} onSuccess={() => setAuthOpen(false)} />
       <CustomBidDialog open={customBidOpen} onOpenChange={setCustomBidOpen} minBid={minBid} onBid={(amount) => requireAuth(() => placeBid(amount))} />
       <AuctionShareDialog open={shareOpen} onOpenChange={setShareOpen} auctionUrl={auctionUrl} centroName={centro?.business_name || ""} auctionTitle={auction?.title || ""} />
+
+      {/* Avatar Picker Dialog */}
+      <Dialog open={avatarPickerOpen} onOpenChange={setAvatarPickerOpen}>
+        <DialogContent className="max-w-[90vw] sm:max-w-xs rounded-2xl bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-base font-black">Scegli il tuo avatar</DialogTitle>
+          </DialogHeader>
+          <AvatarPicker selected={selectedAvatar} onSelect={handleSelectAvatar} />
+        </DialogContent>
+      </Dialog>
 
       {/* ===== FULLSCREEN VIDEO BACKGROUND ===== */}
       <div className="absolute inset-0 z-0">
@@ -746,7 +824,7 @@ export default function AstaLive() {
                   <img src={centro.logo_url} alt="" className="h-16 w-16 rounded-2xl object-cover border-2 border-white/20 shadow-2xl mb-4" />
                 )}
                 <h2 className="text-white font-black text-xl sm:text-2xl text-center mb-2 drop-shadow-lg">{auction.title}</h2>
-                {auction.status === "scheduled" && (
+                {isScheduled && (
                   <div className="bg-white/10 backdrop-blur-xl rounded-2xl px-6 py-4 border border-white/20 mt-3">
                     <div className="flex items-center gap-2 justify-center mb-1">
                       <Timer className="h-4 w-4 text-amber-400" />
@@ -797,6 +875,11 @@ export default function AstaLive() {
                 <Radio className="h-2.5 w-2.5" /> LIVE
               </Badge>
             )}
+            {isScheduled && (
+              <Badge className="bg-amber-500/80 text-white border-0 gap-1 text-[10px] px-2 py-0.5 h-5">
+                <Timer className="h-2.5 w-2.5" /> Attesa
+              </Badge>
+            )}
             {isEnded && <Badge className="bg-white/20 text-white border-0 text-[10px] h-5">Terminata</Badge>}
             <div className="flex items-center gap-1 bg-black/40 backdrop-blur-sm rounded-full px-2 py-1">
               <Eye className="h-3 w-3 text-white/80" />
@@ -814,6 +897,33 @@ export default function AstaLive() {
             </button>
           </div>
         </div>
+
+        {/* Connected viewers avatars */}
+        {presenceViewers.length > 0 && (
+          <div className="flex items-center gap-1 mt-2 overflow-hidden">
+            <Users className="h-3 w-3 text-white/40 flex-shrink-0 mr-1" />
+            <div className="flex -space-x-1.5 overflow-hidden">
+              {presenceViewers.slice(0, 12).map((v, i) => (
+                <div
+                  key={i}
+                  className="h-6 w-6 rounded-full bg-white/15 backdrop-blur-sm flex items-center justify-center ring-1 ring-black/30 flex-shrink-0"
+                  title={v.name}
+                >
+                  {v.avatar ? (
+                    <span className="text-xs">{v.avatar}</span>
+                  ) : (
+                    <span className="text-[8px] font-bold text-white/50">{v.name.slice(0, 1).toUpperCase()}</span>
+                  )}
+                </div>
+              ))}
+              {presenceViewers.length > 12 && (
+                <div className="h-6 w-6 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center ring-1 ring-black/30 flex-shrink-0">
+                  <span className="text-[8px] font-bold text-white/50">+{presenceViewers.length - 12}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Countdown */}
         {activeItem && countdown !== null && (
@@ -872,10 +982,10 @@ export default function AstaLive() {
             ))}
           </AnimatePresence>
         </div>
-        {feedItems.length === 0 && isLive && (
+        {feedItems.length === 0 && canChat && (
           <div className="px-3 py-2">
             <span className="bg-black/40 backdrop-blur-sm rounded-2xl px-3 py-1.5 text-xs text-white/50">
-              Scrivi qualcosa o fai un'offerta! 🔥
+              {isScheduled ? "Sala d'attesa — scrivi qualcosa! 💬" : "Scrivi qualcosa o fai un'offerta! 🔥"}
             </span>
           </div>
         )}
@@ -884,20 +994,32 @@ export default function AstaLive() {
       {/* ===== BOTTOM AREA ===== */}
       <div className="absolute bottom-0 left-0 right-0 z-30 safe-area-bottom">
 
-        {/* "Say something..." chat input */}
-        {isLive && (
+        {/* Chat input — available in live AND scheduled (waiting room) */}
+        {canChat && (
           <div className="mx-3 mb-2">
             {user ? (
               <form
                 onSubmit={e => { e.preventDefault(); sendChat(); }}
                 className="flex items-center gap-2"
               >
+                {/* Avatar button */}
+                <button
+                  type="button"
+                  onClick={() => setAvatarPickerOpen(true)}
+                  className="h-9 w-9 rounded-full bg-black/30 backdrop-blur-sm border border-white/15 flex items-center justify-center flex-shrink-0 hover:bg-white/10 active:scale-95 transition-all"
+                >
+                  {selectedAvatar ? (
+                    <span className="text-sm">{selectedAvatar}</span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-white/50">{(user.email?.charAt(0) || "?").toUpperCase()}</span>
+                  )}
+                </button>
                 <div className="flex-1 relative">
                   <input
                     type="text"
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
-                    placeholder="Say something..."
+                    placeholder={isScheduled ? "Scrivi nella sala d'attesa..." : "Say something..."}
                     className="w-full h-9 bg-black/30 backdrop-blur-sm border border-white/15 rounded-full px-4 pr-10 text-xs text-white placeholder:text-white/40 outline-none focus:border-white/30"
                   />
                   {chatInput.trim() && (
@@ -929,7 +1051,11 @@ export default function AstaLive() {
               className="mx-3 mb-2 flex items-center gap-2"
             >
               <div className="h-5 w-5 rounded-full bg-yellow-400 flex items-center justify-center flex-shrink-0">
-                <span className="text-[8px] font-black text-black">{leadingBidder.bidder_name.slice(0, 1).toUpperCase()}</span>
+                {leadingBidder.avatar_url ? (
+                  <span className="text-[10px]">{leadingBidder.avatar_url}</span>
+                ) : (
+                  <span className="text-[8px] font-black text-black">{leadingBidder.bidder_name.slice(0, 1).toUpperCase()}</span>
+                )}
               </div>
               <span className="text-white text-xs font-bold">
                 {leadingBidder.bidder_name} is <span className="text-yellow-400 font-black">winning!</span>
@@ -1000,7 +1126,7 @@ export default function AstaLive() {
             ) : (
               <div className="bg-black/50 backdrop-blur-xl rounded-xl px-4 py-3 text-center">
                 <p className="text-white/70 text-xs font-semibold">
-                  {isLive ? "In attesa del prossimo lotto..." : "L'asta non è ancora iniziata"}
+                  {isLive ? "In attesa del prossimo lotto..." : isScheduled ? "L'asta inizierà a breve — resta in attesa!" : "L'asta non è ancora iniziata"}
                 </p>
               </div>
             )}

@@ -46,6 +46,20 @@ import { PushNotificationSettings } from "@/components/notifications/PushNotific
 import { useCustomerLoyaltyCards } from "@/hooks/useLoyaltyCard";
 import { LoyaltyCardDisplay } from "@/components/loyalty/LoyaltyCardDisplay";
 import { AndroidAppDownloadWidget } from "@/components/customer/AndroidAppDownloadWidget";
+import { Gavel, Trophy as TrophyIcon } from "lucide-react";
+
+interface AuctionWin {
+  id: string;
+  product_title: string;
+  product_description: string | null;
+  sale_price: number;
+  sold_at: string;
+  fulfillment_status: string;
+  fulfillment_notes: string | null;
+  auction_item: {
+    image_url: string | null;
+  } | null;
+}
 
 interface Repair {
   id: string;
@@ -101,6 +115,7 @@ export default function CustomerDashboard() {
     inProgress: 0,
     completed: 0,
   });
+  const [auctionWins, setAuctionWins] = useState<AuctionWin[]>([]);
 
   // Loyalty cards for this customer
   const { cards: loyaltyCards, loading: loyaltyLoading } = useCustomerLoyaltyCards(user?.email || null);
@@ -108,8 +123,38 @@ export default function CustomerDashboard() {
   useEffect(() => {
     if (user) {
       fetchCustomerData();
+      fetchAuctionWins();
     }
   }, [user]);
+
+  const fetchAuctionWins = async () => {
+    if (!user) return;
+    try {
+      const { data } = await supabase
+        .from("auction_sales")
+        .select("id, product_title, product_description, sale_price, sold_at, fulfillment_status, fulfillment_notes, auction_item_id")
+        .eq("winner_user_id", user.id)
+        .order("sold_at", { ascending: false });
+      
+      if (data && data.length > 0) {
+        // Fetch item images
+        const itemIds = data.map(d => d.auction_item_id).filter(Boolean);
+        const { data: itemsData } = await supabase
+          .from("auction_items")
+          .select("id, image_url")
+          .in("id", itemIds);
+        
+        const itemMap = new Map(itemsData?.map(i => [i.id, i]) || []);
+        
+        setAuctionWins(data.map(d => ({
+          ...d,
+          auction_item: itemMap.get(d.auction_item_id) || null,
+        })) as AuctionWin[]);
+      }
+    } catch (error) {
+      console.error("Error fetching auction wins:", error);
+    }
+  };
 
   const fetchCustomerData = async () => {
     try {
@@ -404,6 +449,58 @@ export default function CustomerDashboard() {
             </div>
           )}
 
+          {/* Auction Wins Section */}
+          {auctionWins.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+                <TrophyIcon className="h-5 w-5 sm:h-6 sm:w-6 text-amber-500" />
+                Le Mie Aste Vinte
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {auctionWins.map((win) => {
+                  const fulfillmentLabel: Record<string, { label: string; color: string }> = {
+                    pending: { label: "In elaborazione", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
+                    shipped: { label: "Spedito", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+                    delivered: { label: "Consegnato", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+                    picked_up: { label: "Ritirato", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+                    cancelled: { label: "Annullato", color: "bg-destructive/10 text-destructive border-destructive/20" },
+                  };
+                  const status = fulfillmentLabel[win.fulfillment_status] || fulfillmentLabel.pending;
+                  return (
+                    <Card key={win.id} className="overflow-hidden hover:shadow-lg transition-all duration-300">
+                      <div className="flex gap-4 p-4">
+                        {win.auction_item?.image_url ? (
+                          <img src={win.auction_item.image_url} alt="" className="h-20 w-20 rounded-xl object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="h-20 w-20 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                            <Gavel className="h-8 w-8 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-foreground truncate">{win.product_title}</h3>
+                          {win.product_description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{win.product_description}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <span className="text-lg font-black text-primary">€{win.sale_price}</span>
+                            <Badge variant="outline" className={`text-[10px] ${status.color}`}>
+                              {status.label}
+                            </Badge>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {new Date(win.sold_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                          </p>
+                          {win.fulfillment_notes && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5 italic">{win.fulfillment_notes}</p>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Quotes Section */}
           {quotes.length > 0 && (

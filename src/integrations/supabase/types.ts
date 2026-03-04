@@ -243,6 +243,7 @@ export type Database = {
         Row: {
           amount: number
           auction_id: string
+          avatar_url: string | null
           bidder_email: string | null
           bidder_name: string
           created_at: string
@@ -253,6 +254,7 @@ export type Database = {
         Insert: {
           amount: number
           auction_id: string
+          avatar_url?: string | null
           bidder_email?: string | null
           bidder_name: string
           created_at?: string
@@ -263,6 +265,7 @@ export type Database = {
         Update: {
           amount?: number
           auction_id?: string
+          avatar_url?: string | null
           bidder_email?: string | null
           bidder_name?: string
           created_at?: string
@@ -290,6 +293,7 @@ export type Database = {
       auction_chat_messages: {
         Row: {
           auction_id: string
+          avatar_url: string | null
           created_at: string
           id: string
           message: string
@@ -298,6 +302,7 @@ export type Database = {
         }
         Insert: {
           auction_id: string
+          avatar_url?: string | null
           created_at?: string
           id?: string
           message: string
@@ -306,6 +311,7 @@ export type Database = {
         }
         Update: {
           auction_id?: string
+          avatar_url?: string | null
           created_at?: string
           id?: string
           message?: string
