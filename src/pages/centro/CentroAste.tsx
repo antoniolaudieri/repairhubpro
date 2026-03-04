@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Gavel, Plus, Play, Square, Eye, Users, Package,
-  Trash2, ChevronRight, Radio, Trophy, ArrowRight, Timer, Copy, ExternalLink
+  Trash2, ChevronRight, Radio, Trophy, ArrowRight, Timer, Copy, ExternalLink, Send, MessageCircle
 } from "lucide-react";
 import { AuctionBroadcast } from "@/components/centro/AuctionBroadcast";
 
@@ -59,6 +59,20 @@ interface AuctionBid {
   created_at: string;
 }
 
+interface ChatMessage {
+  id: string;
+  auction_id: string;
+  sender_name: string;
+  message: string;
+  created_at: string;
+  user_id: string | null;
+}
+
+// Unified feed item
+type FeedItem =
+  | { type: "bid"; data: AuctionBid }
+  | { type: "chat"; data: ChatMessage };
+
 export default function CentroAste() {
   const { user } = useAuth();
   const [centroId, setCentroId] = useState<string | null>(null);
@@ -79,7 +93,10 @@ export default function CentroAste() {
   const [itemReservePrice, setItemReservePrice] = useState("");
   const [itemDuration, setItemDuration] = useState("60");
   const [autoCloseTriggered, setAutoCloseTriggered] = useState<string | null>(null);
-
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [centroName, setCentroName] = useState("");
+  const feedEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (user) fetchCentroId();
   }, [user]);
@@ -88,10 +105,11 @@ export default function CentroAste() {
     if (centroId) fetchAuctions();
   }, [centroId]);
 
-  // Realtime for selected auction - bids, items, AND auction status
+  // Realtime for selected auction - bids, items, chat, AND auction status
   useEffect(() => {
     if (!selectedAuction) return;
     fetchItems(selectedAuction.id);
+    fetchChatMessages(selectedAuction.id);
 
     const channel = supabase
       .channel(`centro-auction-${selectedAuction.id}`)
@@ -107,6 +125,15 @@ export default function CentroAste() {
               ? { ...item, current_price: bid.amount, bid_count: item.bid_count + 1 }
               : item
           ));
+        }
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_chat_messages", filter: `auction_id=eq.${selectedAuction.id}` },
+        (payload) => {
+          const msg = payload.new as ChatMessage;
+          setChatMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            return [msg, ...prev];
+          });
         }
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "auction_items", filter: `auction_id=eq.${selectedAuction.id}` },
@@ -126,8 +153,11 @@ export default function CentroAste() {
 
   const fetchCentroId = async () => {
     if (!user) return;
-    const { data } = await supabase.from("centri_assistenza").select("id").eq("owner_user_id", user.id).single();
-    if (data) setCentroId(data.id);
+    const { data } = await supabase.from("centri_assistenza").select("id, business_name").eq("owner_user_id", user.id).single();
+    if (data) {
+      setCentroId(data.id);
+      setCentroName(data.business_name);
+    }
   };
 
   const fetchAuctions = async () => {
@@ -136,6 +166,28 @@ export default function CentroAste() {
     const { data } = await supabase.from("live_auctions").select("*").eq("centro_id", centroId).order("created_at", { ascending: false });
     setAuctions((data as Auction[]) || []);
     setLoading(false);
+  };
+
+  const fetchChatMessages = async (auctionId: string) => {
+    const { data } = await supabase
+      .from("auction_chat_messages")
+      .select("*")
+      .eq("auction_id", auctionId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    setChatMessages((data as ChatMessage[]) || []);
+  };
+
+  const sendChatMessage = async () => {
+    if (!user || !selectedAuction || !chatInput.trim()) return;
+    const { error } = await supabase.from("auction_chat_messages").insert({
+      auction_id: selectedAuction.id,
+      user_id: user.id,
+      sender_name: centroName || "Centro",
+      message: chatInput.trim(),
+    });
+    if (!error) setChatInput("");
+    else toast({ title: "Errore", description: error.message, variant: "destructive" });
   };
 
   const fetchItems = async (auctionId: string) => {
@@ -517,49 +569,112 @@ export default function CentroAste() {
                 )}
               </div>
 
-              {/* Live bid feed */}
+              {/* Live feed: bids + chat unified */}
               <div className="space-y-2">
                 <h3 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
-                  <Gavel className="h-4 w-4" /> Offerte Live
+                  <MessageCircle className="h-4 w-4" /> Feed Live
                   {activeItem && (
                     <Badge variant="outline" className="ml-auto text-[10px]">{activeItem.bid_count} offerte</Badge>
                   )}
                 </h3>
-                <Card className="h-[300px] sm:h-[400px] lg:h-[500px] overflow-hidden">
-                  <CardContent className="p-0 h-full overflow-y-auto">
-                    {liveBids.length === 0 ? (
-                      <div className="flex items-center justify-center h-full text-muted-foreground text-xs">Nessuna offerta ancora</div>
-                    ) : (
-                      <div className="divide-y divide-border/50">
-                        <AnimatePresence>
-                          {liveBids.map((bid, i) => (
-                            <motion.div
-                              key={bid.id}
-                              initial={{ opacity: 0, x: 15, backgroundColor: "hsl(var(--primary) / 0.1)" }}
-                              animate={{ opacity: 1, x: 0, backgroundColor: "transparent" }}
-                              transition={{ duration: 0.3 }}
-                              className="px-3 py-2"
-                            >
-                              <div className="flex items-center gap-2">
-                                <Avatar className="h-6 w-6 flex-shrink-0">
-                                  <AvatarFallback className="text-[9px] font-bold bg-primary/10 text-primary">
-                                    {bid.bidder_name.slice(0, 2).toUpperCase()}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                  <span className="font-medium text-xs text-foreground">{bid.bidder_name}</span>
-                                  <span className="text-[10px] text-muted-foreground ml-1.5">
-                                    {new Date(bid.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                                  </span>
-                                </div>
-                                <span className={`font-bold text-sm tabular-nums ${i === 0 ? "text-primary" : "text-foreground"}`}>€{bid.amount}</span>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-                      </div>
-                    )}
+                <Card className="h-[300px] sm:h-[400px] lg:h-[500px] overflow-hidden flex flex-col">
+                  <CardContent className="p-0 flex-1 overflow-y-auto">
+                    {(() => {
+                      const feedItems: FeedItem[] = [
+                        ...liveBids.map(b => ({ type: "bid" as const, data: b })),
+                        ...chatMessages.map(c => ({ type: "chat" as const, data: c })),
+                      ].sort((a, b) => new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime());
+
+                      if (feedItems.length === 0) {
+                        return <div className="flex items-center justify-center h-full text-muted-foreground text-xs">Nessuna attività ancora</div>;
+                      }
+
+                      return (
+                        <div className="divide-y divide-border/50">
+                          <AnimatePresence>
+                            {feedItems.map((item, i) => {
+                              if (item.type === "bid") {
+                                const bid = item.data;
+                                return (
+                                  <motion.div
+                                    key={`bid-${bid.id}`}
+                                    initial={{ opacity: 0, x: 15, backgroundColor: "hsl(var(--primary) / 0.1)" }}
+                                    animate={{ opacity: 1, x: 0, backgroundColor: "transparent" }}
+                                    transition={{ duration: 0.3 }}
+                                    className="px-3 py-2"
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="h-6 w-6 flex-shrink-0">
+                                        <AvatarFallback className="text-[9px] font-bold bg-green-500/20 text-green-600">
+                                          {bid.bidder_name.slice(0, 2).toUpperCase()}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 min-w-0">
+                                        <span className="font-medium text-xs text-foreground">{bid.bidder_name}</span>
+                                        <span className="text-[10px] text-muted-foreground ml-1.5">
+                                          {new Date(bid.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                                        </span>
+                                      </div>
+                                      <span className={`font-bold text-sm tabular-nums ${i === 0 ? "text-primary" : "text-foreground"}`}>€{bid.amount}</span>
+                                    </div>
+                                  </motion.div>
+                                );
+                              } else {
+                                const chat = item.data;
+                                const isCentro = chat.user_id === user?.id;
+                                return (
+                                  <motion.div
+                                    key={`chat-${chat.id}`}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="px-3 py-2"
+                                  >
+                                    <div className="flex items-start gap-2">
+                                      <Avatar className="h-6 w-6 flex-shrink-0 mt-0.5">
+                                        <AvatarFallback className={`text-[9px] font-bold ${isCentro ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+                                          {chat.sender_name.slice(0, 1).toUpperCase()}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5">
+                                          <span className={`font-medium text-xs ${isCentro ? "text-primary" : "text-foreground"}`}>
+                                            {chat.sender_name}
+                                          </span>
+                                          {isCentro && <Badge className="text-[8px] h-3.5 px-1 bg-primary/10 text-primary border-0">Host</Badge>}
+                                          <span className="text-[10px] text-muted-foreground">
+                                            {new Date(chat.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })}
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-foreground/80 mt-0.5">{chat.message}</p>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                );
+                              }
+                            })}
+                          </AnimatePresence>
+                          <div ref={feedEndRef} />
+                        </div>
+                      );
+                    })()}
                   </CardContent>
+                  {/* Chat input for Centro */}
+                  {selectedAuction.status === "live" && (
+                    <div className="border-t border-border p-2">
+                      <form onSubmit={e => { e.preventDefault(); sendChatMessage(); }} className="flex items-center gap-2">
+                        <Input
+                          value={chatInput}
+                          onChange={e => setChatInput(e.target.value)}
+                          placeholder="Rispondi alla chat..."
+                          className="h-8 text-xs flex-1"
+                        />
+                        <Button type="submit" size="sm" className="h-8 w-8 p-0" disabled={!chatInput.trim()}>
+                          <Send className="h-3.5 w-3.5" />
+                        </Button>
+                      </form>
+                    </div>
+                  )}
                 </Card>
               </div>
             </div>
