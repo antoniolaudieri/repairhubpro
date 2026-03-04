@@ -153,8 +153,11 @@ export default function CentroAste() {
 
   const fetchCentroId = async () => {
     if (!user) return;
-    const { data } = await supabase.from("centri_assistenza").select("id").eq("owner_user_id", user.id).single();
-    if (data) setCentroId(data.id);
+    const { data } = await supabase.from("centri_assistenza").select("id, business_name").eq("owner_user_id", user.id).single();
+    if (data) {
+      setCentroId(data.id);
+      setCentroName(data.business_name);
+    }
   };
 
   const fetchAuctions = async () => {
