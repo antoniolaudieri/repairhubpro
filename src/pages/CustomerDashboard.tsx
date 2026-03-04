@@ -449,6 +449,58 @@ export default function CustomerDashboard() {
             </div>
           )}
 
+          {/* Auction Wins Section */}
+          {auctionWins.length > 0 && (
+            <div className="space-y-4">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+                <TrophyIcon className="h-5 w-5 sm:h-6 sm:w-6 text-amber-500" />
+                Le Mie Aste Vinte
+              </h2>
+              <div className="grid gap-4 md:grid-cols-2">
+                {auctionWins.map((win) => {
+                  const fulfillmentLabel: Record<string, { label: string; color: string }> = {
+                    pending: { label: "In elaborazione", color: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
+                    shipped: { label: "Spedito", color: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+                    delivered: { label: "Consegnato", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+                    picked_up: { label: "Ritirato", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+                    cancelled: { label: "Annullato", color: "bg-destructive/10 text-destructive border-destructive/20" },
+                  };
+                  const status = fulfillmentLabel[win.fulfillment_status] || fulfillmentLabel.pending;
+                  return (
+                    <Card key={win.id} className="overflow-hidden hover:shadow-lg transition-all duration-300">
+                      <div className="flex gap-4 p-4">
+                        {win.auction_item?.image_url ? (
+                          <img src={win.auction_item.image_url} alt="" className="h-20 w-20 rounded-xl object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="h-20 w-20 rounded-xl bg-muted flex items-center justify-center flex-shrink-0">
+                            <Gavel className="h-8 w-8 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-bold text-foreground truncate">{win.product_title}</h3>
+                          {win.product_description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{win.product_description}</p>
+                          )}
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <span className="text-lg font-black text-primary">€{win.sale_price}</span>
+                            <Badge variant="outline" className={`text-[10px] ${status.color}`}>
+                              {status.label}
+                            </Badge>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1">
+                            {new Date(win.sold_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" })}
+                          </p>
+                          {win.fulfillment_notes && (
+                            <p className="text-[10px] text-muted-foreground mt-0.5 italic">{win.fulfillment_notes}</p>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Quotes Section */}
           {quotes.length > 0 && (
