@@ -465,6 +465,7 @@ export default function AstaLive() {
   const [authOpen, setAuthOpen] = useState(false);
   const [customBidOpen, setCustomBidOpen] = useState(false);
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const feedScrollRef = useRef<HTMLDivElement>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [presenceCount, setPresenceCount] = useState(0);
   const [winnerOverlay, setWinnerOverlay] = useState<{ name: string | null; price: number; sold: boolean } | null>(null);
