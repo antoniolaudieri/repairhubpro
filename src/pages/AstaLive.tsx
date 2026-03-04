@@ -719,6 +719,14 @@ export default function AstaLive() {
                 {presenceCount}
               </motion.span>
             </div>
+            {/* QR Share button */}
+            <button
+              onClick={() => setShareOpen(true)}
+              className="relative h-10 w-10 rounded-xl bg-black/40 backdrop-blur-sm border border-white/15 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all"
+            >
+              <QRCodeSVG value={auctionUrl} size={22} bgColor="transparent" fgColor="white" level="L" />
+              <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse" />
+            </button>
           </div>
         </div>
 
