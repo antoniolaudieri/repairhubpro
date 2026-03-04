@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "framer-motion";
-import { Gavel, Eye, Radio, Timer, ShoppingCart, Building2, Sparkles, Lock, Video, Wifi, WifiOff, Trophy, Send, ChevronsRight, MessageCircle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Gavel, Eye, Radio, Timer, ShoppingCart, Building2, Sparkles, Lock, Video, Wifi, WifiOff, Trophy, Send, MessageCircle } from "lucide-react";
 import { useWebRTCViewer } from "@/hooks/useWebRTCViewer";
 
 // --- Stream URL helper ---
