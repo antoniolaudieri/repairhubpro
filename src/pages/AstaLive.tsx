@@ -638,7 +638,15 @@ export default function AstaLive() {
       item_id: activeItem.id, auction_id: auctionId!, user_id: user.id,
       bidder_name: name, bidder_email: user.email, amount,
     });
-    if (error) toast({ title: "Errore", description: error.message, variant: "destructive" });
+    if (error) {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      return;
+    }
+    // Update current_price and bid_count in DB so closeItem picks them up
+    await supabase.from("auction_items").update({
+      current_price: amount,
+      bid_count: activeItem.bid_count + 1,
+    } as any).eq("id", activeItem.id);
   };
 
   const sendChat = async () => {
