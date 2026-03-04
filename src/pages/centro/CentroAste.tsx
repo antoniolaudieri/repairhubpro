@@ -635,14 +635,14 @@ export default function CentroAste() {
               )}
 
               {/* Items + Feed Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Items List */}
-                <div className="lg:col-span-2 space-y-2">
+                <div className="lg:col-span-2 space-y-3">
                   <h3 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
-                    <Package className="h-4 w-4" /> Prodotti ({auctionItems.length})
+                    <Package className="h-4 w-4 text-primary" /> Prodotti ({auctionItems.length})
                   </h3>
                   {auctionItems.length === 0 ? (
-                    <Card className="border-dashed"><CardContent className="py-6 text-center text-sm text-muted-foreground">Nessun prodotto. Aggiungi il primo!</CardContent></Card>
+                    <Card className="border-dashed"><CardContent className="py-8 sm:py-10 text-center text-sm text-muted-foreground">Nessun prodotto. Aggiungi il primo!</CardContent></Card>
                   ) : (
                     auctionItems.map(item => (
                       <motion.div key={item.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
