@@ -272,11 +272,11 @@ export default function CentroAste() {
           const bid = payload.new as AuctionBid;
           setLiveBids(prev => prev.some(b => b.id === bid.id) ? prev : [bid, ...prev]);
           // Update local state immediately with bid amount
+          // Update local state immediately with bid info
           setAuctionItems(prev => prev.map(item =>
-            item.id === bid.item_id ? { ...item, current_price: bid.amount, bid_count: item.bid_count + 1 } : item
+            item.id === bid.item_id ? { ...item, current_price: Math.max(item.current_price, bid.amount), bid_count: item.bid_count + 1 } : item
           ));
-          // Also re-fetch after a delay to get the DB-confirmed values
-          setTimeout(() => fetchItems(selectedAuction.id), 800);
+          // DB trigger will also fire an auction_items UPDATE which the other handler picks up
         }
       )
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_chat_messages", filter: `auction_id=eq.${selectedAuction.id}` },
