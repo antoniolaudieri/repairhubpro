@@ -463,7 +463,38 @@ export default function CentroAste() {
     if (selectedAuction?.id === auction.id) setSelectedAuction({ ...auction, status: "ended" });
   };
 
-  // Image upload handler
+  const reopenAuctionFn = async () => {
+    if (!reopenAuction) return;
+    const { error } = await supabase.from("live_auctions").update({
+      status: "scheduled" as any,
+      scheduled_at: reopenDate || null,
+      started_at: null,
+      ended_at: null,
+    }).eq("id", reopenAuction.id);
+    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+    // Reset all items to pending
+    await supabase.from("auction_items").update({ status: "pending" as any, started_at: null, ended_at: null, winner_name: null, winner_email: null, winner_user_id: null } as any).eq("auction_id", reopenAuction.id);
+    toast({ title: "Asta riaperta!", description: "L'asta è stata riprogrammata." });
+    setReopenOpen(false); setReopenAuction(null); setReopenDate("");
+    fetchAuctions();
+    if (selectedAuction?.id === reopenAuction.id) setSelectedAuction(null);
+  };
+
+  const deleteAuction = async (auctionId: string) => {
+    // Delete related data first
+    await supabase.from("auction_sales").delete().eq("auction_id", auctionId);
+    await supabase.from("auction_bids").delete().eq("auction_id", auctionId);
+    await supabase.from("auction_chat_messages").delete().eq("auction_id", auctionId);
+    await supabase.from("auction_items").delete().eq("auction_id", auctionId);
+    const { error } = await supabase.from("live_auctions").delete().eq("id", auctionId);
+    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Asta eliminata" });
+    setDeleteConfirmId(null);
+    if (selectedAuction?.id === auctionId) setSelectedAuction(null);
+    fetchAuctions();
+  };
+
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
