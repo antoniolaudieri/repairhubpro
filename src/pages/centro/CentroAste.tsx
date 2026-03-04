@@ -18,7 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Gavel, Plus, Play, Square, Eye, Users, Package, DollarSign,
   Trash2, ChevronRight, Radio, Trophy, ArrowRight, Timer, Copy, ExternalLink, Send, MessageCircle,
-  ShoppingBag, Phone, Truck, CheckCircle2, XCircle
+  ShoppingBag, Phone, Truck, CheckCircle2, XCircle, TrendingUp, Percent, Zap
 } from "lucide-react";
 import { AuctionBroadcast } from "@/components/centro/AuctionBroadcast";
 
@@ -100,6 +100,79 @@ const FULFILLMENT_CONFIG: Record<string, { label: string; icon: React.ElementTyp
   cancelled: { label: "Annullato", icon: XCircle, color: "bg-red-500/15 text-red-600 border-red-500/30" },
 };
 
+// ======= Animated Counter Component =======
+function AnimatedNumber({ value, prefix = "", suffix = "" }: { value: number; prefix?: string; suffix?: string }) {
+  const [displayed, setDisplayed] = useState(value);
+  const prevRef = useRef(value);
+
+  useEffect(() => {
+    const from = prevRef.current;
+    const to = value;
+    prevRef.current = value;
+    if (from === to) return;
+    const steps = 20;
+    const increment = (to - from) / steps;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      if (step >= steps) {
+        setDisplayed(to);
+        clearInterval(timer);
+      } else {
+        setDisplayed(Math.round(from + increment * step));
+      }
+    }, 30);
+    return () => clearInterval(timer);
+  }, [value]);
+
+  return <span>{prefix}{displayed}{suffix}</span>;
+}
+
+// ======= Circular Countdown Component =======
+function CircularCountdown({ item }: { item: AuctionItem }) {
+  const [remaining, setRemaining] = useState(0);
+  useEffect(() => {
+    if (!item.started_at) return;
+    const endTime = new Date(item.started_at).getTime() + item.duration_seconds * 1000;
+    const tick = () => setRemaining(Math.max(0, Math.floor((endTime - Date.now()) / 1000)));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [item.started_at, item.duration_seconds]);
+
+  const total = item.duration_seconds;
+  const progress = total > 0 ? remaining / total : 0;
+  const isUrgent = remaining <= 10;
+  const radius = 44;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference * (1 - progress);
+  const mins = Math.floor(remaining / 60);
+  const secs = remaining % 60;
+
+  return (
+    <div className="relative inline-flex items-center justify-center">
+      <svg width="120" height="120" viewBox="0 0 100 100" className="-rotate-90">
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="6" />
+        <circle
+          cx="50" cy="50" r={radius} fill="none"
+          stroke={isUrgent ? "hsl(var(--destructive))" : "hsl(var(--primary))"}
+          strokeWidth="6" strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          className="transition-all duration-1000 ease-linear"
+          style={{ filter: isUrgent ? "drop-shadow(0 0 8px hsl(var(--destructive) / 0.6))" : "drop-shadow(0 0 6px hsl(var(--primary) / 0.4))" }}
+        />
+      </svg>
+      <div className={`absolute inset-0 flex flex-col items-center justify-center ${isUrgent ? "text-destructive" : "text-foreground"}`}>
+        <span className={`text-2xl sm:text-3xl font-black tabular-nums leading-none ${isUrgent ? "animate-pulse" : ""}`}>
+          {mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : secs}
+        </span>
+        <span className="text-[9px] text-muted-foreground mt-0.5 uppercase tracking-wider">sec</span>
+      </div>
+    </div>
+  );
+}
+
 export default function CentroAste() {
   const { user } = useAuth();
   const [centroId, setCentroId] = useState<string | null>(null);
@@ -126,6 +199,14 @@ export default function CentroAste() {
   const [sales, setSales] = useState<AuctionSale[]>([]);
   const [salesFilter, setSalesFilter] = useState("all");
   const feedEndRef = useRef<HTMLDivElement>(null);
+  const feedContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll feed
+  useEffect(() => {
+    if (feedContainerRef.current) {
+      feedContainerRef.current.scrollTop = 0;
+    }
+  }, [liveBids.length, chatMessages.length]);
 
   useEffect(() => { if (user) fetchCentroId(); }, [user]);
   useEffect(() => { if (centroId) fetchAuctions(); }, [centroId]);
@@ -163,14 +244,18 @@ export default function CentroAste() {
           setAuctions(prev => prev.map(a => a.id === updated.id ? updated : a));
         }
       )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_sales", filter: `auction_id=eq.${selectedAuction.id}` },
+        () => fetchSales(selectedAuction.id)
+      )
       .subscribe();
 
-    // Polling fallback: refresh bids + chat every 4s during live to catch missed realtime events
+    // Polling fallback: 3s during live
     const isLive = selectedAuction.status === "live";
     const pollInterval = isLive ? setInterval(() => {
       fetchItems(selectedAuction.id);
       fetchChatMessages(selectedAuction.id);
-    }, 4000) : null;
+      fetchSales(selectedAuction.id);
+    }, 3000) : null;
 
     return () => {
       supabase.removeChannel(channel);
@@ -275,26 +360,19 @@ export default function CentroAste() {
   };
 
   const closeItem = async (item: AuctionItem, sold: boolean) => {
-    // Always fetch the latest item data from DB to get accurate current_price/bid_count
     const { data: freshItem, error: freshItemError } = await supabase.from("auction_items").select("*").eq("id", item.id).maybeSingle();
     if (freshItemError) console.error("[closeItem] Error fetching fresh item:", freshItemError);
     const itemData = freshItem || item;
     
-    // Fetch ALL bids for this item, sorted by amount desc — use array instead of .single()
     const { data: allBids, error: bidsError } = await supabase
-      .from("auction_bids")
-      .select("*")
-      .eq("item_id", item.id)
-      .order("amount", { ascending: false })
-      .limit(10);
+      .from("auction_bids").select("*").eq("item_id", item.id)
+      .order("amount", { ascending: false }).limit(10);
     
     if (bidsError) console.error("[closeItem] Error fetching bids:", bidsError);
     
     const topBid = allBids && allBids.length > 0 ? allBids[0] : null;
     const hasBids = !!topBid;
     const actualPrice = topBid ? topBid.amount : (itemData as any).current_price || 0;
-    
-    console.log("[closeItem]", { itemId: item.id, title: item.title, sold, hasBids, topBidAmount: topBid?.amount, bidsCount: allBids?.length || 0, actualPrice });
     
     const reservePrice = (itemData as any).reserve_price as number | null;
     const reserveMet = !reservePrice || actualPrice >= reservePrice;
@@ -309,19 +387,13 @@ export default function CentroAste() {
     const { error: updateError } = await supabase.from("auction_items").update(update).eq("id", item.id);
     if (updateError) console.error("[closeItem] Error updating item:", updateError);
 
-    // Register sale in auction_sales
     if (finalSold && centroId && selectedAuction) {
       const { error: saleError } = await supabase.from("auction_sales").insert({
-        auction_id: selectedAuction.id,
-        auction_item_id: item.id,
-        centro_id: centroId,
-        product_title: item.title,
-        product_description: item.description,
-        sale_price: actualPrice,
-        winner_name: update.winner_name || "N/A",
+        auction_id: selectedAuction.id, auction_item_id: item.id, centro_id: centroId,
+        product_title: item.title, product_description: item.description,
+        sale_price: actualPrice, winner_name: update.winner_name || "N/A",
         winner_email: update.winner_email || null,
-        fulfillment_status: "pending" as any,
-        sold_at: new Date().toISOString(),
+        fulfillment_status: "pending" as any, sold_at: new Date().toISOString(),
       });
       if (saleError) console.error("[closeItem] Error creating sale:", saleError);
       fetchSales(selectedAuction.id);
@@ -356,6 +428,8 @@ export default function CentroAste() {
   const totalRevenue = soldItems.reduce((sum, i) => sum + i.current_price, 0);
   const activeItem = auctionItems.find(i => i.status === "active");
   const publicUrl = selectedAuction ? `${window.location.origin}/aste/${selectedAuction.id}` : "";
+  const sellRate = auctionItems.length > 0 ? Math.round((soldItems.length / auctionItems.length) * 100) : 0;
+  const avgBid = liveBids.length > 0 ? Math.round(liveBids.reduce((s, b) => s + b.amount, 0) / liveBids.length) : 0;
 
   const filteredSales = salesFilter === "all" ? sales : sales.filter(s => s.fulfillment_status === salesFilter);
 
@@ -407,44 +481,20 @@ export default function CentroAste() {
     );
   };
 
-  // Countdown display for active item
-  const ActiveItemCountdown = ({ item }: { item: AuctionItem }) => {
-    const [remaining, setRemaining] = useState(0);
-    useEffect(() => {
-      if (!item.started_at) return;
-      const endTime = new Date(item.started_at).getTime() + item.duration_seconds * 1000;
-      const tick = () => setRemaining(Math.max(0, Math.floor((endTime - Date.now()) / 1000)));
-      tick();
-      const interval = setInterval(tick, 1000);
-      return () => clearInterval(interval);
-    }, [item.started_at, item.duration_seconds]);
-    const isUrgent = remaining <= 10;
-    const mins = Math.floor(remaining / 60);
-    const secs = remaining % 60;
-    return (
-      <div className={`text-center ${isUrgent ? "text-destructive" : "text-foreground"}`}>
-        <div className={`text-4xl sm:text-5xl font-black tabular-nums ${isUrgent ? "animate-pulse" : ""}`}>
-          {mins > 0 ? `${mins}:${secs.toString().padStart(2, "0")}` : secs}
-        </div>
-        <p className="text-xs text-muted-foreground mt-1">secondi rimanenti</p>
-      </div>
-    );
-  };
-
   return (
     <CentroLayout>
       <PageTransition>
-        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
+        <div className="p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Gavel className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2.5">
+                <div className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center flex-shrink-0 shadow-md">
+                  <Gavel className="h-5 w-5 sm:h-6 sm:w-6 text-primary-foreground" />
                 </div>
                 Aste Live
               </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-1 ml-12">Gestisci le tue aste in diretta</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 ml-[52px]">Gestisci le tue aste in diretta</p>
             </div>
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
@@ -469,8 +519,8 @@ export default function CentroAste() {
                 <div className="text-center py-16 text-muted-foreground text-sm">Caricamento...</div>
               ) : auctions.length === 0 ? (
                 <Card className="border-dashed"><CardContent className="py-12 sm:py-16 text-center">
-                  <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                    <Gavel className="h-7 w-7 text-muted-foreground/40" />
+                  <div className="h-16 w-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                    <Gavel className="h-8 w-8 text-muted-foreground/40" />
                   </div>
                   <p className="text-sm text-muted-foreground">Nessuna asta. Crea la tua prima asta live!</p>
                 </CardContent></Card>
@@ -480,7 +530,9 @@ export default function CentroAste() {
                     <Card className="hover:shadow-md transition-all cursor-pointer active:scale-[0.99]" onClick={() => setSelectedAuction(auction)}>
                       <CardContent className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <div className={`h-11 w-11 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                            auction.status === "live" ? "bg-destructive/10" : "bg-primary/10"
+                          }`}>
                             {auction.status === "live" ? <Radio className="h-5 w-5 text-destructive animate-pulse" /> : <Gavel className="h-5 w-5 text-primary" />}
                           </div>
                           <div className="min-w-0">
@@ -515,7 +567,7 @@ export default function CentroAste() {
             </div>
           ) : (
             /* ===== AUCTION DETAIL ===== */
-            <div className="space-y-4 sm:space-y-6">
+            <div className="space-y-5 sm:space-y-6">
               {/* Back + Title */}
               <div className="flex items-center gap-2 flex-wrap">
                 <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setSelectedAuction(null); setAuctionItems([]); setLiveBids([]); setSales([]); }}>
@@ -523,29 +575,44 @@ export default function CentroAste() {
                 </Button>
                 <h2 className="text-base sm:text-lg font-bold text-foreground truncate">{selectedAuction.title}</h2>
                 {statusBadge(selectedAuction.status)}
+                {selectedAuction.status === "live" && (
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
+                    </span>
+                    <span className="text-xs font-medium text-destructive">LIVE</span>
+                  </div>
+                )}
               </div>
 
-              {/* Stats Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {/* ===== PREMIUM STATS CARDS ===== */}
+              <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
                 {[
-                  { label: "Prodotti", value: auctionItems.length, icon: Package, color: "text-primary", bgColor: "bg-primary/10" },
-                  { label: "Venduti", value: soldItems.length, icon: Trophy, color: "text-primary", bgColor: "bg-primary/10" },
-                  { label: "Incasso", value: `€${totalRevenue.toFixed(0)}`, icon: DollarSign, color: "text-primary", bgColor: "bg-primary/10" },
-                  { label: "Spettatori", value: selectedAuction.viewer_count, icon: Eye, color: "text-primary", bgColor: "bg-primary/10" },
+                  { label: "Prodotti", value: auctionItems.length, icon: Package, gradient: "from-primary/15 to-primary/5", iconBg: "bg-primary/15", iconColor: "text-primary" },
+                  { label: "Venduti", value: soldItems.length, icon: Trophy, gradient: "from-success/15 to-success/5", iconBg: "bg-success/15", iconColor: "text-success" },
+                  { label: "Incasso", value: totalRevenue, icon: DollarSign, gradient: "from-info/15 to-info/5", iconBg: "bg-info/15", iconColor: "text-info", prefix: "€" },
+                  { label: "Spettatori", value: selectedAuction.viewer_count, icon: Eye, gradient: "from-warning/15 to-warning/5", iconBg: "bg-warning/15", iconColor: "text-warning" },
+                  { label: "Sell Rate", value: sellRate, icon: Percent, gradient: "from-accent/15 to-accent/5", iconBg: "bg-accent/15", iconColor: "text-accent-foreground", suffix: "%" },
+                  { label: "Media Offerta", value: avgBid, icon: TrendingUp, gradient: "from-primary/10 to-info/5", iconBg: "bg-primary/10", iconColor: "text-primary", prefix: "€" },
                 ].map((stat) => (
-                  <Card key={stat.label} className="bg-card/80 backdrop-blur-sm">
-                    <CardContent className="p-3.5 sm:p-5">
-                      <div className="flex items-center gap-3">
-                        <div className={`p-2.5 rounded-xl ${stat.bgColor}`}>
-                          <stat.icon className={`h-5 w-5 ${stat.color}`} />
+                  <motion.div key={stat.label} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }}>
+                    <Card className={`bg-gradient-to-br ${stat.gradient} border-border/50 backdrop-blur-sm overflow-hidden relative group hover:shadow-md transition-all`}>
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`p-2 rounded-lg ${stat.iconBg} transition-transform group-hover:scale-110`}>
+                            <stat.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${stat.iconColor}`} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-lg sm:text-xl font-black text-foreground leading-none tabular-nums">
+                              <AnimatedNumber value={stat.value} prefix={stat.prefix} suffix={stat.suffix} />
+                            </p>
+                            <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 truncate">{stat.label}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</p>
-                          <p className="text-[11px] text-muted-foreground">{stat.label}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 ))}
               </div>
 
@@ -605,148 +672,222 @@ export default function CentroAste() {
                 />
               )}
 
-              {/* Active Item Hero (Live) */}
+              {/* ===== ACTIVE ITEM HERO (Redesigned) ===== */}
               {selectedAuction.status === "live" && activeItem && (
-                <Card className="border-destructive/30 bg-destructive/5 shadow-lg ring-1 ring-destructive/20">
-                  <CardContent className="p-4 sm:p-6">
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="h-2.5 w-2.5 rounded-full bg-destructive animate-pulse" />
-                      <span className="text-xs font-semibold text-destructive uppercase tracking-wider">In asta ora</span>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
-                      <div className="sm:col-span-1">
-                        <h3 className="font-bold text-lg text-foreground">{activeItem.title}</h3>
-                        {activeItem.description && <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{activeItem.description}</p>}
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <span>Da €{activeItem.starting_price}</span>
-                          {activeItem.buy_now_price && <span>CN €{activeItem.buy_now_price}</span>}
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+                  <Card className="border-destructive/30 overflow-hidden relative">
+                    {/* Gradient background */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-destructive/8 via-transparent to-primary/5 pointer-events-none" />
+                    <CardContent className="p-4 sm:p-6 relative">
+                      {/* Header */}
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="relative flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
+                        </span>
+                        <span className="text-xs font-bold text-destructive uppercase tracking-widest">In asta ora</span>
+                        <Badge variant="outline" className="ml-auto text-[10px] gap-1 border-primary/30">
+                          <Zap className="h-3 w-3 text-primary" /> {activeItem.bid_count} offerte
+                        </Badge>
+                      </div>
+
+                      {/* Main Grid: Info | Price | Countdown */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 items-center">
+                        {/* Info */}
+                        <div>
+                          <h3 className="font-bold text-lg sm:text-xl text-foreground leading-tight">{activeItem.title}</h3>
+                          {activeItem.description && <p className="text-sm text-muted-foreground mt-1.5 line-clamp-2">{activeItem.description}</p>}
+                          <div className="flex items-center gap-3 mt-3 text-xs text-muted-foreground">
+                            <span className="px-2 py-0.5 rounded-md bg-muted/60">Da €{activeItem.starting_price}</span>
+                            {activeItem.buy_now_price && <span className="px-2 py-0.5 rounded-md bg-warning/10 text-warning font-medium">CN €{activeItem.buy_now_price}</span>}
+                          </div>
+                          {/* Reserve progress bar */}
+                          {(activeItem as any).reserve_price && (
+                            <div className="mt-3">
+                              <div className="flex items-center justify-between text-[10px] mb-1">
+                                <span className="text-muted-foreground">Riserva</span>
+                                <span className={activeItem.current_price >= (activeItem as any).reserve_price ? "text-success font-bold" : "text-destructive"}>
+                                  €{activeItem.current_price} / €{(activeItem as any).reserve_price}
+                                  {activeItem.current_price >= (activeItem as any).reserve_price ? " ✓" : ""}
+                                </span>
+                              </div>
+                              <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                <motion.div
+                                  className={`h-full rounded-full ${activeItem.current_price >= (activeItem as any).reserve_price ? "bg-success" : "bg-destructive/60"}`}
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${Math.min(100, (activeItem.current_price / (activeItem as any).reserve_price) * 100)}%` }}
+                                  transition={{ duration: 0.5 }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Price - Central Hero */}
+                        <div className="text-center py-3 sm:py-0">
+                          <p className="text-xs text-muted-foreground mb-1.5 font-medium uppercase tracking-wider">Prezzo attuale</p>
+                          <motion.div
+                            key={activeItem.current_price}
+                            initial={{ scale: 1.15, textShadow: "0 0 20px hsl(var(--primary) / 0.5)" }}
+                            animate={{ scale: 1, textShadow: "0 0 0px transparent" }}
+                            transition={{ duration: 0.4 }}
+                          >
+                            <span className="text-5xl sm:text-6xl font-black text-primary tabular-nums leading-none drop-shadow-glow">
+                              €{activeItem.current_price}
+                            </span>
+                          </motion.div>
+                          <div className="flex items-center justify-center gap-2 mt-3">
+                            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                            <motion.span key={activeItem.bid_count} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="text-sm font-bold text-foreground">
+                              {activeItem.bid_count}
+                            </motion.span>
+                            <span className="text-xs text-muted-foreground">offerte</span>
+                          </div>
+                        </div>
+
+                        {/* Countdown + Actions */}
+                        <div className="flex flex-col items-center gap-4">
+                          <CircularCountdown item={activeItem} />
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
+                            <Button size="lg" className="gap-1.5 flex-1 sm:flex-initial h-11 text-sm font-bold shadow-md" onClick={() => closeItem(activeItem, true)}>
+                              <Trophy className="h-4 w-4" /> Aggiudicato
+                            </Button>
+                            <Button size="lg" variant="outline" className="h-11 text-sm" onClick={() => closeItem(activeItem, false)}>Skip</Button>
+                          </div>
                         </div>
                       </div>
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-1">Prezzo attuale</p>
-                        <motion.p key={activeItem.current_price} initial={{ scale: 1.3 }} animate={{ scale: 1 }} className="text-4xl sm:text-5xl font-black text-primary">
-                          €{activeItem.current_price}
-                        </motion.p>
-                        <div className="flex items-center justify-center gap-1.5 mt-2">
-                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                          <motion.span key={activeItem.bid_count} initial={{ scale: 1.2 }} animate={{ scale: 1 }} className="text-sm font-bold">
-                            {activeItem.bid_count}
-                          </motion.span>
-                          <span className="text-xs text-muted-foreground">offerte</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center gap-3">
-                        <ActiveItemCountdown item={activeItem} />
-                        <div className="flex items-center gap-2">
-                          <Button size="sm" className="gap-1" onClick={() => closeItem(activeItem, true)}>
-                            <Trophy className="h-3.5 w-3.5" /> Aggiudicato
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={() => closeItem(activeItem, false)}>Skip</Button>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               )}
 
-              {/* Items + Feed Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-                {/* Items List */}
+              {/* ===== ITEMS + FEED GRID ===== */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-5">
+                {/* Products Grid */}
                 <div className="lg:col-span-2 space-y-3">
                   <h3 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
                     <Package className="h-4 w-4 text-primary" /> Prodotti ({auctionItems.length})
                   </h3>
                   {auctionItems.length === 0 ? (
-                    <Card className="border-dashed"><CardContent className="py-8 sm:py-10 text-center text-sm text-muted-foreground">Nessun prodotto. Aggiungi il primo!</CardContent></Card>
+                    <Card className="border-dashed"><CardContent className="py-10 text-center text-sm text-muted-foreground">Nessun prodotto. Aggiungi il primo!</CardContent></Card>
                   ) : (
-                    auctionItems.map(item => (
-                      <motion.div key={item.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                        <Card className={`transition-all ${
-                          item.status === "active" ? "border-destructive shadow-lg ring-1 ring-destructive/20" :
-                          item.status === "sold" ? "border-primary/30 bg-primary/5" : ""
-                        }`}>
-                          <CardContent className="p-3.5 sm:p-4">
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                                  <h4 className="font-semibold text-foreground text-sm truncate">{item.title}</h4>
-                                  {itemStatusBadge(item.status)}
-                                </div>
-                                {item.description && <p className="text-xs text-muted-foreground mb-1.5 line-clamp-1">{item.description}</p>}
-                                <div className="flex items-center gap-3 text-xs flex-wrap">
-                                  <span className="text-muted-foreground">Da €{item.starting_price}</span>
-                                  <span className="text-primary font-bold text-sm">€{item.current_price}</span>
-                                  {item.buy_now_price && <span className="text-muted-foreground">CN €{item.buy_now_price}</span>}
-                                  {(item as any).reserve_price && (
-                                    <span className={`text-xs font-medium ${item.current_price >= (item as any).reserve_price ? "text-emerald-600" : "text-destructive"}`}>
-                                      R €{(item as any).reserve_price} {item.current_price >= (item as any).reserve_price ? "✓" : "✗"}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {auctionItems.map((item, idx) => (
+                        <motion.div key={item.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}>
+                          <Card className={`transition-all h-full ${
+                            item.status === "active" ? "border-destructive shadow-lg ring-2 ring-destructive/20" :
+                            item.status === "sold" ? "border-success/40 bg-success/5" : "hover:shadow-sm"
+                          }`}>
+                            <CardContent className="p-3.5 sm:p-4 flex flex-col h-full">
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {item.status === "active" && (
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive"></span>
                                     </span>
                                   )}
-                                  <span className="text-muted-foreground flex items-center gap-0.5"><Users className="h-3 w-3" />{item.bid_count}</span>
-                                  <span className="text-muted-foreground flex items-center gap-0.5"><Timer className="h-3 w-3" />{item.duration_seconds}s</span>
+                                  <h4 className="font-semibold text-foreground text-sm leading-tight">{item.title}</h4>
                                 </div>
-
-                                {item.status === "sold" && item.winner_name && (
-                                  <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="mt-2.5 p-2.5 rounded-lg bg-primary/10 border border-primary/20">
-                                    <div className="flex items-center gap-2">
-                                      <div className="h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                                        <Trophy className="h-4 w-4 text-primary" />
-                                      </div>
-                                      <div className="flex-1 min-w-0">
-                                        <p className="font-bold text-foreground text-sm">{item.winner_name}</p>
-                                        {item.winner_email && <p className="text-xs text-muted-foreground truncate">{item.winner_email}</p>}
-                                      </div>
-                                      <div className="text-right flex-shrink-0">
-                                        <p className="font-black text-primary text-lg leading-none">€{item.current_price}</p>
-                                        <p className="text-[10px] text-muted-foreground mt-0.5">{item.bid_count} offerte</p>
-                                      </div>
-                                    </div>
-                                  </motion.div>
-                                )}
-
-                                {item.status === "unsold" && (
-                                  <div className="mt-2 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground flex items-center gap-1.5">
-                                    <Gavel className="h-3.5 w-3.5" />
-                                    {(item as any).reserve_price && item.current_price < (item as any).reserve_price ? "Riserva non raggiunta" : "Nessuna offerta valida"}
-                                  </div>
-                                )}
+                                {itemStatusBadge(item.status)}
                               </div>
-                              <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 flex-shrink-0">
+
+                              {item.description && <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{item.description}</p>}
+
+                              {/* Price row */}
+                              <div className="flex items-baseline gap-2 mb-2">
+                                <span className="text-xl font-black text-primary tabular-nums">€{item.current_price}</span>
+                                <span className="text-xs text-muted-foreground line-through">€{item.starting_price}</span>
+                              </div>
+
+                              {/* Meta row */}
+                              <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap mt-auto">
+                                {item.buy_now_price && <span className="px-1.5 py-0.5 rounded bg-warning/10 text-warning font-medium">CN €{item.buy_now_price}</span>}
+                                {(item as any).reserve_price && (
+                                  <span className={`px-1.5 py-0.5 rounded font-medium ${item.current_price >= (item as any).reserve_price ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                                    R €{(item as any).reserve_price} {item.current_price >= (item as any).reserve_price ? "✓" : "✗"}
+                                  </span>
+                                )}
+                                <span className="flex items-center gap-0.5"><Users className="h-3 w-3" />{item.bid_count}</span>
+                                <span className="flex items-center gap-0.5"><Timer className="h-3 w-3" />{item.duration_seconds}s</span>
+                              </div>
+
+                              {/* Winner */}
+                              {item.status === "sold" && item.winner_name && (
+                                <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className="mt-3 p-2.5 rounded-lg bg-success/10 border border-success/20">
+                                  <div className="flex items-center gap-2">
+                                    <Trophy className="h-4 w-4 text-success flex-shrink-0" />
+                                    <div className="min-w-0 flex-1">
+                                      <p className="font-bold text-foreground text-xs">{item.winner_name}</p>
+                                      {item.winner_email && <p className="text-[10px] text-muted-foreground truncate">{item.winner_email}</p>}
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                              {item.status === "unsold" && (
+                                <div className="mt-3 px-2.5 py-1.5 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground flex items-center gap-1.5">
+                                  <Gavel className="h-3 w-3" />
+                                  {(item as any).reserve_price && item.current_price < (item as any).reserve_price ? "Riserva non raggiunta" : "Nessuna offerta valida"}
+                                </div>
+                              )}
+
+                              {/* Actions */}
+                              <div className="flex items-center gap-1.5 mt-3 pt-2 border-t border-border/50">
                                 {selectedAuction.status === "live" && item.status === "pending" && (
-                                  <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => activateItem(item)}>
+                                  <Button size="sm" className="gap-1 h-8 text-xs flex-1" onClick={() => activateItem(item)}>
                                     <ArrowRight className="h-3 w-3" /> Avvia
                                   </Button>
                                 )}
                                 {selectedAuction.status === "live" && item.status === "active" && (
                                   <>
-                                    <Button size="sm" className="gap-1 h-7 text-xs" onClick={() => closeItem(item, true)}>
+                                    <Button size="sm" className="gap-1 h-8 text-xs flex-1" onClick={() => closeItem(item, true)}>
                                       <Trophy className="h-3 w-3" /> Aggiudicato
                                     </Button>
-                                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => closeItem(item, false)}>Skip</Button>
+                                    <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => closeItem(item, false)}>Skip</Button>
                                   </>
                                 )}
                                 {item.status === "pending" && (
-                                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => deleteItem(item.id)}>
+                                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0 ml-auto" onClick={() => deleteItem(item.id)}>
                                     <Trash2 className="h-3.5 w-3.5 text-destructive" />
                                   </Button>
                                 )}
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                {/* Live Feed */}
+                {/* ===== LIVE FEED (Redesigned) ===== */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
-                    <MessageCircle className="h-4 w-4 text-primary" /> Feed Live
-                    {activeItem && <Badge variant="outline" className="ml-auto text-[10px]">{activeItem.bid_count} offerte</Badge>}
-                  </h3>
-                  <Card className="h-[350px] sm:h-[450px] lg:h-[550px] overflow-hidden flex flex-col">
-                    <CardContent className="p-0 flex-1 overflow-y-auto">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
+                      <MessageCircle className="h-4 w-4 text-primary" /> Feed Live
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {liveBids.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] gap-1 bg-success/10 border-success/30 text-success">
+                          <Zap className="h-3 w-3" /> {liveBids.length}
+                        </Badge>
+                      )}
+                      {chatMessages.length > 0 && (
+                        <Badge variant="outline" className="text-[10px] gap-1">
+                          <MessageCircle className="h-3 w-3" /> {chatMessages.length}
+                        </Badge>
+                      )}
+                      {selectedAuction.status === "live" && (
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <Card className="h-[380px] sm:h-[480px] lg:h-[580px] overflow-hidden flex flex-col border-border/60">
+                    <CardContent className="p-0 flex-1 overflow-y-auto" ref={feedContainerRef}>
                       {(() => {
                         const feedItems: FeedItem[] = [
                           ...liveBids.map(b => ({ type: "bid" as const, data: b })),
@@ -754,20 +895,32 @@ export default function CentroAste() {
                         ].sort((a, b) => new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime());
 
                         if (feedItems.length === 0) {
-                          return <div className="flex items-center justify-center h-full text-muted-foreground text-xs">Nessuna attività ancora</div>;
+                          return (
+                            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
+                              <Radio className="h-8 w-8 opacity-30" />
+                              <p className="text-xs">In attesa di attività...</p>
+                            </div>
+                          );
                         }
 
                         return (
-                          <div className="divide-y divide-border/50">
+                          <div className="divide-y divide-border/30">
                             <AnimatePresence>
                               {feedItems.map((item, i) => {
                                 if (item.type === "bid") {
                                   const bid = item.data;
+                                  const isTop = i === 0;
                                   return (
-                                    <motion.div key={`bid-${bid.id}`} initial={{ opacity: 0, x: 15, backgroundColor: "hsl(var(--primary) / 0.1)" }} animate={{ opacity: 1, x: 0, backgroundColor: "transparent" }} transition={{ duration: 0.3 }} className="px-3 py-2.5">
+                                    <motion.div
+                                      key={`bid-${bid.id}`}
+                                      initial={{ opacity: 0, x: 20 }}
+                                      animate={{ opacity: 1, x: 0 }}
+                                      transition={{ duration: 0.3 }}
+                                      className={`px-3 py-2.5 ${isTop ? "bg-success/5" : ""}`}
+                                    >
                                       <div className="flex items-center gap-2">
                                         <Avatar className="h-7 w-7 flex-shrink-0">
-                                          <AvatarFallback className="text-[9px] font-bold bg-emerald-500/20 text-emerald-600">
+                                          <AvatarFallback className="text-[9px] font-bold bg-success/15 text-success border border-success/20">
                                             {bid.bidder_name.slice(0, 2).toUpperCase()}
                                           </AvatarFallback>
                                         </Avatar>
@@ -777,7 +930,9 @@ export default function CentroAste() {
                                             {new Date(bid.created_at).toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                                           </span>
                                         </div>
-                                        <span className={`font-bold text-sm tabular-nums ${i === 0 ? "text-primary" : "text-foreground"}`}>€{bid.amount}</span>
+                                        <span className={`font-bold text-sm tabular-nums px-2 py-0.5 rounded-md ${isTop ? "bg-success/15 text-success" : "text-foreground"}`}>
+                                          €{bid.amount}
+                                        </span>
                                       </div>
                                     </motion.div>
                                   );
@@ -788,11 +943,11 @@ export default function CentroAste() {
                                     <motion.div key={`chat-${chat.id}`} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3 }} className="px-3 py-2.5">
                                       <div className="flex items-start gap-2">
                                         <Avatar className="h-7 w-7 flex-shrink-0 mt-0.5">
-                                          <AvatarFallback className={`text-[9px] font-bold ${isCentro ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+                                          <AvatarFallback className={`text-[9px] font-bold ${isCentro ? "bg-primary/15 text-primary border border-primary/20" : "bg-muted text-muted-foreground"}`}>
                                             {chat.sender_name.slice(0, 1).toUpperCase()}
                                           </AvatarFallback>
                                         </Avatar>
-                                        <div className="flex-1 min-w-0">
+                                        <div className={`flex-1 min-w-0 ${isCentro ? "bg-primary/5 rounded-lg px-2.5 py-1.5 border border-primary/10" : ""}`}>
                                           <div className="flex items-center gap-1.5">
                                             <span className={`font-medium text-xs ${isCentro ? "text-primary" : "text-foreground"}`}>{chat.sender_name}</span>
                                             {isCentro && <Badge className="text-[8px] h-3.5 px-1 bg-primary/10 text-primary border-0">Host</Badge>}
@@ -815,11 +970,11 @@ export default function CentroAste() {
                     </CardContent>
                     {/* Chat input */}
                     {selectedAuction.status === "live" && (
-                      <div className="border-t border-border p-2">
+                      <div className="border-t border-border p-2.5 bg-muted/30">
                         <form onSubmit={e => { e.preventDefault(); sendChatMessage(); }} className="flex items-center gap-2">
-                          <Input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Rispondi alla chat..." className="h-8 text-xs flex-1" />
-                          <Button type="submit" size="sm" className="h-8 w-8 p-0" disabled={!chatInput.trim()}>
-                            <Send className="h-3.5 w-3.5" />
+                          <Input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Rispondi come Host..." className="h-9 text-xs flex-1 bg-card" />
+                          <Button type="submit" size="sm" className="h-9 w-9 p-0" disabled={!chatInput.trim()}>
+                            <Send className="h-4 w-4" />
                           </Button>
                         </form>
                       </div>
@@ -828,7 +983,7 @@ export default function CentroAste() {
                 </div>
               </div>
 
-              {/* Sales Summary */}
+              {/* ===== SALES SUMMARY ===== */}
               {sales.length > 0 && (
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center justify-between gap-2">
@@ -905,10 +1060,10 @@ export default function CentroAste() {
                     </div>
                   </Card>
                   {/* Sales totals */}
-                  <div className="flex items-center justify-end gap-4 text-sm">
-                    <span className="text-muted-foreground">Totale vendite: <span className="font-bold text-foreground">{sales.length}</span></span>
+                  <div className="flex items-center justify-end gap-4 text-sm flex-wrap">
+                    <span className="text-muted-foreground">Totale: <span className="font-bold text-foreground">{sales.length}</span></span>
                     <span className="text-muted-foreground">Incasso: <span className="font-bold text-primary">€{sales.reduce((s, x) => s + x.sale_price, 0).toFixed(2)}</span></span>
-                    <span className="text-muted-foreground">Da evadere: <span className="font-bold text-amber-600">{sales.filter(s => s.fulfillment_status === "pending").length}</span></span>
+                    <span className="text-muted-foreground">Da evadere: <span className="font-bold text-warning">{sales.filter(s => s.fulfillment_status === "pending").length}</span></span>
                   </div>
                 </div>
               )}
