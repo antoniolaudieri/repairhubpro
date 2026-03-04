@@ -413,6 +413,85 @@ export type Database = {
           },
         ]
       }
+      auction_sales: {
+        Row: {
+          auction_id: string
+          auction_item_id: string
+          centro_id: string
+          created_at: string
+          fulfilled_at: string | null
+          fulfillment_notes: string | null
+          fulfillment_status: Database["public"]["Enums"]["auction_fulfillment_status"]
+          id: string
+          product_description: string | null
+          product_title: string
+          sale_price: number
+          sold_at: string
+          updated_at: string
+          winner_email: string | null
+          winner_name: string
+          winner_user_id: string | null
+        }
+        Insert: {
+          auction_id: string
+          auction_item_id: string
+          centro_id: string
+          created_at?: string
+          fulfilled_at?: string | null
+          fulfillment_notes?: string | null
+          fulfillment_status?: Database["public"]["Enums"]["auction_fulfillment_status"]
+          id?: string
+          product_description?: string | null
+          product_title: string
+          sale_price?: number
+          sold_at?: string
+          updated_at?: string
+          winner_email?: string | null
+          winner_name: string
+          winner_user_id?: string | null
+        }
+        Update: {
+          auction_id?: string
+          auction_item_id?: string
+          centro_id?: string
+          created_at?: string
+          fulfilled_at?: string | null
+          fulfillment_notes?: string | null
+          fulfillment_status?: Database["public"]["Enums"]["auction_fulfillment_status"]
+          id?: string
+          product_description?: string | null
+          product_title?: string
+          sale_price?: number
+          sold_at?: string
+          updated_at?: string
+          winner_email?: string | null
+          winner_name?: string
+          winner_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auction_sales_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "live_auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sales_auction_item_id_fkey"
+            columns: ["auction_item_id"]
+            isOneToOne: false
+            referencedRelation: "auction_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "auction_sales_centro_id_fkey"
+            columns: ["centro_id"]
+            isOneToOne: false
+            referencedRelation: "centri_assistenza"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_logos: {
         Row: {
           brand_name: string
@@ -5951,6 +6030,12 @@ export type Database = {
         | "centro_admin"
         | "centro_tech"
         | "platform_admin"
+      auction_fulfillment_status:
+        | "pending"
+        | "contacted"
+        | "shipped"
+        | "delivered"
+        | "cancelled"
       auction_item_status: "pending" | "active" | "sold" | "unsold"
       auction_status: "scheduled" | "live" | "ended" | "cancelled"
       device_condition:
@@ -6130,6 +6215,13 @@ export const Constants = {
         "centro_admin",
         "centro_tech",
         "platform_admin",
+      ],
+      auction_fulfillment_status: [
+        "pending",
+        "contacted",
+        "shipped",
+        "delivered",
+        "cancelled",
       ],
       auction_item_status: ["pending", "active", "sold", "unsold"],
       auction_status: ["scheduled", "live", "ended", "cancelled"],
