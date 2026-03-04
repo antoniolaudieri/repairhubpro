@@ -40,6 +40,8 @@ interface AuctionData {
   viewer_count: number;
   centro_id: string;
   stream_url: string | null;
+  cover_url: string | null;
+  scheduled_at: string | null;
 }
 
 interface CentroInfo {
