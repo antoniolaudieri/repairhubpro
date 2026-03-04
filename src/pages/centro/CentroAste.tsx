@@ -725,9 +725,9 @@ export default function CentroAste() {
                 </div>
 
                 {/* Live Feed */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <h3 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
-                    <MessageCircle className="h-4 w-4" /> Feed Live
+                    <MessageCircle className="h-4 w-4 text-primary" /> Feed Live
                     {activeItem && <Badge variant="outline" className="ml-auto text-[10px]">{activeItem.bid_count} offerte</Badge>}
                   </h3>
                   <Card className="h-[350px] sm:h-[450px] lg:h-[550px] overflow-hidden flex flex-col">
