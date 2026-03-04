@@ -105,10 +105,11 @@ export default function CentroAste() {
     if (centroId) fetchAuctions();
   }, [centroId]);
 
-  // Realtime for selected auction - bids, items, AND auction status
+  // Realtime for selected auction - bids, items, chat, AND auction status
   useEffect(() => {
     if (!selectedAuction) return;
     fetchItems(selectedAuction.id);
+    fetchChatMessages(selectedAuction.id);
 
     const channel = supabase
       .channel(`centro-auction-${selectedAuction.id}`)
@@ -124,6 +125,15 @@ export default function CentroAste() {
               ? { ...item, current_price: bid.amount, bid_count: item.bid_count + 1 }
               : item
           ));
+        }
+      )
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "auction_chat_messages", filter: `auction_id=eq.${selectedAuction.id}` },
+        (payload) => {
+          const msg = payload.new as ChatMessage;
+          setChatMessages(prev => {
+            if (prev.some(m => m.id === msg.id)) return prev;
+            return [msg, ...prev];
+          });
         }
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "auction_items", filter: `auction_id=eq.${selectedAuction.id}` },
