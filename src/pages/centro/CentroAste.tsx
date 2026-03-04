@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
@@ -14,7 +14,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Gavel, Plus, Play, Square, Eye, Users, Package,
-  Trash2, ChevronRight, Radio, Trophy, ArrowRight, Timer, Copy, ExternalLink
+  Trash2, ChevronRight, Radio, Trophy, ArrowRight, Timer, Copy, ExternalLink, Send, MessageCircle
 } from "lucide-react";
 import { AuctionBroadcast } from "@/components/centro/AuctionBroadcast";
 
