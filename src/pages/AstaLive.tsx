@@ -161,18 +161,34 @@ function FeedBubble({ item }: { item: FeedItem }) {
     const initials = bid.bidder_name.slice(0, 2).toUpperCase();
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20, scale: 0.9 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        initial={{ opacity: 0, x: -40, scale: 0.8 }}
+        animate={{ opacity: 1, x: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 500, damping: 30 }}
         className="flex items-center gap-2 px-2.5 py-1"
       >
-        <div className="h-6 w-6 rounded-full bg-green-500/30 flex items-center justify-center flex-shrink-0">
-          <span className="text-[9px] font-bold text-green-300">{initials}</span>
-        </div>
-        <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-3 py-1.5 flex items-center gap-2">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 600, damping: 15, delay: 0.1 }}
+          className="h-7 w-7 rounded-full bg-gradient-to-br from-emerald-400/40 to-green-600/30 flex items-center justify-center flex-shrink-0 ring-1 ring-emerald-400/30"
+        >
+          <span className="text-[9px] font-bold text-emerald-300">{initials}</span>
+        </motion.div>
+        <motion.div
+          initial={{ scale: 0.9 }}
+          animate={{ scale: 1 }}
+          className="bg-gradient-to-r from-emerald-900/50 to-black/40 backdrop-blur-md rounded-2xl px-3 py-1.5 flex items-center gap-2 border border-emerald-500/20"
+        >
           <span className="font-semibold text-xs text-white/90">{bid.bidder_name}</span>
-          <span className="font-black text-sm tabular-nums text-green-400">€{bid.amount}</span>
-        </div>
+          <motion.span
+            initial={{ scale: 1.3 }}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 10 }}
+            className="font-black text-sm tabular-nums text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"
+          >
+            €{bid.amount}
+          </motion.span>
+        </motion.div>
       </motion.div>
     );
   }
@@ -181,17 +197,17 @@ function FeedBubble({ item }: { item: FeedItem }) {
   const initials = chat.sender_name.slice(0, 1).toUpperCase();
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20, scale: 0.9 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      initial={{ opacity: 0, x: -30, scale: 0.9 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
       className="flex items-start gap-2 px-2.5 py-1"
     >
-      <div className="h-6 w-6 rounded-full bg-white/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-        <span className="text-[9px] font-bold text-white/70">{initials}</span>
+      <div className="h-6 w-6 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-0.5 ring-1 ring-white/10">
+        <span className="text-[9px] font-bold text-white/60">{initials}</span>
       </div>
-      <div className="bg-black/40 backdrop-blur-sm rounded-2xl px-3 py-1.5 max-w-[85%]">
-        <span className="font-semibold text-xs text-white/70">{chat.sender_name}</span>
-        <p className="text-xs text-white/90 leading-snug">{chat.message}</p>
+      <div className="bg-white/[0.08] backdrop-blur-md rounded-2xl px-3 py-1.5 max-w-[85%] border border-white/[0.06]">
+        <span className="font-semibold text-[10px] text-white/50">{chat.sender_name}</span>
+        <p className="text-xs text-white/85 leading-snug">{chat.message}</p>
       </div>
     </motion.div>
   );
@@ -449,6 +465,7 @@ export default function AstaLive() {
   const [authOpen, setAuthOpen] = useState(false);
   const [customBidOpen, setCustomBidOpen] = useState(false);
   const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const feedScrollRef = useRef<HTMLDivElement>(null);
   const [isMuted, setIsMuted] = useState(true);
   const [presenceCount, setPresenceCount] = useState(0);
   const [winnerOverlay, setWinnerOverlay] = useState<{ name: string | null; price: number; sold: boolean } | null>(null);
@@ -600,6 +617,13 @@ export default function AstaLive() {
       void video.play().catch(() => {});
     });
   }, [remoteStream]);
+
+  // Auto-scroll feed to bottom (newest) when new messages arrive
+  useEffect(() => {
+    if (feedScrollRef.current) {
+      feedScrollRef.current.scrollTop = feedScrollRef.current.scrollHeight;
+    }
+  }, [feedItems.length]);
 
   // --- Actions ---
   const requireAuth = (cb: () => void) => {
@@ -782,10 +806,14 @@ export default function AstaLive() {
       </AnimatePresence>
 
       {/* ===== CHAT + BID FEED (left side overlay) ===== */}
-      <div className="absolute left-0 bottom-[280px] z-20 w-[80%] max-w-[340px] max-h-[30vh] overflow-y-auto pointer-events-auto overscroll-contain scrollbar-hide">
-        <div className="flex flex-col-reverse">
+      <div
+        ref={feedScrollRef}
+        className="absolute left-0 bottom-[280px] z-20 w-[85%] max-w-[360px] max-h-[35vh] overflow-y-auto pointer-events-auto overscroll-contain scrollbar-hide"
+        style={{ maskImage: "linear-gradient(to bottom, transparent 0%, black 15%)", WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 15%)" }}
+      >
+        <div className="flex flex-col-reverse gap-0.5 pb-1">
           <AnimatePresence>
-            {feedItems.slice(0, 30).map((item) => (
+            {feedItems.slice(0, 40).map((item) => (
               <FeedBubble key={item.data.id} item={item} />
             ))}
           </AnimatePresence>
