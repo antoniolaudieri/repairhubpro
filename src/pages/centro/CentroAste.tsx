@@ -165,8 +165,18 @@ export default function CentroAste() {
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [selectedAuction?.id]);
+    // Polling fallback: refresh bids + chat every 4s during live to catch missed realtime events
+    const isLive = selectedAuction.status === "live";
+    const pollInterval = isLive ? setInterval(() => {
+      fetchItems(selectedAuction.id);
+      fetchChatMessages(selectedAuction.id);
+    }, 4000) : null;
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [selectedAuction?.id, selectedAuction?.status]);
 
   const fetchCentroId = async () => {
     if (!user) return;
