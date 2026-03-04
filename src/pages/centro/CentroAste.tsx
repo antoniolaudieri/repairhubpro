@@ -59,6 +59,20 @@ interface AuctionBid {
   created_at: string;
 }
 
+interface ChatMessage {
+  id: string;
+  auction_id: string;
+  sender_name: string;
+  message: string;
+  created_at: string;
+  user_id: string | null;
+}
+
+// Unified feed item
+type FeedItem =
+  | { type: "bid"; data: AuctionBid }
+  | { type: "chat"; data: ChatMessage };
+
 export default function CentroAste() {
   const { user } = useAuth();
   const [centroId, setCentroId] = useState<string | null>(null);
