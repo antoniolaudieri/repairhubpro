@@ -618,6 +618,13 @@ export default function AstaLive() {
     });
   }, [remoteStream]);
 
+  // Auto-scroll feed to bottom (newest) when new messages arrive
+  useEffect(() => {
+    if (feedScrollRef.current) {
+      feedScrollRef.current.scrollTop = feedScrollRef.current.scrollHeight;
+    }
+  }, [feedItems.length]);
+
   // --- Actions ---
   const requireAuth = (cb: () => void) => {
     if (!user) { setAuthOpen(true); return; }
