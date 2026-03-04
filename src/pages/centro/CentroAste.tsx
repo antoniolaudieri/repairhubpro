@@ -419,14 +419,17 @@ export default function CentroAste() {
   return (
     <CentroLayout>
       <PageTransition>
-        <div className="space-y-4">
+        <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
           {/* Page Header */}
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
-                <Gavel className="h-6 w-6 text-primary flex-shrink-0" /> Aste Live
+                <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Gavel className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+                </div>
+                Aste Live
               </h1>
-              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Gestisci le tue aste in diretta</p>
+              <p className="text-xs sm:text-sm text-muted-foreground mt-1 ml-12">Gestisci le tue aste in diretta</p>
             </div>
             <Dialog open={createOpen} onOpenChange={setCreateOpen}>
               <DialogTrigger asChild>
@@ -446,18 +449,23 @@ export default function CentroAste() {
 
           {!selectedAuction ? (
             /* ===== AUCTION LIST ===== */
-            <div className="grid gap-3">
+            <div className="grid gap-3 sm:gap-4">
               {loading ? (
-                <div className="text-center py-12 text-muted-foreground text-sm">Caricamento...</div>
+                <div className="text-center py-16 text-muted-foreground text-sm">Caricamento...</div>
               ) : auctions.length === 0 ? (
-                <Card className="border-dashed"><CardContent className="py-10 text-center"><Gavel className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" /><p className="text-sm text-muted-foreground">Nessuna asta. Crea la tua prima asta live!</p></CardContent></Card>
+                <Card className="border-dashed"><CardContent className="py-12 sm:py-16 text-center">
+                  <div className="h-14 w-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                    <Gavel className="h-7 w-7 text-muted-foreground/40" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">Nessuna asta. Crea la tua prima asta live!</p>
+                </CardContent></Card>
               ) : (
                 auctions.map((auction, i) => (
                   <motion.div key={auction.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}>
-                    <Card className="hover:shadow-md transition-shadow cursor-pointer active:scale-[0.99]" onClick={() => setSelectedAuction(auction)}>
-                      <CardContent className="p-3 sm:p-4 flex items-center justify-between gap-3">
+                    <Card className="hover:shadow-md transition-all cursor-pointer active:scale-[0.99]" onClick={() => setSelectedAuction(auction)}>
+                      <CardContent className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <div className="h-11 w-11 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                             {auction.status === "live" ? <Radio className="h-5 w-5 text-destructive animate-pulse" /> : <Gavel className="h-5 w-5 text-primary" />}
                           </div>
                           <div className="min-w-0">
@@ -492,10 +500,10 @@ export default function CentroAste() {
             </div>
           ) : (
             /* ===== AUCTION DETAIL ===== */
-            <div className="space-y-4">
+            <div className="space-y-4 sm:space-y-6">
               {/* Back + Title */}
               <div className="flex items-center gap-2 flex-wrap">
-                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setSelectedAuction(null); setAuctionItems([]); setLiveBids([]); setSales([]); }}>
+                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1" onClick={() => { setSelectedAuction(null); setAuctionItems([]); setLiveBids([]); setSales([]); }}>
                   ← Indietro
                 </Button>
                 <h2 className="text-base sm:text-lg font-bold text-foreground truncate">{selectedAuction.title}</h2>
@@ -503,21 +511,21 @@ export default function CentroAste() {
               </div>
 
               {/* Stats Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                 {[
-                  { label: "Prodotti", value: auctionItems.length, icon: Package, color: "text-blue-500", bgColor: "bg-blue-500/10" },
-                  { label: "Venduti", value: soldItems.length, icon: Trophy, color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
+                  { label: "Prodotti", value: auctionItems.length, icon: Package, color: "text-primary", bgColor: "bg-primary/10" },
+                  { label: "Venduti", value: soldItems.length, icon: Trophy, color: "text-primary", bgColor: "bg-primary/10" },
                   { label: "Incasso", value: `€${totalRevenue.toFixed(0)}`, icon: DollarSign, color: "text-primary", bgColor: "bg-primary/10" },
-                  { label: "Spettatori", value: selectedAuction.viewer_count, icon: Eye, color: "text-amber-500", bgColor: "bg-amber-500/10" },
+                  { label: "Spettatori", value: selectedAuction.viewer_count, icon: Eye, color: "text-primary", bgColor: "bg-primary/10" },
                 ].map((stat) => (
-                  <Card key={stat.label} className="bg-card/50 backdrop-blur-sm">
-                    <CardContent className="p-3 sm:p-4">
+                  <Card key={stat.label} className="bg-card/80 backdrop-blur-sm">
+                    <CardContent className="p-3.5 sm:p-5">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-lg ${stat.bgColor}`}>
+                        <div className={`p-2.5 rounded-xl ${stat.bgColor}`}>
                           <stat.icon className={`h-5 w-5 ${stat.color}`} />
                         </div>
                         <div>
-                          <p className="text-xl sm:text-2xl font-bold">{stat.value}</p>
+                          <p className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</p>
                           <p className="text-[11px] text-muted-foreground">{stat.label}</p>
                         </div>
                       </div>
@@ -627,14 +635,14 @@ export default function CentroAste() {
               )}
 
               {/* Items + Feed Grid */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                 {/* Items List */}
-                <div className="lg:col-span-2 space-y-2">
+                <div className="lg:col-span-2 space-y-3">
                   <h3 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
-                    <Package className="h-4 w-4" /> Prodotti ({auctionItems.length})
+                    <Package className="h-4 w-4 text-primary" /> Prodotti ({auctionItems.length})
                   </h3>
                   {auctionItems.length === 0 ? (
-                    <Card className="border-dashed"><CardContent className="py-6 text-center text-sm text-muted-foreground">Nessun prodotto. Aggiungi il primo!</CardContent></Card>
+                    <Card className="border-dashed"><CardContent className="py-8 sm:py-10 text-center text-sm text-muted-foreground">Nessun prodotto. Aggiungi il primo!</CardContent></Card>
                   ) : (
                     auctionItems.map(item => (
                       <motion.div key={item.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
@@ -642,7 +650,7 @@ export default function CentroAste() {
                           item.status === "active" ? "border-destructive shadow-lg ring-1 ring-destructive/20" :
                           item.status === "sold" ? "border-primary/30 bg-primary/5" : ""
                         }`}>
-                          <CardContent className="p-3">
+                          <CardContent className="p-3.5 sm:p-4">
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 mb-1 flex-wrap">
@@ -717,9 +725,9 @@ export default function CentroAste() {
                 </div>
 
                 {/* Live Feed */}
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <h3 className="font-semibold text-foreground text-sm flex items-center gap-1.5">
-                    <MessageCircle className="h-4 w-4" /> Feed Live
+                    <MessageCircle className="h-4 w-4 text-primary" /> Feed Live
                     {activeItem && <Badge variant="outline" className="ml-auto text-[10px]">{activeItem.bid_count} offerte</Badge>}
                   </h3>
                   <Card className="h-[350px] sm:h-[450px] lg:h-[550px] overflow-hidden flex flex-col">
@@ -807,7 +815,7 @@ export default function CentroAste() {
 
               {/* Sales Summary */}
               {sales.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-semibold text-foreground flex items-center gap-2">
                       <ShoppingBag className="h-4 w-4 text-primary" /> Riepilogo Vendite ({sales.length})
