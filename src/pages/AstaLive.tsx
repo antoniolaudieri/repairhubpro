@@ -657,11 +657,7 @@ export default function AstaLive() {
       toast({ title: "Errore", description: error.message, variant: "destructive" });
       return;
     }
-    // Update current_price and bid_count in DB so closeItem picks them up
-    await supabase.from("auction_items").update({
-      current_price: amount,
-      bid_count: activeItem.bid_count + 1,
-    } as any).eq("id", activeItem.id);
+    // DB trigger sync_auction_bid_to_item automatically updates current_price and bid_count
   };
 
   const sendChat = async () => {
