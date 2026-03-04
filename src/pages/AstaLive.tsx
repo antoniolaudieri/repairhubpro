@@ -584,20 +584,22 @@ export default function AstaLive() {
     return () => clearInterval(interval);
   }, [activeItem?.started_at, activeItem?.duration_seconds]);
 
-  // Attach remote WebRTC stream
+  // Attach remote WebRTC stream — only when stream changes
   useEffect(() => {
-    if (cameraVideoRef.current && remoteStream) {
-      const video = cameraVideoRef.current;
-      video.srcObject = remoteStream;
-      video.muted = isMuted;
-      void video.play().catch(() => {
-        // Autoplay blocked — keep muted and retry
-        video.muted = true;
-        setIsMuted(true);
-        void video.play().catch(() => {});
-      });
-    }
-  }, [remoteStream, isMuted]);
+    if (!cameraVideoRef.current || !remoteStream) return;
+    const video = cameraVideoRef.current;
+    video.srcObject = remoteStream;
+    // Try unmuted first (works on desktop / after user gesture)
+    video.muted = false;
+    void video.play().then(() => {
+      setIsMuted(false);
+    }).catch(() => {
+      // Autoplay with audio blocked — fallback to muted
+      video.muted = true;
+      setIsMuted(true);
+      void video.play().catch(() => {});
+    });
+  }, [remoteStream]);
 
   // --- Actions ---
   const requireAuth = (cb: () => void) => {
