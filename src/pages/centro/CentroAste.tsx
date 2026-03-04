@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -244,6 +245,10 @@ export default function CentroAste() {
   const [coverPreview, setCoverPreview] = useState("");
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const [reopenAuction, setReopenAuction] = useState<Auction | null>(null);
+  const [reopenDate, setReopenDate] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const [autoCloseTriggered, setAutoCloseTriggered] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -459,7 +464,38 @@ export default function CentroAste() {
     if (selectedAuction?.id === auction.id) setSelectedAuction({ ...auction, status: "ended" });
   };
 
-  // Image upload handler
+  const reopenAuctionFn = async () => {
+    if (!reopenAuction) return;
+    const { error } = await supabase.from("live_auctions").update({
+      status: "scheduled" as any,
+      scheduled_at: reopenDate || null,
+      started_at: null,
+      ended_at: null,
+    }).eq("id", reopenAuction.id);
+    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+    // Reset all items to pending
+    await supabase.from("auction_items").update({ status: "pending" as any, started_at: null, ended_at: null, winner_name: null, winner_email: null, winner_user_id: null } as any).eq("auction_id", reopenAuction.id);
+    toast({ title: "Asta riaperta!", description: "L'asta è stata riprogrammata." });
+    setReopenOpen(false); setReopenAuction(null); setReopenDate("");
+    fetchAuctions();
+    if (selectedAuction?.id === reopenAuction.id) setSelectedAuction(null);
+  };
+
+  const deleteAuction = async (auctionId: string) => {
+    // Delete related data first
+    await supabase.from("auction_sales").delete().eq("auction_id", auctionId);
+    await supabase.from("auction_bids").delete().eq("auction_id", auctionId);
+    await supabase.from("auction_chat_messages").delete().eq("auction_id", auctionId);
+    await supabase.from("auction_items").delete().eq("auction_id", auctionId);
+    const { error } = await supabase.from("live_auctions").delete().eq("id", auctionId);
+    if (error) { toast({ title: "Errore", description: error.message, variant: "destructive" }); return; }
+    toast({ title: "Asta eliminata" });
+    setDeleteConfirmId(null);
+    if (selectedAuction?.id === auctionId) setSelectedAuction(null);
+    fetchAuctions();
+  };
+
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -755,7 +791,7 @@ export default function CentroAste() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
                           {auction.status === "scheduled" && (
                             <Button size="sm" className="gap-1 h-8 text-xs" onClick={e => { e.stopPropagation(); goLive(auction); }}>
                               <Play className="h-3.5 w-3.5" /> Live
@@ -765,6 +801,16 @@ export default function CentroAste() {
                             <Button size="sm" variant="destructive" className="gap-1 h-8 text-xs" onClick={e => { e.stopPropagation(); endAuction(auction); }}>
                               <Square className="h-3.5 w-3.5" /> Stop
                             </Button>
+                          )}
+                          {auction.status === "ended" && (
+                            <>
+                              <Button size="sm" variant="outline" className="gap-1 h-8 text-xs" onClick={e => { e.stopPropagation(); setReopenAuction(auction); setReopenDate(""); setReopenOpen(true); }}>
+                                <Play className="h-3.5 w-3.5" /> Riapri
+                              </Button>
+                              <Button size="sm" variant="destructive" className="gap-1 h-8 text-xs" onClick={e => { e.stopPropagation(); setDeleteConfirmId(auction.id); }}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
                           )}
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </div>
@@ -842,6 +888,16 @@ export default function CentroAste() {
                     </Button>
                     <Button size="sm" variant="ghost" asChild>
                       <a href={publicUrl} target="_blank" rel="noopener"><ExternalLink className="h-3.5 w-3.5" /></a>
+                    </Button>
+                  </>
+                )}
+                {selectedAuction.status === "ended" && (
+                  <>
+                    <Button size="sm" variant="outline" className="gap-1.5" onClick={() => { setReopenAuction(selectedAuction); setReopenDate(""); setReopenOpen(true); }}>
+                      <Play className="h-4 w-4" /> Riapri Asta
+                    </Button>
+                    <Button size="sm" variant="destructive" className="gap-1.5" onClick={() => setDeleteConfirmId(selectedAuction.id)}>
+                      <Trash2 className="h-4 w-4" /> Elimina
                     </Button>
                   </>
                 )}
@@ -1490,6 +1546,46 @@ export default function CentroAste() {
             </div>
           )}
         </div>
+
+        {/* Reopen Auction Dialog */}
+        <Dialog open={reopenOpen} onOpenChange={setReopenOpen}>
+          <DialogContent className="max-w-[95vw] sm:max-w-sm">
+            <DialogHeader><DialogTitle>Riapri Asta</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Riprogramma <strong>{reopenAuction?.title}</strong> con una nuova data. Tutti i lotti verranno resettati.
+              </p>
+              <div>
+                <Label>Nuova data programmata</Label>
+                <Input type="datetime-local" value={reopenDate} onChange={e => setReopenDate(e.target.value)} />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" size="sm" onClick={() => setReopenOpen(false)}>Annulla</Button>
+                <Button size="sm" className="gap-1.5" onClick={reopenAuctionFn}>
+                  <Play className="h-3.5 w-3.5" /> Riapri
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Auction Confirm Dialog */}
+        <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Eliminare questa asta?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Verranno eliminati tutti i prodotti, offerte, chat e vendite associate. Questa azione è irreversibile.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteConfirmId && deleteAuction(deleteConfirmId)}>
+                <Trash2 className="h-4 w-4 mr-1.5" /> Elimina
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </PageTransition>
     </CentroLayout>
   );
