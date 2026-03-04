@@ -643,6 +643,7 @@ export default function AstaLive() {
     <div className="h-[100dvh] w-full relative overflow-hidden bg-black">
       <InlineAuthDialog open={authOpen} onOpenChange={setAuthOpen} onSuccess={() => setAuthOpen(false)} />
       <CustomBidDialog open={customBidOpen} onOpenChange={setCustomBidOpen} minBid={minBid} onBid={(amount) => requireAuth(() => placeBid(amount))} />
+      <AuctionShareDialog open={shareOpen} onOpenChange={setShareOpen} auctionUrl={auctionUrl} centroName={centro?.business_name || ""} auctionTitle={auction?.title || ""} />
 
       {/* ===== FULLSCREEN VIDEO BACKGROUND ===== */}
       <div className="absolute inset-0 z-0">
