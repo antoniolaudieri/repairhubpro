@@ -792,8 +792,8 @@ export default function AstaLive() {
                   >
                     Custom
                   </button>
-                  {/* Swipe to bid */}
-                  <SwipeBidButton amount={minBid} onBid={() => requireAuth(() => placeBid(minBid))} />
+                  {/* Tap to bid */}
+                  <TapBidButton amount={minBid} onBid={() => requireAuth(() => placeBid(minBid))} />
                 </div>
                 {/* Buy Now */}
                 {activeItem.buy_now_price && (
