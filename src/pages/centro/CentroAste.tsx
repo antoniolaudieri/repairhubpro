@@ -244,6 +244,10 @@ export default function CentroAste() {
   const [coverPreview, setCoverPreview] = useState("");
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const [reopenAuction, setReopenAuction] = useState<Auction | null>(null);
+  const [reopenDate, setReopenDate] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const [autoCloseTriggered, setAutoCloseTriggered] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
