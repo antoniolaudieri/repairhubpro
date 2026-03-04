@@ -46,6 +46,20 @@ import { PushNotificationSettings } from "@/components/notifications/PushNotific
 import { useCustomerLoyaltyCards } from "@/hooks/useLoyaltyCard";
 import { LoyaltyCardDisplay } from "@/components/loyalty/LoyaltyCardDisplay";
 import { AndroidAppDownloadWidget } from "@/components/customer/AndroidAppDownloadWidget";
+import { Gavel, Trophy as TrophyIcon } from "lucide-react";
+
+interface AuctionWin {
+  id: string;
+  product_title: string;
+  product_description: string | null;
+  sale_price: number;
+  sold_at: string;
+  fulfillment_status: string;
+  fulfillment_notes: string | null;
+  auction_item: {
+    image_url: string | null;
+  } | null;
+}
 
 interface Repair {
   id: string;
