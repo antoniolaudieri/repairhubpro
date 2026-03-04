@@ -35,6 +35,7 @@ interface Auction {
   created_at: string;
   centro_id: string;
   stream_url: string | null;
+  cover_url: string | null;
 }
 
 interface AuctionItem {
