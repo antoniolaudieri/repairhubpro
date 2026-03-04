@@ -275,14 +275,25 @@ export default function CentroAste() {
   };
 
   const closeItem = async (item: AuctionItem, sold: boolean) => {
-    const reservePrice = (item as any).reserve_price as number | null;
-    const reserveMet = !reservePrice || item.current_price >= reservePrice;
-    const finalSold = sold && reserveMet && item.bid_count > 0;
+    // Always fetch the latest item data from DB to get accurate current_price/bid_count
+    const { data: freshItem } = await supabase.from("auction_items").select("*").eq("id", item.id).single();
+    const itemData = freshItem || item;
+    
+    // Also fetch top bid directly from auction_bids as source of truth
+    const { data: topBid } = await supabase.from("auction_bids").select("*").eq("item_id", item.id).order("amount", { ascending: false }).limit(1).single();
+    
+    const actualPrice = topBid ? topBid.amount : (itemData as any).current_price || 0;
+    const hasBids = !!topBid;
+    
+    const reservePrice = (itemData as any).reserve_price as number | null;
+    const reserveMet = !reservePrice || actualPrice >= reservePrice;
+    const finalSold = sold && reserveMet && hasBids;
 
-    const update: any = { status: finalSold ? "sold" : "unsold", ended_at: new Date().toISOString() };
-    if (finalSold) {
-      const { data: topBid } = await supabase.from("auction_bids").select("*").eq("item_id", item.id).order("amount", { ascending: false }).limit(1).single();
-      if (topBid) { update.winner_name = topBid.bidder_name; update.winner_email = topBid.bidder_email; update.winner_user_id = topBid.user_id; }
+    const update: any = { status: finalSold ? "sold" : "unsold", ended_at: new Date().toISOString(), current_price: actualPrice };
+    if (finalSold && topBid) {
+      update.winner_name = topBid.bidder_name;
+      update.winner_email = topBid.bidder_email;
+      update.winner_user_id = topBid.user_id;
     }
     await supabase.from("auction_items").update(update).eq("id", item.id);
 
@@ -294,16 +305,16 @@ export default function CentroAste() {
         centro_id: centroId,
         product_title: item.title,
         product_description: item.description,
-        sale_price: item.current_price,
+        sale_price: actualPrice,
         winner_name: update.winner_name || "N/A",
         winner_email: update.winner_email || null,
         fulfillment_status: "pending" as any,
         sold_at: new Date().toISOString(),
       });
       fetchSales(selectedAuction.id);
-      toast({ title: `🏆 Venduto a ${update.winner_name || "N/A"}!`, description: `Prezzo finale: €${item.current_price}` });
+      toast({ title: `🏆 Venduto a ${update.winner_name || "N/A"}!`, description: `Prezzo finale: €${actualPrice}` });
     } else if (sold && !reserveMet) {
-      toast({ title: "Riserva non raggiunta", description: `Il prezzo €${item.current_price} non ha raggiunto la riserva.`, variant: "destructive" });
+      toast({ title: "Riserva non raggiunta", description: `Il prezzo €${actualPrice} non ha raggiunto la riserva.`, variant: "destructive" });
     }
     fetchItems(item.auction_id);
   };
