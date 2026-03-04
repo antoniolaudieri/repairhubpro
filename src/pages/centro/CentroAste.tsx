@@ -815,7 +815,7 @@ export default function CentroAste() {
 
               {/* Sales Summary */}
               {sales.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-3 sm:space-y-4">
                   <div className="flex items-center justify-between gap-2">
                     <h3 className="font-semibold text-foreground flex items-center gap-2">
                       <ShoppingBag className="h-4 w-4 text-primary" /> Riepilogo Vendite ({sales.length})
