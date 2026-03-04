@@ -790,7 +790,7 @@ export default function CentroAste() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
                           {auction.status === "scheduled" && (
                             <Button size="sm" className="gap-1 h-8 text-xs" onClick={e => { e.stopPropagation(); goLive(auction); }}>
                               <Play className="h-3.5 w-3.5" /> Live
@@ -800,6 +800,16 @@ export default function CentroAste() {
                             <Button size="sm" variant="destructive" className="gap-1 h-8 text-xs" onClick={e => { e.stopPropagation(); endAuction(auction); }}>
                               <Square className="h-3.5 w-3.5" /> Stop
                             </Button>
+                          )}
+                          {auction.status === "ended" && (
+                            <>
+                              <Button size="sm" variant="outline" className="gap-1 h-8 text-xs" onClick={e => { e.stopPropagation(); setReopenAuction(auction); setReopenDate(""); setReopenOpen(true); }}>
+                                <Play className="h-3.5 w-3.5" /> Riapri
+                              </Button>
+                              <Button size="sm" variant="destructive" className="gap-1 h-8 text-xs" onClick={e => { e.stopPropagation(); setDeleteConfirmId(auction.id); }}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
                           )}
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </div>
