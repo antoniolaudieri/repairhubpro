@@ -452,7 +452,9 @@ export default function AstaLive() {
   const [isMuted, setIsMuted] = useState(true);
   const [presenceCount, setPresenceCount] = useState(0);
   const [winnerOverlay, setWinnerOverlay] = useState<{ name: string | null; price: number; sold: boolean } | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
 
+  const auctionUrl = `${window.location.origin}/asta/${auctionId}`;
   const isCameraStream = auction?.stream_url?.startsWith("camera:");
   const { remoteStream, connectionState } = useWebRTCViewer(auctionId || "", !!isCameraStream);
   const activeItem = items.find(i => i.status === "active");
