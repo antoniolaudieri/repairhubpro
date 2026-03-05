@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
-import { Gavel, Eye, Radio, Timer, ShoppingCart, Building2, Sparkles, Lock, Video, Wifi, WifiOff, Trophy, Send, MessageCircle, Share2, Copy, Check, ExternalLink, Users } from "lucide-react";
+import { Gavel, Eye, Radio, Timer, ShoppingCart, Building2, Sparkles, Lock, Video, Wifi, WifiOff, Trophy, Send, MessageCircle, Share2, Copy, Check, ExternalLink, Users, MoreHorizontal, Store, Search } from "lucide-react";
 import { useWebRTCViewer } from "@/hooks/useWebRTCViewer";
 import { QRCodeSVG } from "qrcode.react";
 import { safeGetItem, safeSetItem } from "@/utils/safeStorage";
@@ -87,10 +88,11 @@ interface ChatMessage {
   avatar_url?: string | null;
 }
 
-// Feed item: either a bid or a chat message
+// Feed item: bid, chat, or join notification
 type FeedItem = 
   | { type: "bid"; data: BidData }
-  | { type: "chat"; data: ChatMessage };
+  | { type: "chat"; data: ChatMessage }
+  | { type: "join"; data: { id: string; name: string; avatar: string; created_at: string } };
 
 // Presence viewer type
 interface PresenceViewer {
@@ -189,8 +191,37 @@ function InlineAuthDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
   );
 }
 
+// --- Join Notification Bubble ---
+function JoinBubble({ name, avatar }: { name: string; avatar: string }) {
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -30, scale: 0.8 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: -20, scale: 0.9 }}
+      transition={{ type: "spring", stiffness: 500, damping: 28 }}
+      className="flex items-center gap-2 px-2.5 py-0.5"
+    >
+      <div className="h-5 w-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0 ring-1 ring-blue-400/30">
+        {avatar ? (
+          <span className="text-[10px]">{avatar}</span>
+        ) : (
+          <span className="text-[8px] font-bold text-blue-300">{name.slice(0, 1).toUpperCase()}</span>
+        )}
+      </div>
+      <span className="text-[11px] text-white/50 font-medium">
+        <span className="text-white/70 font-semibold">{name}</span> joined 👋
+      </span>
+    </motion.div>
+  );
+}
+
 // --- Feed Bubble (chat or bid) ---
 function FeedBubble({ item }: { item: FeedItem }) {
+  if (item.type === "join") {
+    return <JoinBubble name={item.data.name} avatar={item.data.avatar} />;
+  }
+
   if (item.type === "bid") {
     const bid = item.data;
     const avatar = bid.avatar_url;
@@ -364,19 +395,27 @@ function CustomBidDialog({ open, onOpenChange, minBid, onBid }: { open: boolean;
   );
 }
 
-// --- Share Dialog ---
+// --- iOS-Style Share Sheet ---
 function AuctionShareDialog({
   open,
   onOpenChange,
   auctionUrl,
   centroName,
   auctionTitle,
+  coverUrl,
+  logoUrl,
+  isLive,
+  onShared,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   auctionUrl: string;
   centroName: string;
   auctionTitle: string;
+  coverUrl?: string | null;
+  logoUrl?: string | null;
+  isLive?: boolean;
+  onShared?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -386,6 +425,7 @@ function AuctionShareDialog({
   const handleCopy = async () => {
     await navigator.clipboard.writeText(auctionUrl);
     setCopied(true);
+    onShared?.();
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -393,119 +433,234 @@ function AuctionShareDialog({
     if (navigator.share) {
       try {
         await navigator.share({ title: `🔴 ${auctionTitle} - LIVE`, text: shareText, url: auctionUrl });
+        onShared?.();
       } catch {}
     }
   };
 
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(fullShareText)}`;
   const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(auctionUrl)}&text=${encodeURIComponent(shareText)}`;
-  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(auctionUrl)}`;
+  const instagramUrl = `https://www.instagram.com/`;
+
+  const handleSocialClick = () => {
+    onShared?.();
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[92vw] sm:max-w-sm p-0 overflow-hidden rounded-3xl border-0 bg-gradient-to-b from-[#1a1a2e] to-[#0f0f1a]">
-        <div className="relative px-6 pt-6 pb-4">
-          {/* Live badge */}
-          <div className="flex justify-center mb-4">
-            <motion.div
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="flex items-center gap-2 bg-red-600/90 px-4 py-1.5 rounded-full"
-            >
-              <Radio className="h-3.5 w-3.5 text-white animate-pulse" />
-              <span className="text-white font-black text-xs tracking-wider">LIVE NOW</span>
-            </motion.div>
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="bg-[#1c1c1e] border-0 rounded-t-[20px] max-h-[85vh]">
+        <div className="mx-auto w-10 h-1 rounded-full bg-white/20 mt-2 mb-3" />
+        
+        {/* Preview Card */}
+        <div className="mx-4 mb-5 rounded-2xl overflow-hidden bg-[#2c2c2e] border border-white/10">
+          <div className="relative h-36 bg-gradient-to-br from-purple-900/60 to-blue-900/60">
+            {coverUrl && (
+              <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            )}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+            {/* Live badge on preview */}
+            {isLive && (
+              <div className="absolute top-3 left-3">
+                <div className="flex items-center gap-1.5 bg-red-600 px-2.5 py-1 rounded-lg">
+                  <div className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+                  <span className="text-white font-black text-[10px] tracking-wider">LIVE</span>
+                </div>
+              </div>
+            )}
+            {/* Centro info on preview */}
+            <div className="absolute bottom-3 left-3 flex items-center gap-2">
+              {logoUrl ? (
+                <img src={logoUrl} alt="" className="h-8 w-8 rounded-full object-cover border border-white/30" />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <Building2 className="h-4 w-4 text-white" />
+                </div>
+              )}
+              <div>
+                <p className="text-white font-bold text-xs">{centroName}</p>
+                <p className="text-white/60 text-[10px]">{auctionTitle}</p>
+              </div>
+            </div>
           </div>
+        </div>
 
-          {/* Large QR */}
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1 }}
-            className="mx-auto w-fit p-4 bg-white rounded-2xl shadow-2xl shadow-white/10 mb-4"
-          >
-            <QRCodeSVG
-              value={auctionUrl}
-              size={180}
-              level="H"
-            />
-          </motion.div>
+        {/* Share Icons Grid */}
+        <div className="px-4 mb-6">
+          <div className="grid grid-cols-5 gap-3">
+            {/* Copy Link */}
+            <button onClick={handleCopy} className="flex flex-col items-center gap-1.5">
+              <div className={`h-14 w-14 rounded-full flex items-center justify-center transition-all ${copied ? 'bg-green-500' : 'bg-[#3a3a3c]'}`}>
+                {copied ? <Check className="h-6 w-6 text-white" /> : <Copy className="h-6 w-6 text-white" />}
+              </div>
+              <span className="text-[10px] text-white/70 font-medium">{copied ? 'Copiato!' : 'Copia Link'}</span>
+            </button>
 
-          <p className="text-center text-white/60 text-xs font-medium mb-5">
-            Scansiona il QR per entrare nell'asta
-          </p>
+            {/* Native Share / Messages */}
+            {typeof navigator !== "undefined" && navigator.share && (
+              <button onClick={handleNativeShare} className="flex flex-col items-center gap-1.5">
+                <div className="h-14 w-14 rounded-full bg-[#34c759] flex items-center justify-center">
+                  <Share2 className="h-6 w-6 text-white" />
+                </div>
+                <span className="text-[10px] text-white/70 font-medium">Condividi</span>
+              </button>
+            )}
 
-          {/* Centro + Auction info */}
-          <div className="text-center mb-5">
-            <p className="text-white font-black text-sm">{centroName}</p>
-            <p className="text-white/50 text-xs mt-0.5">{auctionTitle}</p>
-          </div>
-
-          {/* Copy link */}
-          <button
-            onClick={handleCopy}
-            className="w-full flex items-center justify-center gap-2 bg-white/10 hover:bg-white/15 text-white rounded-xl py-3 text-sm font-bold transition-all active:scale-[0.98] mb-3"
-          >
-            {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
-            {copied ? "Link copiato!" : "Copia Link"}
-          </button>
-
-          {/* Social share buttons */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col items-center gap-1.5 bg-[#25D366]/15 hover:bg-[#25D366]/25 rounded-xl py-3 transition-all active:scale-95"
-            >
-              <div className="h-9 w-9 rounded-full bg-[#25D366] flex items-center justify-center">
-                <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+            {/* WhatsApp */}
+            <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" onClick={handleSocialClick} className="flex flex-col items-center gap-1.5">
+              <div className="h-14 w-14 rounded-full bg-[#25D366] flex items-center justify-center">
+                <svg className="h-7 w-7 text-white" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                 </svg>
               </div>
-              <span className="text-[10px] font-bold text-white/70">WhatsApp</span>
+              <span className="text-[10px] text-white/70 font-medium">WhatsApp</span>
             </a>
-            <a
-              href={telegramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col items-center gap-1.5 bg-[#0088cc]/15 hover:bg-[#0088cc]/25 rounded-xl py-3 transition-all active:scale-95"
-            >
-              <div className="h-9 w-9 rounded-full bg-[#0088cc] flex items-center justify-center">
-                <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+
+            {/* Telegram */}
+            <a href={telegramUrl} target="_blank" rel="noopener noreferrer" onClick={handleSocialClick} className="flex flex-col items-center gap-1.5">
+              <div className="h-14 w-14 rounded-full bg-[#0088cc] flex items-center justify-center">
+                <svg className="h-7 w-7 text-white" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.479.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
                 </svg>
               </div>
-              <span className="text-[10px] font-bold text-white/70">Telegram</span>
+              <span className="text-[10px] text-white/70 font-medium">Telegram</span>
             </a>
-            <a
-              href={twitterUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col items-center gap-1.5 bg-white/5 hover:bg-white/10 rounded-xl py-3 transition-all active:scale-95"
-            >
-              <div className="h-9 w-9 rounded-full bg-white/20 flex items-center justify-center">
-                <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+
+            {/* Instagram */}
+            <a href={instagramUrl} target="_blank" rel="noopener noreferrer" onClick={handleSocialClick} className="flex flex-col items-center gap-1.5">
+              <div className="h-14 w-14 rounded-full bg-gradient-to-br from-[#f09433] via-[#e6683c] to-[#bc1888] flex items-center justify-center">
+                <svg className="h-7 w-7 text-white" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
                 </svg>
               </div>
-              <span className="text-[10px] font-bold text-white/70">X</span>
+              <span className="text-[10px] text-white/70 font-medium">Instagram</span>
             </a>
           </div>
+        </div>
 
-          {/* Native share (mobile) */}
-          {typeof navigator !== "undefined" && navigator.share && (
-            <button
-              onClick={handleNativeShare}
-              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-xl py-3 text-sm font-black transition-all active:scale-[0.98] hover:opacity-90"
-            >
-              <Share2 className="h-4 w-4" />
-              Condividi
-            </button>
+        {/* QR Code section */}
+        <div className="px-4 pb-6">
+          <div className="bg-[#2c2c2e] rounded-2xl p-4 flex items-center gap-4">
+            <div className="bg-white rounded-xl p-2 flex-shrink-0">
+              <QRCodeSVG value={auctionUrl} size={64} level="L" />
+            </div>
+            <div className="flex-1">
+              <p className="text-white text-xs font-bold mb-1">Scansiona il QR</p>
+              <p className="text-white/50 text-[10px]">Condividi sullo schermo per far entrare altri spettatori</p>
+            </div>
+          </div>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+// --- Shop Drawer ---
+function ShopDrawer({
+  open,
+  onOpenChange,
+  items,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  items: ItemData[];
+}) {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "active" | "sold">("all");
+
+  const filtered = items.filter(item => {
+    const matchesSearch = !search || item.title.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = filter === "all" || 
+      (filter === "active" && (item.status === "active" || item.status === "pending")) ||
+      (filter === "sold" && item.status === "sold");
+    return matchesSearch && matchesFilter;
+  });
+
+  const activeCount = items.filter(i => i.status === "active" || i.status === "pending").length;
+  const soldCount = items.filter(i => i.status === "sold").length;
+
+  return (
+    <Drawer open={open} onOpenChange={onOpenChange}>
+      <DrawerContent className="bg-[#1c1c1e] border-0 rounded-t-[20px] max-h-[80vh]">
+        <div className="mx-auto w-10 h-1 rounded-full bg-white/20 mt-2 mb-2" />
+        <DrawerHeader className="px-4 pb-3 pt-0">
+          <DrawerTitle className="text-white font-black text-base flex items-center gap-2">
+            <Store className="h-4 w-4" /> Prodotti ({items.length})
+          </DrawerTitle>
+        </DrawerHeader>
+
+        {/* Search */}
+        <div className="px-4 mb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Cerca prodotto..."
+              className="w-full h-9 bg-[#2c2c2e] rounded-xl pl-9 pr-4 text-xs text-white placeholder:text-white/40 outline-none border border-white/10 focus:border-white/20"
+            />
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex gap-2 px-4 mb-3">
+          <button
+            onClick={() => setFilter("all")}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${filter === "all" ? "bg-white text-black" : "bg-white/10 text-white/70"}`}
+          >
+            Tutti ({items.length})
+          </button>
+          <button
+            onClick={() => setFilter("active")}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${filter === "active" ? "bg-yellow-400 text-black" : "bg-white/10 text-white/70"}`}
+          >
+            In Asta ({activeCount})
+          </button>
+          <button
+            onClick={() => setFilter("sold")}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${filter === "sold" ? "bg-red-500 text-white" : "bg-white/10 text-white/70"}`}
+          >
+            Venduti ({soldCount})
+          </button>
+        </div>
+
+        {/* Product List */}
+        <div className="px-4 pb-6 overflow-y-auto max-h-[50vh] space-y-2">
+          {filtered.length === 0 ? (
+            <div className="text-center py-8">
+              <Store className="h-8 w-8 text-white/20 mx-auto mb-2" />
+              <p className="text-white/40 text-xs">Nessun prodotto trovato</p>
+            </div>
+          ) : (
+            filtered.map(item => (
+              <div key={item.id} className="flex items-center gap-3 bg-[#2c2c2e] rounded-xl p-2.5 border border-white/5">
+                {item.image_url ? (
+                  <img src={item.image_url} alt="" className="h-14 w-14 rounded-lg object-cover flex-shrink-0" />
+                ) : (
+                  <div className="h-14 w-14 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
+                    <Gavel className="h-5 w-5 text-white/30" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-xs font-bold truncate">{item.title}</p>
+                  <p className="text-white/40 text-[10px] mt-0.5">{item.bid_count} offerte</p>
+                  {item.status === "sold" && (
+                    <Badge className="bg-red-500/20 text-red-400 border-0 text-[9px] px-1.5 py-0 h-4 mt-1">VENDUTO</Badge>
+                  )}
+                  {item.status === "active" && (
+                    <Badge className="bg-green-500/20 text-green-400 border-0 text-[9px] px-1.5 py-0 h-4 mt-1">IN ASTA</Badge>
+                  )}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-white font-black text-sm">€{item.current_price}</p>
+                  <p className="text-white/40 text-[9px]">da €{item.starting_price}</p>
+                </div>
+              </div>
+            ))
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </DrawerContent>
+    </Drawer>
   );
 }
 
@@ -518,6 +673,7 @@ export default function AstaLive() {
   const [items, setItems] = useState<ItemData[]>([]);
   const [bids, setBids] = useState<BidData[]>([]);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [joinMessages, setJoinMessages] = useState<FeedItem[]>([]);
   const [bidderName, setBidderName] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -531,8 +687,11 @@ export default function AstaLive() {
   const [presenceViewers, setPresenceViewers] = useState<PresenceViewer[]>([]);
   const [winnerOverlay, setWinnerOverlay] = useState<{ name: string | null; price: number; sold: boolean } | null>(null);
   const [shareOpen, setShareOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
+  const [shareCount, setShareCount] = useState(0);
   const [selectedAvatar, setSelectedAvatar] = useState(() => safeGetItem("auction_avatar") || "");
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const seenPresenceKeysRef = useRef<Set<string>>(new Set());
 
   const auctionUrl = `${window.location.origin}/asta/${auctionId}`;
   const isCameraStream = auction?.stream_url?.startsWith("camera:");
@@ -542,13 +701,14 @@ export default function AstaLive() {
   const isLive = auction?.status === "live";
   const isEnded = auction?.status === "ended";
   const isScheduled = auction?.status === "scheduled";
-  const canChat = isLive || isScheduled; // Chat available in live AND waiting room
+  const canChat = isLive || isScheduled;
 
-  // Combined feed: bids + chat sorted by time (newest first)
+  // Combined feed: bids + chat + joins sorted by time (newest first)
   const feedItems: FeedItem[] = [
     ...bids.filter(b => activeItem ? b.item_id === activeItem.id : true).map(b => ({ type: "bid" as const, data: b })),
     ...chatMessages.map(c => ({ type: "chat" as const, data: c })),
-  ].sort((a, b) => new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()).slice(0, 20);
+    ...joinMessages,
+  ].sort((a, b) => new Date(b.data.created_at).getTime() - new Date(a.data.created_at).getTime()).slice(0, 30);
 
   // Leading bidder
   const activeBids = activeItem ? bids.filter(b => b.item_id === activeItem.id) : [];
@@ -559,6 +719,10 @@ export default function AstaLive() {
     setSelectedAvatar(emoji);
     safeSetItem("auction_avatar", emoji);
     setAvatarPickerOpen(false);
+  };
+
+  const handleShared = () => {
+    setShareCount(prev => prev + 1);
   };
 
   // --- Data fetching ---
@@ -607,7 +771,7 @@ export default function AstaLive() {
     if (!auctionId) return;
     fetchAuction();
 
-    // Presence with avatar
+    // Presence with avatar + join messages
     const presenceChannel = supabase.channel(`presence-auction-${auctionId}`, {
       config: { presence: { key: `viewer-${Date.now()}-${Math.random().toString(36).slice(2, 6)}` } },
     });
@@ -616,7 +780,6 @@ export default function AstaLive() {
         const state = presenceChannel.presenceState();
         const keys = Object.keys(state);
         setPresenceCount(keys.length);
-        // Extract viewer info from presence
         const viewers: PresenceViewer[] = [];
         keys.forEach(k => {
           const presences = state[k] as any[];
@@ -627,6 +790,25 @@ export default function AstaLive() {
           });
         });
         setPresenceViewers(viewers.slice(0, 20));
+      })
+      .on("presence", { event: "join" }, ({ key, newPresences }) => {
+        // Generate join messages for new viewers
+        if (seenPresenceKeysRef.current.has(key)) return;
+        seenPresenceKeysRef.current.add(key);
+        newPresences.forEach((p: any) => {
+          const name = p.name || "";
+          if (!name) return;
+          const joinItem: FeedItem = {
+            type: "join",
+            data: {
+              id: `join-${key}-${Date.now()}`,
+              name,
+              avatar: p.avatar || "",
+              created_at: new Date().toISOString(),
+            },
+          };
+          setJoinMessages(prev => [joinItem, ...prev].slice(0, 15));
+        });
       })
       .subscribe(async (status) => {
         if (status === "SUBSCRIBED") {
@@ -687,7 +869,7 @@ export default function AstaLive() {
     return () => clearInterval(interval);
   }, [activeItem?.started_at, activeItem?.duration_seconds]);
 
-  // Attach remote WebRTC stream — only when stream changes
+  // Attach remote WebRTC stream
   useEffect(() => {
     if (!cameraVideoRef.current || !remoteStream) return;
     const video = cameraVideoRef.current;
@@ -763,7 +945,18 @@ export default function AstaLive() {
     <div className="h-[100dvh] w-full relative overflow-hidden bg-black">
       <InlineAuthDialog open={authOpen} onOpenChange={setAuthOpen} onSuccess={() => setAuthOpen(false)} />
       <CustomBidDialog open={customBidOpen} onOpenChange={setCustomBidOpen} minBid={minBid} onBid={(amount) => requireAuth(() => placeBid(amount))} />
-      <AuctionShareDialog open={shareOpen} onOpenChange={setShareOpen} auctionUrl={auctionUrl} centroName={centro?.business_name || ""} auctionTitle={auction?.title || ""} />
+      <AuctionShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        auctionUrl={auctionUrl}
+        centroName={centro?.business_name || ""}
+        auctionTitle={auction?.title || ""}
+        coverUrl={auction?.cover_url}
+        logoUrl={centro?.logo_url}
+        isLive={isLive}
+        onShared={handleShared}
+      />
+      <ShopDrawer open={shopOpen} onOpenChange={setShopOpen} items={items} />
 
       {/* Avatar Picker Dialog */}
       <Dialog open={avatarPickerOpen} onOpenChange={setAvatarPickerOpen}>
@@ -815,9 +1008,7 @@ export default function AstaLive() {
         ) : auction.cover_url ? (
           <>
             <img src={auction.cover_url} alt={auction.title} className="w-full h-full object-cover" />
-            {/* Dark overlay for cover */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/30" />
-            {/* Centered info on cover */}
             {!isLive && (
               <div className="absolute inset-0 flex flex-col items-center justify-center z-10 px-6">
                 {centro?.logo_url && (
@@ -887,14 +1078,6 @@ export default function AstaLive() {
                 {presenceCount}
               </motion.span>
             </div>
-            {/* QR Share button */}
-            <button
-              onClick={() => setShareOpen(true)}
-              className="relative h-10 w-10 rounded-xl bg-black/40 backdrop-blur-sm border border-white/15 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all"
-            >
-              <QRCodeSVG value={auctionUrl} size={22} bgColor="transparent" fgColor="white" level="L" />
-              <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 bg-red-500 rounded-full animate-pulse" />
-            </button>
           </div>
         </div>
 
@@ -940,6 +1123,47 @@ export default function AstaLive() {
         )}
       </div>
 
+      {/* ===== RIGHT ACTION SIDEBAR (Whatnot-style) ===== */}
+      <div className="absolute right-3 z-25 flex flex-col items-center gap-3" style={{ bottom: activeItem ? '320px' : '280px' }}>
+        {/* More / QR */}
+        <button
+          onClick={() => setShareOpen(true)}
+          className="h-11 w-11 rounded-full bg-black/40 backdrop-blur-sm border border-white/15 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all"
+        >
+          <MoreHorizontal className="h-5 w-5 text-white" />
+        </button>
+
+        {/* Share with counter */}
+        <button
+          onClick={() => setShareOpen(true)}
+          className="relative h-11 w-11 rounded-full bg-black/40 backdrop-blur-sm border border-white/15 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all"
+        >
+          <Share2 className="h-5 w-5 text-white" />
+          {shareCount > 0 && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              className="absolute -top-1 -right-1 h-5 min-w-[20px] rounded-full bg-red-500 flex items-center justify-center px-1"
+            >
+              <span className="text-[9px] font-black text-white">{shareCount}</span>
+            </motion.div>
+          )}
+        </button>
+
+        {/* Shop */}
+        <button
+          onClick={() => setShopOpen(true)}
+          className="relative h-11 w-11 rounded-full bg-black/40 backdrop-blur-sm border border-white/15 flex items-center justify-center hover:bg-white/10 active:scale-95 transition-all"
+        >
+          <Store className="h-5 w-5 text-white" />
+          {items.length > 0 && (
+            <div className="absolute -top-1 -right-1 h-5 min-w-[20px] rounded-full bg-yellow-400 flex items-center justify-center px-1">
+              <span className="text-[9px] font-black text-black">{items.length}</span>
+            </div>
+          )}
+        </button>
+      </div>
+
       {/* ===== WINNER OVERLAY ===== */}
       <AnimatePresence>
         {winnerOverlay && (
@@ -972,8 +1196,12 @@ export default function AstaLive() {
       {/* ===== CHAT + BID FEED (left side overlay) ===== */}
       <div
         ref={feedScrollRef}
-        className="absolute left-0 bottom-[280px] z-20 w-[85%] max-w-[360px] max-h-[35vh] overflow-y-auto pointer-events-auto overscroll-contain scrollbar-hide"
-        style={{ maskImage: "linear-gradient(to bottom, transparent 0%, black 15%)", WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 15%)" }}
+        className="absolute left-0 z-20 w-[75%] max-w-[320px] max-h-[35vh] overflow-y-auto pointer-events-auto overscroll-contain scrollbar-hide"
+        style={{ 
+          bottom: activeItem ? '320px' : '280px',
+          maskImage: "linear-gradient(to bottom, transparent 0%, black 15%)", 
+          WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, black 15%)" 
+        }}
       >
         <div className="flex flex-col-reverse gap-0.5 pb-1">
           <AnimatePresence>
