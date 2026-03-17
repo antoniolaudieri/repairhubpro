@@ -436,7 +436,7 @@ export default function CornerDisplay() {
     });
     
     let isActive = true;
-    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const setupChannel = () => {
       if (!isActive) return;

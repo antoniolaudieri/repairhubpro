@@ -55,7 +55,7 @@ export default function WhatsAppSendingModal({
   const [loading, setLoading] = useState(true);
   const [isPaused, setIsPaused] = useState(false);
   const [autoAdvance, setAutoAdvance] = useState(false);
-  const [autoAdvanceTimer, setAutoAdvanceTimer] = useState<NodeJS.Timeout | null>(null);
+  const [autoAdvanceTimer, setAutoAdvanceTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchRecipients();

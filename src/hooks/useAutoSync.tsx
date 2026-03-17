@@ -9,7 +9,7 @@ interface AutoSyncOptions {
 }
 
 export const useAutoSync = ({ centroId, syncToServer, enabled = true }: AutoSyncOptions) => {
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSyncRef = useRef<Date | null>(null);
 
   // Fetch sync interval from centro settings

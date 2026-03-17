@@ -188,7 +188,7 @@ export default function CentroImpostazioni() {
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(true);
   const [slideInterval, setSlideInterval] = useState(5); // seconds
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const geocodeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const geocodeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // SMTP Configuration State
   const [smtpEnabled, setSmtpEnabled] = useState(false);
