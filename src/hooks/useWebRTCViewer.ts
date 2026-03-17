@@ -13,8 +13,8 @@ export function useWebRTCViewer(auctionId: string, enabled: boolean) {
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const viewerId = useRef(`viewer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
-  const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const joinIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const joinIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
 
   const cleanup = useCallback(() => {
