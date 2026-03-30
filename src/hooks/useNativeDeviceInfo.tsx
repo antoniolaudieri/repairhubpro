@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Capacitor } from '@capacitor/core';
+import { Geolocation } from '@capacitor/geolocation';
 import DeviceDiagnostics, { SensorStatus, SensorsInfo } from '@/plugins/DeviceStoragePlugin';
 
 export interface NativeDeviceData {
