@@ -403,23 +403,34 @@ export const useNativeDeviceInfo = (centroId?: string, customerId?: string, loya
       let longitude: number | null = null;
       
       try {
-        const geo = await new Promise<GeolocationPosition | null>((resolve) => {
-          if (!navigator.geolocation) {
-            resolve(null);
-            return;
+        if (Capacitor.isNativePlatform()) {
+          // Native: use Capacitor Geolocation plugin for proper Android permissions
+          const perms = await Geolocation.requestPermissions();
+          if (perms.location === 'granted' || perms.coarseLocation === 'granted') {
+            const pos = await Geolocation.getCurrentPosition({ timeout: 5000 });
+            latitude = pos.coords.latitude;
+            longitude = pos.coords.longitude;
           }
-          navigator.geolocation.getCurrentPosition(
-            (pos) => resolve(pos),
-            () => resolve(null),
-            { timeout: 5000, maximumAge: 60000 }
-          );
-        });
-        if (geo) {
-          latitude = geo.coords.latitude;
-          longitude = geo.coords.longitude;
+        } else {
+          // Web: use standard browser API
+          const geo = await new Promise<GeolocationPosition | null>((resolve) => {
+            if (!navigator.geolocation) {
+              resolve(null);
+              return;
+            }
+            navigator.geolocation.getCurrentPosition(
+              (pos) => resolve(pos),
+              () => resolve(null),
+              { timeout: 5000, maximumAge: 60000 }
+            );
+          });
+          if (geo) {
+            latitude = geo.coords.latitude;
+            longitude = geo.coords.longitude;
+          }
         }
       } catch (e) {
-        console.log('Geolocation not available');
+        console.log('Geolocation not available:', e);
       }
       
       const newData: Partial<NativeDeviceData> = {
