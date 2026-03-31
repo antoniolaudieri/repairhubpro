@@ -493,15 +493,38 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
             </TabsContent>
 
             <TabsContent value="analisi" className="space-y-4 mt-4">
+              {/* Proforma Template - FREE */}
+              <Card className="bg-accent/50 border-primary/20">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <Label className="text-base font-semibold">Proforma Gratuito</Label>
+                    <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">GRATIS</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Genera un documento professionale con testi standard pre-compilati. Seleziona prima i controlli eseguiti qui sotto, poi premi il pulsante.
+                  </p>
+                  <Button 
+                    onClick={handleGenerateProforma} 
+                    variant="outline"
+                    className="w-full border-primary/30 hover:bg-primary/10"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Genera Proforma (Nessuna Anomalia)
+                  </Button>
+                </CardContent>
+              </Card>
+
               {/* AI Generation Section */}
-              <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
+              <Card className="bg-accent/30 border-muted">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-purple-500" />
                     <Label className="text-base font-semibold">Generazione AI</Label>
+                    <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full font-medium">AVANZATA</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Scrivi un breve riepilogo della diagnosi e l'AI genererà un documento professionale completo.
+                    Scrivi un breve riepilogo della diagnosi e l'AI genererà un documento personalizzato.
                   </p>
                   <Textarea
                     value={diagnosisSummary}
