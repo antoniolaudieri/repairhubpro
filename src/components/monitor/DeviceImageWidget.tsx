@@ -60,8 +60,9 @@ export const DeviceImageWidget = ({
 
         if (fnError) throw fnError;
         
-        if (data?.imageUrl) {
-          setImageUrl(data.imageUrl);
+        const url = data?.imageUrl || data?.device_info?.imageUrl;
+        if (url) {
+          setImageUrl(url);
         }
       } catch (e) {
         console.log('Could not fetch device image:', e);
