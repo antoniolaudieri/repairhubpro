@@ -22,9 +22,9 @@ serve(async (req) => {
 
     console.log("Generating forensic report for:", { deviceType, deviceBrand, deviceModel, purpose });
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GOOGLE_GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      throw new Error("GOOGLE_GEMINI_API_KEY is not configured");
     }
 
     const purposeLabels: Record<string, string> = {
