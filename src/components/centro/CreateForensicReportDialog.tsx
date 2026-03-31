@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, Smartphone, Tablet, Laptop, Monitor, Sparkles, Loader2 } from 'lucide-react';
+import { Search, Smartphone, Tablet, Laptop, Monitor, Sparkles, Loader2, FileText } from 'lucide-react';
 
 interface Customer {
   id: string;
@@ -153,6 +153,48 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
     const year = date.getFullYear();
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     return `PER-${year}-${random}`;
+  };
+
+  const handleGenerateProforma = () => {
+    const brand = formData.device_brand || 'N/D';
+    const model = formData.device_model || 'N/D';
+    const deviceDesc = `${brand} ${model}`.trim();
+    const deviceType = formData.device_type || 'dispositivo';
+
+    const analysisParts = [
+      `Il ${deviceType} ${deviceDesc} è stato sottoposto ad un'analisi tecnica forense approfondita.`,
+      'Sono state eseguite le seguenti operazioni:'
+    ];
+    const opsList: string[] = [];
+    if (formData.malware_check) opsList.push('scansione antimalware completa del sistema operativo e delle applicazioni installate');
+    if (formData.spyware_check) opsList.push('verifica della presenza di software spia (spyware) o applicazioni di monitoraggio non autorizzate');
+    if (formData.compromised_accounts_check) opsList.push('controllo degli account configurati per eventuali compromissioni');
+    if (formData.data_integrity_check) opsList.push("verifica dell'integrità dei dati e del sistema operativo");
+    if (opsList.length === 0) opsList.push('analisi generale dello stato del dispositivo');
+    analysisParts.push(opsList.join('; ') + '.');
+    analysisParts.push('Tutte le operazioni sono state condotte secondo le best practice della digital forensics, garantendo la non alterazione dei dati presenti sul dispositivo.');
+
+    setFormData(prev => ({
+      ...prev,
+      analysis_summary: analysisParts.join(' '),
+      malware_findings: prev.malware_check
+        ? `La scansione antimalware eseguita sul dispositivo ${deviceDesc} non ha rilevato alcuna minaccia. Il dispositivo risulta privo di software malevolo, virus, trojan o altre forme di malware. Sono state verificate tutte le applicazioni installate e i processi in esecuzione.`
+        : prev.malware_findings,
+      spyware_findings: prev.spyware_check
+        ? `Non è stata rilevata la presenza di software spia, applicazioni di monitoraggio remoto, keylogger o strumenti di sorveglianza non autorizzati sul dispositivo ${deviceDesc}. L'analisi ha incluso la verifica di app note di stalkerware e monitoraggio.`
+        : prev.spyware_findings,
+      compromised_accounts_findings: prev.compromised_accounts_check
+        ? `Gli account configurati sul dispositivo ${deviceDesc} non presentano segni di compromissione. Non sono stati rilevati accessi non autorizzati o attività sospette sui profili verificati.`
+        : prev.compromised_accounts_findings,
+      data_integrity_findings: prev.data_integrity_check
+        ? `Il sistema operativo e i dati presenti sul dispositivo ${deviceDesc} risultano integri. Non sono state rilevate modifiche non autorizzate, jailbreak/root o alterazioni del firmware.`
+        : prev.data_integrity_findings,
+      other_findings: prev.other_findings || `Non sono emerse ulteriori anomalie durante l'analisi del dispositivo ${deviceDesc}.`,
+      conclusions: `A seguito dell'analisi tecnica forense condotta sul dispositivo ${deviceDesc}, si conclude che il dispositivo NON presenta anomalie rilevanti. Non sono stati rilevati elementi che possano indicare compromissioni della sicurezza, installazione di software malevolo o accessi non autorizzati. Il dispositivo risulta in condizioni normali di funzionamento e sicurezza.`,
+      recommendations: prev.recommendations || 'Si raccomanda di mantenere aggiornato il sistema operativo e le applicazioni installate; utilizzare password complesse e autenticazione a due fattori su tutti gli account; effettuare periodicamente scansioni di sicurezza sul dispositivo.'
+    }));
+
+    toast.success('Proforma compilato! Puoi modificare i testi prima di salvare.');
   };
 
   const handleGenerateWithAI = async () => {
@@ -451,15 +493,38 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
             </TabsContent>
 
             <TabsContent value="analisi" className="space-y-4 mt-4">
+              {/* Proforma Template - FREE */}
+              <Card className="bg-accent/50 border-primary/20">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <Label className="text-base font-semibold">Proforma Gratuito</Label>
+                    <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">GRATIS</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Genera un documento professionale con testi standard pre-compilati. Seleziona prima i controlli eseguiti qui sotto, poi premi il pulsante.
+                  </p>
+                  <Button 
+                    onClick={handleGenerateProforma} 
+                    variant="outline"
+                    className="w-full border-primary/30 hover:bg-primary/10"
+                  >
+                    <FileText className="mr-2 h-4 w-4" />
+                    Genera Proforma (Nessuna Anomalia)
+                  </Button>
+                </CardContent>
+              </Card>
+
               {/* AI Generation Section */}
-              <Card className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 border-purple-500/20">
+              <Card className="bg-accent/30 border-muted">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <Sparkles className="h-5 w-5 text-purple-500" />
                     <Label className="text-base font-semibold">Generazione AI</Label>
+                    <span className="text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-0.5 rounded-full font-medium">AVANZATA</span>
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Scrivi un breve riepilogo della diagnosi e l'AI genererà un documento professionale completo.
+                    Scrivi un breve riepilogo della diagnosi e l'AI genererà un documento personalizzato.
                   </p>
                   <Textarea
                     value={diagnosisSummary}
@@ -470,7 +535,8 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
                   <Button 
                     onClick={handleGenerateWithAI} 
                     disabled={generating || !diagnosisSummary.trim()}
-                    className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                    variant="outline"
+                    className="w-full"
                   >
                     {generating ? (
                       <>
