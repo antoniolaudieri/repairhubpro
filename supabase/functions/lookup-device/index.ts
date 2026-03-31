@@ -150,21 +150,21 @@ Se non trovi info, usa valori ragionevoli basati su conoscenza generale.`
       const errorText = await response.text();
       console.error("AI API error:", response.status, errorText);
       
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit superato. Riprova tra poco." }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 429 }
-        );
-      }
+      // On 402/429 or any error, fallback to generated URL without AI
+      const fallbackInfo = {
+        device_info: {
+          fullName: `${brand} ${model}`,
+          year: "N/A",
+          specs: {},
+          gsmarenaSlug: "",
+          imageUrl: baseImageUrl
+        }
+      };
       
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Crediti esauriti. Aggiungi crediti al tuo workspace Lovable." }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 402 }
-        );
-      }
-      
-      throw new Error(`AI API error: ${response.status}`);
+      return new Response(
+        JSON.stringify(fallbackInfo),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
 
     const data = await response.json();
