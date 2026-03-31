@@ -116,10 +116,10 @@ Il tono deve essere formale, tecnico e adatto per presentazione in sede legale o
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!content) {
-      throw new Error("No content in AI response");
+      throw new Error("No content in Gemini response");
     }
 
     // Parse the JSON response
