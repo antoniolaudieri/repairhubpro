@@ -155,6 +155,48 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
     return `PER-${year}-${random}`;
   };
 
+  const handleGenerateProforma = () => {
+    const brand = formData.device_brand || 'N/D';
+    const model = formData.device_model || 'N/D';
+    const deviceDesc = `${brand} ${model}`.trim();
+    const deviceType = formData.device_type || 'dispositivo';
+
+    const analysisParts = [
+      `Il ${deviceType} ${deviceDesc} è stato sottoposto ad un'analisi tecnica forense approfondita.`,
+      'Sono state eseguite le seguenti operazioni:'
+    ];
+    const opsList: string[] = [];
+    if (formData.malware_check) opsList.push('scansione antimalware completa del sistema operativo e delle applicazioni installate');
+    if (formData.spyware_check) opsList.push('verifica della presenza di software spia (spyware) o applicazioni di monitoraggio non autorizzate');
+    if (formData.compromised_accounts_check) opsList.push('controllo degli account configurati per eventuali compromissioni');
+    if (formData.data_integrity_check) opsList.push("verifica dell'integrità dei dati e del sistema operativo");
+    if (opsList.length === 0) opsList.push('analisi generale dello stato del dispositivo');
+    analysisParts.push(opsList.join('; ') + '.');
+    analysisParts.push('Tutte le operazioni sono state condotte secondo le best practice della digital forensics, garantendo la non alterazione dei dati presenti sul dispositivo.');
+
+    setFormData(prev => ({
+      ...prev,
+      analysis_summary: analysisParts.join(' '),
+      malware_findings: prev.malware_check
+        ? `La scansione antimalware eseguita sul dispositivo ${deviceDesc} non ha rilevato alcuna minaccia. Il dispositivo risulta privo di software malevolo, virus, trojan o altre forme di malware. Sono state verificate tutte le applicazioni installate e i processi in esecuzione.`
+        : prev.malware_findings,
+      spyware_findings: prev.spyware_check
+        ? `Non è stata rilevata la presenza di software spia, applicazioni di monitoraggio remoto, keylogger o strumenti di sorveglianza non autorizzati sul dispositivo ${deviceDesc}. L'analisi ha incluso la verifica di app note di stalkerware e monitoraggio.`
+        : prev.spyware_findings,
+      compromised_accounts_findings: prev.compromised_accounts_check
+        ? `Gli account configurati sul dispositivo ${deviceDesc} non presentano segni di compromissione. Non sono stati rilevati accessi non autorizzati o attività sospette sui profili verificati.`
+        : prev.compromised_accounts_findings,
+      data_integrity_findings: prev.data_integrity_check
+        ? `Il sistema operativo e i dati presenti sul dispositivo ${deviceDesc} risultano integri. Non sono state rilevate modifiche non autorizzate, jailbreak/root o alterazioni del firmware.`
+        : prev.data_integrity_findings,
+      other_findings: prev.other_findings || `Non sono emerse ulteriori anomalie durante l'analisi del dispositivo ${deviceDesc}.`,
+      conclusions: `A seguito dell'analisi tecnica forense condotta sul dispositivo ${deviceDesc}, si conclude che il dispositivo NON presenta anomalie rilevanti. Non sono stati rilevati elementi che possano indicare compromissioni della sicurezza, installazione di software malevolo o accessi non autorizzati. Il dispositivo risulta in condizioni normali di funzionamento e sicurezza.`,
+      recommendations: prev.recommendations || 'Si raccomanda di mantenere aggiornato il sistema operativo e le applicazioni installate; utilizzare password complesse e autenticazione a due fattori su tutti gli account; effettuare periodicamente scansioni di sicurezza sul dispositivo.'
+    }));
+
+    toast.success('Proforma compilato! Puoi modificare i testi prima di salvare.');
+  };
+
   const handleGenerateWithAI = async () => {
     if (!diagnosisSummary.trim()) {
       toast.error('Scrivi prima un riepilogo della diagnosi');
