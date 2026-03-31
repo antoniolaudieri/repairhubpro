@@ -535,7 +535,8 @@ export default function CreateForensicReportDialog({ open, onOpenChange, centroI
                   <Button 
                     onClick={handleGenerateWithAI} 
                     disabled={generating || !diagnosisSummary.trim()}
-                    className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                    variant="outline"
+                    className="w-full"
                   >
                     {generating ? (
                       <>
