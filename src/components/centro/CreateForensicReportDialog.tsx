@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
-import { Search, Smartphone, Tablet, Laptop, Monitor, Sparkles, Loader2 } from 'lucide-react';
+import { Search, Smartphone, Tablet, Laptop, Monitor, Sparkles, Loader2, FileText } from 'lucide-react';
 
 interface Customer {
   id: string;
