@@ -176,3 +176,6 @@ verify_jwt = false
 
 [functions.ricondizionati-track]
 verify_jwt = false
+
+[functions.mcp-server]
+verify_jwt = false
