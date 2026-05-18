@@ -1,5 +1,4 @@
 // MCP Server exposing full database access via API Key
-// Transport: Streamable HTTP (MCP spec)
 import { Hono } from "npm:hono@4";
 import { McpServer, StreamableHttpTransport } from "npm:mcp-lite@^0.10.0";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -10,7 +9,7 @@ const MCP_API_KEY = Deno.env.get("MCP_API_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, mcp-session-id",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, mcp-session-id, mcp-protocol-version",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS, DELETE",
   "Access-Control-Expose-Headers": "mcp-session-id",
 };
@@ -24,7 +23,6 @@ const ok = (data: unknown) => ({
 });
 
 type Filter = { column: string; op: string; value: unknown };
-
 function applyFilters(q: any, filters?: Filter[]) {
   if (!filters) return q;
   for (const f of filters) {
@@ -51,7 +49,7 @@ const filterSchema = {
     type: "object",
     properties: {
       column: { type: "string" },
-      op: { type: "string", enum: ["eq", "neq", "gt", "gte", "lt", "lte", "like", "ilike", "is", "in"] },
+      op: { type: "string", enum: ["eq","neq","gt","gte","lt","lte","like","ilike","is","in"] },
       value: {},
     },
     required: ["column", "op", "value"],
@@ -60,44 +58,33 @@ const filterSchema = {
 
 const mcp = new McpServer({ name: "lovable-db-mcp", version: "1.0.0" });
 
-mcp.tool({
-  name: "list_tables",
-  description: "List all tables in the public schema",
+mcp.tool("list_tables", {
+  description: "List all tables exposed by the database",
   inputSchema: { type: "object", properties: {} },
   handler: async () => {
-    const { data, error } = await admin.rpc("pg_catalog_tables" as any).select?.() ?? { data: null, error: null };
-    if (data) return ok(data);
-    // Fallback: use information_schema via a raw query through PostgREST is not allowed; use a known list endpoint
     const res = await fetch(`${SUPABASE_URL}/rest/v1/?apikey=${SERVICE_ROLE}`, {
       headers: { Authorization: `Bearer ${SERVICE_ROLE}` },
     });
     const json = await res.json();
-    const tables = Object.keys(json?.definitions ?? {});
-    return ok({ tables });
+    return ok({ tables: Object.keys(json?.definitions ?? {}) });
   },
 });
 
-mcp.tool({
-  name: "describe_table",
+mcp.tool("describe_table", {
   description: "Describe columns of a table",
-  inputSchema: {
-    type: "object",
-    properties: { table: { type: "string" } },
-    required: ["table"],
-  },
-  handler: async ({ table }: { table: string }) => {
+  inputSchema: { type: "object", properties: { table: { type: "string" } }, required: ["table"] },
+  handler: async (args: any) => {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/?apikey=${SERVICE_ROLE}`, {
       headers: { Authorization: `Bearer ${SERVICE_ROLE}` },
     });
     const json = await res.json();
-    const def = json?.definitions?.[table];
-    if (!def) throw new Error(`Table not found: ${table}`);
+    const def = json?.definitions?.[args.table];
+    if (!def) throw new Error(`Table not found: ${args.table}`);
     return ok(def);
   },
 });
 
-mcp.tool({
-  name: "query_table",
+mcp.tool("query_table", {
   description: "SELECT rows from a table with optional filters, order, limit",
   inputSchema: {
     type: "object",
@@ -118,20 +105,15 @@ mcp.tool({
     if (args.order_by) q = q.order(args.order_by, { ascending: args.ascending ?? true });
     if (args.limit) q = q.limit(args.limit);
     if (args.offset != null && args.limit) q = q.range(args.offset, args.offset + args.limit - 1);
-    const { data, error, count } = await q;
+    const { data, error } = await q;
     if (error) throw new Error(error.message);
-    return ok({ rows: data, count });
+    return ok({ rows: data });
   },
 });
 
-mcp.tool({
-  name: "count_rows",
+mcp.tool("count_rows", {
   description: "Count rows in a table with optional filters",
-  inputSchema: {
-    type: "object",
-    properties: { table: { type: "string" }, filters: filterSchema },
-    required: ["table"],
-  },
+  inputSchema: { type: "object", properties: { table: { type: "string" }, filters: filterSchema }, required: ["table"] },
   handler: async (args: any) => {
     let q = admin.from(args.table).select("*", { count: "exact", head: true });
     q = applyFilters(q, args.filters);
@@ -141,61 +123,48 @@ mcp.tool({
   },
 });
 
-mcp.tool({
-  name: "insert_row",
+mcp.tool("insert_row", {
   description: "Insert one or multiple rows into a table",
   inputSchema: {
     type: "object",
-    properties: {
-      table: { type: "string" },
-      values: { description: "Object or array of objects to insert" },
-    },
+    properties: { table: { type: "string" }, values: {} },
     required: ["table", "values"],
   },
-  handler: async ({ table, values }: any) => {
-    const { data, error } = await admin.from(table).insert(values).select();
+  handler: async (args: any) => {
+    const { data, error } = await admin.from(args.table).insert(args.values).select();
     if (error) throw new Error(error.message);
     return ok({ inserted: data });
   },
 });
 
-mcp.tool({
-  name: "update_rows",
+mcp.tool("update_rows", {
   description: "UPDATE rows matching filters. Filters are REQUIRED.",
   inputSchema: {
     type: "object",
-    properties: {
-      table: { type: "string" },
-      values: { type: "object" },
-      filters: filterSchema,
-    },
+    properties: { table: { type: "string" }, values: { type: "object" }, filters: filterSchema },
     required: ["table", "values", "filters"],
   },
-  handler: async ({ table, values, filters }: any) => {
-    if (!filters?.length) throw new Error("filters are required to prevent full-table updates");
-    let q = admin.from(table).update(values);
-    q = applyFilters(q, filters);
+  handler: async (args: any) => {
+    if (!args.filters?.length) throw new Error("filters required to prevent full-table updates");
+    let q = admin.from(args.table).update(args.values);
+    q = applyFilters(q, args.filters);
     const { data, error } = await q.select();
     if (error) throw new Error(error.message);
     return ok({ updated: data });
   },
 });
 
-mcp.tool({
-  name: "delete_rows",
+mcp.tool("delete_rows", {
   description: "DELETE rows matching filters. Filters are REQUIRED.",
   inputSchema: {
     type: "object",
-    properties: {
-      table: { type: "string" },
-      filters: filterSchema,
-    },
+    properties: { table: { type: "string" }, filters: filterSchema },
     required: ["table", "filters"],
   },
-  handler: async ({ table, filters }: any) => {
-    if (!filters?.length) throw new Error("filters are required to prevent full-table deletes");
-    let q = admin.from(table).delete();
-    q = applyFilters(q, filters);
+  handler: async (args: any) => {
+    if (!args.filters?.length) throw new Error("filters required to prevent full-table deletes");
+    let q = admin.from(args.table).delete();
+    q = applyFilters(q, args.filters);
     const { data, error } = await q.select();
     if (error) throw new Error(error.message);
     return ok({ deleted: data });
@@ -203,12 +172,11 @@ mcp.tool({
 });
 
 const transport = new StreamableHttpTransport();
+const mcpHandler = transport.bind(mcp);
+
 const app = new Hono();
+app.options("/*", () => new Response("ok", { headers: corsHeaders }));
 
-// CORS preflight
-app.options("/*", (c) => new Response("ok", { headers: corsHeaders }));
-
-// API key auth middleware
 app.use("/*", async (c, next) => {
   const auth = c.req.header("authorization") ?? "";
   const token = auth.replace(/^Bearer\s+/i, "");
@@ -222,8 +190,7 @@ app.use("/*", async (c, next) => {
 });
 
 app.all("/*", async (c) => {
-  const res = await transport.handleRequest(c.req.raw, mcp);
-  // Attach CORS headers
+  const res = await mcpHandler(c.req.raw);
   const headers = new Headers(res.headers);
   for (const [k, v] of Object.entries(corsHeaders)) headers.set(k, v);
   return new Response(res.body, { status: res.status, headers });
